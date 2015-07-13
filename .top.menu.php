@@ -1,46 +1,123 @@
-<?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
+<?
 $aMenuLinks = Array(
 	Array(
-		"Как купить", 
-		"about/howto/", 
+		"Наши услуги", 
+		"/services/", 
 		Array(), 
 		Array(), 
 		"" 
 	),
 	Array(
-		"Доставка", 
-		"about/delivery/", 
+		"Как заказать", 
+		"/how-to-order/", 
 		Array(), 
 		Array(), 
 		"" 
 	),
 	Array(
-		"О магазине", 
-		"about/", 
-		Array(), 
-		Array(), 
-		"" 
-	),	
-	Array(
-		"Гарантия", 
-		"about/guaranty/", 
+		"Оплата и доставка", 
+		"/payment-and-delivery/", 
 		Array(), 
 		Array(), 
 		"" 
 	),
 	Array(
-		"Контакты",
-		"about/contacts/",
-		Array(),
-		Array(),
-		""
+		"Контакты", 
+		"/contacts/", 
+		Array(), 
+		Array(), 
+		"" 
 	),
 	Array(
-		"Мой кабинет",
-		"personal/",
-		Array(),
-		Array(),
-		"CUser::IsAuthorized()"
+		"Уголок потребителя", 
+		"/consumer-area/", 
+		Array(), 
+		Array(), 
+		"" 
 	),
+	Array(
+		"Конфиденциальность", 
+		"/privacy-policy/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Гарантия качества", 
+		"/guarantee/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Новости", 
+		"/news/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Акции", 
+		"/actions/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Статьи", 
+		"/articles/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Советы по выбору", 
+		"/tips-for-choosing/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Новинки", 
+		"/new/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Распродажа", 
+		"/sale/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Избранное", 
+		"/favorites/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Сравнение товаров", 
+		"/compare/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Список брендов", 
+		"/brands/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Отзывы о нас", 
+		"/reviews/", 
+		Array(), 
+		Array(), 
+		"" 
+	)
 );
 ?>
