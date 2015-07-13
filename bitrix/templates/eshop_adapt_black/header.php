@@ -133,7 +133,7 @@ $curPage = $APPLICATION->GetCurPage(true);
 	"catalog_horizontal", 
 	array(
 		"ROOT_MENU_TYPE" => "left",
-		"MENU_CACHE_TYPE" => "N",
+		"MENU_CACHE_TYPE" => "A",
 		"MENU_CACHE_TIME" => "36000000",
 		"MENU_CACHE_USE_GROUPS" => "Y",
 		"MENU_THEME" => "site",
