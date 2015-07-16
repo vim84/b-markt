@@ -62,6 +62,7 @@ div.calendar-float a.spin:hover {width:9px; height:9px; margin:0px; border:1px s
 div.calendar-float a.spin-up {background-image:url(images/calendar/spin_up.gif);}
 div.calendar-float a.spin-down {background-image:url(images/calendar/spin_down.gif);}
 
+
 /*Menu icon*/
 #catalog_menu_icon {background-image:url(icons/catalog/mnu_catalog.gif);}
 #catalog_page_icon {background-image:url(icons/catalog/title.gif);}
@@ -232,7 +233,7 @@ table.bxfm-d-params a.bxfm-add-link{margin: 2px 0 4px 10px; display: block; floa
 div.bx-fm-dialog-tabed table.edit-tab tr.bxfm-d-title td{background-color: #EEEEEE !important; height: 22px;}
 
 /* Input Select*/
-div.bx-fm-dialog input.bxfm-is-inp, input.bxfm-is-inp{background: #fff url(/bitrix/images/fileman/controls_ex/sort_down.gif) right center no-repeat; padding-right: 15px !important;}
+div.bx-fm-dialog input.bxfm-is-inp, input.bxfm-is-inp{background: #fff url(/bitrix/images/fileman/controls_ex/sort_down.gif) right center no-repeat;}
 div.bxfm-is-popup {
 	background: #fff;
 	border: 1px solid #D5E1E4;
@@ -400,7 +401,7 @@ img.bxfm-unlinked{background: url(/bitrix/themes/.default/icons/fileman/unlink.g
 .bxfm-site-sel-it{/* height: 20px; */ width: 200px;margin: 0!important; padding: 0!important;display: inline-block;}
 .bxfm-ss-checked{background-image: url(/bitrix/themes/.default/images/checkbox.gif);background-repeat: no-repeat; background-color: transparent; background-position: 4px 2px;font-weight: bold!important;}
 .bxfm-ss-over{background-color:#DBE3F2!important;}
-.bxfm-site-sel-it div{margin: 0px 2px 0 26px!important; font-family: Verdana!important; font-size: 11px!important; padding:4px 0!important;}
+.bxfm-site-sel-it div{margin: 0px 2px 0 26px!important; font-family: Verdana!important; font-size: 11px!important; padding:4px 0 4px 3px!important;}
 
 .bxfm-text-overflow{-o-text-overflow: ellipsis; text-overflow: ellipsis; -moz-binding: url('/bitrix/js/fileman/text-overflow.xml#ellipsis'); overflow:hidden; white-space: nowrap;}
 
@@ -445,7 +446,7 @@ table.bx-pack-compare-tbl tr.bx-pack-title td.bx-pack-sep-td{padding: 0!importan
 div.bxfm-arctype-sel{margin: 1px 5px 0 0;float: left; width: 260px; height: 18px; border: 1px solid #EEEEEE;background: #fff url(/bitrix/images/fileman/controls_ex/sort_down.gif) right center no-repeat; cursor: pointer;}
 div.bxfm-arctype-sel div{font-family: Verdana!important; font-size: 11px!important; color: #000!important; margin: 2px 0 0 3px!important; padding: 0!important;}
 div.bxfm-arctype-sel-it{/* height: 20px; */ width: 260px;margin: 0!important; padding: 0!important;}
-div.bxfm-at-is-popup{background: #fff;border: 1px solid #B2B2B2; position: absolute;width: 260px; display: none; top:20px;z-index:15; overflow: hidden;}
+div.bxfm-at-is-popup{background-color: #FCFCFC !important; background-image: url(/bitrix/themes/.default/images/menu_gutter.gif) !important; background-repeat: repeat-y !important;border: 1px solid #B2B2B2; position: absolute;width: 260px; display: none; top:20px;z-index:15; overflow: hidden;}
 div.bxfm-at-checked{background-image: url(/bitrix/themes/.default/images/checkbox.gif);background-repeat: no-repeat; background-color: transparent; background-position: 4px 2px;font-weight: bold!important;}
 div.bxfm-at-over{background-color:#DBE3F2!important;}
 div.bxfm-arc-type-it div{margin: 0px 2px 0 26px!important; font-family: Verdana!important; font-size: 11px!important; padding:4px 0!important;}
@@ -477,6 +478,8 @@ img.linked
 	background-position:  center -118px;
 }
 .perfmon_code {color:navy;}
+.perfmon_number {white-space:nowrap;}
+.perfmon_number span {width:4px;display:inline-block;}
 /*Menu icon*/
 #sale_menu_icon {background-image:url(icons/sale/mnu_sale.gif);}
 #sale_menu_icon_orders {background-image:url(icons/sale/mnu_orders.gif);}
@@ -1071,13 +1074,13 @@ div.set_coupon {
 	border: 1px solid #DCDCDC;
 	color: #be0000;
 }
-div.set_coupon input {
+/*div.set_coupon input {
 	color: black !important;
 }
 div.set_coupon div {
 	margin-top: 5px;
 	color: #000000;
-}
+} */
 div.dont_can_buy {
 	color: #be0000;
 	font-size: 11px;
@@ -1460,6 +1463,92 @@ a.dashed-link:hover {
 	width: 150px;
 }
 
+.set_coupon .bx_ordercart_coupon{
+	position: relative;
+	white-space: nowrap;
+	margin-bottom: 4px;
+}
+.set_coupon .bx_ordercart_coupon span{
+	display:block;
+	margin-bottom:13px;
+	color:#7f7f7f;
+	font-size:13px;
+}
+.set_coupon .bx_ordercart_coupon input{
+	height:34px;
+	border:1px solid #bababa;
+	border-radius:3px;
+	box-shadow:inset 0 1px 2px 0 rgba(0,0,0,.21);
+	color:#000;
+	text-align:left;
+	font-weight:bold;
+	font-size:16px;
+	vertical-align: middle;
+	outline: none !important;
+}
+
+.set_coupon .bx_ordercart_coupon span.good,
+.set_coupon .bx_ordercart_coupon span.bad,
+.set_coupon .bx_ordercart_coupon span.disabled{
+	display: inline-block;
+	width:22px;
+	height:34px;
+	vertical-align: middle;
+	margin: 0 0 0 5px;
+	cursor: pointer;
+}
+.set_coupon .bx_ordercart_coupon span.disabled:hover{cursor:pointer}
+.set_coupon .bx_ordercart_coupon input.good{
+	position: relative;
+	border:1px solid #59a62a;
+	background:rgba(89,166,42,.16);
+	box-shadow:0 0 2px 0 rgba(89,166,42,.8);
+}
+.set_coupon .bx_ordercart_coupon span.good{
+	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAANCAYAAABPeYUaAAAAoklEQVQ4y2NgIBOUb7JkY6AEAA0wBuJHQGxHrgFWQPwBiP8D8WcgliTVAHuoRpAB/4A4E10BDwED3ID4K9SAP0CciK7ACYhfg2gcBvgA8Q8kA6LQFQgB8Seogq/oBgH5QUD8EyoPooNwOTUMagOKQSAbkcRBLvEhFGjoBvWi8V2JDX1kg2AY5FV7UqMR2SBQerAkN0GBDHoJSpmUJm1uYtUCAMzalTMY8Lf6AAAAAElFTkSuQmCC") no-repeat center;
+}
+.set_coupon .bx_ordercart_coupon input.bad{
+	border:1px solid #e16565;
+	background:rgba(225,101,101,.16);
+	box-shadow:0 0 2px 0 rgba(225,101,101,.8);
+}
+.set_coupon .bx_ordercart_coupon span.good:hover,
+.set_coupon .bx_ordercart_coupon span.bad,
+.set_coupon .bx_ordercart_coupon span.disabled{
+	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NjA2QzFEQUU3QTJEMTFFNEJFMTJEMjJGMUE4MkZDRkYiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NjA2QzFEQUY3QTJEMTFFNEJFMTJEMjJGMUE4MkZDRkYiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo2MDZDMURBQzdBMkQxMUU0QkUxMkQyMkYxQTgyRkNGRiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo2MDZDMURBRDdBMkQxMUU0QkUxMkQyMkYxQTgyRkNGRiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PuRKTjMAAAC1SURBVHjaXJAhEsIwEEWTDiCoAa6CBtUKEAxHwAfHGSpxySWqUFQUh+YG3AEMOvxlfmf+kJmXnXRftr/1McaDc+4M9iGEu5OVUlqhXMCpwNaABejYUKljrxlh24EbmFHeomZKJXiZ43POdnsp8odDB6lGpMdP5KtUdirZoZDsNmEs5wmYDoeC09YoV8pvUuoHevyef6nikB7MmXljE1sJXlkm5qr5zHqtiQE8Nbgtka13/AowAFzKRSz6AcYPAAAAAElFTkSuQmCC") no-repeat center;
+}
+.set_coupon .bx_ordercart_coupon span.bad:hover{
+	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAXCAMAAAA4Nk+sAAAA1VBMVEXVLy/VMTHWMjLWMzPWNDTWNjbXODjXOjrXOzvYPT3YPz/ZQUHZQ0PaRkbaR0faSEjbTEzbTU3bTk7bT0/dWFjdWVneW1veXV3fYWHfYmLgY2PgZGTgZWXgZmbibW3ib2/jc3Pjd3flfX3lf3/mgYHojo7oj4/rm5vrnZ3soKDtpKTtpqbuqanura3wsrLxuLjxurr42tr43Nz43t754uL54+P76ur76+v77Oz87u787+/88PD88fH88vL99PT99fX99vb++Pj++fn++vr+/Pz//f3////hD3ITAAAA4klEQVQoU2XR2VrCMBRF4YWCAwIiGg1OYHGsI1qrNalGpef9H8mLNvlKXTfJ/m8P4iusWYRB+bxeH7ShvX+V1Nier1DVmhnP8wG1hs8lzzdZauNFBPnaodEwF+SiqXApfHQAIqMBtIkAOim3AKTiNGgnKQA3nAKgcnFj7cQqAE7YJnhQeqwRPCgt1qvf2Ik4XY1VRkHzPPiAs6BKWe8THgB4F6tAWXkD4B7XBZgmCkAlU4DuJxLzr1iQQtPo8FcQyXaXdZSVZ8iO6nps/NGKu57HrXhRO/HP00z1+3vR43e5/wBykDHWjqbzywAAAABJRU5ErkJggg==") no-repeat center;
+}
+.set_coupon .bx_ordercart_coupon input.disabled{
+	color: #9a9a9a;
+}
+.set_coupon .bx_ordercart_coupon_notes{
+	-webkit-transition: opacity .3s ease-out;
+	-moz-transition: opacity .3s ease-out;
+	-ms-transition: opacity .3s ease-out;
+	-o-transition: opacity .3s ease-out;
+	transition: opacity .3s ease-out;
+	display: none;
+	opacity: 0;
+	white-space: normal;
+	border: 1px solid #ddd;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	max-width: 270px;
+	padding: 10px;
+	background: #fff;
+	z-index: 1010;
+	border-radius: 5px;
+	font-size: 13px;
+	line-height: 17px;
+	box-shadow: 0 3px 7px 0 rgba(0,0,0,.05)
+}
+.set_coupon .bx_ordercart_coupon:hover .bx_ordercart_coupon_notes{
+	display: block;
+	opacity: 1;
+}
 /*Menu icon*/
 #security_menu_icon {background-image:url(icons/security/mnu_security.gif);}
 #security_page_icon {background-image:url(icons/security/title.gif);}
