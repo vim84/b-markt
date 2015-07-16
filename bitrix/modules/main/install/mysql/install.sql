@@ -82,6 +82,7 @@ CREATE TABLE b_event_message
 	EMAIL_TO varchar(255) not null default '#EMAIL_TO#',
 	SUBJECT varchar(255),
 	MESSAGE text,
+	MESSAGE_PHP text,
 	BODY_TYPE varchar(4) not null default 'text',
 	BCC text,
 	REPLY_TO varchar(255),
@@ -92,8 +93,24 @@ CREATE TABLE b_event_message
 	FIELD1_VALUE varchar(255),
 	FIELD2_NAME varchar(50),
 	FIELD2_VALUE varchar(255),
+	SITE_TEMPLATE_ID varchar(255) DEFAULT NULL,
+	ADDITIONAL_FIELD text NULL,
 	PRIMARY KEY (ID),
 	INDEX ix_b_event_message_name (EVENT_NAME(50))
+);
+
+CREATE TABLE b_event_attachment
+(
+  EVENT_ID int(18) not null,
+  FILE_ID int(18) not null,
+  PRIMARY KEY (EVENT_ID, FILE_ID)
+);
+
+CREATE TABLE b_event_message_attachment
+(
+  EVENT_MESSAGE_ID int(18) not null,
+  FILE_ID int(18) not null,
+  PRIMARY KEY (EVENT_MESSAGE_ID, FILE_ID)
 );
 
 CREATE TABLE b_event
@@ -187,6 +204,8 @@ CREATE TABLE b_user
 	TIME_ZONE varchar(50),
 	TIME_ZONE_OFFSET int(18),
 	TITLE varchar(255) null,
+	BX_USER_ID varchar(32) null,
+	LANGUAGE_ID char(2) null,
 	PRIMARY KEY (ID),
 	UNIQUE ix_login (LOGIN, EXTERNAL_AUTH_ID),
 	INDEX ix_b_user_email (EMAIL),
@@ -277,7 +296,7 @@ CREATE TABLE b_file
 	MODULE_ID varchar(50),
 	HEIGHT INT(18),
 	WIDTH INT(18),
-	FILE_SIZE INT(18) not null,
+	FILE_SIZE BIGINT null,
 	CONTENT_TYPE VARCHAR(255) default 'IMAGE',
 	SUBDIR VARCHAR(255),
 	FILE_NAME VARCHAR(255) not null,

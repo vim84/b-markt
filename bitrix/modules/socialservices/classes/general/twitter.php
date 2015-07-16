@@ -18,11 +18,22 @@ class CSocServTwitter extends CSocServAuth
 	{
 		$phrase = ($arParams["FOR_INTRANET"]) ? GetMessage("socserv_tw_note_intranet") : GetMessage("socserv_tw_note");
 
-		$url = $GLOBALS['APPLICATION']->GetCurPageParam('ncc=1&auth_service_id='.self::ID.'&check_key='.$_SESSION["UNIQUE_KEY"].(isset($arParams['BACKURL']) ? "&backurl=".urlencode($arParams['BACKURL']) : ''), array("logout", "auth_service_error", "auth_service_id", "current_fieldset", "ncc"));
+		$url = $this->getUrl($arParams);
 
 		if($arParams["FOR_INTRANET"])
 			return array("ON_CLICK" => 'onclick="BX.util.popup(\''.htmlspecialcharsbx(CUtil::JSEscape($url)).'\', 800, 450)"');
 		return '<a href="javascript:void(0)" onclick="BX.util.popup(\''.htmlspecialcharsbx(CUtil::JSEscape($url)).'\', 800, 450)" class="bx-ss-button twitter-button"></a><span class="bx-spacer"></span><span>'.$phrase.'</span>';
+	}
+
+	public function GetOnClickJs($arParams)
+	{
+		$url = $this->getUrl($arParams);
+		return "BX.util.popup('".CUtil::JSEscape($url)."', 800, 450)";
+	}
+
+	public function getUrl($arParams)
+	{
+		return $GLOBALS['APPLICATION']->GetCurPageParam('ncc=1&auth_service_id='.self::ID.'&check_key='.$_SESSION["UNIQUE_KEY"].(isset($arParams['BACKURL']) ? "&backurl=".urlencode($arParams['BACKURL']) : ''), array("logout", "auth_service_error", "auth_service_id", "current_fieldset", "ncc"));
 	}
 
 	public function Authorize()

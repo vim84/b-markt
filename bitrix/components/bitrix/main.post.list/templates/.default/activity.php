@@ -53,6 +53,7 @@ if (check_bitrix_sessid() && $_REQUEST["MODE"] == "PUSH&PULL" &&
 		Array(
 			'module_id' => 'unicomments',
 			'command' => 'answer',
+			'expiry' => 60,
 			'params' => Array(
 				"USER_ID" => $GLOBALS["USER"]->GetId(),
 				"ENTITY_XML_ID" => $_REQUEST["ENTITY_XML_ID"],

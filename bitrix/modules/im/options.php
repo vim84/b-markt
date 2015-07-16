@@ -1,7 +1,4 @@
 <?php
-if(!$USER->IsAdmin())
-	return;
-
 global $MESS;
 include(GetLangFileName($GLOBALS['DOCUMENT_ROOT'].'/bitrix/modules/im/lang/', '/options.php'));
 IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].BX_ROOT.'/modules/main/options.php');
@@ -28,6 +25,11 @@ if (CIMConvert::ConvertCount() > 0)
 $arDefaultValues['default'] = array(
 	'user_name_template' => CIMContactList::GetUserNameTemplate(false,false,true)
 );
+if (!IsModuleInstalled('intranet'))
+{
+	$arDefaultValues['default']['path_to_user_profile'] = '/club/user/#user_id#/';
+}
+
 $arDefaultValues['extranet'] = array(
 	'user_name_template' => CIMContactList::GetUserNameTemplate(false,false,true)
 );
@@ -52,7 +54,7 @@ $aTabs = array(
 );
 $tabControl = new CAdminTabControl("tabControl", $aTabs);
 
-if(strlen($_POST['Update'].$_GET['RestoreDefaults'])>0 && check_bitrix_sessid())
+if(strlen($_POST['Update'].$_GET['RestoreDefaults'])>0 && check_bitrix_sessid() && $MOD_RIGHT >= 'W')
 {
 	if(strlen($_GET['RestoreDefaults'])>0)
 	{

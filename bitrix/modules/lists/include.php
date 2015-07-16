@@ -4,6 +4,8 @@ if(!CModule::IncludeModule('iblock'))
 
 if(!defined("CACHED_b_lists_permission")) define("CACHED_b_lists_permission", 36000);
 
+define('SONET_LISTS_NEW_POST_ENTITY', 'WF');
+
 CModule::AddAutoloadClasses(
 	"lists",
 	array(
@@ -19,10 +21,14 @@ CModule::AddAutoloadClasses(
 		"CListPropertyField" => "classes/general/listfield.php",
 		"CListFields" => "classes/general/listfields.php",
 		"CListFile" => "classes/general/listfile.php",
-
 		"CListsParameters" => "classes/general/parameters.php",
 		"CListFileControl" => "classes/general/comp_lib.php",
 		"CListsSocnet" => "classes/general/listsocnet.php",
+
+		"BizprocDocument" => "lib/bizprocdocument.php",
+		"CListsLiveFeed" => "lib/livefeed.php",
+
+		"bitrix\\lists\\importer" => "lib/importer.php",
 	)
 );
 ?>

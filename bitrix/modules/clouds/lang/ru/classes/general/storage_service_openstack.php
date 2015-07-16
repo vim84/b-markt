@@ -6,4 +6,5 @@ $MESS["CLO_STORAGE_OPENSTACK_ERROR_GET_TOKEN"] = "Ошибка авториза�
 $MESS["CLO_STORAGE_OPENSTACK_EDIT_USER"] = "Имя пользователя (API user)";
 $MESS["CLO_STORAGE_OPENSTACK_EDIT_KEY"] = "Ключ доступа (API key)";
 $MESS["CLO_STORAGE_OPENSTACK_EDIT_HOST"] = "Имя сервера (API host)";
+$MESS["CLO_STORAGE_OPENSTACK_FORCE_HTTP"] = "Всегда использовать протокол http";
 ?>

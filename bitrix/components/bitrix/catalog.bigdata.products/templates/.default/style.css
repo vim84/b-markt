@@ -120,8 +120,8 @@
     font-size:13px;
 }
 .bx_item_list_you_looked_horizontal .bx_catalog_item_title{
-    overflow:hidden;
-    height:38px;
+	overflow:hidden;
+	height:34px;
 }
 .bx-no-touch .bx_item_list_you_looked_horizontal .bx_catalog_item:hover .bx_catalog_item_title{
     overflow:auto;

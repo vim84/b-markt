@@ -29,6 +29,7 @@ $this->setFrameMode(true);
 		"META_KEYWORDS" => $arParams["META_KEYWORDS"],
 		"META_DESCRIPTION" => $arParams["META_DESCRIPTION"],
 		"BROWSER_TITLE" => $arParams["BROWSER_TITLE"],
+		"SET_CANONICAL_URL" => $arParams["DETAIL_SET_CANONICAL_URL"],
 		"DISPLAY_PANEL" => $arParams["DISPLAY_PANEL"],
 		"SET_TITLE" => $arParams["SET_TITLE"],
 		"SET_STATUS_404" => $arParams["SET_STATUS_404"],

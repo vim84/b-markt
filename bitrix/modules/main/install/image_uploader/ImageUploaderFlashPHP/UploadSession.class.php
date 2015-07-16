@@ -124,13 +124,15 @@ class UploadSession {
     if (empty($this->_server) || empty($this->_post) || $this->_server['REQUEST_METHOD'] !== 'POST') {
       return false;
     }
-     
+
     // Every request have PackageGuid field
     if (empty($this->_post[PostFields::packageGuid])) {
       // If not - it is not image uploader request, ignore it.
       return false;
+    } else if (!preg_match("/^\\{[a-z0-9-]+\\}$/i", $this->_post[PostFields::packageGuid])) {
+        throw new Exception('Upload '.PostFields::packageGuid.' is invalid.');
     }
-     
+
     // check if request completed
     if (@$this->_post[PostFields::requestComplete] != 1) {
       throw new Exception('Upload request is invalid.');

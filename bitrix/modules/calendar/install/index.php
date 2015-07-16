@@ -167,6 +167,7 @@ Class calendar extends CModule
 		RegisterModuleDependences('socialnetwork', 'onAfterCommentAddAfter', 'calendar', 'CCalendarLiveFeed', 'onAfterCommentAddAfter');
 		RegisterModuleDependences('socialnetwork', 'onAfterCommentUpdateAfter', 'calendar', 'CCalendarLiveFeed', 'onAfterCommentUpdateAfter');
 		RegisterModuleDependences('search', 'BeforeIndex', 'calendar', 'CCalendarLiveFeed', 'FixForumCommentURL');
+		RegisterModuleDependences("main", "OnAfterRegisterModule", "main", "calendar", "InstallUserFields", 100, "/modules/calendar/install/index.php"); // check webdav UF
 
 		return true;
 	}
@@ -202,6 +203,7 @@ Class calendar extends CModule
 		UnRegisterModuleDependences('socialnetwork', 'onAfterCommentAddAfter', 'calendar', 'CCalendarLiveFeed', 'onAfterCommentAddAfter');
 		UnRegisterModuleDependences('socialnetwork', 'onAfterCommentUpdateAfter', 'calendar', 'CCalendarLiveFeed', 'onAfterCommentUpdateAfter');
 		UnRegisterModuleDependences('search', 'BeforeIndex', 'calendar', 'CCalendarLiveFeed', 'FixForumCommentURL');
+		UnRegisterModuleDependences("main", "OnAfterRegisterModule", "main", "calendar", "InstallUserFields", "/modules/calendar/install/index.php"); // check webdav UF
 
 		UnRegisterModule("calendar");
 
@@ -301,36 +303,69 @@ Class calendar extends CModule
 
 	function InstallUserFields($id = "all")
 	{
+		global $APPLICATION;
 		$errors = null;
-		$ENTITY_ID = 'CALENDAR_EVENT';
-		$FIELD_NAME = 'UF_WEBDAV_CAL_EVENT';
-		$arElement = $GLOBALS['USER_FIELD_MANAGER']->GetUserFields($ENTITY_ID, 0);
-		if (empty($arElement) || $arElement == array() ||$arElement == false || !isset($arElement[$FIELD_NAME]))
-		{
-			$arFields = array(
-				"ENTITY_ID" => $ENTITY_ID,
-				"FIELD_NAME" => $FIELD_NAME,
-				"XML_ID" => $FIELD_NAME,
-				"USER_TYPE_ID" => "webdav_element",
-				"SORT" => 100,
-				"MULTIPLE" => "Y",
-				"MANDATORY" => "N",
-				"SHOW_FILTER" => "N",
-				"SHOW_IN_LIST" => "N",
-				"EDIT_IN_LIST" => "Y",
-				"IS_SEARCHABLE" => "N"
-			);
 
-			$obUserField  = new CUserTypeEntity;
-			$intID = $obUserField->Add($arFields, false);
-			if (false == $intID)
+		if(($id == 'all' || $id == 'disk') && IsModuleInstalled('disk'))
+		{
+			$uf = new CUserTypeEntity;
+			$rsData = CUserTypeEntity::getList(array("ID" => "ASC"), array("ENTITY_ID" => 'CALENDAR_EVENT', "FIELD_NAME" => 'UF_WEBDAV_CAL_EVENT'));
+			if (!($rsData && ($arRes = $rsData->Fetch())))
 			{
-				if ($strEx = $GLOBALS['APPLICATION']->GetException())
+				$intID = $uf->add(array(
+					"ENTITY_ID" => 'CALENDAR_EVENT',
+					"FIELD_NAME" => 'UF_WEBDAV_CAL_EVENT',
+					"XML_ID" => 'UF_WEBDAV_CAL_EVENT',
+					"USER_TYPE_ID" => 'disk_file',
+					"SORT" => 100,
+					"MULTIPLE" => "Y",
+					"MANDATORY" => "N",
+					"SHOW_FILTER" => "N",
+					"SHOW_IN_LIST" => "N",
+					"EDIT_IN_LIST" => "Y",
+					"IS_SEARCHABLE" => "Y"
+				), false);
+
+				if (false == $intID && ($strEx = $APPLICATION->getException()))
 				{
-					$errors = $strEx->GetString();
+					$errors[] = $strEx->getString();
 				}
 			}
 		}
+
+		if(($id == 'all' || $id == 'webdav') && IsModuleInstalled('webdav'))
+		{
+			$ENTITY_ID = 'CALENDAR_EVENT';
+			$FIELD_NAME = 'UF_WEBDAV_CAL_EVENT';
+			$arElement = $GLOBALS['USER_FIELD_MANAGER']->GetUserFields($ENTITY_ID, 0);
+			if (empty($arElement) || $arElement == array() ||$arElement == false || !isset($arElement[$FIELD_NAME]))
+			{
+				$arFields = array(
+					"ENTITY_ID" => $ENTITY_ID,
+					"FIELD_NAME" => $FIELD_NAME,
+					"XML_ID" => $FIELD_NAME,
+					"USER_TYPE_ID" => "webdav_element",
+					"SORT" => 100,
+					"MULTIPLE" => "Y",
+					"MANDATORY" => "N",
+					"SHOW_FILTER" => "N",
+					"SHOW_IN_LIST" => "N",
+					"EDIT_IN_LIST" => "Y",
+					"IS_SEARCHABLE" => "N"
+				);
+
+				$obUserField  = new CUserTypeEntity;
+				$intID = $obUserField->Add($arFields, false);
+				if (false == $intID)
+				{
+					if ($strEx = $APPLICATION->GetException())
+					{
+						$errors[] = $strEx->GetString();
+					}
+				}
+			}
+		}
+
 		return $errors;
 	}
 

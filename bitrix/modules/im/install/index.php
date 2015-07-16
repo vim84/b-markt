@@ -70,10 +70,17 @@ class im extends CModule
 		RegisterModuleDependences("im", "OnGetNotifySchema", "im", "CIMNotifySchema", "OnGetNotifySchema");
 		RegisterModuleDependences("main", "OnFileDelete", "im", "CIMEvent", "OnFileDelete");
 		RegisterModuleDependences("main", "OnApplicationsBuildList", "im", "DesktopApplication", "OnApplicationsBuildList");
+		RegisterModuleDependences('rest', 'OnRestServiceBuildDescription', 'im', 'CIMRestService', 'OnRestServiceBuildDescription');
 
 		CAgent::AddAgent("CIMMail::MailNotifyAgent();", "im", "N", 600);
 		CAgent::AddAgent("CIMMail::MailMessageAgent();", "im", "N", 600);
 		CAgent::AddAgent("CIMDisk::RemoveTmpFileAgent();", "im", "N", 43200);
+
+		$solution = COption::GetOptionString("main", "wizard_solution", false);
+		if ($solution == 'community')
+		{
+			COption::SetOptionString("im", "path_to_user_profile",'/people/user/#user_id#/');
+		}
 
 		CModule::IncludeModule("im");
 
@@ -243,6 +250,8 @@ class im extends CModule
 		UnRegisterModuleDependences("pull", "OnGetDependentModule", "im", "CIMEvent", "OnGetDependentModule");
 		UnRegisterModuleDependences("main", "OnProlog", "main", "", "", "/modules/im/ajax_hit.php");
 		UnRegisterModuleDependences("main", "OnApplicationsBuildList", "im", "DesktopApplication", "OnApplicationsBuildList");
+		UnRegisterModuleDependences('rest', 'OnRestServiceBuildDescription', 'im', 'CIMRestService', 'OnRestServiceBuildDescription');
+
 		UnRegisterModule("im");
 
 		return true;

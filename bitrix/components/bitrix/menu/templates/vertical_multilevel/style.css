@@ -1,8 +1,8 @@
 ul#vertical-multilevel-menu, #vertical-multilevel-menu ul
 {
-	margin: 0; 
-	padding: 0; 
-	list-style: none; 
+	margin: 0;
+	padding: 0;
+	list-style: none;
 	width: 214px;
 	font-size:12px;
 }
@@ -21,21 +21,21 @@ ul#vertical-multilevel-menu, #vertical-multilevel-menu ul
 	width:200px;
 }
 
-/* Submenu Items */ 
+/* Submenu Items */
 #vertical-multilevel-menu li a
-{ 
-	display: block; 
-	text-decoration: none; 
-	color: #4F4F4F; 
+{
+	display: block;
+	text-decoration: none;
+	color: #4F4F4F;
 	font-weight:bold;
-	padding: 5px; 
+	padding: 5px;
 	background:#F5F5F5;
 	border-bottom:1px solid #C1C1C1;
 }
 
 /*Items selected*/
 #vertical-multilevel-menu li a.item-selected
-{ 
+{
 	background-color: #D6D6D6;
 }
 
@@ -43,7 +43,7 @@ ul#vertical-multilevel-menu, #vertical-multilevel-menu ul
 #vertical-multilevel-menu li a:hover
 {
 	background-color: #D6D6D6;
-} 
+}
 
 /*Rootmenu Items*/
 #vertical-multilevel-menu a.root-item
@@ -96,10 +96,10 @@ ul#vertical-multilevel-menu, #vertical-multilevel-menu ul
 	padding-right:10px;
 }
 
-/* Holly Hack. IE Requirement \*/ 
-* html ul#vertical-multilevel-menu li { float: left; height: 1%; } 
-* html ul#vertical-multilevel-menu li a { height: 1%; } 
-/* End */ 
+/* Holly Hack. IE Requirement \*/
+* html ul#vertical-multilevel-menu li { float: left; height: 1%; }
+* html ul#vertical-multilevel-menu li a { height: 1%; }
+/* End */
 
 
 /*Submenu margin*/
@@ -117,7 +117,7 @@ ul#vertical-multilevel-menu, #vertical-multilevel-menu ul
 #vertical-multilevel-menu li:hover ul ul,
 #vertical-multilevel-menu li.jsvhover ul ul,
 #vertical-multilevel-menu li:hover ul ul ul,
-#vertical-multilevel-menu li.jsvhover ul ul ul 
+#vertical-multilevel-menu li.jsvhover ul ul ul
 {
 	/*top:-999em;*/
 	display:none;

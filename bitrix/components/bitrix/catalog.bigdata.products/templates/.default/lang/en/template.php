@@ -1,5 +1,5 @@
 <?
-$MESS["CVP_TPL_MESS_YOU_LOOKED"] = "Recently viewed";
+$MESS["CVP_TPL_MESS_RCM"] = "Personal recommendations:";
 $MESS["CVP_TPL_ELEMENT_DELETE_CONFIRM"] = "This will delete all the information related to this record! Continue?";
 $MESS["CVP_TPL_MESS_BTN_BUY"] = "Buy";
 $MESS["CVP_TPL_MESS_BTN_ADD_TO_BASKET"] = "Add to cart";
@@ -18,5 +18,4 @@ $MESS["CVP_CATALOG_BTN_MESSAGE_CLOSE"] = "Close";
 $MESS["CVP_CATALOG_BTN_MESSAGE_BASKET_REDIRECT"] = "View shopping cart";
 $MESS["CVP_CATALOG_BTN_MESSAGE_SEND_PROPS"] = "Select";
 $MESS["CVP_MSG_YOU_HAVE_NOT_YET"] = "You have not viewed any products yet.";
-$MESS["CVP_TPL_MESS_RCM"] = "Personal recommendations:";
 ?>

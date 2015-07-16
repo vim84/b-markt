@@ -3215,8 +3215,9 @@ function AddMessage2Log($sText, $sModule = "", $traceDepth = 6, $bShowArgs = fal
 					$arBacktrace = Bitrix\Main\Diag\Helper::getBackTrace($traceDepth, ($bShowArgs? null : DEBUG_BACKTRACE_IGNORE_ARGS));
 					$strFunctionStack = "";
 					$strFilesStack = "";
+					$firstFrame = (count($arBacktrace) == 1? 0: 1);
 					$iterationsCount = min(count($arBacktrace), $traceDepth);
-					for ($i = 1; $i < $iterationsCount; $i++)
+					for ($i = $firstFrame; $i < $iterationsCount; $i++)
 					{
 						if (strlen($strFunctionStack)>0)
 							$strFunctionStack .= " < ";
@@ -3449,13 +3450,12 @@ function LocalRedirect($url, $skip_security_check=false, $status="302 Found")
 	{
 		foreach(GetModuleEvents("main", "OnBeforeLocalRedirect", true) as $arEvent)
 		{
-			ExecuteModuleEventEx($arEvent, array(&$url, $skip_security_check));
+			ExecuteModuleEventEx($arEvent, array(&$url, $skip_security_check, $bExternal));
 		}
 	}
 
 	if(!$bExternal)
 	{
-		$APPLICATION->HoldSpreadCookieHTML(true);
 		//store cookies for next hit (see CMain::GetSpreadCookieHTML())
 		$APPLICATION->StoreCookies();
 
@@ -3472,8 +3472,6 @@ function LocalRedirect($url, $skip_security_check=false, $status="302 Found")
 
 	CHTTP::SetStatus($status);
 
-	header("Request-URI: ".$url);
-	header("Content-Location: ".$url);
 	header("Location: ".$url);
 
 	if(function_exists("getmoduleevents"))
@@ -3981,7 +3979,7 @@ function check_email($email, $bStrict=false)
 
 	//"." can't be in the beginning or in the end of local-part
 	//dot-atom-text = 1*atext *("." 1*atext)
-	if(preg_match("#^[".$atom."]+(\\.[".$atom."]+)*@(([-0-9a-z_]+\\.)+)([a-z0-9-]{2,10})$#i", $email))
+	if(preg_match("#^[".$atom."]+(\\.[".$atom."]+)*@(([-0-9a-z_]+\\.)+)([a-z0-9-]{2,20})$#i", $email))
 	{
 		return true;
 	}
@@ -4496,8 +4494,11 @@ class CUtil
 
 	public static function PhpToJSObject($arData, $bWS = false, $bSkipTilda = false, $bExtType = false)
 	{
-		static $aSearch = array("\r", "\n");
-		$bExtType = !!$bExtType;
+		static $use_bx_encode = null;
+		if (!isset($use_bx_encode))
+			$use_bx_encode = function_exists('bx_js_encode');
+		if ($use_bx_encode)
+			return bx_js_encode($arData, $bWS, $bSkipTilda, $bExtType);
 
 		switch(gettype($arData))
 		{
@@ -4518,41 +4519,49 @@ class CUtil
 
 			if($j === $i)
 			{
+				$res = '[';
+				$first = true;
 				foreach($arData as $key => $value)
 				{
+					if($first)
+						$first = false;
+					else
+						$res .= ',';
+
 					switch(gettype($value))
 					{
 					case "string":
 						if(preg_match("#['\"\\n\\r<\\\\\x80]#", $value))
-							$arData[$key] = "'".CUtil::JSEscape($value)."'";
+							$res .= "'".CUtil::JSEscape($value)."'";
 						else
-							$arData[$key] = "'".$value."'";
+							$res .= "'".$value."'";
 						break;
 					case "array":
-						$arData[$key] = CUtil::PhpToJSObject($value, $bWS, $bSkipTilda, $bExtType);
+						$res .= CUtil::PhpToJSObject($value, $bWS, $bSkipTilda, $bExtType);
 						break;
 					case "boolean":
 						if($value === true)
-							$arData[$key] = 'true';
+							$res .= 'true';
 						else
-							$arData[$key] = 'false';
+							$res .= 'false';
 						break;
 					case "integer":
 					case "double":
 						if ($bExtType)
-						{
-							$arData[$key] = $value;
-							break;
-						}
+							$res .= $value;
+						else
+							$res .= "'".$value."'";
+						break;
 					default:
 						if(preg_match("#['\"\\n\\r<\\\\\x80]#", $value))
-							$arData[$key] = "'".CUtil::JSEscape($value)."'";
+							$res .= "'".CUtil::JSEscape($value)."'";
 						else
-							$arData[$key] = "'".$value."'";
+							$res .= "'".$value."'";
 						break;
 					}
 				}
-				return '['.implode(',', $arData).']';
+				$res .= ']';
+				return $res;
 			}
 
 			$sWS = ','.($bWS ? "\n" : '');
@@ -4569,7 +4578,7 @@ class CUtil
 					$res .= $sWS;
 
 				if(preg_match("#['\"\\n\\r<\\\\\x80]#", $key))
-					$res .= "'".str_replace($aSearch, '', CUtil::JSEscape($key))."':";
+					$res .= "'".CUtil::JSEscape($key)."':";
 				else
 					$res .= "'".$key."':";
 
@@ -4593,10 +4602,10 @@ class CUtil
 				case "integer":
 				case "double":
 					if ($bExtType)
-					{
 						$res .= $value;
-						break;
-					}
+					else
+						$res .= "'".$value."'";
+					break;
 				default:
 					if(preg_match("#['\"\\n\\r<\\\\\x80]#", $value))
 						$res .= "'".CUtil::JSEscape($value)."'";
@@ -4615,9 +4624,9 @@ class CUtil
 		case "integer":
 		case "double":
 			if ($bExtType)
-			{
 				return $arData;
-			}
+			else
+				return "'".$arData."'";
 		default:
 			if(preg_match("#['\"\\n\\r<\\\\\x80]#", $arData))
 				return "'".CUtil::JSEscape($arData)."'";
@@ -5084,9 +5093,15 @@ class CUtil
 
 	public static function BinStrpos($haystack, $needle, $offset = 0)
 	{
-		return function_exists('mb_strpos') ?
-			mb_strpos($haystack, $needle, $offset, 'latin1') :
-			strpos($haystack, $needle, $offset);
+		if (defined("BX_UTF"))
+		{
+			if (function_exists('mb_orig_strpos'))
+			{
+				return mb_orig_strpos($haystack, $needle, $offset);
+			}
+			return mb_strpos($haystack, $needle, $offset, 'latin1');
+		}
+		return strpos($haystack, $needle, $offset);
 	}
 
 	/**
@@ -5271,7 +5286,6 @@ class CHTTP
 	 */
 	function HTTPQuery($method, $url, $postdata = '')
 	{
-		$arUrl = false;
 		if(is_resource($this->fp))
 			$file_pos = ftell($this->fp);
 
@@ -5280,7 +5294,7 @@ class CHTTP
 		while (true)
 		{
 			$this->url = $url;
-			$arUrl = $this->ParseURL($url, $arUrl);
+			$arUrl = $this->ParseURL($url);
 			if (!$this->Query($method, $arUrl['host'], $arUrl['port'], $arUrl['path_query'], $postdata, $arUrl['proto']))
 			{
 				return false;
@@ -5366,7 +5380,6 @@ class CHTTP
 				{
 					fwrite($fp, $postdata);
 				}
-				fwrite($fp, "\r\n");
 			}
 
 			if ($dont_wait_answer)
@@ -5439,27 +5452,9 @@ class CHTTP
 	/**
 	 * @deprecated Use Bitrix\Main\Web\Uri
 	 */
-	public function ParseURL($url, $arUrlOld = false)
+	public function ParseURL($url)
 	{
 		$arUrl = parse_url($url);
-
-		if (is_array($arUrlOld))
-		{
-			if (!array_key_exists('scheme', $arUrl))
-			{
-				$arUrl['scheme'] = $arUrlOld['scheme'];
-			}
-
-			if (!array_key_exists('host', $arUrl))
-			{
-				$arUrl['host'] = $arUrlOld['host'];
-			}
-
-			if (!array_key_exists('port', $arUrl))
-			{
-				$arUrl['port'] = $arUrlOld['port'];
-			}
-		}
 
 		$arUrl['proto'] = '';
 		if (array_key_exists('scheme', $arUrl))
@@ -5671,10 +5666,10 @@ class CHTTP
 				$res = (isset($_SERVER['REDIRECT_REMOTE_USER'])? $_SERVER['REDIRECT_REMOTE_USER'] : $_SERVER['REMOTE_USER']);
 				if($res <> '')
 				{
-					if(preg_match('/(?<=(basic\s))(.*)$/is', $res, $matches))
+					if(preg_match('/^\x20*Basic\x20+([a-zA-Z0-9+\/=]+)\s*$/D', $res, $matches))
 					{
 						// Basic Authorization PHP FastCGI (CGI)
-						$res = trim($matches[0]);
+						$res = trim($matches[1]);
 						$res = base64_decode($res);
 						$res = CUtil::ConvertToLangCharset($res);
 						list($user, $pass) = explode(':', $res);
@@ -5688,10 +5683,10 @@ class CHTTP
 							"password"=>$pass,
 						));
 					}
-					elseif(preg_match('/(?<=(digest\s))(.*)$/is', $res, $matches))
+					elseif(preg_match('/^\x20*Digest\x20+(.*)$/sD', $res, $matches))
 					{
 						// Digest Authorization PHP FastCGI (CGI)
-						$sDigest = trim($matches[0]);
+						$sDigest = trim($matches[1]);
 					}
 				}
 			}
@@ -5903,7 +5898,7 @@ function GetMenuTypes($site=false, $default_value=false)
 
 function SetMenuTypes($armt, $site = '', $description = false)
 {
-	COption::SetOptionString('fileman', "menutypes", addslashes(serialize($armt)), $description, $site);
+	return COption::SetOptionString('fileman', "menutypes", addslashes(serialize($armt)), $description, $site);
 }
 
 function ParseFileContent($filesrc, $params = array())
@@ -6009,10 +6004,12 @@ function ParseFileContent($filesrc, $params = array())
 	$arPageProps = array();
 	if(strlen($prolog))
 	{
-		if (preg_match_all("'\\\$APPLICATION->SetPageProperty\\(\"(.*?)(?<!\\\\)\" *, *\"(.*?)(?<!\\\\)\"\\);'i", $prolog, $out))
+		if (preg_match_all("'\\\$APPLICATION->SetPageProperty\\(([\"\\'])(.*?)(?<!\\\\)[\"\\'] *, *([\"\\'])(.*?)(?<!\\\\)[\"\\']\\);'i", $prolog, $out))
 		{
-			foreach ($out[1] as $i => $m1)
-				$arPageProps[UnEscapePHPString($m1)] = UnEscapePHPString($out[2][$i]);
+			foreach ($out[2] as $i => $m1)
+			{
+				$arPageProps[UnEscapePHPString($m1, $out[1][$i])] = UnEscapePHPString($out[4][$i], $out[3][$i]);
+			}
 		}
 	}
 
@@ -6043,20 +6040,36 @@ function ParseFileContent($filesrc, $params = array())
 	);
 }
 
-function EscapePHPString($str)
+function EscapePHPString($str, $encloser = '"')
 {
-	$str = str_replace("\\", "\\\\", $str);
-	$str = str_replace("\$", "\\\$", $str);
-	$str = str_replace("\"", "\\"."\"", $str);
-	return $str;
+	if($encloser == "'")
+	{
+		$from = array("\\", "'");
+		$to = array("\\\\", "\\'");
+	}
+	else
+	{
+		$from = array("\\", "\$", "\"");
+		$to = array("\\\\", "\\\$", "\\\"");
+	}
+
+	return str_replace($from, $to, $str);
 }
 
-function UnEscapePHPString($str)
+function UnEscapePHPString($str, $encloser = '"')
 {
-	$str = str_replace("\\\\", "\\", $str);
-	$str = str_replace("\\\$", "\$", $str);
-	$str = str_replace("\\\"", "\"", $str);
-	return $str;
+	if($encloser == "'")
+	{
+		$from = array("\\\\", "\\'");
+		$to = array("\\", "'");
+	}
+	else
+	{
+		$from = array("\\\\", "\\\$", "\\\"");
+		$to = array("\\", "\$", "\"");
+	}
+
+	return str_replace($from, $to, $str);
 }
 
 function CheckSerializedData($str, $max_depth = 200)

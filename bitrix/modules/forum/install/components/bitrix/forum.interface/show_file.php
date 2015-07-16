@@ -2,10 +2,11 @@
 define("STOP_STATISTICS", true);
 define("NO_AGENT_STATISTIC","Y");
 define("NO_AGENT_CHECK", true);
+define("NO_KEEP_STATISTIC", true);
 define("DisableEventsCheck", true);
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
-if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
+if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true || !CModule::IncludeModule("forum"))die();
 
 /**
  * @global CUser $USER
@@ -17,7 +18,6 @@ include_once($path);
 $MESS1 =& $MESS;
 $GLOBALS["MESS"] = $MESS1 + $GLOBALS["MESS"];
 
-CModule::IncludeModule("forum");
 // ************************* Input params***************************************************************
 // ************************* BASE **********************************************************************
 $arParams = array(
@@ -34,7 +34,7 @@ $arResult = array(
 	"FILE" => array()
 );
 $arError = array();
-if (intVal($arParams["FILE_ID"]) > 0)
+if (intval($arParams["FILE_ID"]) > 0)
 {
 	$db_res = CForumFiles::GetList(array("ID" => "ASC"), array("FILE_ID" => $arParams["FILE_ID"]));
 	if ($db_res && ($arResult["FILE"] = $db_res->GetNext()))
@@ -51,16 +51,16 @@ if (empty($arResult["FILE"]))
 		"code" => "EMPTY FILE",
 		"title" => GetMessage("F_EMPTY_FID"));
 }
-elseif (intVal($arResult["FILE"]["MESSAGE_ID"]) > 0)
+elseif (intval($arResult["FILE"]["MESSAGE_ID"]) > 0)
 {
 	$arResult["MESSAGE"] = CForumMessage::GetByIDEx($arResult["FILE"]["MESSAGE_ID"], array("GET_FORUM_INFO" => "Y", "GET_TOPIC_INFO" => "Y"));
 	$arResult["TOPIC"] = $arResult["MESSAGE"]["TOPIC_INFO"];
 	$arResult["FORUM"] = $arResult["MESSAGE"]["FORUM_INFO"];
 
-	if (IsModuleInstalled('meeting') && CModule::IncludeModule('meeting'))
+	if (IsModuleInstalled('meeting'))
 	{
 		$forumId = COption::GetOptionInt('meeting', 'comments_forum_id', 0, SITE_ID);
-		if ($arResult['FORUM']['ID'] == $forumId)
+		if ($arResult['FORUM']['ID'] == $forumId && CModule::IncludeModule('meeting'))
 		{
 			$meetingID = false;
 			$xmlID = $arResult['MESSAGE']['FT_XML_ID'];
@@ -83,7 +83,7 @@ elseif (intVal($arResult["FILE"]["MESSAGE_ID"]) > 0)
 		}
 	}
 
-	if (IsModuleInstalled('tasks') && CModule::IncludeModule('tasks'))
+	if (CModule::IncludeModule('tasks'))
 	{
 		$tasksIsTasksJurisdiction = false;
 

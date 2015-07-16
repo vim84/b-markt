@@ -1,4 +1,15 @@
-<? if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
+<?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
+/** @var array $arParams */
+/** @var array $arResult */
+/** @global CMain $APPLICATION */
+/** @global CUser $USER */
+/** @global CDatabase $DB */
+/** @var CBitrixComponentTemplate $this */
+/** @var string $templateName */
+/** @var string $templateFile */
+/** @var string $templateFolder */
+/** @var string $componentPath */
+/** @var CBitrixComponent $component */
 if ($arResult['IS_ADMIN_SECTION']):
 $maxImageSize = array(
 	"W" => \COption::GetOptionString("iblock", "list_image_size"),
@@ -55,21 +66,25 @@ function renderTree($sections, $level = 0, $tableId)
  */
 function _ShowGroupPropertyFieldList($name, $property_fields, $values)
 {
-	if (!is_array($values)) $values = Array();
+	if (!is_array($values)) $values = array();
 
 	$options = "";
 	$result = "";
 	$bWas = false;
 	$sections = ProductSearchComponent::getPropertyFieldSections($property_fields["LINK_IBLOCK_ID"]);
-	foreach ($sections AS $section)
+	if (!empty($sections) && is_array($sections))
 	{
-		$options .= '<option value="' . $section["ID"] . '"';
-		if (in_array($section["ID"], $values))
+		foreach ($sections as &$section)
 		{
-			$bWas = true;
-			$options .= ' selected';
+			$options .= '<option value="' . $section["ID"] . '"';
+			if (in_array($section["ID"], $values))
+			{
+				$bWas = true;
+				$options .= ' selected';
+			}
+			$options .= '>' . str_repeat(" . ", $section["DEPTH_LEVEL"]) . $section["NAME"] . '</option>';
 		}
-		$options .= '>' . str_repeat(" . ", $section["DEPTH_LEVEL"]) . $section["NAME"] . '</option>';
+		unset($section);
 	}
 	$result .= '<select name="' . $name . '[]" size="' . ($property_fields["MULTIPLE"] == "Y" ? "5" : "1") . '" ' . ($property_fields["MULTIPLE"] == "Y" ? "multiple" : "") . '>';
 	$result .= '<option value=""' . (!$bWas ? ' selected' : '') . '>' . GetMessage("SPS_A_PROP_NOT_SET") . '</option>';
@@ -134,14 +149,12 @@ function getImageField($property_value_id,$property_value)
 	return $res;
 }
 
-
 if (!empty($arResult['OPEN_SECTION_MODE']))
 {
 	echo renderTree($arResult['SECTIONS'],$arResult['LEVEL'],$arResult['TABLE_ID']);
 }
 else
 {
-
 	$arProps = $arResult['PROPS'];
 	$arSKUProps = $arResult['SKU_PROPS'];
 	$arFilter = $arResult['FILTER'];
@@ -153,7 +166,7 @@ else
 
 	// START TEMPLATE
 
-	$lAdmin = new CAdminList($arResult['TABLE_ID'], new CAdminSorting($arResult['TABLE_ID'], "ID", "asc"));
+	$lAdmin = new CAdminList($arResult['TABLE_ID'], new CAdminSorting($arResult['TABLE_ID'], "ID", "ASC"));
 	$lAdmin->InitFilter($arResult['FILTER_FIELDS']);
 
 	// fix
@@ -195,16 +208,27 @@ else
 
 		$row =& $lAdmin->AddRow($arItems["ID"], $arItems);
 
-		$row->AddField("ACTIVE", $arItems["ACTIVE"] == 'Y' ? GetMEssage('SPS_PRODUCT_ACTIVE') : GetMEssage('SPS_PRODUCT_NO_ACTIVE'));
+		$row->AddField("ACTIVE", $arItems["ACTIVE"] == 'Y' ? GetMessage('SPS_PRODUCT_ACTIVE') : GetMessage('SPS_PRODUCT_NO_ACTIVE'));
 		$row->AddViewField("PREVIEW_PICTURE", getImageField('NO_FIELDS[' . $arItems['ID'] . '][PREVIEW_PICTURE]', $arItems['PREVIEW_PICTURE']));
 		$row->AddViewField("DETAIL_PICTURE", getImageField('NO_FIELDS[' . $arItems['ID'] . '][DETAIL_PICTURE]', $arItems['DETAIL_PICTURE']));
 		$arActions = array();
-		$icon = $arCatalogProduct['TYPE'] == 2 ? 'f2' : 'f1';
+		$icon = $arCatalogProduct['TYPE'] == CCatalogProduct::TYPE_SET ? 'f2' : 'f1';
 
 		if (!empty($arItems['SKU_ITEMS']) && !empty($arItems['SKU_ITEMS']["SKU_ELEMENTS"]))
 		{
 			$icon = 'f3';
 			$arSkuResult = $arItems['SKU_ITEMS'];
+
+			$arParams = array(
+				'id' => $arItems['ID'],
+				'type' => $arCatalogProduct['TYPE'],
+				'name' => $arItems['NAME']
+			);
+			$jsClick = $tableId.'_helper.SelEl('.CUtil::PhpToJSObject($arParams, false, true, true).', this);';
+			if ($arResult['CALLER'] == 'discount')
+			{
+				$row->AddField("ACTION", '<a href="javascript:void()" onclick="'.$jsClick.'">'.GetMessage('SPS_SELECT').'</a>');
+			}
 			$row->AddViewField("EXPAND", '<a class="expand-sku">' . GetMessage('SPS_EXPAND') . '</a><a class="collapse-sku">' . GetMessage('SPS_COLLAPSE') . '</a>');
 
 			$arActions[] = array(
@@ -213,6 +237,15 @@ else
 				"DEFAULT" => "Y",
 				"ACTION" => $tableId . '_helper.fShowSku(' . CUtil::PhpToJSObject($arSkuResult["SKU_ELEMENTS"]) . ', this);'
 			);
+			if ($arResult['CALLER'] == 'discount')
+			{
+				$arActions[] = array(
+					"TEXT" => GetMessage("SPS_SELECT"),
+					"DEFAULT" => "N",
+					"ACTION" => $jsClick
+				);
+			}
+			unset($jsClick, $arParams);
 
 			foreach ($arSkuResult["SKU_ELEMENTS"] as $val)
 			{
@@ -240,10 +273,11 @@ else
 
 				$balance = FloatVal($val["BALANCE"]);
 
-				$arParams = array();
-				$arParams['id'] = $val["ID"];
-				$arParams['type'] = $val["TYPE"];
-				$arParams['name'] = $val['NAME'];
+				$arParams = array(
+					'id' => $val["ID"],
+					'type' => $val["TYPE"],
+					'name' => $val['NAME']
+				);
 
 				$active = GetMEssage('SPS_PRODUCT_ACTIVE');
 				$arSkuActions[] = array(
@@ -258,6 +292,10 @@ else
 				$rowSku->AddActions($arSkuActions);
 				$rowSku->AddField("BALANCE", $balance);
 				$rowSku->AddField("ACTIVE", $active);
+
+				$rowSku->AddField("QUANTITY", '<input type="text" id="'.$tableId.'_qty_'.$val["ID"].'" value="1" size="3" />');
+				$rowSku->AddField("ACTION", '<a class="select-sku">' . GetMessage('SPS_SELECT') . '</a>');
+
 				addPropsCell($rowSku, $arSelectedProps, $val);
 			}
 		}
@@ -286,6 +324,9 @@ else
 					"DEFAULT" => "Y",
 					"ACTION" => $tableId . '_helper.SelEl(' . CUtil::PhpToJSObject($arParams) . ', this);'
 				);
+
+				$row->AddField("QUANTITY", '<input type="text" id="'.$tableId.'_qty_'.$arItems["ID"].'" value="1" size="3" />');
+				$row->AddField("ACTION", '<a class="select-sku">' . GetMessage('SPS_SELECT') . '</a>');
 			}
 			else
 			{
@@ -341,6 +382,12 @@ else
 						this.ondblclick();
 					};
 				}
+
+				var hasActionButton = BX.findChildren(rows[i], {className: 'select-sku'}, true);
+				if (hasActionButton.length > 0)
+				{
+					hasActionButton[0].onclick = rows[i].ondblclick;
+				}
 			}
 		}
 		if (typeof <?=$tableId?>_helper != 'undefined')
@@ -362,7 +409,7 @@ else
 	?>
 	<!-- START HTML -->
 	<? if (!$arResult['RELOAD']): ?>
-	<div id="<?= $tableId ?>_reload_container">
+	<div id="<?= $tableId ?>_reload_container" class="catalog-product-search-dialog">
 		<? if ($arResult['IS_EXTERNALCONTEXT']):
 			$GLOBALS['APPLICATION']->SetAdditionalCSS('/bitrix/panel/main/admin.css');
 		endif;

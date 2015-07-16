@@ -25,7 +25,7 @@ class CAllPerfomanceTable
 			if (array_key_exists($strColumn, $arFields))
 			{
 				$arSelect[] = $strColumn;
-				if ($arFields[$strColumn] == "datetime")
+				if ($arFields[$strColumn] == "datetime" || $arFields[$strColumn] == "date")
 					$arQueryOrder[$strColumn] = $this->escapeColumn("TMP_".$strColumn)." ".$strDirection;
 				else
 					$arQueryOrder[$strColumn] = $this->escapeColumn($strColumn)." ".$strDirection;
@@ -39,14 +39,14 @@ class CAllPerfomanceTable
 			{
 				if ($arFields[$strColumn] == "datetime" || $arFields[$strColumn] == "date")
 				{
-					$arQuerySelect["TMP_".$strColumn] = "t.".$strColumn." TMP_".$strColumn;
-					$arQuerySelect[$strColumn] = $DB->DateToCharFunction("t.".$strColumn, "SHORT")." ".$strColumn;
-					$arQuerySelect["FULL_".$strColumn] = $DB->DateToCharFunction("t.".$strColumn, "FULL")." FULL_".$strColumn;
-					$arQuerySelect["SHORT_".$strColumn] = $DB->DateToCharFunction("t.".$strColumn, "SHORT")." SHORT_".$strColumn;
+					$arQuerySelect["TMP_".$strColumn] = "t.".$this->escapeColumn($strColumn)." TMP_".$strColumn;
+					$arQuerySelect[$strColumn] = $DB->DateToCharFunction("t.".$this->escapeColumn($strColumn), "SHORT")." ".$strColumn;
+					$arQuerySelect["FULL_".$strColumn] = $DB->DateToCharFunction("t.".$this->escapeColumn($strColumn), "FULL")." FULL_".$strColumn;
+					$arQuerySelect["SHORT_".$strColumn] = $DB->DateToCharFunction("t.".$this->escapeColumn($strColumn), "SHORT")." SHORT_".$strColumn;
 				}
 				else
 				{
-					$arQuerySelect[$strColumn] = "t.".$strColumn;
+					$arQuerySelect[$strColumn] = "t.".$this->escapeColumn($strColumn);
 				}
 			}
 		}
@@ -55,7 +55,7 @@ class CAllPerfomanceTable
 		{
 			$arFields[$FIELD_NAME] = array(
 				"TABLE_ALIAS" => "t",
-				"FIELD_NAME" => $FIELD_NAME,
+				"FIELD_NAME" => $this->escapeColumn($FIELD_NAME),
 				"FIELD_TYPE" => $FIELD_TYPE,
 				"JOIN" => false,
 				//"LEFT_JOIN" => "lt",

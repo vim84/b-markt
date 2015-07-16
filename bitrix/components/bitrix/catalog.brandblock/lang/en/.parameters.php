@@ -11,4 +11,5 @@ $MESS["IBLOCK_CB_WIDTH_SMALL"] = "Maximum image width, with description (px)";
 $MESS["IBLOCK_CB_HEIGHT_SMALL"] = "Maximum image height, with description (px)";
 $MESS["IBLOCK_CB_ELEMENT_COUNT"] = "Items per page";
 $MESS["IBLOCK_CB_SINGLE_COMPONENT"] = "Show list";
+$MESS["IBLOCK_CB_SHOW_DEACTIVATED"] = "Show brands for deactivated products";
 ?>

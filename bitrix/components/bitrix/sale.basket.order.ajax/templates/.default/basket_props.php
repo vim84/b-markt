@@ -124,8 +124,19 @@ if (!function_exists('PrintPropsForm'))
 								"SIZE1" => $arProperties["SIZE1"],
 							),
 							array(
-								"ID" => $arProperties["VALUE"],
+								"ID" => $value,
 								"CODE" => "",
+
+								"SHOW_DEFAULT_LOCATIONS" => "Y",
+
+								"INITIALIZE_BY_GLOBAL_EVENT" => 'sboa-init-loc-selector',
+								"GLOBAL_EVENT_SCOPE" => 'window',
+
+								"JS_CALLBACK" => ($arProperties["IS_LOCATION"] == "Y" || $arProperties["IS_LOCATION4TAX"] == "Y") ? "submitFormProxy()" : "",
+								"DISABLE_KEYBOARD_INPUT" => "Y",
+								"PRECACHE_LAST_LEVEL" => "Y",
+								"PRESELECT_TREE_TRUNK" => "Y",
+								"SUPPRESS_ERRORS" => "Y"
 							),
 							$locationTemplate,
 							true,

@@ -21,9 +21,15 @@
 	background-color: #fe5857;
 }
 
+.feed-add-grat-box.feed-add-grat-medal-heart:hover {color: #ffd4d4;}
+
 .feed-add-grat-box.feed-add-grat-medal-gift {
 	background-position: -74px -8px;
 	background-color: #5cd1df;
+}
+
+.feed-add-grat-box.feed-add-grat-medal-gift:hover {
+	color: #cef1f5;
 }
 
 .feed-add-grat-box.feed-add-grat-medal-cup {
@@ -31,9 +37,17 @@
 	background-color: #ffa800;
 }
 
+.feed-add-grat-box.feed-add-grat-medal-cup:hover {
+	color: #ffe5b2;
+}
+
 .feed-add-grat-box.feed-add-grat-medal-money {
 	background-position: -196px -8px;
 	background-color: #05b5ab;
+}
+
+.feed-add-grat-box.feed-add-grat-medal-money:hover {
+	color: #b4e9e6;
 }
 
 .feed-add-grat-box.feed-add-grat-medal-crown {
@@ -41,9 +55,17 @@
 	background-color: #a7abb0;
 }
 
+.feed-add-grat-box.feed-add-grat-medal-crown:hover {
+	color: #e4e6e7;
+}
+
 .feed-add-grat-box.feed-add-grat-medal-drink {
 	background-position: -318px -8px;
 	background-color: #2fc7f7;
+}
+
+.feed-add-grat-box.feed-add-grat-medal-drink:hover {
+	color: #c0eefd;
 }
 
 .feed-add-grat-box.feed-add-grat-medal-cake {
@@ -51,9 +73,17 @@
 	background-color: #b47153;
 }
 
+.feed-add-grat-box.feed-add-grat-medal-cake:hover {
+	color: #ecdad2;
+}
+
 .feed-add-grat-box.feed-add-grat-medal-thefirst {
 	background-position: -13px -191px;
 	background-color: #ffd200;
+}
+
+.feed-add-grat-box.feed-add-grat-medal-thefirst:hover {
+	color: #fff1b2;
 }
 
 .feed-add-grat-box.feed-add-grat-medal-flag {
@@ -61,9 +91,17 @@
 	background-color: #fb6dba;
 }
 
+.feed-add-grat-box.feed-add-grat-medal-flag:hover {
+	color: #fed3ea;
+}
+
 .feed-add-grat-box.feed-add-grat-medal-star {
 	background-position: -134px -190px;
 	background-color: #29ad49;
+}
+
+.feed-add-grat-box.feed-add-grat-medal-star:hover {
+	color: #bee6c8;
 }
 
 .feed-add-grat-box.feed-add-grat-medal-thumbsup {
@@ -71,9 +109,17 @@
 	background-color: #6e54d1;
 }
 
+.feed-add-grat-box.feed-add-grat-medal-thumbsup:hover {
+	color: #dfd9f5;
+}
+
 .feed-add-grat-box.feed-add-grat-medal-beer {
 	background-position: -257px -191px;
 	background-color: #ae914b;
+}
+
+.feed-add-grat-box.feed-add-grat-medal-beer:hover {
+	color: #e9e1ce;
 }
 
 .feed-add-grat-box.feed-add-grat-medal-flowers {
@@ -81,9 +127,17 @@
 	background-color: #ff7b9d;
 }
 
+.feed-add-grat-box.feed-add-grat-medal-flowers:hover {
+	color: #ffd7e1;
+}
+
 .feed-add-grat-box.feed-add-grat-medal-smile {
 	background-position: -379px -191px;
 	background-color: #bada0b;
+}
+
+.feed-add-grat-box.feed-add-grat-medal-smile:hover {
+	color: #eaf4b5;
 }
 
 .feed-add-grat-medal-other {
@@ -133,15 +187,28 @@
 .feed-add-grat-box {
 	background: url("/bitrix/components/bitrix/socialnetwork.log.ex/templates/.default/images/log/medals-2.png") no-repeat 100px 100px;
 	border-radius: 50%;
+	border: 3px solid #fff;
 	cursor: pointer;
 	display: inline-block;
 	height: 45px;
-	margin: 10px;
+	margin: 7px;
 	vertical-align: top;
 	width: 45px;
 }
 
-.feed-add-grat-medal .feed-add-grat-box {
+.feed-add-grat-box:hover {
+	-webkit-box-shadow: 0 0 0 3px;
+	box-shadow: 0 0 0 3px;
+
+	-webkit-transition: box-shadow 0.25s linear;
+	transition: box-shadow 0.25s linear;
+}
+
+.feed-add-grat-medal .feed-add-grat-box,
+.feed-add-grat-medal .feed-add-grat-box:hover {
+	-webkit-box-shadow: none;
+	box-shadow: none;
+	border: none;
 	margin: 6px 0 5px 0;
 }
 
@@ -294,7 +361,7 @@
 	display: none;
 }
 
-.feed-add-post-form-message-link.feed-add-post-form-link-more, .feed-add-post-form-file-link.feed-add-post-form-link-more, .feed-add-post-form-important-link.feed-add-post-form-link-more, .feed-add-post-form-calendar-link.feed-add-post-form-link-more, .feed-add-post-form-vote-link.feed-add-post-form-link-more, .feed-add-post-form-grat-link.feed-add-post-form-link-more {
+.feed-add-post-form-message-link.feed-add-post-form-link-more, .feed-add-post-form-file-link.feed-add-post-form-link-more, .feed-add-post-form-important-link.feed-add-post-form-link-more, .feed-add-post-form-calendar-link.feed-add-post-form-link-more, .feed-add-post-form-lists-link.feed-add-post-form-link-more, .feed-add-post-form-vote-link.feed-add-post-form-link-more, .feed-add-post-form-grat-link.feed-add-post-form-link-more {
 	padding: 0 14px 0 27px;
 }
 
@@ -309,7 +376,7 @@
 	background-position: -101px -779px;
 }
 
-.feed-add-post-form-message-link-icon, .feed-add-post-form-message-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-file-link-icon, .feed-add-post-form-file-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-polls-link-icon, .feed-add-post-form-vote-link .feed-add-post-form-link-icon, .feed-add-post-form-important-link-icon, .feed-add-post-form-important-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-grat-link-icon, .feed-add-post-form-grat-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-calendar-link-icon, .feed-add-post-form-calendar-link.feed-add-post-form-link-more .feed-add-post-form-link-icon {
+.feed-add-post-form-message-link-icon, .feed-add-post-form-message-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-file-link-icon, .feed-add-post-form-file-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-polls-link-icon, .feed-add-post-form-lists-link .feed-add-post-form-link-icon, .feed-add-post-form-vote-link .feed-add-post-form-link-icon, .feed-add-post-form-important-link-icon, .feed-add-post-form-important-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-grat-link-icon, .feed-add-post-form-grat-link.feed-add-post-form-link-more .feed-add-post-form-link-icon, .feed-add-post-form-calendar-link-icon, .feed-add-post-form-calendar-link.feed-add-post-form-link-more .feed-add-post-form-link-icon {
 	background: url("/bitrix/components/bitrix/socialnetwork.log.ex/templates/.default/images/log/live_feed_sprite_6.png?3") no-repeat 100px 100px;
 	display: inline-block;
 	height: 18px;
@@ -317,6 +384,22 @@
 	position: absolute;
 	top: 2px;
 	width: 18px;
+}
+
+.feed-add-post-form-lists-link-icon
+{
+	background: url("images/lists.png");
+	display: inline-block;
+	height: 16px;
+	left: 0;
+	position: absolute;
+	top: 2px;
+	width: 16px;
+}
+
+.feed-add-post-form-link:hover .feed-add-post-form-lists-link-icon,
+.feed-add-post-form-link-active .feed-add-post-form-lists-link-icon {
+	background: url("images/lists-hover.png");
 }
 
 .feed-add-post-form-message-link-icon {
@@ -346,6 +429,16 @@
 }
 
 .feed-add-post-form-link-active .feed-add-post-form-polls-link-icon, .feed-add-post-form-link-active.feed-add-post-form-vote-link .feed-add-post-form-link-icon, .feed-add-post-form-vote:hover .menu-popup-item-icon {
+	background-position: -34px -728px;
+}
+
+.feed-add-post-form-polls-link-icon, .feed-add-post-form-lists-link.feed-add-post-form-link-more .feed-add-post-form-link-icon {
+	background-position: -75px -701px;
+	left: 5px;
+	top: 1px;
+}
+
+.feed-add-post-form-link-active .feed-add-post-form-polls-link-icon, .feed-add-post-form-link-active.feed-add-post-form-lists-link .feed-add-post-form-link-icon {
 	background-position: -34px -728px;
 }
 
@@ -406,17 +499,40 @@
 	margin-left: 5px;
 }
 
+.feed-add-post-form-lists .menu-popup-item-icon {
+	text-align: center;
+}
+.feed-add-post-form-lists-default-new .menu-popup-item-icon {
+	background: url(images/sprite.png) no-repeat -19px -453px;
+}
+.feed-add-post-form-lists-default-new:hover .menu-popup-item-icon {
+	background: url(images/sprite.png) no-repeat 0px -453px;
+}
+.feed-add-post-form-lists-default-market .menu-popup-item-icon
+{
+	background: url(images/sprite.png) no-repeat -19px -472px;
+}
+/*.feed-add-post-form-lists-default-market:hover .menu-popup-item-icon {*/
+	/*background: url(images/sprite.png) no-repeat 0px -472px;*/
+/*}*/
+.feed-add-post-form-lists-default-settings .menu-popup-item-icon {
+	background: url(images/sprite.png) no-repeat -19px -434px;
+}
+.feed-add-post-form-lists-default-settings:hover .menu-popup-item-icon {
+	background: url(images/sprite.png) no-repeat 0px -434px;
+}
+
 .feed-add-post-form-file .menu-popup-item-icon {
 	background: url("/bitrix/components/bitrix/socialnetwork.log.ex/templates/.default/images/log/live_feed_sprite_6.png?3") no-repeat -35px -751px;
 	margin-left: 5px;
 }
 
-.feed-add-post-form-message .menu-popup-item-text, .feed-add-post-form-file .menu-popup-item-text, .feed-add-post-form-calendar .menu-popup-item-text, .feed-add-post-form-grat .menu-popup-item-text, .feed-add-post-form-vote .menu-popup-item-text, .feed-add-post-form-important .menu-popup-item-text {
+.feed-add-post-form-message .menu-popup-item-text, .feed-add-post-form-file .menu-popup-item-text, .feed-add-post-form-calendar .menu-popup-item-text, .feed-add-post-form-grat .menu-popup-item-text, .feed-add-post-form-lists .menu-popup-item-text, .feed-add-post-form-vote .menu-popup-item-text, .feed-add-post-form-important .menu-popup-item-text {
 	color: #7f8182;
 	font-size: 14px;
 }
 
-.feed-add-post-form-grat:hover .menu-popup-item-text, .feed-add-post-form-vote:hover .menu-popup-item-text, .feed-add-post-form-important:hover .menu-popup-item-text {
+.feed-add-post-form-grat:hover .menu-popup-item-text, .feed-add-post-form-lists:hover .menu-popup-item-text, .feed-add-post-form-vote:hover .menu-popup-item-text, .feed-add-post-form-important:hover .menu-popup-item-text {
 	color: #515a65;
 }
 
@@ -425,6 +541,15 @@
 	height: 3px;
 	position: absolute;
 	right: 0;
+	top: 9px;
+	width: 6px;
+}
+
+.feed-add-post-more-icon-lists {
+	background: url("/bitrix/components/bitrix/socialnetwork.log.ex/templates/.default/images/log/live_feed_sprite_6.png?3") no-repeat -88px -779px;
+	height: 3px;
+	position: absolute;
+	right: -12px;
 	top: 9px;
 	width: 6px;
 }

@@ -10,7 +10,7 @@
 	vertical-align: top;
 }
 
-.crm-feed-filter-btn-split a, 
+.crm-feed-filter-btn-split a,
 .crm-feed-filter-btn-split a:visited,
 .crm-feed-filter-btn-split a:active,
 .crm-feed-filter-btn-split a:link,
@@ -86,7 +86,7 @@
 }
 
 .crm-feed-filter-btn {
-	background: url(images/crm-control-panel-sprite-4.png) no-repeat -15px -1773px, #fbfbfb;
+	background: url(images/crm-control-panel-sprite-4.png) no-repeat -15px -1773px #fbfbfb;
 	background: url(images/crm-control-panel-sprite-4.png) no-repeat -15px -1773px, -webkit-linear-gradient(top, #ffffff, #f8f8f8);
 	background: url(images/crm-control-panel-sprite-4.png) no-repeat -15px -1773px,    -moz-linear-gradient(top, #ffffff, #f8f8f8);
 	background: url(images/crm-control-panel-sprite-4.png) no-repeat -15px -1773px,     -ms-linear-gradient(top, #ffffff, #f8f8f8);

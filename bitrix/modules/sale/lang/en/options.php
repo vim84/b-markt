@@ -154,4 +154,8 @@ $MESS["SALE_LOCATION_WIDGET_APPEARANCE"] = "Location widget type";
 $MESS["BX_SALE_SETTINGS_SECTION_DISCOUNT"] = "Discount settings";
 $MESS["BX_SALE_SETTINGS_OPTION_USE_SALE_DISCOUNT_ONLY"] = "Use shopping cart rules only:";
 $MESS["BX_SALE_SETTINGS_OPTION_PERCENT_FROM_BASE_PRICE"] = "Use full product price to calculate percent based discount/markup";
+$MESS["BX_SALE_SETTINGS_OPTION_PRODUCT_RESERVE_CLEAR_PERIOD"] = "Days to keep reservation:";
+$MESS["BX_SALE_SETTINGS_OPTION_PRODUCT_RESERVE_CONDITION"] = "Reserve items:";
+$MESS["BX_SALE_SETTINGS_SECTION_RESERVATION"] = "Product reservation preferences";
+$MESS["BX_SALE_SETTINGS_SECTION_LOCATIONS"] = "Location settings";
 ?>

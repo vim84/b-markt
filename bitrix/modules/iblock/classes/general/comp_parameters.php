@@ -830,6 +830,10 @@ class CIBlockParameters
 		}
 	}
 
+	/**
+	 * @param bool|array $arTop
+	 * @return array
+	 */
 	public static function GetIBlockTypes($arTop = false)
 	{
 		if(is_array($arTop))

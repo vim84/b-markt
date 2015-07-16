@@ -29,7 +29,7 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/fileman/prolog.php");
 
 $io = CBXVirtualIo::GetInstance();
 
-$path = $APPLICATION->UnJSEscape($_REQUEST['path']);
+$path = $APPLICATION->UnJSEscape(trim($_REQUEST['path']));
 $site = $_REQUEST['site'];
 
 $site = CFileMan::__CheckSite($site);
@@ -470,7 +470,7 @@ if($logical=='Y')
 {
 	$arHeaders = array(
 		array("id"=>"LOGIC_NAME", "content"=>GetMessage("FILEMAN_FILE_NAME"), "default"=>true),
-		array("id"=>"NAME", "content"=>GetMessage("FILEMAN_REAL_FILE_NAME"), "sort"=>"name"),
+		array("id"=>"NAME", "content"=>GetMessage("FILEMAN_REAL_FILE_NAME"), "sort"=>"name_nat"),
 		array("id"=>"SIZE","content"=>GetMessage("FILEMAN_ADMIN_FILE_SIZE"), "sort"=>"size", "default"=>true),
 		array("id"=>"DATE", "content"=>GetMessage('FILEMAN_ADMIN_FILE_TIMESTAMP'), "sort"=>"timestamp", "default"=>true),
 		array("id"=>"TYPE", "content"=>GetMessage('FILEMAN_ADMIN_FILE_TYPE'), "sort"=>"", "default"=>true)
@@ -479,7 +479,7 @@ if($logical=='Y')
 else
 {
 	$arHeaders = array(
-		array("id"=>"NAME", "content"=>GetMessage("FILEMAN_FILE_NAME"), "sort"=>"name", "default"=>true),
+		array("id"=>"NAME", "content"=>GetMessage("FILEMAN_FILE_NAME"), "sort"=>"name_nat", "default"=>true),
 		array("id"=>"SIZE","content"=>GetMessage("FILEMAN_ADMIN_FILE_SIZE"), "sort"=>"size", "default"=>true),
 		array("id"=>"DATE", "content"=>GetMessage('FILEMAN_ADMIN_FILE_TIMESTAMP'), "sort"=>"timestamp", "default"=>true),
 		array("id"=>"TYPE", "content"=>GetMessage('FILEMAN_ADMIN_FILE_TYPE'), "sort"=>"", "default"=>true)
@@ -500,6 +500,29 @@ $arVisibleColumns = $lAdmin->GetVisibleHeaderColumns();
 if(!$bSearch && strlen($path) > 0 && ($logical != "Y" || rtrim($arSite["DIR"], "/") != rtrim($arParsedPath["FULL"], "/")))
 {
 	$row =& $lAdmin->AddRow(".", array("NAME" => GetMessage("FILEMAN_UP")));
+
+	$dbSitesList = CSite::GetList($b = "lendir", $o = "desc");
+	while ($arSite = $dbSitesList->GetNext())
+	{
+		if ($arSite['DOC_ROOT'] == CSite::GetSiteDocRoot($site) || $arSite['DOC_ROOT'] == '')
+		{
+			$resSites[] = array(
+				'ID' => $arSite['ID'],
+				'DIR' => $arSite['DIR'],
+				'DOC_ROOT' => $arSite['DOC_ROOT']
+			);
+		}
+	}
+	$cnt_resSites = count($resSites);
+	for($i = 0; $i < $cnt_resSites; $i++)
+	{
+		$dir = trim($resSites[$i]["DIR"], "/");
+		if (substr(trim($arParsedPath["PREV"], "/"), 0, strlen($dir)) == $dir)
+		{
+			$site = $resSites[$i]["ID"];
+			break;
+		}
+	}
 
 	if($logical == "Y")
 		$showField = "<a href=\"javascript:".$sTableID.".GetAdminList('fileman_admin.php?".$addUrl_s."&site=".$site."&path=".urlencode(urlencode($arParsedPath["PREV"]))."&show_perms_for=".IntVal($show_perms_for)."', GALCallBack);\"><span class=\"adm-submenu-item-link-icon fileman_icon_folder_up\" alt=\"".GetMessage("FILEMAN_UP")."\"></span>&nbsp;<a href=\"javascript:".$sTableID.".GetAdminList('fileman_admin.php?".$addUrl_s."&site=".$site."&path=".urlencode(urlencode($arParsedPath["PREV"]))."&show_perms_for=".IntVal($show_perms_for)."', GALCallBack);\">..</a>";
@@ -533,12 +556,22 @@ if(!$bSearch && strlen($path) > 0 && ($logical != "Y" || rtrim($arSite["DIR"], "
 while($Elem = $db_DirContent->NavNext(true, "f_"))
 {
 	$arPath = Array($site, $Elem['ABS_PATH']);
-	$fpath = $bSearch ? $Elem['ABS_PATH'] : $path."/".$Elem["NAME"];
+	$fpath = $bSearch ? $Elem['ABS_PATH'] : ($path == "/" ? "" : $path)."/".$Elem["NAME"];
 	$fpathUrl = urlencode($fpath);
+	for($i = 0; $i < $cnt_resSites; $i++)
+	{
+		$dir = trim($resSites[$i]["DIR"], "/");
+		if (substr(trim($fpath, "/"), 0, strlen($dir)) == $dir)
+		{
+			$site = $resSites[$i]["ID"];
+			break;
+		}
+	}
 	//$fname = $documentRoot.$path."/".$Elem["NAME"];
 	$fname = $documentRoot.$fpath;
 	$fnameConverted = CBXVirtualIoFileSystem::ConvertCharset($fname); //http://www.jabber.bx/view.php?id=26893
-
+	$bIsDir = $io->DirectoryExists($fname);
+	$arrIsDir[$fpath] = $bIsDir;
 	if(!file_exists($fnameConverted))
 	{
 		$lAdmin->AddGroupError(GetMessage("FILEMAN_ADMIN_FLIST_ERROR"));
@@ -813,7 +846,7 @@ while($Elem = $db_DirContent->NavNext(true, "f_"))
 			$arActions[] = array(
 				"ICON" => "pack",
 				"TEXT" => GetMessage("FILEMAN_ADMIN_ARC_PACK"),
-				"ACTION" => "window.PackUnpackRun(['".CUtil::JSEscape($fpath)."'], true); return false;"
+				"ACTION" => "window.PackUnpackRun([{'path' : '".CUtil::JSEscape($fpath)."', 'isDir' : '".$arrIsDir[$fpath]."'}], true); return false;"
 			);
 
 			$is_archive = CBXArchive::IsArchive($fpath);
@@ -833,7 +866,7 @@ while($Elem = $db_DirContent->NavNext(true, "f_"))
 			$arActions[] = array(
 				"ICON" => "rename",
 				"TEXT" => GetMessage("FILEMAN_RENAME_SAVE"),
-				"ACTION" => 'setCheckbox(\''.addslashes($f_NAME).'\'); if('.$lAdmin->table_id.'.IsActionEnabled(\'edit\')){document.forms[\'form_'.$lAdmin->table_id.'\'].elements[\'action_button\'].value=\'edit\'; '.$lAdmin->ActionPost().'}'
+				"ACTION" => 'setCheckbox(\''.addslashes($f_NAME).'\'); if('.$lAdmin->table_id.'.IsActionEnabled(\'edit\')){document.forms[\'form_'.$lAdmin->table_id.'\'].elements[\'action_button\'].value=\'edit\'; '.$lAdmin->ActionPost().'}else{document.location.href=\'fileman_rename.php?'.$addUrl.'&path='.urlencode($path).'&site='.$site.'&files[]='.CFileman::GetFileName($arPath[1]).'\'}'
 			);
 		}
 
@@ -843,7 +876,7 @@ while($Elem = $db_DirContent->NavNext(true, "f_"))
 			$arActions[] = array(
 				"ICON" => "copy",
 				"TEXT" => GetMessage("FILEMAN_ADM_COPY"),
-				"ACTION" => "window.CopyMoveRun(['".CUtil::JSEscape($fpath)."'], true); return false;"
+				"ACTION" => "window.CopyMoveRun([{'path' : '".CUtil::JSEscape($fpath)."', 'isDir' : '".$arrIsDir[$fpath]."'}], true); return false;"
 			);
 		}
 
@@ -855,7 +888,7 @@ while($Elem = $db_DirContent->NavNext(true, "f_"))
 				$arActions[] = array(
 					"ICON" => "move",
 					"TEXT" => GetMessage("FILEMAN_ADM_MOVE"),
-					"ACTION" => "window.CopyMoveRun(['".CUtil::JSEscape($fpath)."'], false); return false;"
+					"ACTION" => "window.CopyMoveRun([{'path' : '".CUtil::JSEscape($fpath)."', 'isDir' : '".$arrIsDir[$fpath]."'}], false); return false;"
 				);
 			}
 
@@ -937,13 +970,13 @@ if($USER->CanDoFileOperation('fm_create_new_'.$type,$arPath))
 {
 	//$arGrActionAr["copy"] = GetMessage("FILEMAN_ADM_COPY");
 	$arGrActionAr["copy"] = array(
-		"action" => "setCopyMove('".Cutil::JSEscape($site)."', '".Cutil::JSEscape($path)."', true)",
+		"action" => "setCopyMove('".Cutil::JSEscape($site)."', '".Cutil::JSEscape($path)."', true, ".CUtil::PhpToJSObject($arrIsDir).")",
 		"value" => "copy",
 		"name" => GetMessage("FILEMAN_ADM_COPY")
 	);
 
 	$arGrActionAr["pack"] = array(
-		"action" => "setPackUnpack('".Cutil::JSEscape($site)."', '".Cutil::JSEscape($path)."', true)",
+		"action" => "setPackUnpack('".Cutil::JSEscape($site)."', '".Cutil::JSEscape($path)."', true, ".CUtil::PhpToJSObject($arrIsDir).")",
 		"value" => "pack",
 		"name" => GetMessage("FILEMAN_ADMIN_ARC_PACK"),
 	);
@@ -953,7 +986,7 @@ if($USER->CanDoFileOperation('fm_create_new_'.$type, $arPath) && $USER->CanDoFil
 {
 	//$arGrActionAr["move"] = GetMessage("FILEMAN_ADM_MOVE");
 	$arGrActionAr["move"] = array(
-		"action" => "setCopyMove('".Cutil::JSEscape($site)."', '".Cutil::JSEscape($path)."', false)",
+		"action" => "setCopyMove('".Cutil::JSEscape($site)."', '".Cutil::JSEscape($path)."', false, ".CUtil::PhpToJSObject($arrIsDir).")",
 		"value" => "move",
 		"name" => GetMessage("FILEMAN_ADM_MOVE")
 	);
@@ -1224,8 +1257,8 @@ CFilemanUtils::InitScript(array(
 	'initSearch' => true,
 	'initCopy' => true,
 	'initPack' => true,
-	'viewFilePath' => "fileman_file_view.php?path=#PATH#&site=".$site."&".$addUrl,
-	'viewFolderPath' => "fileman_admin.php?path=#PATH#&site=".$site."&".$addUrl,
+	'viewMsFilePath' => "fileman_file_view.php?path=#PATH#&".$addUrl."&site=",
+	'viewMsFolderPath' => "fileman_admin.php?path=#PATH#&".$addUrl."&site=",
 	'site' => $site,
 	'arCurValues' => array()
 ));
@@ -1306,7 +1339,7 @@ function setAccess(site, path, bServerPermission)
 	window.location = (bServerPermission ? "fileman_server_access.php" : "fileman_access.php") + "?<?= $addUrl?>&site=" + BX.util.urlencode(site) + "&path=" + BX.util.urlencode(path) + "&" + par + "<?= ($bSearch ? "&search=Y&ssess=".$searchSess : "")?>";
 }
 
-function setCopyMove(site, path, bCopy)
+function setCopyMove(site, path, bCopy, isDir)
 {
 
 	var
@@ -1323,12 +1356,14 @@ function setCopyMove(site, path, bCopy)
 			if (oForm.elements[i].tagName.toUpperCase() == "INPUT"
 				&& oForm.elements[i].type.toUpperCase() == "CHECKBOX"
 				&& oForm.elements[i].name.toUpperCase() == "ID[]"
-				&& oForm.elements[i].checked == true)
+				&& oForm.elements[i].checked == true
+				&& oForm.elements[i].value !== '.')
 			{
 				<?if ($bSearch):?>
-					arFiles.push(oForm.elements[i].value);
+					arFiles.push({'path' : oForm.elements[i].value, 'isDir' : isDir[oForm.elements[i].value]});
 				<?else:?>
-					arFiles.push((path == '/' ? '' : path) + '/' + oForm.elements[i].value);
+					var pathF = (path == '/' ? '' : path) + '/' + oForm.elements[i].value;
+					arFiles.push({'path' : pathF, 'isDir' : isDir[pathF]});
 				<?endif;?>
 			}
 		}
@@ -1337,7 +1372,7 @@ function setCopyMove(site, path, bCopy)
 	{
 		<?if ($bSearch): // only for action_target and search results mode
 			for($i = 0, $l = count($searchRes); $i < $l; $i++):?>
-				arFiles.push('<?= CUtil::JSEscape($searchRes[$i]['path'])?>');
+				arFiles.push({'path' : '<?= CUtil::JSEscape($searchRes[$i]['path'])?>', 'isDir' : '<?= CUtil::JSEscape($searchRes[$i]['b_dir'])?>'});
 			<?endfor;
 		endif;?>
 	}
@@ -1345,7 +1380,7 @@ function setCopyMove(site, path, bCopy)
 	window.CopyMoveRun(arFiles, bCopy);
 }
 
-function setPackUnpack(site, path, bPack)
+function setPackUnpack(site, path, bPack, isDir)
 {
 	var
 		arFiles = [],
@@ -1361,12 +1396,14 @@ function setPackUnpack(site, path, bPack)
 			if (oForm.elements[i].tagName.toUpperCase() == "INPUT"
 				&& oForm.elements[i].type.toUpperCase() == "CHECKBOX"
 				&& oForm.elements[i].name.toUpperCase() == "ID[]"
-				&& oForm.elements[i].checked == true)
+				&& oForm.elements[i].checked == true
+				&& oForm.elements[i].value !== '.')
 			{
 				<?if ($bSearch):?>
-					arFiles.push(oForm.elements[i].value);
+					arFiles.push({'path' : oForm.elements[i].value, 'isDir' : isDir[oForm.elements[i].value]});
 				<?else:?>
-					arFiles.push((path == '/' ? '' : path) + '/' + oForm.elements[i].value);
+					var pathF = (path == '/' ? '' : path) + '/' + oForm.elements[i].value;
+					arFiles.push({'path' : pathF, 'isDir' : isDir[pathF]});
 				<?endif;?>
 			}
 		}
@@ -1375,10 +1412,11 @@ function setPackUnpack(site, path, bPack)
 	{
 		<?if ($bSearch): // only for action_target and search results mode
 			for($i = 0, $l = count($searchRes); $i < $l; $i++):?>
-				arFiles.push('<?= CUtil::JSEscape($searchRes[$i]['path'])?>');
+				arFiles.push({'path' : '<?= CUtil::JSEscape($searchRes[$i]['path'])?>', 'isDir' : '<?= CUtil::JSEscape($searchRes[$i]['b_dir'])?>'});
 			<?endfor;
-		endif;
-		?>
+		else:?>
+				arFiles.push('action_target');
+		<?endif;?>
 	}
 
 	window.PackUnpackRun(arFiles, bPack);
@@ -1386,26 +1424,20 @@ function setPackUnpack(site, path, bPack)
 
 function setCheckbox(name)
 {
-	var listTable = BX("<?= $lAdmin->table_id;?>");
-	for (var row=0; row<listTable.rows.length; row++)
+	var el = document.forms['form_<?= $sTableID ?>'].elements;
+	for (var i=0; i<el.length; i++)
 	{
-		var oTR = listTable.rows[row];
-		var oInputTD = oTR.cells[0];
-		var oInput = oInputTD.firstChild;
-
-		if (!oInput)
-			continue;
-
-		if (oInput.value == name)
+		if (el[i].value == name)
 		{
-			//oInput.checked = true;
-			BX.fireEvent(oInput, 'click');
-
-			if(oInput.onclick)
-				oInput.onclick.apply(oInput);
+			if(!el[i].checked)
+			{
+				BX.fireEvent(el[i], 'click');
+				if(el[i].onclick)
+					el[i].onclick.apply(el[i]);
+			}
 		}
 		else
-			oInput.checked = false;
+			el[i].checked = false;
 	}
 }
 

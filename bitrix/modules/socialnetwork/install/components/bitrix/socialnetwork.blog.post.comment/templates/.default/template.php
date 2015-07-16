@@ -29,13 +29,24 @@ die();
 }
 
 $rights = "N";
-if (CSocNetUser::IsCurrentUserModuleAdmin() ||
-	$APPLICATION->GetGroupRight("blog") >= "W")
+if (
+	CSocNetUser::IsCurrentUserModuleAdmin() 
+	||$APPLICATION->GetGroupRight("blog") >= "W"
+)
+{
 	$rights = "ALL";
-else if (IsModuleInstalled("intranet") && $USER->IsAuthorized())
+}
+else if (
+	IsModuleInstalled("intranet") 
+	&& $USER->IsAuthorized()
+)
+{
 	$rights = "OWN";
+}
 else if (!IsModuleInstalled("intranet"))
+{
 	$rights = ($arResult["Perm"] < BLOG_PERMS_FULL ? "OWNLAST" : "ALL");
+}
 
 $arResult["OUTPUT_LIST"] = $APPLICATION->IncludeComponent(
 	"bitrix:main.post.list",
@@ -70,7 +81,8 @@ $arResult["OUTPUT_LIST"] = $APPLICATION->IncludeComponent(
 		"PATH_TO_USER" => $arParams["PATH_TO_USER"],
 		"AVATAR_SIZE" => $arParams["AVATAR_SIZE_COMMENT"],
 		"NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"],
-		"SHOW_LOGIN" => $arParams['SHOW_LOGIN']
+		"SHOW_LOGIN" => $arParams['SHOW_LOGIN'],
+		"LAZYLOAD" => $arParams["LAZYLOAD"]
 	),
 	$this->__component
 );
@@ -85,7 +97,7 @@ if ($_REQUEST["AJAX_POST"] == "Y" && $arParams["ENTITY_XML_ID"] == $_REQUEST["EN
 		?><a name="comments"></a><?
 		?><?=$arResult["OUTPUT_LIST"]["HTML"]?><?
 	?></div><?
-?><script type="application/javascript">
+?><script>
 	BX.ready(function() {
 		BX.bind(BX("blg-post-img-<?=$arResult["Post"]["ID"]?>"), "mouseup", function(e){ checkForQuote(e, this, '<?=$arParams["ENTITY_XML_ID"]?>', 'bp_<?=$arResult["Post"]["ID"]?>')});
 		BX.addCustomEvent(window, 'OnUCAfterRecordAdd', function(ENTITY_XML_ID, response) {

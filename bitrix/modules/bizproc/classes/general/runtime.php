@@ -163,7 +163,7 @@ class CBPRuntime
 		foreach(GetModuleEvents("bizproc", "OnCreateWorkflow", true)  as $arEvent)
 			ExecuteModuleEventEx($arEvent, array($workflowTemplateId, $documentId, &$workflowParameters));
 
-		$workflow->Initialize($rootActivity, $arDocumentId, $workflowParameters, $workflowVariablesTypes, $workflowParametersTypes);
+		$workflow->Initialize($rootActivity, $arDocumentId, $workflowParameters, $workflowVariablesTypes, $workflowParametersTypes, $workflowTemplateId);
 
 		$starterUserId = 0;
 		if (array_key_exists("TargetUser", $workflowParameters))

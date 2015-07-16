@@ -2,12 +2,15 @@
 /** @global CDatabase $DB */
 /** @global CUser $USER */
 /** @global CMain $APPLICATION */
+use Bitrix\Main;
+use Bitrix\Catalog;
+
 define('NO_AGENT_CHECK', true);
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/prolog.php");
 if (!($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_discount')))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
-CModule::IncludeModule("catalog");
+Main\Loader::includeModule('catalog');
 $bReadOnly = !$USER->CanDoOperation('catalog_discount');
 
 if ($ex = $APPLICATION->GetException())
@@ -53,9 +56,6 @@ if (!$boolDiscount)
 	die();
 }
 
-if (!empty($return_url) && strtolower(substr($return_url, strlen($APPLICATION->GetCurPage())))==strtolower($APPLICATION->GetCurPage()))
-	$return_url = "";
-
 $boolMulti = (isset($_REQUEST['MULTI']) && 'Y' == $_REQUEST['MULTI']);
 
 if (!$boolMulti)
@@ -90,7 +90,7 @@ $bVarsFromForm = false;
 
 $ID = intval($ID);
 
-$arTypeList = CCatalogDiscountCoupon::GetCoupontTypes(true);
+$arTypeList = Catalog\DiscountCouponTable::getCouponTypes(true);
 
 if (!$bReadOnly && $_SERVER['REQUEST_METHOD']=="POST" && !empty($_POST['Update']) && check_bitrix_sessid())
 {
@@ -233,7 +233,7 @@ if (!$boolMulti)
 	$arDefaultValues = array(
 		'DISCOUNT_ID' => $intDiscountID,
 		'ACTIVE' => 'Y',
-		'ONE_TIME' => CCatalogDiscountCoupon::TYPE_ONE_TIME,
+		'ONE_TIME' => Catalog\DiscountCouponTable::TYPE_ONE_ROW,
 		'COUPON' => '',
 		'DATE_APPLY' => '',
 		'DESCRIPTION' => '',
@@ -275,12 +275,6 @@ if (!$boolMulti)
 	<input type="hidden" name="lang" value="<?echo LANGUAGE_ID ?>">
 	<input type="hidden" name="ID" value="<?echo $ID ?>">
 	<? echo bitrix_sessid_post()?>
-	<?
-	if (!empty($return_url))
-	{
-		?><input type="hidden" name="return_url" value="<? echo htmlspecialcharsbx($return_url); ?>"><?
-	}
-	?>
 	<input type="hidden" name="DISCOUNT_ID" value="<? echo $intDiscountID; ?>">
 	<input type="hidden" name="MULTI" value="<? echo ($boolMulti ? 'Y' : 'N');?>">
 	<input type="hidden" name="TMP_ID" value="<?echo htmlspecialcharsbx($strSubTMP_ID)?>"><?
@@ -435,12 +429,6 @@ else
 	<input type="hidden" name="lang" value="<? echo LANGUAGE_ID; ?>">
 	<input type="hidden" name="ID" value="<? echo $ID; ?>">
 	<? echo bitrix_sessid_post()?>
-	<?
-	if (!empty($return_url))
-	{
-		?><input type="hidden" name="return_url" value="<? echo htmlspecialcharsbx($return_url); ?>"><?
-	}
-	?>
 	<input type="hidden" name="DISCOUNT_ID" value="<? echo $intDiscountID; ?>">
 	<input type="hidden" name="MULTI" value="<? echo ($boolMulti ? 'Y' : 'N');?>">
 	<input type="hidden" name="TMP_ID" value="<?echo htmlspecialcharsbx($strSubTMP_ID)?>"><?

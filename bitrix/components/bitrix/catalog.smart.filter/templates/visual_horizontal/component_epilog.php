@@ -2,7 +2,7 @@
 /** @var array $templateData */
 /** @var @global CMain $APPLICATION */
 global $APPLICATION;
-CJSCore::Init(array("fx"));
+CJSCore::Init(array('fx', 'popup'));
 
 if (isset($templateData['TEMPLATE_THEME']))
 {

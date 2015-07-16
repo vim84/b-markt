@@ -33,15 +33,18 @@
 .sonet-groups-group-block { display: inline-block; height: 50px; margin-bottom: 20px; padding-left: 3%; overflow: hidden; vertical-align: top; width: 47%; }
 * + html .sonet-groups-group-block { width: 46%; overflow: hidden; position: relative; }
 * html .sonet-groups-group-block { padding-left: 25px; width: 500px; }
-.sonet-groups-group-img { background: url("images/group-list-sprite.png") no-repeat 0 0; border: 1px solid #DBDBDB; display: inline-block; float: left; height: 48px; vertical-align: top; width: 48px; }
-.sonet-groups-group-text { display: block; overflow: hidden; padding-left: 3%; width: 75% }
+.sonet-groups-group-img { background: url("images/group-list-sprite.png") no-repeat 0 0; border: 1px solid #DBDBDB; float: left; height: 48px; vertical-align: top; width: 48px; }
+.sonet-groups-group-text { display: block; overflow: hidden; padding-left: 3%;
+}
 * html .sonet-groups-group-text { padding-left: 7px; width: 345px; zoom: 1; }
 .sonet-groups-group-title { display: block; font-size: 15px; margin-bottom: 4px; zoom: 1; }
 .sonet-groups-group-signature { color: #307F28; font-size: 11px; vertical-align: super; }
 .sonet-groups-group-link,
 .sonet-groups-group-link:hover,
 .sonet-groups-group-link:visited,
-.sonet-groups-group-link:active { color: #000!important; font-size: 15px; text-decoration: underline; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.sonet-groups-group-link:active {display: block; color: #000!important; font-size: 15px; text-decoration: underline; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
+
+}
 .sonet-groups-group-description { display: block; text-overflow: ellipsis; overflow: hidden; font-size: 13px; color: #7F7F7F; white-space: nowrap; zoom: 1; }
 
 .sonet-groups-search { float: right; }

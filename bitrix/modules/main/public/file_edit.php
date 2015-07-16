@@ -71,6 +71,7 @@ if(!$io->FileExists($abs_path) && !$io->DirectoryExists($abs_path))
 		$path = substr($path, 0, $p);
 	}
 }
+$relPath = $io->ExtractPathFromPath($path);
 
 $NEW_ROW_CNT = 1;
 
@@ -198,7 +199,7 @@ if(strlen($strWarning) <= 0)
 				$old_filesrc_tmp = $f->GetContents();
 				$old_res = CFileman::ParseFileContent($old_filesrc_tmp, true);
 				$old_filesrc = $old_res["CONTENT"];
-				$filesrc = CMain::ProcessLPA($filesrc, $old_filesrc);
+				$filesrc = LPA::Process($filesrc, $old_filesrc);
 			}
 
 			$res = CFileman::ParseFileContent($filesrc_tmp, true);
@@ -461,7 +462,8 @@ if (!$bDisableEditor)
 			'bAllowPhp' => $USER->CanDoOperation('edit_php'),
 			"limitPhpAccess" => $limit_php_access,
 			"site" => $site,
-			"templateID" => $_REQUEST['templateID'],
+			"relPath" => $relPath,
+			"templateId" => $_REQUEST['templateID'],
 		));
 
 		?>
@@ -724,13 +726,11 @@ else //if ($bDisableEditor)
 <script type="text/javascript">
 var
 	border,
-	ta,
 	wnd = BX.WindowManager.Get();
 
 function TAResize(data)
 {
-	if (null == ta)
-		ta = BX('<?=CUtil::JSEscape($editor_name)?>');
+	var ta = BX('<?=CUtil::JSEscape($editor_name)?>');
 	if (null == border)
 		border = parseInt(BX.style(ta, 'border-left-width')) + parseInt(BX.style(ta, 'border-right-width'));
 

@@ -2,10 +2,14 @@
 define("STOP_STATISTICS", true);
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 
+/**
+ * @global CUser $USER
+ */
+
 if(!CModule::IncludeModule("bizproc"))
 	die();
 
-if (!$GLOBALS["USER"]->IsAuthorized())
+if (!$USER->IsAuthorized())
 	die();
 
 $fileName = preg_replace("/[^A-Za-z0-9_.-]+/i", "", trim($_REQUEST["f"]));
@@ -16,11 +20,48 @@ $filePathHash = trim($_REQUEST["h"]);
 if (strlen($fileName) <= 0 || $fileId <= 0 || strlen($fileAction) <= 0)
 	die("Error1");
 
+$bpId = !empty($_REQUEST['bp_id']) ? (int)$_REQUEST['bp_id'] : 0;
+$iblockId = !empty($_REQUEST['iblock_id']) ? (int)$_REQUEST['iblock_id'] : 0;
+
+$options = array();
+if ($fileAction == "download")
+{
+	$options["force_download"] = true;
+}
+
+if ($bpId > 0 && $iblockId > 0 && $fileName !== '')
+{
+	$fields = CBPVirtualDocument::GetDocumentFields("type_".$iblockId);
+	if (isset($fields[$fileName]) && $fields[$fileName]["BaseType"] == "file")
+	{
+		list($dbRecordsList, $dbRecordsList1) = CBPVirtualDocument::GetList(
+			array(),
+			array("ID" => $bpId, "IBLOCK_ID" => $iblockId, "CHECK_BP_VIRTUAL_PERMISSIONS" => "read"),
+			false,
+			false,
+			array($fileName)
+		);
+		$row = $dbRecordsList->fetch();
+		if (!$row)
+			die("Error: BP not found");
+		$files = (array)$row[$fileName];
+		$key = array_search($fileId, $files);
+		if ($key !== false)
+		{
+			set_time_limit(0);
+			CFile::ViewByUser($files[$key], $options);
+		}
+		else
+			die("Error: File not found");
+	}
+	die();
+}
+$rawName = trim($_REQUEST["f"]);
 $arImg = CFile::GetFileArray($fileId);
- if (!$arImg)
+if (!$arImg)
 	die("Error2");
 
-if (strlen($arImg["FILE_NAME"]) != strlen($fileName) || $arImg["FILE_NAME"] != $fileName)
+if (strlen($arImg["FILE_NAME"]) != strlen($rawName) || $arImg["FILE_NAME"] != $rawName)
 	die("Error3");
 
 if (strlen($arImg["SUBDIR"]) <= 0)
@@ -32,36 +73,4 @@ if (substr($arImg["SUBDIR"], 0, strlen("bizproc_wf/")) != "bizproc_wf/"
 
 set_time_limit(0);
 
-if ($fileAction == "download")
-{
-	CFile::ViewByUser($arImg, array("force_download" => true));
-}
-else
-{
-	$contentType = strtolower($arImg["CONTENT_TYPE"]);
-
-	if (
-		strpos($contentType, "image/")!==false
-		&& strpos($contentType, "html")===false
-		&& (
-			CFile::GetImageSize($_SERVER["DOCUMENT_ROOT"].$arImg["SRC"])
-			|| ($arFile["WIDTH"] > 0 && $arImg["HEIGHT"] > 0)
-		)
-	)
-		$contentType = $contentType;
-	elseif (strpos($contentType, "excel") !== false)
-		$contentType = "application/vnd.ms-excel";
-	elseif (strpos($contentType, "word") !== false)
-		$contentType = "application/msword";
-	//elseif (strpos($contentType, "flash") !== false)
-	//	$contentType = "application/x-shockwave-flash";
-	//elseif (strpos($contentType, "pdf") !== false)
-	//	$contentType = "application/pdf";
-	//elseif (strpos($contentType, "text") !== false)
-	//	$contentType = "text/xml";
-	else
-		$contentType = "application/octet-stream";
-
-	CFile::ViewByUser($arImg, array("content_type" => $contentType));
-}
-?>
+CFile::ViewByUser($arImg, $options);

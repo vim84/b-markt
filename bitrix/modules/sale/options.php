@@ -1,13 +1,13 @@
 <?
-
-use Bitrix\Main\Config;
-
 $module_id = "sale";
+/** @global CMain $APPLICATION */
 
+use Bitrix\Main;
 use Bitrix\Main\Loader;
 use Bitrix\Main\SiteTable;
 use Bitrix\Main\Config\Option;
 use Bitrix\Sale\SalesZone;
+use Bitrix\Sale;
 
 $SALE_RIGHT = $APPLICATION->GetGroupRight($module_id);
 if ($SALE_RIGHT>="R") :
@@ -15,7 +15,7 @@ if ($SALE_RIGHT>="R") :
 IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/options.php');
 IncludeModuleLangFile(__FILE__);
 
-$APPLICATION->AddHeadScript("/bitrix/js/sale/options.js");
+Main\Page\Asset::getInstance()->addJs('/bitrix/js/sale/options.js');
 $APPLICATION->SetAdditionalCSS("/bitrix/themes/.default/sale.css");
 
 Loader::includeModule('sale');
@@ -33,7 +33,7 @@ function checkAccountNumberValue($templateType, $number_data, $number_prefix)
 
 			if (strlen($number_data) <= 0
 				|| strlen($number_data) > 7
-				|| !ctype_digit($number_data)
+				|| !preg_match('/^[0-9]+$/', $number_data)
 				|| intval($number_data) < intval(COption::GetOptionString("sale", "account_number_data", ""))
 				)
 				$res = false;
@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && strlen($Update) > 0 && $SALE_RIGHT =
 			for ($i = 0; $i < $siteCount; $i++)
 			{
 				COption::SetOptionString($module_id, "location_zip", $_REQUEST["location_zip"][$siteList[$i]["ID"]], false, $siteList[$i]["ID"]);
-				COption::SetOptionInt($module_id, "location", intval($_REQUEST["location"][$siteList[$i]["ID"]]), false, $siteList[$i]["ID"]);
+				COption::SetOptionString($module_id, "location", $_REQUEST["location"][$siteList[$i]["ID"]], false, $siteList[$i]["ID"]);
 			}
 			COption::SetOptionString($module_id, "ADDRESS_different_set", "Y");
 		}
@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && strlen($Update) > 0 && $SALE_RIGHT =
 		{
 			$site_id = trim($_REQUEST["ADDRESS_current_site"]);
 			COption::SetOptionString($module_id, "location_zip", $_REQUEST["location_zip"][$site_id]);
-			COption::SetOptionInt($module_id, "location", intval($_REQUEST["location"][$site_id]));
+			COption::SetOptionString($module_id, "location", $_REQUEST["location"][$site_id]);
 			COption::SetOptionString($module_id, "ADDRESS_different_set", "N");
 		}
 
@@ -544,6 +544,38 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && strlen($Update) > 0 && $SALE_RIGHT =
 			}
 		}
 
+		if (isset($_POST['product_reserve_condition']))
+		{
+			$productReserveCondition = (string)$_POST['product_reserve_condition'];
+			if (in_array($productReserveCondition, Sale\Configuration::getReservationConditionList(false)))
+				Option::set('sale', 'product_reserve_condition', $productReserveCondition, '');
+			unset($productReserveCondition);
+		}
+
+		if (isset($_POST['product_reserve_clear_period']))
+		{
+			$clearPeriod = (int)$_POST['product_reserve_clear_period'];
+			if ($clearPeriod >= 0)
+				Option::set('sale', 'product_reserve_clear_period', $clearPeriod, '');
+			unset($clearPeriod);
+		}
+
+		if (isset($_POST['use_sale_discount_only']))
+		{
+			$useSaleDiscountOnly = (string)$_POST['use_sale_discount_only'];
+			if ($useSaleDiscountOnly == 'Y' || $useSaleDiscountOnly == 'N')
+				Option::set('sale', 'use_sale_discount_only', $useSaleDiscountOnly, '');
+			unset($useSaleDiscountOnly);
+		}
+
+		if (isset($_POST['get_discount_percent_from_base_price']))
+		{
+			$discountPercent = (string)$_REQUEST['get_discount_percent_from_base_price'];
+			if ($discountPercent == 'Y' || $discountPercent == 'N')
+				Option::set('sale', 'get_discount_percent_from_base_price', $discountPercent, '');
+			unset($discountPercent);
+		}
+
 		ob_start();
 		require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/admin/group_rights.php");
 		ob_end_clean();
@@ -565,11 +597,17 @@ elseif ($bWasUpdated)
 	if(strlen($Update)>0 && strlen($_REQUEST["back_url_settings"])>0)
 		LocalRedirect($_REQUEST["back_url_settings"]);
 	else
-		LocalRedirect($APPLICATION->GetCurPage()."?mid=".urlencode($mid)."&lang=".LANGUAGE_ID."&back_url_settings=".urlencode($_REQUEST["back_url_settings"])."&".$tabControl->ActiveTabParam());
+		LocalRedirect($APPLICATION->GetCurPage()."?mid=".$module_id."&lang=".LANGUAGE_ID."&back_url_settings=".urlencode($_REQUEST["back_url_settings"])."&".$tabControl->ActiveTabParam());
 }
 
+$currentSettings = array();
+$currentSettings['use_sale_discount_only'] = Option::get('sale', 'use_sale_discount_only');
+$currentSettings['get_discount_percent_from_base_price'] = Option::get('sale', 'get_discount_percent_from_base_price');
+$currentSettings['product_reserve_condition'] = (string)Option::get('sale', 'product_reserve_condition');
+$currentSettings['product_reserve_clear_period'] = (int)Option::get('sale', 'product_reserve_clear_period');
+
 $tabControl->Begin();
-?><form method="POST" action="<?echo $APPLICATION->GetCurPage()?>?mid=<?=htmlspecialcharsbx($mid)?>&lang=<?=LANGUAGE_ID?>" name="opt_form">
+?><form method="POST" action="<?echo $APPLICATION->GetCurPage()?>?mid=<?=$module_id?>&lang=<?=LANGUAGE_ID?>" name="opt_form">
 <?=bitrix_sessid_post();
 $tabControl->BeginNextTab();
 ?>
@@ -613,8 +651,8 @@ $tabControl->BeginNextTab();
 		</td>
 		<td>
 			<?
-			$val = COption::GetOptionString("sale", "default_currency", "RUB");
-			echo CCurrency::SelectBox("CURRENCY_DEFAULT", $val, "", True, "");
+			$val = COption::GetOptionString("sale", "default_currency");
+			echo CCurrency::SelectBox("CURRENCY_DEFAULT", $val, "", true, "");
 			?>
 		</td>
 	</tr>
@@ -863,8 +901,33 @@ $tabControl->BeginNextTab();
 		</td>
 	</tr>
 	<!-- end of ps success and fail paths -->
+	<tr class="heading">
+		<td colspan="2"><a name="section_reservation"></a><?=GetMessage('BX_SALE_SETTINGS_SECTION_RESERVATION')?></td>
 	</tr>
-
+	<tr>
+		<td width="40%"><? echo GetMessage('BX_SALE_SETTINGS_OPTION_PRODUCT_RESERVE_CONDITION'); ?></td>
+		<td width="60%"><select name="product_reserve_condition">
+			<?
+			foreach (Sale\Configuration::getReservationConditionList(true) as $reserveId => $reserveTitle)
+			{
+				?><option value="<? echo $reserveId; ?>"<?
+					echo ($reserveId == $currentSettings['product_reserve_condition'] ? ' selected' : '')
+				?>><? echo htmlspecialcharsex($reserveTitle); ?></option>
+				<?
+			}
+			unset($reserveId, $reserveTitle);
+			?>
+		</select></td>
+	</tr>
+	<tr>
+		<td width="40%"><? echo GetMessage('BX_SALE_SETTINGS_OPTION_PRODUCT_RESERVE_CLEAR_PERIOD'); ?></td>
+		<td width="60%">
+			<input type="text" name="product_reserve_clear_period" value="<? echo $currentSettings['product_reserve_clear_period']; ?>">
+		</td>
+	</tr>
+	<tr class="heading">
+		<td colspan="2"><?=GetMessage('BX_SALE_SETTINGS_SECTION_LOCATIONS')?></td>
+	</tr>
 	<tr>
 		<td>
 			<?echo GetMessage("SALE_LOCATION_WIDGET_APPEARANCE")?>:
@@ -875,6 +938,24 @@ $tabControl->BeginNextTab();
 				<option <?if(!$isSearch):?>selected<?endif?> value="steps"><?=GetMessage('SALE_LOCATION_SELECTOR_APPEARANCE_STEPS')?></option>
 				<option <?if($isSearch):?>selected<?endif?> value="search"><?=GetMessage('SALE_LOCATION_SELECTOR_APPEARANCE_SEARCH')?></option>
 			</select>
+		</td>
+	</tr>
+
+	<tr class="heading">
+		<td colspan="2"><a name="section_discount"></a><?=GetMessage('BX_SALE_SETTINGS_SECTION_DISCOUNT')?></td>
+	</tr>
+	<tr>
+		<td width="40%"><? echo GetMessage('BX_SALE_SETTINGS_OPTION_USE_SALE_DISCOUNT_ONLY'); ?></td>
+		<td width="60%">
+			<input type="hidden" name="use_sale_discount_only" id="use_sale_discount_only_N" value="N">
+			<input type="checkbox" name="use_sale_discount_only" id="use_sale_discount_only_Y" value="Y"<? echo ($currentSettings['use_sale_discount_only'] == 'Y' ? ' checked' : ''); ?>>
+		</td>
+	</tr>
+	<tr>
+		<td width="40%"><? echo GetMessage('BX_SALE_SETTINGS_OPTION_PERCENT_FROM_BASE_PRICE'); ?></td>
+		<td width="60%">
+			<input type="hidden" name="get_discount_percent_from_base_price" id="get_discount_percent_from_base_price_N" value="N">
+			<input type="checkbox" name="get_discount_percent_from_base_price" id="get_discount_percent_from_base_price_Y" value="Y"<? echo ($currentSettings['get_discount_percent_from_base_price'] == 'Y' ? ' checked' : ''); ?>>
 		</td>
 	</tr>
 
@@ -954,6 +1035,7 @@ $tabControl->BeginNextTab();
 				</tr>
 				<?
 				$val = COption::GetOptionString("sale", "pay_amount", 'a:4:{i:1;a:2:{s:6:"AMOUNT";s:2:"10";s:8:"CURRENCY";s:3:"EUR";}i:2;a:2:{s:6:"AMOUNT";s:2:"20";s:8:"CURRENCY";s:3:"EUR";}i:3;a:2:{s:6:"AMOUNT";s:2:"30";s:8:"CURRENCY";s:3:"EUR";}i:4;a:2:{s:6:"AMOUNT";s:2:"40";s:8:"CURRENCY";s:3:"EUR";}}');
+				$key = 0;
 				if(strlen($val) > 0)
 				{
 					$arAmount = unserialize($val);
@@ -967,20 +1049,20 @@ $tabControl->BeginNextTab();
 						<?
 					}
 				}
-				if(IntVal($key) <= 0)
+				if ((int)$key <= 0)
 					$key = 0;
 				?>
 				<tr>
 					<td><input type="text" name="amount_val[<?=++$key?>]" value=""></td>
-					<td><?=CCurrency::SelectBox("amount_currency[".$key."]", $val["CURRENCY"], "", True, "")?></td>
+					<td><?=CCurrency::SelectBox("amount_currency[".$key."]", $val["CURRENCY"], "", true, "")?></td>
 				</tr>
 				<tr>
 					<td><input type="text" name="amount_val[<?=++$key?>]" value=""></td>
-					<td><?=CCurrency::SelectBox("amount_currency[".$key."]", $val["CURRENCY"], "", True, "")?></td>
+					<td><?=CCurrency::SelectBox("amount_currency[".$key."]", $val["CURRENCY"], "", true, "")?></td>
 				</tr>
 				<tr>
 					<td><input type="text" name="amount_val[<?=++$key?>]" value=""></td>
-					<td><?=CCurrency::SelectBox("amount_currency[".$key."]", $val["CURRENCY"], "", True, "")?></td>
+					<td><?=CCurrency::SelectBox("amount_currency[".$key."]", $val["CURRENCY"], "", true, "")?></td>
 				</tr>
 
 			</table>
@@ -1136,7 +1218,7 @@ function showAccountNumberAdditionalFields(templateID)
 	for (var i = 1; i < 6; i++)
 	{
 		BX("account_template_" + i).style.display = 'none';
-	};
+	}
 
 	if (templateID != 0)
 	{
@@ -1232,7 +1314,7 @@ function allowAutoDelivery(value)
 <?
 for ($i = 0; $i < $siteCount; $i++):
 	$location_zip = COption::GetOptionString('sale', 'location_zip', '', $siteList[$i]["ID"]);
-	$location = intval(COption::GetOptionString('sale', 'location', '', $siteList[$i]["ID"]));
+	$location = COption::GetOptionString('sale', 'location', '', $siteList[$i]["ID"]);
 
 	$sales_zone_countries = SalesZone::getCountriesIds($siteList[$i]["ID"]);
 	$sales_zone_regions = SalesZone::getRegionsIds($siteList[$i]["ID"]);
@@ -1257,10 +1339,10 @@ for ($i = 0; $i < $siteCount; $i++):
 					<?if($lpEnabled):?>
 
 						<?$APPLICATION->IncludeComponent("bitrix:sale.location.selector.".\Bitrix\Sale\Location\Admin\Helper::getWidgetAppearance(), "", array(
-							"ID" => $location,
-							"CODE" => "",
+							"ID" => "",
+							"CODE" => $location,
 							"INPUT_NAME" => "location[".$siteList[$i]["ID"]."]",
-							"PROVIDE_LINK_BY" => "id",
+							"PROVIDE_LINK_BY" => "code",
 							"SHOW_ADMIN_CONTROLS" => 'N',
 							"SELECT_WHEN_SINGLE" => 'N',
 							"FILTER_BY_SITE" => 'N',
@@ -1352,7 +1434,7 @@ for ($i = 0; $i < $siteCount; $i++):
 									<option value=''<?=in_array("", $sales_zone_regions) ? " selected" : ""?>><?=GetMessage("SMO_LOCATION_ALL")?></option>
 									<option value='NULL'<?=in_array("NULL", $sales_zone_regions) ? " selected" : ""?>><?=GetMessage("SMO_LOCATION_NO_REGION")?></option>
 									<?if(!in_array("", $sales_zone_countries)):?>
-										<?$arRegions = \Bitrix\Sale\SalesZone::getRegions($sales_zone_countries, $lang);?>
+										<?$arRegions = \Bitrix\Sale\SalesZone::getRegions($sales_zone_countries, LANGUAGE_ID);?>
 										<?foreach($arRegions as $regionId => $arRegionName):?>
 											<option value="<?=$regionId?>"<?=in_array($regionId, $sales_zone_regions) ? " selected" : ""?>><?= htmlspecialcharsbx($arRegionName)?></option>
 										<?endforeach;?>
@@ -1493,31 +1575,25 @@ endfor;
 						$arCurrentGroups[] = IntVal($arSiteGroup["GROUP_ID"]);
 					}
 
-					if (!isset($LOCAL_USER_GROUPS_CACHE) || !is_array($LOCAL_USER_GROUPS_CACHE))
+					$b = "c_sort";
+					$o = "asc";
+					$userGroupList = array();
+					$dbGroups = CGroup::GetList($b, $o, array("ANONYMOUS" => "N"));
+					while ($arGroup = $dbGroups->Fetch())
 					{
-						$LOCAL_USER_GROUPS_CACHE = array();
+						$arGroup["ID"] = (int)$arGroup["ID"];
 
-						$dbGroups = CGroup::GetList(
-								($b = "c_sort"),
-								($o = "asc"),
-								array("ANONYMOUS" => "N")
-							);
-						while ($arGroup = $dbGroups->Fetch())
-						{
-							$arGroup["ID"] = IntVal($arGroup["ID"]);
+						if ($arGroup["ID"] == 1 || $arGroup["ID"] == 2)
+							continue;
 
-							if ($arGroup["ID"] == 1 || $arGroup["ID"] == 2)
-								continue;
-
-							$LOCAL_USER_GROUPS_CACHE[] = $arGroup;
-						}
+						$userGroupList[] = $arGroup;
 					}
 					?>
 					<select name="SITE_USER_GROUPS_<?= $val["ID"] ?>[]" multiple size="5">
 						<?
-						for ($i = 0, $intCount = count($LOCAL_USER_GROUPS_CACHE); $i < $intCount; $i++)
+						for ($i = 0, $intCount = count($userGroupList); $i < $intCount; $i++)
 						{
-							?><option value="<?= $LOCAL_USER_GROUPS_CACHE[$i]["ID"] ?>"<?if (in_array($LOCAL_USER_GROUPS_CACHE[$i]["ID"], $arCurrentGroups)) echo " selected";?>><?= htmlspecialcharsEx($LOCAL_USER_GROUPS_CACHE[$i]["NAME"]) ?></option><?
+							?><option value="<?= $userGroupList[$i]["ID"] ?>"<?if (in_array($userGroupList[$i]["ID"], $arCurrentGroups)) echo " selected";?>><?= htmlspecialcharsEx($userGroupList[$i]["NAME"]) ?></option><?
 						}
 						?>
 					</select>
@@ -1537,7 +1613,7 @@ endfor;
 function RestoreDefaults()
 {
 	if (confirm('<?echo AddSlashes(GetMessage("MAIN_HINT_RESTORE_DEFAULTS_WARNING"))?>'))
-		window.location = "<?echo $APPLICATION->GetCurPage()?>?RestoreDefaults=Y&lang=<?echo LANGUAGE_ID?>&mid=<?echo urlencode($mid)?>";
+		window.location = "<?echo $APPLICATION->GetCurPage()?>?RestoreDefaults=Y&lang=<?echo LANGUAGE_ID?>&mid=<?echo $module_id?>";
 }
 </script>
 

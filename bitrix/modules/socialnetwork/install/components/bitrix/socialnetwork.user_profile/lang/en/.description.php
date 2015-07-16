@@ -1,5 +1,5 @@
 <?
-$MESS ['SONET_DEFAULT_TEMPLATE_NAME'] = "User Profile";
-$MESS ['SONET_DEFAULT_TEMPLATE_DESCRIPTION'] = "Allows to view and edit the user profile.";
-$MESS ['SONET_NAME'] = "Social Network";
+$MESS["SONET_NAME"] = "Social Network";
+$MESS["SONET_UP_TEMPLATE_NAME"] = "View user profile";
+$MESS["SONET_UP_TEMPLATE_DESCRIPTION"] = "A component to view a user profile";
 ?>

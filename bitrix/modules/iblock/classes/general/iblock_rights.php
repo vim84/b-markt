@@ -1709,7 +1709,7 @@ class CIBlockRightsStorage
 						WHERE
 							BR.GROUP_CODE = '".$DB->ForSQL($GROUP_CODE, 32)."'
 							AND BR.IBLOCK_ID = ".$this->IBLOCK_ID."
-							AND ER.SECTION_ID = BSE.IBLOCK_SECTION_ID
+							AND ER.SECTION_ID in (BSE.IBLOCK_SECTION_ID, 0)
 					)
 			");
 		}

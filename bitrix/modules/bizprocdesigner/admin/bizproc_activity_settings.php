@@ -153,11 +153,6 @@ if($_POST["save"] == "Y" && check_bitrix_sessid())
 	}
 }
 
-//echo htmlspecialcharsbx($_POST['template']);
-//print_r($arWorkflowTemplate);
-//print_r($_POST);
-?>
-<?
 function PHPToHiddens($ob, $name)
 {
 	if(is_array($ob))

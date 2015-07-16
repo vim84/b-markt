@@ -17,15 +17,15 @@ $MESS ['BPT_BT_T_DATE_END'] = "Дата планируемого заверше�
 $MESS ['BPT_BT_T_EXP'] = "Планируемые расходы";
 $MESS ['BPT_BT_T_TICKETS'] = "Копии билетов";
 $MESS ['BPT_BT_SWA'] = "Последовательный бизнес-процесс";
-$MESS ['BPT_BT_SFA1_NAME'] = "Командировка  {=Template:TargetUser_printable}, {=Template:country}-{=Template:city}";
+$MESS ['BPT_BT_SFA1_NAME'] = "Командировка  {=Template:TargetUser_printable}, {=Template:COUNTRY}-{=Template:CITY}";
 $MESS ['BPT_BT_SFA1_TITLE'] = "Сохранение параметров командировки";
 $MESS ['BPT_BT_STA1_STATE_TITLE'] = "Проект";
 $MESS ['BPT_BT_STA1_TITLE'] = "Установить текст статуса";
-$MESS ['BPT_BT_AA1_NAME'] = "Утверждение командировки  {=Template:TargetUser_printable}, {=Template:country} - {=Template:city}";
+$MESS ['BPT_BT_AA1_NAME'] = "Утверждение командировки  {=Template:TargetUser_printable}, {=Template:COUNTRY} - {=Template:CITY}";
 $MESS ['BPT_BT_AA1_DESCR'] = "Необходимо утвердить командировку сотрудника {=Template:TargetUser_printable}
 
-Страна преимущественного пребывания: {=Template:country}
-Город преимущественного пребывания: {=Template:city}
+Страна преимущественного пребывания: {=Template:COUNTRY}
+Город преимущественного пребывания: {=Template:CITY}
 Период командировки: {=Template:date_start} - {=Template:date_end}
 Планируемые расходы: {=Template:expenditures}
 
@@ -38,13 +38,13 @@ $MESS ['BPT_BT_SSTA2_STATE_TITLE'] = "Оформление командиров�
 $MESS ['BPT_BT_SSTA2_TITLE'] = "Установка статуса: оформление";
 $MESS ['BPT_BT_SNMA1_TEXT'] = "Ваша командировка была утверждена начальником";
 $MESS ['BPT_BT_SNMA1_TITLE'] = "Сообщение соц.сети";
-$MESS ['BPT_BT_RA1_NAME'] = "Оформление командировки {=Template:TargetUser_printable}, {=Template:country}-{=Template:city}";
+$MESS ['BPT_BT_RA1_NAME'] = "Оформление командировки {=Template:TargetUser_printable}, {=Template:COUNTRY}-{=Template:CITY}";
 $MESS ['BPT_BT_RA1_DESCR'] = "Необходимо оформить утвержденную начальником командировку.
 
 Сотрудник: {=Template:TargetUser_printable}
 
-Страна преимущественного пребывания: {=Template:country}
-Город преимущественного пребывания: {=Template:city}
+Страна преимущественного пребывания: {=Template:COUNTRY}
+Город преимущественного пребывания: {=Template:CITY}
 Планируемый период командировки: {=Template:date_start} - {=Template:date_end}
 Планируемые расходы: {=Template:expenditures}
 

@@ -23,7 +23,8 @@ if(is_array($arUserFields) && array_key_exists("NAME", $arUserFields) && strlen(
 }
 ?>
 <?$APPLICATION->IncludeComponent("bitrix:search.page", "tags_icons_user", array(
-	"RESTART" => "N",
+	"RESTART" => $arParams["SEARCH_RESTART"],
+	"USE_LANGUAGE_GUESS" => $arParams["SEARCH_USE_LANGUAGE_GUESS"],
 	"CHECK_DATES" => "N",
 	"USE_TITLE_RANK" => "N",
 	"FILTER_NAME" => $arParams["SEARCH_FILTER_NAME"],

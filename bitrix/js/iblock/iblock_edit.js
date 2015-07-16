@@ -981,3 +981,99 @@ JCInheritedPropertiesTemplates.prototype.asciiOnly = function(el)
 		}
 	}
 };
+
+function JCPopupEditor(width, height)
+{
+	this.width = width;
+	this.height = height;
+	this.popup_editor_dialog = null;
+	this.input = null;
+}
+
+JCPopupEditor.prototype.openEditor = function (hiddenId, maxLength)
+{
+	if (!this.popup_editor_dialog)
+	{
+		this.popup_editor_dialog = new BX.CDialog({
+			content: '<div width="100%" id="popup_editor_container"></div>',
+			buttons: this.getButtons(),
+			width: this.width,
+			height: this.height
+		});
+		var popup_editor_container = BX('popup_editor_container');
+		var popup_editor_start   = BX('popup_editor_start');
+		popup_editor_container.parentNode.appendChild(popup_editor_start);
+		popup_editor_container.parentNode.removeChild(popup_editor_container);
+		popup_editor_start.style.display = '';
+		LoadLHE_popup_editor_id();
+	}
+	this.popup_editor_dialog.Show();
+	this.input = BX(hiddenId);
+	popup_editor.SetEditorContent(this.input.value);
+	popup_editor.SetFocus();
+	this.startCharCounter();
+}
+
+JCPopupEditor.prototype.getButtons = function ()
+{
+	var _this = this;
+	var btnOK = new BX.CWindowButton({
+		title: BX.message('JS_CORE_WINDOW_SAVE'),
+		id: 'savebtn',
+		name: 'savebtn',
+		className: BX.browser.IsIE() && BX.browser.IsDoctype() && !BX.browser.IsIE10() ? '' : 'adm-btn-save',
+		action: function()
+		{
+			_this.stopCharCounter();
+			this.parentWindow.Hide();
+			popup_editor.SetView('html');
+			_this.input.value = popup_editor.GetEditorContent();
+			_this.input.onchange();
+		}
+	});
+	var btnClose = new BX.CWindowButton({
+		title: BX.message('JS_CORE_WINDOW_CLOSE'),
+		id: 'closebtn',
+		name: 'closebtn',
+		action: function () {
+			_this.stopCharCounter();
+			//this.parentWindow.Close();
+			this.parentWindow.Hide();
+		}
+	});
+	return [btnOK, btnClose];
+}
+
+JCPopupEditor.prototype.startCharCounter = function()
+{
+	if (!this.charCounterContainer)
+	{
+		this.charCounterContainer = BX.create('SPAN');
+		this.charCounterContainer.style.display = 'inline';
+		this.popup_editor_dialog.PARTS.BUTTONS_CONTAINER.appendChild(this.charCounterContainer);
+	}
+
+	if (!this.charCounterTimer)
+	{
+		this.charCounterTimer = setInterval(BX.delegate(function(){
+			this.updateCharCounter();
+		}, this), 500);
+	}
+};
+
+JCPopupEditor.prototype.updateCharCounter = function()
+{
+	var len = popup_editor.GetEditorContent().length;
+	this.charCounterContainer.innerHTML = len;
+	if (len > 255 && !this.charCounterContainer.style.color)
+		this.charCounterContainer.style.color = 'red';
+	if (len <= 255 && this.charCounterContainer.style.color)
+		this.charCounterContainer.style.color = '';
+};
+
+JCPopupEditor.prototype.stopCharCounter = function()
+{
+	if (this.charCounterTimer)
+		clearInterval(this.charCounterTimer);
+	this.charCounterTimer = null;
+};

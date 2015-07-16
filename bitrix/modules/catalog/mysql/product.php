@@ -27,8 +27,10 @@ class CCatalogProduct extends CAllCatalogProduct
 		$boolFlag = false;
 		$boolCheck = (false == $boolCheck ? false : true);
 
-		$arFields["ID"] = intval($arFields["ID"]);
-		if ($arFields["ID"]<=0)
+		if (empty($arFields['ID']))
+			return false;
+		$arFields['ID'] = (int)$arFields["ID"];
+		if ($arFields['ID'] <= 0)
 			return false;
 
 		if ($boolCheck)
@@ -40,9 +42,9 @@ class CCatalogProduct extends CAllCatalogProduct
 			}
 		}
 
-		if (true == $boolFlag)
+		if ($boolFlag)
 		{
-			return CCatalogProduct::Update($arFields["ID"], $arFields);
+			return CCatalogProduct::Update($arFields['ID'], $arFields);
 		}
 		else
 		{
@@ -135,6 +137,7 @@ class CCatalogProduct extends CAllCatalogProduct
 				unset(self::$arProductCache[$ID]);
 				if (defined('CATALOG_GLOBAL_VARS') && 'Y' == CATALOG_GLOBAL_VARS)
 				{
+					/** @var array $CATALOG_PRODUCT_CACHE */
 					global $CATALOG_PRODUCT_CACHE;
 					$CATALOG_PRODUCT_CACHE = self::$arProductCache;
 				}
@@ -172,6 +175,7 @@ class CCatalogProduct extends CAllCatalogProduct
 			unset(self::$arProductCache[$ID]);
 			if (defined('CATALOG_GLOBAL_VARS') && CATALOG_GLOBAL_VARS == 'Y')
 			{
+				/** @var array $CATALOG_PRODUCT_CACHE */
 				global $CATALOG_PRODUCT_CACHE;
 				$CATALOG_PRODUCT_CACHE = self::$arProductCache;
 			}
@@ -429,12 +433,12 @@ class CCatalogProduct extends CAllCatalogProduct
 			{
 				$i = (int)$row["ID"];
 
-				if (isset($arWhereTmp[$i]) && !empty($arWhereTmp[$i]) && is_array($arWhereTmp[$i]))
+				if (!empty($arWhereTmp[$i]) && is_array($arWhereTmp[$i]))
 				{
 					$sResWhere .= ' AND '.implode(' AND ', $arWhereTmp[$i]);
 				}
 
-				if (isset($arOrderTmp[$i]) && !empty($arOrderTmp[$i]) && is_array($arOrderTmp[$i]))
+				if (!empty($arOrderTmp[$i]) && is_array($arOrderTmp[$i]))
 				{
 					foreach($arOrderTmp[$i] as $k=>$v)
 						$arResOrder[$k] = $v;

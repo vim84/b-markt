@@ -56,4 +56,5 @@ $MESS["MAIL_MBOX_EDT_USER_ID"] = "User:";
 $MESS["MAIL_MBOX_EDT_COMMENT_ASTERISK"] = "No e-mail services configured for the website.";
 $MESS["MAIL_MBOX_SERVER_TYPE_IMAP"] = "External IMAP server";
 $MESS["MAIL_MBOX_SERVER_TYPE_IMAP_DESC"] = "Receive messages from external IMAP server.";
+$MESS["MAIL_MBOX_EDT_SELF_CERT"] = "Allow self-signed certificates";
 ?>

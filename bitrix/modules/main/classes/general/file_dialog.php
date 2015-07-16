@@ -373,7 +373,7 @@ if (window.jsUtils)
 		$arSites = $Params['arSites'];
 		if (count($arSites) > 1) // Site selector
 		{
-			$u = new CAdminPopup("fd_site_list", "fd_site_list", $Params['arSitesPP'], array('zIndex' => 3500, 'dxShadow' => 0));
+			$u = new CAdminPopup("fd_site_list", "fd_site_list", $Params['arSitesPP'], array('zIndex' => 3520, 'dxShadow' => 0));
 			$u->Show();
 		}
 		?>
@@ -923,7 +923,7 @@ arFDPermission['<?=$path_js?>'] = {
 		}
 
 		$arDirs = array(); $arFiles = array();
-		GetDirList(array($site, $path), $arDirs, $arFiles, array(), array("name" => "asc"), "DF", false, true);
+		GetDirList(array($site, $path), $arDirs, $arFiles, array(), array("name_nat" => "asc"), "DF", false, true);
 ?>
 arFDDirs['<?=$path_js?>'] = [];
 arFDFiles['<?=$path_js?>'] = [];

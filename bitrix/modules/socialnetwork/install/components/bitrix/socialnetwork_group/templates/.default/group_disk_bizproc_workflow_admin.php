@@ -51,11 +51,11 @@ $APPLICATION->includeComponent(
 	array('HIDE_ICONS' => 'Y')
 );
 ?>
-<div class="bx-disk-filepage-section">
+<div class="bx-disk-bizproc-section">
 <?
 $APPLICATION->IncludeComponent("bitrix:disk.bizproc.list", ".default", Array(
 		"MODULE_ID"     => \Bitrix\Disk\Driver::INTERNAL_MODULE_ID,
-		"DOCUMENT_ID"   => "STORAGE_".$arResult['VARIABLES']['STORAGE']->getId(),
+		"STORAGE_ID"   => $arResult["VARIABLES"]["STORAGE"]->getId(),
 		"EDIT_URL"      => $arResult["PATH_TO_DISK_BIZPROC_WORKFLOW_EDIT"],
 		"SET_TITLE"     => "Y",
 		"NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"]

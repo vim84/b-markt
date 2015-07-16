@@ -56,7 +56,7 @@ Loc::loadMessages(__FILE__);
 									<select class="adm-loc-filter-select bx-ui-slss-type">
 										<option value="">-- <?=Loc::getMessage('SALE_SLSS_TYPE_NOT_SELECTED')?></option>
 										<?foreach($arResult['TYPES'] as $id => $type):?>
-											<option value="<?=$id?>"><?=$type['NAME']?></option>
+											<option value="<?=$id?>"><?=htmlspecialcharsbx($type['NAME'])?></option>
 										<?endforeach?>
 									</select>
 								</td>
@@ -199,11 +199,11 @@ Loc::loadMessages(__FILE__);
 									<script type="text/html" data-template-id="bx-ui-slss-dropdown-item">
 										<tr class="adm-list-table-row">
 											<td class="adm-list-table-cell adm-list-table-checkbox">
-												<input type="checkbox" class="adm-designed-checkbox" value="{{id}}" id="designed_checkbox_{{random_value}}">
+												<input type="checkbox" class="adm-designed-checkbox" value="{{value}}" id="designed_checkbox_{{random_value}}">
 												<label class="adm-designed-checkbox-label" for="designed_checkbox_{{random_value}}"></label>
 											</td>
 											<td class="adm-list-table-cell">
-												<span class="adm-list-table-link">{{display}}&nbsp;<span class="adm-list-table-loc-type">({{type}})</span>&nbsp;&nbsp;<a href="/bitrix/admin/sale_location_node_edit.php?lang=<?=LANGUAGE_ID?>&id={{id}}" target="_blank" class="adm-list-table-loc-id">id: {{id}}</a></span>
+												<span class="adm-list-table-link">{{display}}&nbsp;<span class="adm-list-table-loc-type">({{type}})</span>&nbsp;&nbsp;<a href="/bitrix/admin/sale_location_node_edit.php?lang=<?=LANGUAGE_ID?>&id={{value}}" target="_blank" class="adm-list-table-loc-id">id: {{value}}</a></span>
 												<span class="adm-list-table-loc-path">{{path}}</span>
 											</td>
 										</tr>
@@ -242,7 +242,9 @@ Loc::loadMessages(__FILE__);
 					<div class="adm-loc-title"><?=Loc::getMessage('SALE_SLSS_SELECTED_LOCATIONS')?></div>
 					<div class="adm-loc-filter">
 						<?=Loc::getMessage('SALE_SLSS_LOCATION_SELECTOR_LOC_TOTAL_SELECTED')?>: <span class="bx-ui-slss-selected-node-counter">0</span><br />
-						<?=Loc::getMessage('SALE_SLSS_LOCATION_SELECTOR_GRP_TOTAL_SELECTED')?>: <span class="bx-ui-slss-selected-group-counter">0</span><br />
+						<?if($arResult['USE_GROUPS']):?>
+							<?=Loc::getMessage('SALE_SLSS_LOCATION_SELECTOR_GRP_TOTAL_SELECTED')?>: <span class="bx-ui-slss-selected-group-counter">0</span><br />
+						<?endif?>
 						<div class="adm-loc-selected-actions">
 							<a href="javascript:void(0)" class="bx-ui-slss-selected-act-clean"><?=Loc::getMessage('SALE_SLSS_LOCATION_SELECTOR_CLEAN_SELECTION')?></a>
 						</div>
@@ -283,11 +285,11 @@ Loc::loadMessages(__FILE__);
 									<script type="text/html" data-template-id="bx-ui-slss-selected-node">
 										<tr class="adm-list-table-row">
 											<td class="adm-list-table-cell adm-list-table-checkbox">
-												<input type="checkbox" class="adm-designed-checkbox" value="{{id}}" id="designed_checkbox_{{random_value}}">
+												<input type="checkbox" class="adm-designed-checkbox" value="{{value}}" id="designed_checkbox_{{random_value}}">
 												<label class="adm-designed-checkbox-label" for="designed_checkbox_{{random_value}}"></label>
 											</td>
 											<td class="adm-list-table-cell">
-												<span class="adm-list-table-link">{{display}}&nbsp;<span class="adm-list-table-loc-type">({{type}})</span>&nbsp;&nbsp;<a href="/bitrix/admin/sale_location_node_edit.php?lang=<?=LANGUAGE_ID?>&id={{id}}" target="_blank" class="adm-list-table-loc-id">id: {{id}}</a></span>
+												<span class="adm-list-table-link">{{display}}&nbsp;<span class="adm-list-table-loc-type">({{type}})</span>&nbsp;&nbsp;<a href="/bitrix/admin/sale_location_node_edit.php?lang=<?=LANGUAGE_ID?>&id={{value}}" target="_blank" class="adm-list-table-loc-id">id: {{value}}</a></span>
 												<span class="adm-list-table-loc-path">{{path}}</span>
 											</td>
 										</tr>
@@ -342,7 +344,7 @@ Loc::loadMessages(__FILE__);
 				window.BX.locationSelectors['<?=$arParams['JS_CONTROL_GLOBAL_ID']?>'] = 
 			<?endif?>
 
-				new BX.systemLocationSelector(<?=CUtil::PhpToJSObject(array(
+				new BX.Sale.component.location.selector.system(<?=CUtil::PhpToJSObject(array(
 
 					'scope' => 'slss-'.intval($arResult['RANDOM_TAG']),
 					'source' => $component->getPath().'/get.php',

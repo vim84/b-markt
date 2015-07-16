@@ -42,13 +42,6 @@ if ($this->StartResultCache())
 	if ('' == $arParams["CURRENCY_BASE"])
 		$arParams["CURRENCY_BASE"] = Currency\CurrencyManager::getBaseCurrency();
 
-	if ('' == $arParams["CURRENCY_BASE"])
-	{
-		$dbCurrency = CCurrency::GetList(($by="SORT"), ($order="ASC"));
-		$arCurrency = $dbCurrency->Fetch();
-		$arParams["CURRENCY_BASE"] = $arCurrency["CURRENCY"];
-	}
-
 	if ('' != $arParams["CURRENCY_BASE"])
 	{
 		if ('' == $arParams["RATE_DAY"])
@@ -130,8 +123,8 @@ if ($this->StartResultCache())
 											);
 
 											$arResult["CURRENCY_CBRF"][] = array(
-												"FROM" => CurrencyFormat($arCurrency["RATE_CNT"], $arCurrency["CURRENCY"]),
-												"BASE" => CurrencyFormat($arCurrency["RATE"], $arParams["CURRENCY_BASE"]),
+												"FROM" => CCurrencyLang::CurrencyFormat($arCurrency["RATE_CNT"], $arCurrency["CURRENCY"], true),
+												"BASE" => CCurrencyLang::CurrencyFormat($arCurrency["RATE"], $arParams["CURRENCY_BASE"], true),
 											);
 										}
 									}
@@ -158,8 +151,8 @@ if ($this->StartResultCache())
 					$arCurrencyList[] = $strCurrencyCode;
 					$rate = CCurrencyRates::ConvertCurrency($arDBCurrencies[$strCurrencyCode], $strCurrencyCode, $arParams["CURRENCY_BASE"], $arParams["RATE_DAY"]);
 					$arResult["CURRENCY"][] = array(
-						'FROM' => CurrencyFormat($arDBCurrencies[$strCurrencyCode], $strCurrencyCode),
-						'BASE' => CurrencyFormat($rate, $arParams["CURRENCY_BASE"]),
+						'FROM' => CCurrencyLang::CurrencyFormat($arDBCurrencies[$strCurrencyCode], $strCurrencyCode, true),
+						'BASE' => CCurrencyLang::CurrencyFormat($rate, $arParams["CURRENCY_BASE"], true),
 					);
 				}
 			}
@@ -187,4 +180,3 @@ if ($this->StartResultCache())
 
 	$this->IncludeComponentTemplate();
 }
-?>

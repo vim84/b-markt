@@ -15,6 +15,8 @@ class Facet
 	protected $skuPropertyId = 0;
 	protected $sectionFilter = array();
 	protected $priceFilter = null;
+	protected $toCurrencyId = 0;
+	protected $convertCurrencyId = array();
 
 	/** @var \Bitrix\Iblock\PropertyIndex\Dictionary */
 	protected $dictionary = null;
@@ -32,6 +34,7 @@ class Facet
 	{
 		$this->iblockId = intval($iblockId);
 		$this->valid = \CIBlock::getArrayByID($this->iblockId, "PROPERTY_INDEX") === "Y";
+
 		if (self::$catalog === null)
 		{
 			self::$catalog = \Bitrix\Main\Loader::includeModule("catalog");
@@ -47,9 +50,11 @@ class Facet
 				$this->valid = $this->valid && \CIBlock::getArrayByID($this->skuIblockId, "PROPERTY_INDEX") === "Y";
 			}
 		}
-		$this->dictionary = new \Bitrix\Iblock\PropertyIndex\Dictionary($this->iblockId);
+
+		$this->dictionary = new Dictionary($this->iblockId);
+		$this->storage = new Storage($this->iblockId);
+
 		$this->valid = $this->valid && $this->dictionary->isExists();
-		$this->storage = new \Bitrix\Iblock\PropertyIndex\Storage($this->iblockId);
 	}
 
 	/**
@@ -60,6 +65,56 @@ class Facet
 	public function isValid()
 	{
 		return $this->valid;
+	}
+
+	/**
+	 * Returns iblock identifier.
+	 *
+	 * @return integer
+	 */
+	public function getIblockId()
+	{
+		return $this->iblockId;
+	}
+
+	/**
+	 * Returns SKU iblock identifier.
+	 *
+	 * @return integer
+	 */
+	public function getSkuIblockId()
+	{
+		return $this->skuIblockId;
+	}
+
+	/**
+	 * Returns SKU property identifier.
+	 *
+	 * @return integer
+	 */
+	public function getSkuPropertyId()
+	{
+		return $this->skuPropertyId;
+	}
+
+	/**
+	 * Returns facet storage object.
+	 *
+	 * @return \Bitrix\Iblock\PropertyIndex\Storage
+	 */
+	public function getStorage()
+	{
+		return $this->storage;
+	}
+
+	/**
+	 * Returns facet dictionary object.
+	 *
+	 * @return \Bitrix\Iblock\PropertyIndex\Dictionary
+	 */
+	public function getDictionary()
+	{
+		return $this->dictionary;
 	}
 
 	/**
@@ -90,6 +145,7 @@ class Facet
 	public function query(array $filter, array $facetTypes = array(), $facetId = 0)
 	{
 		$connection = \Bitrix\Main\Application::getConnection();
+		$sqlHelper = $connection->getSqlHelper();
 
 		$facetFilter = $this->getFacetFilter($facetTypes);
 		if (!$facetFilter)
@@ -164,6 +220,11 @@ class Facet
 						,F.VALUE
 						,MIN(F.VALUE_NUM) MIN_VALUE_NUM
 						,MAX(F.VALUE_NUM) MAX_VALUE_NUM
+						".($connection instanceof \Bitrix\Main\DB\MysqlCommonConnection
+							?",MAX(case when LOCATE('.', F.VALUE_NUM) > 0 then LENGTH(SUBSTRING_INDEX(F.VALUE_NUM, '.', -1)) else 0 end)"
+							:",MAX(".$sqlHelper->getLengthFunction("ABS(F.VALUE_NUM) - FLOOR(ABS(F.VALUE_NUM))")."+1-".$sqlHelper->getLengthFunction("0.1").")"
+						)." VALUE_FRAC_LEN
+						,COUNT(DISTINCT F.ELEMENT_ID) ELEMENT_COUNT
 					FROM
 						".($elementFrom
 								?$elementFrom."
@@ -191,40 +252,35 @@ class Facet
 			}
 			elseif (count($where) <= 5)
 			{
-				$fcJoin = "
-						INNER JOIN (
-							SELECT FC0.ELEMENT_ID
-							FROM ".$this->storage->getTableName()." FC0
-					";
+				$subJoin = "";
+				$subWhere = "";
 				$i = 0;
 				foreach ($where as $facetWhere)
 				{
-					if ($i > 0)
-					{
-						$fcJoin .= "INNER JOIN ".$this->storage->getTableName()." FC$i ON FC$i.ELEMENT_ID = FC0.ELEMENT_ID\n";
-					}
-					$i++;
-				}
-				$fcJoin .= "
-						WHERE
-					";
-				$i = 0;
-				foreach ($where as $facetWhere)
-				{
-					if ($i > 0)
-					{
-						$fcJoin .= " AND ";
-					}
+					if ($i == 0)
+						$subJoin .= "FROM ".$this->storage->getTableName()." FC$i\n";
+					else
+						$subJoin .= "INNER JOIN ".$this->storage->getTableName()." FC$i ON FC$i.ELEMENT_ID = FC0.ELEMENT_ID\n";
 
 					$sqlWhere = $this->whereToSql($facetWhere, "FC$i");
 					if ($sqlWhere)
-						$fcJoin .= $sqlWhere;
+					{
+						if ($subWhere)
+							$subWhere .= "\nAND ".$sqlWhere;
+						else
+							$subWhere .= $sqlWhere;
+					}
 
 					$i++;
 				}
-				$fcJoin .= "
-						) FC on FC.ELEMENT_ID = BE.ID
-					";
+				$fcJoin = "
+					INNER JOIN (
+						SELECT FC0.ELEMENT_ID
+						$subJoin
+						WHERE
+						$subWhere
+					) FC on FC.ELEMENT_ID = BE.ID
+				";
 			}
 			else
 			{
@@ -255,6 +311,11 @@ class Facet
 					,F.VALUE
 					,MIN(F.VALUE_NUM) MIN_VALUE_NUM
 					,MAX(F.VALUE_NUM) MAX_VALUE_NUM
+					".($connection instanceof \Bitrix\Main\DB\MysqlCommonConnection
+						?",MAX(case when LOCATE('.', F.VALUE_NUM) > 0 then LENGTH(SUBSTRING_INDEX(F.VALUE_NUM, '.', -1)) else 0 end)"
+						:",MAX(".$sqlHelper->getLengthFunction("ABS(F.VALUE_NUM) - FLOOR(ABS(F.VALUE_NUM))")."+1-".$sqlHelper->getLengthFunction("0.1").")"
+					)." VALUE_FRAC_LEN
+					,COUNT(DISTINCT F.ELEMENT_ID) ELEMENT_COUNT
 				FROM
 					".$this->storage->getTableName()." F
 					INNER JOIN (
@@ -331,10 +392,11 @@ class Facet
 	 *
 	 * @param array $where Structured condition.
 	 * @param string $tableAlias Table alias to use in sql.
+	 * @param string $subsectionsCondition If not empty will be added.
 	 *
 	 * @return string
 	 */
-	protected function whereToSql(array $where, $tableAlias)
+	public function whereToSql(array $where, $tableAlias, $subsectionsCondition = "")
 	{
 		$sqlWhere = "";
 		$sectionCondition = "$tableAlias.SECTION_ID = ".$this->sectionId;
@@ -347,13 +409,13 @@ class Facet
 			{
 				$sqlWhere = $sectionCondition
 					." AND ".$facetCondition
-					." AND $tableAlias.VALUE_NUM = 0 "
+					." AND $tableAlias.VALUE_NUM = 0"
 					." AND $tableAlias.VALUE in (".implode(", ", $where["VALUES"]).")"
 				;
 			}
 			break;
 		case Storage::NUMERIC:
-			if (($where["OP"] == ">=" || $where["OP"] == "<="))
+			if ($where["OP"] == ">=" || $where["OP"] == "<=")
 			{
 				$sqlWhere = $sectionCondition
 					." AND ".$facetCondition
@@ -367,6 +429,29 @@ class Facet
 					." AND ".$facetCondition
 					." AND $tableAlias.VALUE_NUM BETWEEN ".$where["VALUES"][0]." AND ".$where["VALUES"][1]
 					." AND $tableAlias.VALUE = 0"
+				;
+			}
+			break;
+		case Storage::DATETIME:
+			if ($where["OP"] == ">=" || $where["OP"] == "<=")
+			{
+				$sqlWhere = $sectionCondition
+					." AND ".$facetCondition
+					." AND $tableAlias.VALUE_NUM ".$where["OP"]." ".$where["VALUES"][0]
+				;
+			}
+			elseif ($where["OP"] == "><")
+			{
+				$sqlWhere = $sectionCondition
+					." AND ".$facetCondition
+					." AND $tableAlias.VALUE_NUM BETWEEN ".$where["VALUES"][0]." AND ".$where["VALUES"][1]
+				;
+			}
+			elseif ($where["OP"] == "=")
+			{
+				$sqlWhere = $sectionCondition
+					." AND ".$facetCondition
+					." AND $tableAlias.VALUE_NUM in (".implode(", ", $where["VALUES"]).")"
 				;
 			}
 			break;
@@ -375,18 +460,51 @@ class Facet
 			{
 				$sqlWhere = $sectionCondition
 					." AND ".$facetCondition
-					." AND $tableAlias.VALUE_NUM ".$where["OP"]." ".$where["VALUES"][0]
 				;
+				if ($this->toCurrencyId && $this->convertCurrencyId)
+				{
+					$sqlOr = array();
+					foreach ($this->convertCurrencyId as $currency => $currencyDictionaryId)
+					{
+						$convertedPrice = \CCurrencyRates::convertCurrency($where["VALUES"][0], $this->toCurrencyId, $currency);
+						$sqlOr[] = "($tableAlias.VALUE = $currencyDictionaryId AND $tableAlias.VALUE_NUM ".$where["OP"]." $convertedPrice)";
+					}
+					$sqlWhere .= " AND (".implode(" OR ", $sqlOr).")";
+				}
+				else
+				{
+					$sqlWhere .= " AND $tableAlias.VALUE_NUM ".$where["OP"]." ".$where["VALUES"][0];
+				}
 			}
 			elseif ($where["OP"] == "><")
 			{
 				$sqlWhere = $sectionCondition
 					." AND ".$facetCondition
-					." AND $tableAlias.VALUE_NUM BETWEEN ".$where["VALUES"][0]." AND ".$where["VALUES"][1]
 				;
+				if ($this->toCurrencyId && $this->convertCurrencyId)
+				{
+					$sqlOr = array();
+					foreach ($this->convertCurrencyId as $currency => $currencyDictionaryId)
+					{
+						$convertedPrice1 = \CCurrencyRates::convertCurrency($where["VALUES"][0], $this->toCurrencyId, $currency);
+						$convertedPrice2 = \CCurrencyRates::convertCurrency($where["VALUES"][1], $this->toCurrencyId, $currency);
+						$sqlOr[] = "($tableAlias.VALUE = $currencyDictionaryId AND $tableAlias.VALUE_NUM BETWEEN $convertedPrice1 AND $convertedPrice2)";
+					}
+					$sqlWhere .= " AND (".implode(" OR ", $sqlOr).")";
+				}
+				else
+				{
+					$sqlWhere .= " AND $tableAlias.VALUE_NUM BETWEEN ".$where["VALUES"][0]." AND ".$where["VALUES"][1];
+				}
 			}
 			break;
 		}
+
+		if ($sqlWhere && $subsectionsCondition !== '')
+		{
+			$sqlWhere .= " and ".$tableAlias.".".$subsectionsCondition;
+		}
+
 		return $sqlWhere;
 	}
 
@@ -412,6 +530,8 @@ class Facet
 				{
 					if ($link["PROPERTY_TYPE"] === "N")
 						$properties[$link["PROPERTY_ID"]] = Storage::NUMERIC;
+					elseif ($link["USER_TYPE"] === "DateTime")
+						$properties[$link["PROPERTY_ID"]] = Storage::DATETIME;
 					elseif ($link["PROPERTY_TYPE"] === "S")
 						$properties[$link["PROPERTY_ID"]] = Storage::STRING;
 					else
@@ -426,6 +546,8 @@ class Facet
 					{
 						if ($link["PROPERTY_TYPE"] === "N")
 							$properties[$link["PROPERTY_ID"]] = Storage::NUMERIC;
+						elseif ($link["USER_TYPE"] === "DateTime")
+							$properties[$link["PROPERTY_ID"]] = Storage::DATETIME;
 						elseif ($link["PROPERTY_TYPE"] === "S")
 							$properties[$link["PROPERTY_ID"]] = Storage::STRING;
 					else
@@ -597,6 +719,93 @@ class Facet
 					"FACET_ID" => $facetId,
 					"VALUES" => array(intval($value)),
 				);
+			}
+		}
+	}
+
+	/**
+	 * Adds a condition for further filtering.
+	 *
+	 * @param integer $propertyId Iblock property identifier.
+	 * @param string $operator Comparing operator.
+	 * @param float $value Timestamp to compare.
+	 *
+	 * @return void
+	 */
+	public function addDatetimePropertyFilter($propertyId, $operator, $value)
+	{
+		$facetId = $this->storage->propertyIdToFacetId($propertyId);
+		if ($operator == "<=" || $operator == ">=")
+		{
+			$this->where[$operator.$facetId] = array(
+				"TYPE" => Storage::DATETIME,
+				"OP" => $operator,
+				"FACET_ID" => $facetId,
+				"VALUES" => array(intval($value)),
+			);
+			if (isset($this->where[">=".$facetId]) && isset($this->where["<=".$facetId]))
+			{
+				$this->where["><".$facetId] = array(
+					"TYPE" => Storage::DATETIME,
+					"OP" => $operator,
+					"FACET_ID" => $facetId,
+					"VALUES" => array(
+						$this->where[">=".$facetId]["VALUES"][0],
+						$this->where["<=".$facetId]["VALUES"][0]
+					),
+				);
+				unset($this->where[">=".$facetId]);
+				unset($this->where["<=".$facetId]);
+			}
+		}
+		elseif ($operator == "=")
+		{
+			if (isset($this->where[$operator.$facetId]))
+			{
+				$this->where[$operator.$facetId]["VALUES"][] = intval($value);
+			}
+			else
+			{
+				$this->where[$operator.$facetId] = array(
+					"TYPE" => Storage::DATETIME,
+					"OP" => $operator,
+					"FACET_ID" => $facetId,
+					"VALUES" => array(intval($value)),
+				);
+			}
+		}
+	}
+
+	/**
+	 * Returns true if not filters were applied.
+	 *
+	 * @return boolean
+	 */
+	public function isEmptyWhere()
+	{
+		return empty($this->where);
+	}
+
+	/**
+	 * When called subsequent queries will use currency conversion for filtering.
+	 * Works only with 'currency' module installed.
+	 *
+	 * @param string $toCurrencyId Valid currency id for price value passed into addPriceFilter method.
+	 * @param array $convertCurrencyId Array of valid currencies ids.
+	 *
+	 * @return void
+	 */
+	public function enableCurrencyConversion($toCurrencyId, array $convertCurrencyId)
+	{
+		if (\Bitrix\Main\Loader::includeModule('currency'))
+		{
+			$this->toCurrencyId = $toCurrencyId;
+			$this->convertCurrencyId = array();
+			foreach ($convertCurrencyId as $currency)
+			{
+				$currencyDictionaryId = $this->dictionary->getStringId($currency, false);
+				if ($currency)
+					$this->convertCurrencyId[$currency] = $currencyDictionaryId;
 			}
 		}
 	}

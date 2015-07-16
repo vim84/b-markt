@@ -77,4 +77,7 @@ $MESS["CC_BSC1_DI_PS"] = "PaymentSystems";
 $MESS["CC_BSC1_DI_ELEMENT"] = "Element";
 $MESS["CC_BSC1_DI_ID"] = "ID";
 $MESS["CC_BSC1_DI_NAME"] = "Name";
+$MESS["CC_BSC1_1C_DELIVERY_NUM"] = "1C shipping ref.";
+$MESS["CP_BCI1_CHANGE_STATUS_FROM_1C"] = "Use 1C data to set order status ";
+$MESS["CC_BSC1_1C_STATUS_ID"] = "Order status ID";
 ?>

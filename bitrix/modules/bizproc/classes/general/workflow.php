@@ -81,10 +81,12 @@ class CBPWorkflow
 
 	/************************  CREATE / LOAD WORKFLOW  ****************************************/
 
-	public function Initialize(CBPActivity $rootActivity, $documentId, $workflowParameters = array(), $workflowVariablesTypes = array(), $workflowParametersTypes = array())
+	public function Initialize(CBPActivity $rootActivity, $documentId, $workflowParameters = array(), $workflowVariablesTypes = array(), $workflowParametersTypes = array(), $workflowTemplateId = 0)
 	{
 		$this->rootActivity = $rootActivity;
 		$rootActivity->SetWorkflow($this);
+		if (method_exists($rootActivity, 'SetWorkflowTemplateId'))
+			$rootActivity->SetWorkflowTemplateId($workflowTemplateId);
 
 		$arDocumentId = CBPHelper::ParseDocumentId($documentId);
 
@@ -100,6 +102,7 @@ class CBPWorkflow
 		}
 
 		$rootActivity->SetProperties($workflowParameters);
+
 
 		$rootActivity->SetVariablesTypes($workflowVariablesTypes);
 		if (is_array($workflowVariablesTypes))
@@ -167,8 +170,8 @@ class CBPWorkflow
 		}
 		catch (Exception $e)
 		{
-		    $this->Terminate($e);
-		    throw $e;
+			$this->Terminate($e);
+			throw $e;
 		}
 
 		if ($this->rootActivity->executionStatus == CBPActivityExecutionStatus::Closed)
@@ -203,8 +206,8 @@ class CBPWorkflow
 		}
 		catch (Exception $e)
 		{
-		    $this->Terminate($e);
-		    throw $e;
+			$this->Terminate($e);
+			throw $e;
 		}
 
 		if ($this->rootActivity->executionStatus == CBPActivityExecutionStatus::Closed)

@@ -6,10 +6,10 @@
 	</td>
 	<td valign="top" width="5%" rowspan="3">&nbsp;</td>
 	<td valign="top" width="35%" rowspan="3">
-		
+
 		<?echo GetMessage("STOF_DELIVERY_NOTES")?><br /><br />
 		<?echo GetMessage("STOF_PRIVATE_NOTES")?>
-		
+
 	</td>
 </tr>
 <tr>
@@ -29,7 +29,7 @@
 						<b><?=$arDelivery["TITLE"]?></b><?if (strlen($arDelivery["DESCRIPTION"]) > 0):?><br />
 						<?=nl2br($arDelivery["DESCRIPTION"])?><br /><?endif;?>
 						<table border="0" cellspacing="0" cellpadding="3">
-						
+
 					<?
 						foreach ($arDelivery["PROFILES"] as $profile_id => $arProfile)
 						{
@@ -54,6 +54,7 @@
 								"LOCATION_TO" => $arResult["DELIVERY_LOCATION"],
 								"LOCATION_ZIP" => $arResult['DELIVERY_LOCATION_ZIP'],
 								"CURRENCY" => $arResult["BASE_LANG_CURRENCY"],
+								"ITEMS" => $arResult["BASKET_ITEMS"],
 							));
 						?>
 						<?if ($arParams["SHOW_AJAX_DELIVERY_LINK"] == 'N'):?>
@@ -66,7 +67,7 @@
 					?>
 						</table>
 
-						
+
 					</td>
 				</tr>
 				<?
@@ -100,7 +101,7 @@
 					</tr>
 					<?
 					endif;
-				
+
 				} // endforeach
 			?>
 			<?

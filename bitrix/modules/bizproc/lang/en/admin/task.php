@@ -8,4 +8,5 @@ $MESS["BPAT_DESCR"] = "Task Description";
 $MESS["BPAT_NAME"] = "Task Name";
 $MESS["BPAT_NO_TASK"] = "The task was not found.";
 $MESS["BPAT_USER"] = "User";
+$MESS["BPAT_USER_NOT_FOUND"] = "(Not found)";
 ?>

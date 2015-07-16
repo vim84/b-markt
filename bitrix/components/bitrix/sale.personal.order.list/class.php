@@ -597,12 +597,6 @@ class CBitrixPersonalOrderListComponent extends CBitrixComponent
 				while ($arPType = $dbPType->Fetch())
 					$cachedData['PERSON_TYPE'][$arPType["ID"]] = $arPType;
 
-				// Tax list
-				$cachedData['TAX'] = array();
-				$dbTaxList = CSaleOrderTax::GetList(array("APPLY_ORDER" => "ASC"));
-				while ($arTaxList = $dbTaxList->Fetch())
-					$cachedData['TAX'] = $arTaxList;
-
 				// Save statuses for Filter form
 				$cachedData['STATUS'] = array();
 				$dbStatus = CSaleStatus::GetList(array("SORT"=>"ASC"), array("LID"=>LANGUAGE_ID));

@@ -35,6 +35,7 @@ create table b_ldap_server
 	SYNC_ATTR 		varchar(255),
 	SYNC_LAST 		datetime,
 	MAX_PAGE_SIZE	int null,
+	SYNC_USER_ADD 			char(1),
 	primary key(ID)
 );
 

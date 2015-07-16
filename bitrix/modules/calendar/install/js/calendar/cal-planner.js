@@ -741,8 +741,7 @@ BuildGridTitle: function()
 			for (j = this.oTime.from.h; j < this.oTime.to.h; j++)
 			{
 				c_time = r_time.insertCell(-1);
-				c_time.innerHTML = '<div>' + this.FormatTime(j, 0, false, false, true) + '</div>';
-				c_time.title = this.FormatTime(i);
+				c_time.innerHTML = '<div>' + this.FormatTime(j, parseInt(this.oTime.from.m), false, false, true) + '</div>';
 
 				if (this.scale == 2)
 					j++;
@@ -751,21 +750,20 @@ BuildGridTitle: function()
 				{
 					c_time = r_time.insertCell(-1);
 					c_time.className = 'bxecpl-half-t-cell';
-					c_time.title = this.FormatTime(j, 30);
 
 					if (this.bAMPM)
 						c_time.innerHTML = '<div></div>';
-					else
+					else if (parseInt(this.oTime.from.m) == 0)
 						c_time.innerHTML = '<div>' + this.FormatTime(j, 30) + '</div>';
+					else
+						c_time.innerHTML = '<div>' + this.FormatTime(j + 1, 0) + '</div>';
 				}
 			}
 		}
 		else
 		{
 			c_time = r_time.insertCell(-1);
-			c_time.innerHTML = '<div>' + this.FormatTime(this.oTime.from.h, 0, false, false, true) + ' - ' + this.FormatTime(this.oTime.to.h, 0, false, false, true) + '</div>';
-			c_time.title = this.FormatTime(this.oTime.from.h) + ' - ' + this.FormatTime(this.oTime.to.h);
-
+			c_time.innerHTML = '<div>' + this.FormatTime(this.oTime.from.h, this.oTime.from.m, false, false, true) + ' - ' + this.FormatTime(this.oTime.to.h, this.oTime.to.m, false, false, true) + '</div>';
 			arCell.pTime = c_time;
 		}
 

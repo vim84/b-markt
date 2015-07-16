@@ -75,6 +75,10 @@ class Asset
 	const MAX_ADD_CSS_SELECTOR = 3950;
 	const MAX_CSS_SELECTOR = 4000;
 
+	const SOURCE_MAP_TAG = "\n//# sourceMappingURL=";
+	const HEADER_START_TAG = "; /* Start:\"";
+	const HEADER_END_TAG = "\"*/";
+
 	private function __construct()
 	{
 		//use self::getInstance()
@@ -399,7 +403,7 @@ class Asset
 				{
 					if($mode == $item['MODE'])
 					{
-						$cacheInfo[$mode]['STRINGS'][$item['TARGET']][] = $item['CONTENT'];
+						$cacheInfo[$mode]['STRINGS'][$item['TARGET'][0]][] = $item['CONTENT'];
 					}
 				}
 			}
@@ -692,7 +696,7 @@ class Asset
 		{
 			if($moduleInfo['MODULE_ID'] == $from)
 			{
-				$this->moduleInfo['JS'][$moduleID] = $to;
+				$this->moduleInfo['JS'][$moduleID]["MODULE_ID"] = $to;
 			}
 		}
 	}
@@ -723,7 +727,7 @@ class Asset
 		{
 			if($moduleInfo['MODULE_ID'] == $from)
 			{
-				$this->moduleInfo['CSS'][$moduleID] = $to;
+				$this->moduleInfo['CSS'][$moduleID]["MODULE_ID"] = $to;
 			}
 		}
 	}
@@ -856,6 +860,16 @@ class Asset
 		return $optimize;
 	}
 
+	public static function canUseMinifiedAssets()
+	{
+		static $canLoad = null;
+		if ($canLoad === null)
+		{
+			$canLoad = Option::get("main","use_minified_assets", "Y") == "Y";
+		}
+
+		return $canLoad;
+	}
 	/**
 	 * @return bool
 	 */
@@ -971,11 +985,41 @@ class Asset
 			foreach($stringLocation as $key => $item)
 			{
 				/** @var  $assetTID - get first target where added asset */
-				$assetTID = $item['TARGET'][0];
-				$this->strings[$location][$key]['MODE'] = ($item['MODE'] === null ? $this->targetList[$assetTID]['MODE'] : $item['MODE']);
-				$this->strings[$location][$key]['TARGET'] = $assetTID;
+				$this->strings[$location][$key]['MODE'] = ($item['MODE'] === null ? $this->targetList[$item['TARGET'][0]]['MODE'] : $item['MODE']);
 			}
 		}
+	}
+
+	/***
+	 * Returns asset's paths
+	 * @param $assetPath
+	 * @return null|array
+	 */
+	private function getAssetPaths($assetPath)
+	{
+		$paths = array($assetPath);
+		if (self::canUseMinifiedAssets() && preg_match("/(.+)\\.(js|css)$/i", $assetPath, $matches))
+		{
+			array_unshift($paths, $matches[1].".min.".$matches[2]);
+		}
+
+		$result = null;
+		$maxMtime = 0;
+		foreach ($paths as $path)
+		{
+			$filePath = $this->documentRoot.$path;
+			if (file_exists($filePath) && ($mtime = filemtime($filePath)) > $maxMtime && filesize($filePath) > 0)
+			{
+				$maxMtime = $mtime;
+				$result = array(
+					"PATH" => $path,
+					"FILE_PATH" => $filePath,
+					"FULL_PATH" => \CUtil::GetAdditionalFileURL($path, true),
+				);
+			}
+		}
+
+		return $result;
 	}
 
 	/** Prepare css asset to optimize */
@@ -1027,10 +1071,11 @@ class Asset
 			}
 			else
 			{
-				$cssInfo['FILE_PATH'] = $this->documentRoot.$css;
-				if(file_exists($cssInfo['FILE_PATH']) && filesize($cssInfo['FILE_PATH']) > 0)
+				if (($paths = $this->getAssetPaths($css)) !== null)
 				{
-					$cssInfo['FULL_PATH'] = \CUtil::GetAdditionalFileURL($cssInfo['PATH'], true);
+					$cssInfo["PATH"] = $css;
+					$cssInfo["FILE_PATH"] = $paths["FILE_PATH"];
+					$cssInfo["FULL_PATH"] = $paths["FULL_PATH"];
 				}
 				else
 				{
@@ -1163,10 +1208,11 @@ class Asset
 			}
 			else
 			{
-				$jsInfo['FILE_PATH'] = $this->documentRoot.$js;
-				if(file_exists($jsInfo['FILE_PATH']) && filesize($jsInfo['FILE_PATH']) > 0)
+				if (($paths = $this->getAssetPaths($js)) !== null)
 				{
-					$jsInfo['FULL_PATH'] = \CUtil::GetAdditionalFileURL($jsInfo['PATH'], true);
+					$jsInfo["PATH"] = $js;
+					$jsInfo["FILE_PATH"] = $paths["FILE_PATH"];
+					$jsInfo["FULL_PATH"] = $paths["FULL_PATH"];
 				}
 				else
 				{
@@ -1811,7 +1857,7 @@ class Asset
 					{
 						if(isset($arFilesInfo['FILES'][$arAsset['PATH']]))
 						{
-							if($arAsset['FULL_PATH'] != $arAsset['PATH'].'?'.$arFilesInfo['FILES'][$arAsset['PATH']])
+							if($this->getAssetTime($arAsset['FULL_PATH']) != $arFilesInfo['FILES'][$arAsset['PATH']])
 							{
 								$arRes = array(
 									'FILE' => $arAssetList,
@@ -1873,7 +1919,7 @@ class Asset
 		}
 
 		$this->setTemplateID();
-		$res = $assetMD5 = $strFiles = $contents = '';
+		$res = $assetMD5 = $comments = $contents = '';
 		$prefix = trim($prefix);
 		$prefix = strlen($prefix) < 1 ? 'default' : $prefix;
 		$add2End = (strncmp($prefix, 'kernel', 6) == 0);
@@ -1944,36 +1990,56 @@ class Asset
 			$needWrite = false;
 			if($noCheckOnly)
 			{
-				$tmpStr = '';
+				$newContent = '';
+				$mapNeeded = false;
 				foreach($arFile as $file)
 				{
-					$tmpContent = file_get_contents($file['FILE_PATH']);
+					$assetContent = file_get_contents($file['FILE_PATH']);
 					if($type == 'css')
 					{
-						$f_cnt = $this->getCssSelectCnt($tmpContent);
+						$f_cnt = $this->getCssSelectCnt($assetContent);
 						$new_cnt = $f_cnt + $arFilesInfo['CUR_SEL_CNT'];
 
-						$strFiles .= "/* ".$file['PATH']." */\n";
-						$tmpContent = $this->fixCSSIncludes($tmpContent, $file['PATH']);
-						$tmpContent = "\n/* Start:".$file['PATH']."*/\n".$tmpContent."\n/* End */\n";
+						$comments .= "/* ".$file['FULL_PATH']." */\n";
+						$assetContent = $this->fixCSSIncludes($assetContent, $file['PATH']);
+						$assetContent = "\n/* Start:".$file['FULL_PATH']."*/\n".$assetContent."\n/* End */\n";
 
 						if($new_cnt < self::MAX_CSS_SELECTOR)
 						{
 							$arFilesInfo['CUR_SEL_CNT'] = $new_cnt;
-							$arIEContent[$arFilesInfo['CUR_IE_CNT']] .= $tmpContent;
+							$arIEContent[$arFilesInfo['CUR_IE_CNT']] .= $assetContent;
 						}
 						else
 						{
 							$arFilesInfo['CUR_SEL_CNT'] = $f_cnt;
 							$arFilesInfo['CUR_IE_CNT']++;
-							$arIEContent[$arFilesInfo['CUR_IE_CNT']] .= $tmpContent;
+							$arIEContent[$arFilesInfo['CUR_IE_CNT']] .= $assetContent;
 						}
-						$tmpStr .= "\n\n".$tmpContent;
+						$newContent .= "\n\n".$assetContent;
 					}
 					else
 					{
-						$strFiles .= "; /* ".$file['PATH']."*/\n";
-						$tmpStr .= "\n; /* Start:".$file['PATH']."*/\n".$tmpContent."\n/* End */\n;";
+						$info = array(
+							"full" => $file['FULL_PATH'],
+							"source" => $file['PATH'],
+							"min" => "",
+							"map" => "",
+						);
+
+						if (preg_match("/\\.min\\.js$/i", $file['FILE_PATH']))
+						{
+							$sourceMap = self::cutSourceMap($assetContent);
+							if (strlen($sourceMap) > 0)
+							{
+								$dirPath = IO\Path::getDirectory($file['PATH']);
+								$info["map"] = $dirPath."/".$sourceMap;
+								$info["min"] = self::getAssetPath($file['FULL_PATH']);
+								$mapNeeded = true;
+							}
+						}
+
+						$comments .= "; /* ".$file['FULL_PATH']."*/\n";
+						$newContent .= "\n".self::HEADER_START_TAG.serialize($info).self::HEADER_END_TAG."\n".$assetContent."\n/* End */\n;";
 					}
 
 					$arFilesInfo['FILES'][$file['PATH']] = $this->getAssetTime($file['FULL_PATH']);
@@ -1982,8 +2048,16 @@ class Asset
 
 				if($needWrite)
 				{
+					$sourceMap = self::cutSourceMap($contents);
+					$mapNeeded = $mapNeeded || strlen($sourceMap) > 0;
+
 					// Write packed files and meta information
-					$contents = ($add2End ? $strFiles.$contents.$tmpStr : $tmpStr.$contents.$strFiles);
+					$contents = ($add2End ? $comments.$contents.$newContent : $newContent.$contents.$comments);
+					if ($mapNeeded)
+					{
+						$contents .= self::SOURCE_MAP_TAG.$prefix.".map.js";
+					}
+
 					if($writeResult = $this->write($optimFName, $contents))
 					{
 						$cacheInfo = '<? $arFilesInfo = array( \'FILES\' => array(';
@@ -2003,6 +2077,11 @@ class Asset
 								$css = str_replace('#CNT#', $key, $cssFPathIE);
 								$this->write($css, $ieContent);
 							}
+						}
+
+						if ($mapNeeded)
+						{
+							$this->write($documentRoot.$optimPath.$prefix.".map.js", self::generateSourceMap($prefix.".js", $contents), false);
 						}
 					}
 				}
@@ -2052,7 +2131,7 @@ class Asset
 							}
 							else
 							{
-								$tmpInfo = $this->showInlineCssIE($file['FILE_PATH'], $file['FULL_PATH'], $ruleCount, true);
+								$tmpInfo = $this->showInlineCssIE($file['FILE_PATH'], $file['PATH'], $ruleCount, true);
 								$ruleCount = $tmpInfo['CNT'];
 								$resContent .= $tmpInfo['CONTENT'];
 							}
@@ -2101,6 +2180,117 @@ class Asset
 		}
 		unset($arFile, $arFilesInfo);
 		return array('RESULT' => $res, 'FILES' => $arF);
+	}
+
+	/**
+	 * Cuts and returns source map comment
+	 * @param $content
+	 * @return string
+	 */
+	private static function cutSourceMap(&$content)
+	{
+		$sourceMapName = "";
+
+		$length = \CUtil::BinStrlen($content);
+		$position = $length > 512 ? $length - 512 : 0;
+		$lastLine = \CUtil::BinStrpos($content, self::SOURCE_MAP_TAG, $position);
+		if ($lastLine !== false)
+		{
+			$nameStart = $lastLine + strlen(self::SOURCE_MAP_TAG);
+			if (($newLinePos = \CUtil::BinStrpos($content, "\n", $nameStart)) !== false)
+			{
+				$sourceMapName = \CUtil::BinSubstr($content, $nameStart, $newLinePos - $nameStart);
+			}
+			else
+			{
+				$sourceMapName = \CUtil::BinSubstr($content, $nameStart);
+			}
+
+			$sourceMapName = trim($sourceMapName);
+			$content = \CUtil::BinSubstr($content, 0, $lastLine);
+		}
+
+		return $sourceMapName;
+	}
+
+	/**
+	 * Returns array of file data
+	 * @param $content
+	 * @return array
+	 */
+	private static function getFilesInfo($content)
+	{
+		$offset = 0;
+		$line = 0;
+
+		$arResult = array();
+		while (($newLinePos = \CUtil::BinStrpos($content, "\n", $offset)) !== false)
+		{
+			$line++;
+			$offset = $newLinePos + 1;
+			if (\CUtil::BinSubstr($content, $offset, strlen(self::HEADER_START_TAG)) === self::HEADER_START_TAG)
+			{
+				$endingPos = \CUtil::BinStrpos($content, self::HEADER_END_TAG, $offset);
+				if ($endingPos === false)
+				{
+					break;
+				}
+
+				$startData = $offset + strlen(self::HEADER_START_TAG);
+				$data = unserialize(\CUtil::BinSubstr($content, $startData, $endingPos - $startData));
+
+				if (is_array($data))
+				{
+					$data["line"] = $line + 1;
+					$arResult[] = $data;
+				}
+
+				$offset = $endingPos;
+			}
+		}
+
+		return $arResult;
+	}
+
+	/**
+	 * Generates source map content
+	 * @param $fileName
+	 * @param $content
+	 * @return string
+	 */
+	private static function generateSourceMap($fileName, $content)
+	{
+		$files = self::getFilesInfo($content);
+		$sections = "";
+		foreach ($files as $file)
+		{
+			if (!isset($file["map"]) || strlen($file["map"]) < 1)
+			{
+				continue;
+			}
+
+			$filePath = Main\Loader::getDocumentRoot().$file["map"];
+			if (file_exists($filePath) && ($content = file_get_contents($filePath)) !== false)
+			{
+				if ($sections !== "")
+				{
+					$sections .= ",";
+				}
+
+				$dirPath = IO\Path::getDirectory($file["source"]);
+				$sourceName = IO\Path::getName($file["source"]);
+				$minName = IO\Path::getName($file["min"]);
+
+				$sourceMap = str_replace(
+					array($sourceName, $minName),
+					array($dirPath."/".$sourceName, $dirPath."/".$minName),
+					$content
+				);
+				$sections .= '{"offset": { "line": '.$file["line"].', "column": 0 }, "map": '.$sourceMap.'}';
+			}
+		}
+
+		return '{"version":3, "file":"'.$fileName.'", "sections": ['.$sections.']}';
 	}
 
 	/**

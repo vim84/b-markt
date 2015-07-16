@@ -13,7 +13,7 @@ $MESS ['BP_REVW_REVIEW_DESC'] = "You should read the document: \"{=Document:NAME
 Author: {=Document:CREATED_BY_PRINTABLE}";
 $MESS ['BP_REVW_TASK_DESC'] = "You should read the document: \"{=Document:NAME}\".
 
-Please proceed by opening the link: http://#HTTP_HOST##TASK_URL#
+Please proceed by opening the link: #BASE_HREF##TASK_URL#
 
 Author: {=Document:CREATED_BY_PRINTABLE}";
 ?>

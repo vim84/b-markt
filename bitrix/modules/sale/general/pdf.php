@@ -203,7 +203,7 @@ class CSalePdf
 		}
 		else
 		{
-			$arFile = CFile::GetImageSize($file, true);
+			$arFile = CFile::GetImageSize($this->GetImagePath($file), true);
 
 			if ($arFile)
 			{
@@ -228,7 +228,9 @@ class CSalePdf
 		}
 		elseif ($file)
 		{
-			$path = $_SERVER['DOCUMENT_ROOT'] . $file;
+			$path = strpos($file, $_SERVER['DOCUMENT_ROOT']) === 0
+				? $file
+				: $_SERVER['DOCUMENT_ROOT'] . $file;
 		}
 
 		return $path;

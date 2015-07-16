@@ -18,4 +18,5 @@ $MESS["opt_template_method"] = "Message generation method:";
 $MESS["opt_template_interval"] = "Check to generate pending messages each (sec.):";
 $MESS["opt_max_bcc_count"] = "Maximum number of addresses in BCC field when not in direct mail mode (0 - use one e-mail for all subscribers):";
 $MESS["opt_mail_additional_parameters"] = "Additional parameter for mail() function:";
+$MESS["opt_max_files_size"] = "Max. attachment size, MB (0 means no restriction):";
 ?>

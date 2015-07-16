@@ -88,6 +88,8 @@ abstract class CAllMain
 	var $arAuthResult;
 	private $__componentStack = array();
 
+	private static $forkActions = array();
+
 	function __construct()
 	{
 		$this->CMain();
@@ -220,7 +222,7 @@ abstract class CAllMain
 
 	function AuthForm($mess, $show_prolog=true, $show_epilog=true, $not_show_links="N", $do_die=true)
 	{
-		$excl = array("excl"=>1, "key"=>1, "GLOBALS"=>1, "mess"=>1, "show_epilog"=>1, "not_show_links"=>1, "do_die"=>1);
+		$excl = array("excl"=>1, "key"=>1, "GLOBALS"=>1, "mess"=>1, "show_prolog"=>1, "show_epilog"=>1, "not_show_links"=>1, "do_die"=>1);
 		foreach($GLOBALS as $key => $value)
 			if(!array_key_exists($key , $excl))
 				global ${$key};
@@ -623,6 +625,20 @@ abstract class CAllMain
 		return '';
 	}
 
+	function GetLink($id, $rel = null, $bXhtmlStyle = true)
+	{
+		if($rel === null)
+		{
+			$rel = $id;
+		}
+		$href = $this->GetProperty($id);
+		if($href <> '')
+		{
+			return '<link rel="'.$rel.'" href="'.$href.'"'.($bXhtmlStyle? ' /':'').'>'."\n";
+		}
+		return '';
+	}
+
 	function ShowBanner($type, $html_before="", $html_after="")
 	{
 		if(!CModule::IncludeModule("advertising"))
@@ -636,6 +652,11 @@ abstract class CAllMain
 	function ShowMeta($id, $meta_name=false, $bXhtmlStyle=true)
 	{
 		$this->AddBufferContent(array(&$this, "GetMeta"), $id, $meta_name, $bXhtmlStyle);
+	}
+
+	function ShowLink($id, $rel = null, $bXhtmlStyle = true)
+	{
+		$this->AddBufferContent(array(&$this, "GetLink"), $id, $rel, $bXhtmlStyle);
 	}
 
 	function SetAdditionalCSS($Path2css, $additional=false)
@@ -659,7 +680,6 @@ abstract class CAllMain
 		return false;
 	}
 
-	/** @deprecated */
 	function GetCSSArray()
 	{
 		return array_unique($this->sPath2css);
@@ -818,6 +838,7 @@ abstract class CAllMain
 		$this->ShowMeta("robots", false, $bXhtmlStyle);
 		$this->ShowMeta("keywords", false, $bXhtmlStyle);
 		$this->ShowMeta("description", false, $bXhtmlStyle);
+		$this->ShowLink("canonical", null, $bXhtmlStyle);
 		$this->ShowCSS(true, $bXhtmlStyle);
 		$this->ShowHeadStrings();
 		$this->ShowHeadScripts();
@@ -1009,6 +1030,7 @@ abstract class CAllMain
 
 				$this->__componentStack[] = $component;
 				$result = $component->IncludeComponent($componentTemplate, $arParams, $parentComponent);
+
 				array_pop($this->__componentStack);
 			}
 
@@ -1119,17 +1141,33 @@ abstract class CAllMain
 
 			if (isset($arComponents[$i]["DATA"]["PARAMS"]) && is_array($arComponents[$i]["DATA"]["PARAMS"]))
 			{
-				if (array_key_exists("SEF_MODE", $arComponents[$i]["DATA"]["PARAMS"])
-					&& $arComponents[$i]["DATA"]["PARAMS"]["SEF_MODE"] == "Y")
+				if (
+					array_key_exists("SEF_MODE", $arComponents[$i]["DATA"]["PARAMS"])
+					&& $arComponents[$i]["DATA"]["PARAMS"]["SEF_MODE"] == "Y"
+				)
 				{
-					CUrlRewriter::Add(
-						array(
+					if (array_key_exists("SEF_RULE", $arComponents[$i]["DATA"]["PARAMS"]))
+					{
+						$ruleMaker = new \Bitrix\Main\UrlRewriterRuleMaker;
+						$ruleMaker->process($arComponents[$i]["DATA"]["PARAMS"]["SEF_RULE"]);
+
+						CUrlRewriter::Add(array(
+							"SITE_ID" => $site,
+							"CONDITION" => $ruleMaker->getCondition(),
+							"RULE" => $ruleMaker->getRule(),
+							"ID" => $arComponents[$i]["DATA"]["COMPONENT_NAME"],
+							"PATH" => $path
+						));
+					}
+					else
+					{
+						CUrlRewriter::Add(array(
 							"SITE_ID" => $site,
 							"CONDITION" => "#^".$arComponents[$i]["DATA"]["PARAMS"]["SEF_FOLDER"]."#",
 							"ID" => $arComponents[$i]["DATA"]["COMPONENT_NAME"],
 							"PATH" => $path
-						)
-					);
+						));
+					}
 				}
 			}
 		}
@@ -1241,17 +1279,17 @@ abstract class CAllMain
 				switch ($arFunctionParams['MODE'])
 				{
 					case 'html':
-						$editor = '/bitrix/admin/public_file_edit.php?bxpublic=Y&from=includefile&templateID='.$encSiteTemplateId.'&';
+						$editor = '/bitrix/admin/public_file_edit.php?site='.SITE_ID.'&bxpublic=Y&from=includefile&templateID='.$encSiteTemplateId.'&';
 						$resize = 'false';
 						break;
 
 					case 'text':
-						$editor = '/bitrix/admin/public_file_edit.php?bxpublic=Y&from=includefile&noeditor=Y&';
+						$editor = '/bitrix/admin/public_file_edit.php?site='.SITE_ID.'&bxpublic=Y&from=includefile&noeditor=Y&';
 						$resize = 'true';
 						break;
 
 					case 'php':
-						$editor = '/bitrix/admin/public_file_edit_src.php?templateID='.$encSiteTemplateId.'&';
+						$editor = '/bitrix/admin/public_file_edit_src.php?site='.SITE_ID.'&templateID='.$encSiteTemplateId.'&';
 						$resize = 'true';
 						break;
 				}
@@ -1341,7 +1379,6 @@ abstract class CAllMain
 							)
 						)
 					),
-					//'URL'=>'javascript:jsPopup.ShowDialog(\''.$editor.$path_url.$arFunctionParams["BACK_URL"].$arFunctionParams["LANG"].$arFunctionParams["TEMPLATE"].'\', {width: 770, height: 570, resize: '.$resize.'})',
 					'ICON'=>'bx-context-toolbar-edit-icon',
 					'TITLE'=>str_replace("#MODE#", $arFunctionParams["MODE"], str_replace("#BLOCK_TYPE#", (!is_set($arFunctionParams, "NAME")? GetMessage("MAIN__INC_BLOCK") : $arFunctionParams["NAME"]), GetMessage("MAIN_INC_ED"))),
 					'DEFAULT'=>!$bDefaultExists
@@ -2178,196 +2215,20 @@ abstract class CAllMain
 		return $contents;
 	}
 
+	/**
+	 * @deprecated Use LPA::Process()
+	 */
 	function ProcessLPA($filesrc = false, $old_filesrc = false)
 	{
-		if ($filesrc === false)
-			return '';
-
-		// Find all php fragments in $filesrc and:
-		// 	1. Kill all non-component 2.0 fragments
-		// 	2. Get and check params of components
-		$arPHP = PHPParser::ParseFile($filesrc);
-		$l = count($arPHP);
-		if ($l > 0)
-		{
-			$new_filesrc = '';
-			$end = 0;
-			for ($n = 0; $n<$l; $n++)
-			{
-				$start = $arPHP[$n][0];
-				$new_filesrc .= CMain::EncodePHPTags(substr($filesrc,$end,$start-$end));
-				$end = $arPHP[$n][1];
-
-				//Trim php tags
-				$src = $arPHP[$n][2];
-				if (substr($src, 0, 5) == "<?php")
-					$src = '<?'.substr($src, 5);
-
-				//If it's Component 2 - we handle it's params, non components2 will be erased
-				$comp2_begin = '<?$APPLICATION->INCLUDECOMPONENT(';
-				if (strtoupper(substr($src, 0, strlen($comp2_begin))) == $comp2_begin)
-				{
-					$arRes = PHPParser::CheckForComponent2($src);
-
-					if ($arRes)
-					{
-						$comp_name = CMain::_ReplaceNonLatin($arRes['COMPONENT_NAME']);
-						$template_name = CMain::_ReplaceNonLatin($arRes['TEMPLATE_NAME']);
-						$arParams = $arRes['PARAMS'];
-						$arPHPparams = array();
-						CMain::LPAComponentChecker($arParams, $arPHPparams);
-						$len = count($arPHPparams);
-						$br = "\r\n";
-						$code = '$APPLICATION->IncludeComponent('.$br.
-							"\t".'"'.$comp_name.'",'.$br.
-							"\t".'"'.$template_name.'",'.$br;
-						// If exist at least one parameter with php code inside
-						if (count($arParams) > 0)
-						{
-							// Get array with description of component params
-							$arCompParams = CComponentUtil::GetComponentProps($comp_name);
-							$arTemplParams = CComponentUtil::GetTemplateProps($comp_name, $template_name);
-
-							$arParameters = array();
-							if (isset($arCompParams["PARAMETERS"]) && is_array($arCompParams["PARAMETERS"]))
-								$arParameters = $arParameters + $arCompParams["PARAMETERS"];
-							if (is_array($arTemplParams))
-								$arParameters = $arParameters + $arTemplParams;
-
-							// Replace values from 'DEFAULT'
-							for ($e = 0; $e < $len; $e++)
-							{
-								$par_name = $arPHPparams[$e];
-								$arParams[$par_name] = isset($arParameters[$par_name]['DEFAULT']) ? $arParameters[$par_name]['DEFAULT'] : '';
-							}
-
-							//ReturnPHPStr
-							$params = PHPParser::ReturnPHPStr2($arParams, $arParameters);
-							$code .= "\t".'array('.$br."\t".$params.$br."\t".')';
-						}
-						else
-						{
-							$code .=  "\t".'array()';
-						}
-						$parent_comp = CMain::_ReplaceNonLatin($arRes['PARENT_COMP']);
-						$arExParams_ = $arRes['FUNCTION_PARAMS'];
-
-						$bEx = isset($arExParams_) && is_array($arExParams_) && count($arExParams_) > 0;
-
-						if (!$parent_comp || strtolower($parent_comp) == 'false')
-							$parent_comp = false;
-						if ($parent_comp)
-						{
-							if ($parent_comp == 'true' || intVal($parent_comp) == $parent_comp)
-								$code .= ','.$br."\t".$parent_comp;
-							else
-								$code .= ','.$br."\t\"".$parent_comp.'"';
-						}
-						if ($bEx)
-						{
-							if (!$parent_comp)
-								$code .= ','.$br."\tfalse";
-
-							$arExParams = array();
-							foreach ($arExParams_ as $k => $v)
-							{
-								$k = CMain::_ReplaceNonLatin($k);
-								$v = CMain::_ReplaceNonLatin($v);
-								if (strlen($k) > 0 && strlen($v) > 0)
-									$arExParams[$k] = $v;
-							}
-							//CComponentUtil::PrepareVariables($arExParams);
-							$exParams = PHPParser::ReturnPHPStr2($arExParams);
-							$code .= ','.$br."\tarray(".$exParams.')';
-						}
-						$code .= $br.');';
-						$code = '<?'.$code.'?>';
-						$new_filesrc .= $code;
-					}
-				}
-			}
-			$new_filesrc .= CMain::EncodePHPTags(substr($filesrc,$end));
-			$filesrc = $new_filesrc;
-		}
-		else
-		{
-			$filesrc = CMain::EncodePHPTags($filesrc);
-		}
-
-		if (strpos($filesrc, '#PHP') !== false && $old_filesrc !== false) // We have to handle php fragments
-		{
-			// Get array of PHP scripts from old saved file
-			$arPHP = PHPParser::ParseFile($old_filesrc);
-			$arPHPscripts = array();
-			$l = count($arPHP);
-			if ($l > 0)
-			{
-				$new_filesrc = '';
-				$end = 0;
-				for ($n = 0; $n < $l; $n++)
-				{
-					$start = $arPHP[$n][0];
-					$new_filesrc .= substr($old_filesrc, $end, $start - $end);
-					$end = $arPHP[$n][1];
-					$src = $arPHP[$n][2];
-					$src = SubStr($src, (SubStr($src, 0, 5) == "<?"."php") ? 5 : 2, -2); // Trim php tags
-					$comp2_begin = '$APPLICATION->INCLUDECOMPONENT(';
-					if (strtoupper(substr($src,0, strlen($comp2_begin))) != $comp2_begin)
-						$arPHPscripts[] = $src;
-				}
-			}
-
-			// Ok, so we already have array of php scripts lets check our new content
-			// LPA-users CAN delete PHP fragments and swap them but CAN'T add new or modify existent:
-			while (preg_match('/#PHP\d{4}#/i'.BX_UTF_PCRE_MODIFIER, $filesrc, $res))
-			{
-				$php_begin = strpos($filesrc, $res[0]);
-				$php_fr_num = intval(substr($filesrc, $php_begin + 4, 4)) - 1; // Number of PHP fragment from #PHPXXXX# conctruction
-
-				if (isset($arPHPscripts[$php_fr_num]))
-					$filesrc = substr($filesrc, 0, $php_begin).'<?'.$arPHPscripts[$php_fr_num].'?>'.substr($filesrc, $php_begin + 9);
-				else
-					$filesrc = substr($filesrc, 0, $php_begin).substr($filesrc, $php_begin + 9);
-			}
-		}
-
-		return $filesrc;
+		return LPA::Process($filesrc, $old_filesrc);
 	}
 
-	function EncodePHPTags($str)
-	{
-		$str = str_replace(array("<?","?>", "<%", "%>"),array("&lt;?","?&gt;","&lt;%","%&gt;"), $str);
-
-		static $pattern = "/(<script[^>]*language\s*=\s*)('|\"|)php('|\"|)([^>]*>)/i";
-		$str = preg_replace($pattern, "&lt;??&gt;", $str);
-
-		return $str;
-	}
-
+	/**
+	 * @deprecated Use LPA::ComponentChecker()
+	 */
 	function LPAComponentChecker(&$arParams, &$arPHPparams, $parentParamName = false)
 	{
-		//all php fragments wraped by ={}
-		foreach ($arParams as $param_name => $paramval)
-		{
-			if (substr($param_name, 0, 2) == '={' && substr($param_name, -1) == '}')
-			{
-				$key = substr($param_name, 2, -1);
-				if (strval($key) !== strval(intval($key)))
-				{
-					unset($arParams[$param_name]);
-					continue;
-				}
-			}
-			if (is_array($paramval))
-			{
-				CMain::LPAComponentChecker($paramval, $arPHPparams, $param_name);
-				$arParams[$param_name] = $paramval;
-			}
-			elseif (substr($paramval, 0, 2) == '={' && substr($paramval, -1) == '}')
-			{
-				$arPHPparams[] = $parentParamName ? $parentParamName : $param_name;
-			}
-		}
+		LPA::ComponentChecker($arParams, $arPHPparams, $parentParamName);
 	}
 
 	function _ReplaceNonLatin($str)
@@ -2531,36 +2392,41 @@ abstract class CAllMain
 		$err_mess = (CAllMain::err_mess())."<br>Function: GetUserRight<br>Line: ";
 		$min_right = "D";
 		$max_right = "W";
-		if($arGroups===false)
+		if ($arGroups === false)
 		{
-			if(is_object($USER))
+			if (is_object($USER))
 			{
 				if($USER->IsAdmin())
 					return $max_right;
 				$arGroups = $USER->GetUserGroupArray();
 			}
-			if(!is_array($arGroups))
+			if (!is_array($arGroups))
 				$arGroups = array(2);
 		}
 
 		$key = $use_default_level."_".$max_right_for_super_admin;
 		$groups = '';
-		if(is_array($arGroups) && count($arGroups)>0)
+		$admin = false;
+		if (is_array($arGroups) && !empty($arGroups))
 		{
 			foreach($arGroups as $grp)
-				$groups .= ($groups<>''? ',':'').intval($grp);
+			{
+				$grp = intval($grp);
+				$groups .= ($groups <> ''? ',' :'').$grp;
+				if ($grp == 1)
+					$admin = true;
+			}
 			$key .= "_".$groups;
 		}
-
 
 		if (!$site_id)
 		{
 			$cache_site_key = "COMMON";
 		}
-		elseif(is_array($site_id))
+		elseif (is_array($site_id))
 		{
 			$cache_site_key = "";
-			foreach($site_id as $i => $site_id_tmp)
+			foreach ($site_id as $i => $site_id_tmp)
 			{
 				if ($i > 0)
 					$cache_site_key .= "_";
@@ -2577,19 +2443,36 @@ abstract class CAllMain
 			$MODULE_PERMISSIONS[$module_id][$cache_site_key] = array();
 
 		$right = "";
-		if(is_set($MODULE_PERMISSIONS[$module_id][$cache_site_key], $key))
+		if (isset($MODULE_PERMISSIONS[$module_id][$cache_site_key][$key]))
+		{
 			$right = $MODULE_PERMISSIONS[$module_id][$cache_site_key][$key];
+		}
+		elseif (isset($_SESSION["MODULE_PERMISSIONS"][$module_id][$cache_site_key][$key]))
+		{
+			$right = $_SESSION["MODULE_PERMISSIONS"][$module_id][$cache_site_key][$key];
+		}
 		else
 		{
-			if(is_array($arGroups) && count($arGroups)>0)
+			if ($groups != '')
 			{
-				if(in_array(1, $arGroups) && $max_right_for_super_admin=="Y" && (COption::GetOptionString("main", "controller_member", "N") != "Y" || COption::GetOptionString("main", "~controller_limited_admin", "N") != "Y"))
+				if (
+					$admin
+					&& $max_right_for_super_admin == "Y"
+					&& (
+						COption::GetOptionString("main", "controller_member", "N") != "Y"
+						|| COption::GetOptionString("main", "~controller_limited_admin", "N") != "Y"
+					)
+				)
+				{
 					$right = $max_right;
+				}
 				else
 				{
 					if (!$site_id)
+					{
 						$strSqlSite = "and MG.SITE_ID IS NULL";
-					elseif(is_array($site_id))
+					}
+					elseif (is_array($site_id))
 					{
 						$strSqlSite = " and (";
 						foreach($site_id as $i => $site_id_tmp)
@@ -2602,7 +2485,9 @@ abstract class CAllMain
 						$strSqlSite .= ")";
 					}
 					else
+					{
 						$strSqlSite = "and MG.SITE_ID = '".$DB->ForSql($site_id)."'";
+					}
 
 					$strSql = "
 						SELECT
@@ -2611,27 +2496,32 @@ abstract class CAllMain
 							b_module_group MG
 						INNER JOIN b_group G ON (MG.GROUP_ID = G.ID)
 						WHERE
-							MG.MODULE_ID = '".$DB->ForSql($module_id,50)."'
+							MG.MODULE_ID = '".$DB->ForSql($module_id, 50)."'
 						and MG.GROUP_ID in (".$groups.")
 						and G.ACTIVE = 'Y'
 						".$strSqlSite;
 
 					$t = $DB->Query($strSql, false, $err_mess.__LINE__);
 					$tr = $t->Fetch();
-					$right = $tr["G_ACCESS"];
+					if ($tr)
+					{
+						$right = $tr["G_ACCESS"];
+					}
 				}
 			}
 
-			if($right == "" && $use_default_level=="Y")
-				$right = COption::GetOptionString($module_id, "GROUP_DEFAULT_RIGHT", $min_right);
-
-			if($right <> "")
+			if ($right == "" && $use_default_level == "Y")
 			{
-				if(!is_array($MODULE_PERMISSIONS[$module_id][$cache_site_key]))
-					$MODULE_PERMISSIONS[$module_id][$cache_site_key] = array();
-				$MODULE_PERMISSIONS[$module_id][$cache_site_key][$key] = $right;
+				$right = COption::GetOptionString($module_id, "GROUP_DEFAULT_RIGHT", $min_right);
+			}
+
+			$MODULE_PERMISSIONS[$module_id][$cache_site_key][$key] = $right;
+			if (defined("CACHE_MODULE_PERMISSIONS") && constant("CACHE_MODULE_PERMISSIONS") == "SESSION")
+			{
+				$_SESSION["MODULE_PERMISSIONS"][$module_id][$cache_site_key][$key] = $right;
 			}
 		}
+
 		return $right;
 	}
 
@@ -2747,6 +2637,11 @@ abstract class CAllMain
 
 			$DB->Insert("b_module_group",$arFields, $err_mess.__LINE__);
 		}
+
+		foreach (GetModuleEvents("main", "OnAfterSetGroupRight", true) as $arEvent)
+		{
+			ExecuteModuleEventEx($arEvent, array("MODULE_ID" => $module_id, "GROUP_ID" => $group_id));
+		}
 	}
 
 	function DelGroupRight($module_id='', $arGroups=array(), $site_id=false)
@@ -2786,7 +2681,14 @@ abstract class CAllMain
 		}
 
 		if($strSql <> '')
+		{
 			$DB->Query($strSql, false, $err_mess.__LINE__);
+
+			foreach (GetModuleEvents("main", "OnAfterDelGroupRight", true) as $arEvent)
+			{
+				ExecuteModuleEventEx($arEvent, array("MODULE_ID" => $module_id, "GROUPS" => $arGroups));
+			}
+		}
 	}
 
 	function GetMainRightList()
@@ -2952,6 +2854,8 @@ abstract class CAllMain
 			$this->arrSPREAD_COOKIE += $_SESSION['SPREAD_COOKIE'];
 		}
 		$_SESSION['SPREAD_COOKIE'] = $this->arrSPREAD_COOKIE;
+
+		$this->HoldSpreadCookieHTML(true);
 	}
 
 	function HoldSpreadCookieHTML($bSet = false)
@@ -3425,6 +3329,13 @@ abstract class CAllMain
 			else
 				$check_url = substr($arUrl['URL'], 0, $pos);
 
+			if (defined('SITE_TEMPLATE_ID'))
+			{
+				$arUrl['URL'] = CHTTP::urlAddParams($arUrl['URL'], array(
+					'siteTemplateId' => SITE_TEMPLATE_ID
+				), array("encode"));
+			}
+
 			$arPos = CUtil::GetPopupSize($check_url, $arUrl['PARAMS']);
 
 			if ($arPos['width'])
@@ -3494,20 +3405,6 @@ abstract class CAllMain
 		/** @global CMain $APPLICATION */
 		global $APPLICATION, $USER;
 
-		if (defined("BX_CHECK_SHORT_URI") && BX_CHECK_SHORT_URI)
-		{
-			if ($arUri = CBXShortUri::GetUri(Bitrix\Main\Context::getCurrent()->getRequest()->getDecodedUri()))
-			{
-				CBXShortUri::SetLastUsed($arUri["ID"]);
-				if (CModule::IncludeModule("statistic"))
-				{
-					CStatEvent::AddCurrent("short_uri_redirect", "", "", "", "", $arUri["URI"], "N", SITE_ID);
-				}
-				LocalRedirect($arUri["URI"], true, CBXShortUri::GetHttpStatusCodeText($arUri["STATUS"]));
-				die();
-			}
-		}
-
 		if(COption::GetOptionString("main", "buffer_content", "Y")=="Y" && (!defined("BX_BUFFER_USED") || BX_BUFFER_USED!==true))
 		{
 			ob_start(array(&$APPLICATION, "EndBufferContent"));
@@ -3532,7 +3429,7 @@ abstract class CAllMain
 			}
 
 			$cookie_prefix = COption::GetOptionString('main', 'cookie_name', 'BITRIX_SM');
-			$salt = $_COOKIE[$cookie_prefix.'_UIDH']."|".$_SERVER["REMOTE_ADDR"]."|".@filemtime($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/general/version.php")."|".LICENSE_KEY."|".CMain::GetServerUniqID();
+			$salt = $_COOKIE[$cookie_prefix.'_UIDH']."|".$USER->GetID()."|".$_SERVER["REMOTE_ADDR"]."|".@filemtime($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/general/version.php")."|".LICENSE_KEY."|".CMain::GetServerUniqID();
 			$key = md5(bitrix_sessid().$salt);
 
 			$bShowMess = ($USER->IsAuthorized() && COption::GetOptionString("main", "session_show_message", "Y") <> "N");
@@ -3576,6 +3473,22 @@ abstract class CAllMain
 		}
 	}
 
+	public static function FinalActions()
+	{
+		global $DB;
+
+		self::EpilogActions();
+
+		foreach(GetModuleEvents("main", "OnAfterEpilog", true) as $arEvent)
+		{
+			ExecuteModuleEventEx($arEvent);
+		}
+
+		$DB->Disconnect();
+
+		self::ForkActions();
+	}
+
 	function EpilogActions()
 	{
 		global $DB;
@@ -3592,8 +3505,6 @@ abstract class CAllMain
 
 	static function ForkActions($func = false, $args = array())
 	{
-		static $arFunctions = array();
-
 		if(
 			!defined("BX_FORK_AGENTS_AND_EVENTS_FUNCTION")
 			|| !function_exists(BX_FORK_AGENTS_AND_EVENTS_FUNCTION)
@@ -3609,12 +3520,12 @@ abstract class CAllMain
 		//Register function to execute in forked process
 		if($func !== false)
 		{
-			$arFunctions[] = array($func, $args);
+			self::$forkActions[] = array($func, $args);
 			return true;
 		}
 
 		//There is nothing to do
-		if(empty($arFunctions))
+		if(empty(self::$forkActions))
 			return true;
 
 		//Release session
@@ -3653,7 +3564,7 @@ abstract class CAllMain
 
 		$DB->DoConnect();
 		$DB->StartUsingMasterOnly();
-		foreach($arFunctions as $action)
+		foreach(self::$forkActions as $action)
 			call_user_func_array($action[0], $action[1]);
 		$DB->Disconnect();
 		$CACHE_MANAGER->_Finalize();
@@ -3954,8 +3865,16 @@ class CAllSite
 
 		$domains = str_replace("\r", "\n", $domains);
 		$arDomains = explode("\n", $domains);
-		for($i=0, $n=count($arDomains); $i<$n; $i++)
-			$arDomains[$i] = preg_replace("#^(http://|https://)#", "", rtrim(trim(strtolower($arDomains[$i])), "/"));
+		foreach($arDomains as $i => $domain)
+		{
+			$domain = preg_replace("#^(http://|https://)#", "", rtrim(trim(strtolower($domain)), "/"));
+
+			$arErrors = array();
+			if ($domainTmp = CBXPunycode::ToASCII($domain, $arErrors))
+				$domain = $domainTmp;
+
+			$arDomains[$i] = $domain;
+		}
 		$arDomains = array_unique($arDomains);
 
 		$bIsDomain = false;
@@ -3963,9 +3882,6 @@ class CAllSite
 		{
 			if($domain <> '')
 			{
-				$arErrors = array();
-				if ($domainTmp = CBXPunycode::ToASCII($domain, $arErrors))
-					$domain = $domainTmp;
 				$DB->Query("INSERT INTO b_lang_domain(LID, DOMAIN) VALUES('".$DB->ForSQL($LID, 2)."', '".$DB->ForSQL($domain, 255)."')");
 				$bIsDomain = true;
 			}
@@ -4203,7 +4119,7 @@ class CAllSite
 		if(($p = realpath($path)))
 			$path = $p;
 		$path = str_replace("\\", "/", $path);
-		$path = strtoupper($path);
+		$path = strtolower($path)."/";
 
 		$db_res = CSite::GetList($by="lendir", $order="desc");
 		while($ar_res = $db_res->Fetch())
@@ -4212,10 +4128,10 @@ class CAllSite
 			if(($p = realpath($abspath)))
 				$abspath = $p;
 			$abspath = str_replace("\\", "/", $abspath);
-			$abspath = strtoupper($abspath);
+			$abspath = strtolower($abspath);
 			if(substr($abspath, -1) <> "/")
 				$abspath .= "/";
-			if(strpos($path, $abspath)===0)
+			if(strpos($path, $abspath) === 0)
 			{
 				if($bOneResult)
 					return $ar_res["ID"];
@@ -4223,7 +4139,7 @@ class CAllSite
 			}
 		}
 
-		if(count($res)>0)
+		if(!empty($res))
 			return $res;
 
 		return false;

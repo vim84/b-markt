@@ -49,7 +49,7 @@ if($REQUEST_METHOD=="POST" && (strlen($save)>0 || strlen($save_ext)>0 || strlen(
 		'MAX_MSG_COUNT'   => $MAX_MSG_COUNT,
 		'MAX_MSG_SIZE'    => $MAX_MSG_SIZE*1024,
 		'MAX_KEEP_DAYS'   => $MAX_KEEP_DAYS,
-		'USE_TLS'         => $bCanUseTLS ? $USE_TLS : 'N',
+		'USE_TLS'         => $bCanUseTLS && $USE_TLS == 'Y' ? ($SELF_CERT == 'Y' ? 'S' : 'Y') : 'N',
 		'USER_ID'         => $USER_ID,
 		'LINK'            => $LINK
 	);
@@ -84,8 +84,8 @@ if($REQUEST_METHOD=="POST" && (strlen($save)>0 || strlen($save_ext)>0 || strlen(
 }
 
 $str_SERVER_TYPE = $mailbox_type == 'user' ? 'imap' : 'pop3';
-$str_PORT        = $str_SERVER_TYPE == 'imap' ? '993' : '110';
-$str_USE_TLS     = $str_SERVER_TYPE == 'imap' ? 'Y' : 'N';
+$str_PORT        = $str_SERVER_TYPE == 'imap' ? ($bCanUseTLS ? '993' : '143') : '110';
+$str_USE_TLS     = $str_SERVER_TYPE == 'imap' && $bCanUseTLS ? 'Y' : 'N';
 $str_ACTIVE      = 'Y';
 $str_AUTH_RELAY  = 'Y';
 $str_RELAY       = 'Y';
@@ -281,7 +281,11 @@ if ($message)
 	</tr>
 	<tr id="el8" class="pop3 imap">
 		<td><?=GetMessage("MAIL_MBOX_EDT_USE_TLS"); ?><span class="required"><sup>1</sup></span></td>
-		<td><input type="checkbox" name="USE_TLS" id="USE_TLS" value="Y"<?if($str_USE_TLS=="Y")echo " checked"?> onclick="change_port();"<?if (!$bCanUseTLS){?> disabled<?}?>></td>
+		<td><input type="checkbox" name="USE_TLS" id="USE_TLS" value="Y"<? if ($str_USE_TLS == 'Y' || $str_USE_TLS == 'S') { ?> checked<? } ?> onclick="change_port();"<? if (!$bCanUseTLS) { ?> disabled<? } ?>></td>
+	</tr>
+	<tr id="el23" class="pop3 imap">
+		<td><?=GetMessage('MAIL_MBOX_EDT_SELF_CERT'); ?></td>
+		<td><input type="checkbox" name="SELF_CERT" id="SELF_CERT" value="Y"<? if ($str_USE_TLS == 'S') { ?> checked<? } ?><? if ($str_USE_TLS != 'Y' && $str_USE_TLS != 'S') { ?> disabled<? } ?>></td>
 	</tr>
 	<tr id="el9" class="pop3 imap domain crdomain controller adm-detail-required-field">
 		<td><?=GetMessage("MAIL_MBOX_EDT_LOGIN"); ?></td>
@@ -410,7 +414,7 @@ if ($message)
 		var serverType = serverTypeSelect.options[serverTypeSelect.selectedIndex].value;
 		<? } ?>
 
-		for (var i = 0; i <= 22; i++)
+		for (var i = 0; i <= 23; i++)
 		{
 			var d = document.getElementById('el'+i);
 
@@ -460,9 +464,11 @@ if ($message)
 			{
 				case 'pop3':
 					serverPort.value = document.getElementById('USE_TLS').checked ? 995 : 110;
+					document.getElementById('SELF_CERT').disabled = !document.getElementById('USE_TLS').checked;
 					break;
 				case 'imap':
 					serverPort.value = document.getElementById('USE_TLS').checked ? 993 : 143;
+					document.getElementById('SELF_CERT').disabled = !document.getElementById('USE_TLS').checked;
 					break;
 				case 'smtp':
 					serverPort.value = 25;
@@ -540,6 +546,7 @@ if ($message)
 		var mailboxServer = document.getElementById('mailbox_server');
 		var mailboxPort = document.getElementById('PORT_PORT');
 		var mailboxEncryption = document.getElementById('USE_TLS');
+		var mailboxAllowSelfCert = document.getElementById('SELF_CERT');
 		var mailboxLink = document.getElementById('mailbox_link');
 
 		serverType.value = service['type'];
@@ -548,6 +555,7 @@ if ($message)
 		mailboxServer.value = service['server'];
 		mailboxPort.value = service['port'] > 0 ? service['port'] : '';
 		mailboxEncryption.checked = service['encryption'] == 'N' ? false : true;
+		mailboxAllowSelfCert.checked = service['encryption'] == 'S';
 		mailboxLink.value = service['link'];
 
 		change_type();

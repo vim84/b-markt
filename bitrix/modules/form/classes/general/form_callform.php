@@ -1987,7 +1987,6 @@ http://#SERVER_NAME#/bitrix/admin/form_result_view.php?lang=".$arrSiteLang[$sid]
 					case 'form_result_edit.php':
 					case 'form_result_list.php':
 					case 'form_result_view.php':
-					case 'form_view.php':
 						$current_section = 'result';
 					break;
 

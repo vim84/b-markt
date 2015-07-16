@@ -74,13 +74,13 @@ a.tablebodylink:hover {text-decoration:underline; color:red;}
 
 .text, .smalltext, .smalltextlink {font-family:Arial; font-weight:normal;}
 .text {font-size:12px; color:#000000;}
-.smalltext {font-size:11px; color:#000000;} 
+.smalltext {font-size:11px; color:#000000;}
 .smalltextlink {font-size:11px; text-decoration:none}
 a.smalltextlink:hover {text-decoration:underline;}
 a.smalltext:hover {color:#000000;}
 
 .notetable {background-color:#FFFFEC;}
-.legendtext {font-family:Arial; font-size:11px; color:#000000; font-weight:normal;} 
+.legendtext {font-family:Arial; font-size:11px; color:#000000; font-weight:normal;}
 .star, .starrequired {font-family:Verdana; font-size:8pt;}
 .starrequired {color: #FF0000}
 
@@ -91,8 +91,8 @@ a.submenutext:hover {text-decoration:underline; color:#4D5F6C;}
 .justify {text-align:justify;}
 .linktext {font-family:Verdana; font-size:10pt; color:#000000; font-weight:normal;}
 .textmain {font-family:Verdana; font-size:12px; line-height: 15px; text-decoration:none;}
-.textb {font-family:Arial; font-size:10pt; color:#000000; font-weight:bold;} 
-.subtitletext {font-family:Arial; color:#000000; font-size:11pt; font-weight:bold;} 
+.textb {font-family:Arial; font-size:10pt; color:#000000; font-weight:bold;}
+.subtitletext {font-family:Arial; color:#000000; font-size:11pt; font-weight:bold;}
 
 .smalltxt, .smalltxtw, .smalltxtws {font-family:Verdana; text-decoration:none}
 .smalltxt {font-size:11px; line-height: 13px;}
@@ -118,9 +118,9 @@ form {margin-top: 16px; margin-bottom: 16px;}
 INPUT.typeinput, INPUT.typefile, TEXTAREA.typearea, SELECT.typeselect {background-color:#FFFFFF; font-size:12px; font-family:Arial;}
 INPUT.button {
 	padding:2px;
-	font-family:Tahoma; font-size:12px; 
-	color:#FFFFFF; background-color:#6AA2CA; 
-	border: 2px solid #4083B5; 
+	font-family:Tahoma; font-size:12px;
+	color:#FFFFFF; background-color:#6AA2CA;
+	border: 2px solid #4083B5;
 	cursor: pointer;
 }
 .tablebodybutton {font-size:12px; font-family: Arial;}

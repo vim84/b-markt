@@ -32,12 +32,13 @@ ul.left-menu li a:hover
 }
 
 
-ul.left-menu li a.selected:link, 
-ul.left-menu li a.selected:visited, 
-ul.left-menu li a.selected:active, 
+ul.left-menu li a.selected:link,
+ul.left-menu li a.selected:visited,
+ul.left-menu li a.selected:active,
 ul.left-menu li a.selected:hover
 {
 	color:#FC8D3D;
 }
+
 
 

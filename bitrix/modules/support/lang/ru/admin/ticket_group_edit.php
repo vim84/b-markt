@@ -17,7 +17,8 @@ $MESS["SUP_GE_ADD_MORE_USERS"] = "Добавить";
 $MESS["SUP_GE_USER"] = "Пользователь";
 $MESS["SUP_GE_CAN_VIEW"] = "Может видеть сообщения группы";
 $MESS["MAIN_USER_PROFILE"] = "Перейти к редактированию профиля";
-
 $MESS["SUP_GE_CAN_MAIL"] = "Получает уведомления о новых обращениях в группе";
 $MESS["SUP_GE_CAN_MAIL_UPDATE"] = "Получает уведомления о обновлении обращений в группе";
+$MESS["MAIN_WAIT"] = "ждите...";
+$MESS["REQUIRED_FIELDS"] = "Поля, обязательные для заполнения.";
 ?>

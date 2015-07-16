@@ -1,3 +1,5 @@
+/* absolute path to images is required to make crm-sale proxy work */
+
 .bx-sls .dropdown-block {
 	border: 1px solid #bdbdbd;
 	border-radius: 2px;
@@ -10,7 +12,7 @@
 }
 
 .bx-sls .dropdown-arrow {
-	background: url(images/dropdown-errow.png) no-repeat center center;
+	background: url(/bitrix/components/bitrix/sale.location.selector.search/templates/.default/images/dropdown-errow.png) no-repeat center center;
 	height: 100%;
 	top: 0;
 	right: 0;
@@ -105,7 +107,7 @@
 }
 
 .bx-sls .dropdown-icon {
-	background: url(images/lens.png) no-repeat center center;
+	background: url(/bitrix/components/bitrix/sale.location.selector.search/templates/.default/images/lens.png) no-repeat center center;
 	height: 14px;
 	left: 10px;
 	position: absolute;
@@ -187,6 +189,10 @@
 
 .bx-sls .bx-ui-sls-pane{
 	max-height: 300px;
+}
+
+.bx-sls input::-ms-clear {
+	display: none;
 }
 
 .bx-sls input[type="text"]{

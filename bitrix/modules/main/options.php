@@ -93,6 +93,8 @@ $arAllOptions = array(
 		Array("email_from", GetMessage("MAIN_EMAIL_FROM"), "admin@".$SERVER_NAME, Array("text", 30)),
 		Array("CONVERT_UNIX_NEWLINE_2_WINDOWS", GetMessage("MAIN_CONVERT_UNIX_NEWLINE_2_WINDOWS"), "N", Array("checkbox", "Y")),
 		Array("convert_mail_header", GetMessage("MAIN_OPTION_CONVERT_8BIT"), "Y", Array("checkbox", "Y")),
+		Array("attach_images", GetMessage("MAIN_OPTION_ATTACH_IMAGES"), "N", array("checkbox", "Y")),
+		Array("max_file_size", GetMessage("MAIN_OPTION_MAX_FILE_SIZE"), "0", Array("text", 10)),
 		Array("mail_event_period", GetMessage("main_option_mail_period"), "14", Array("text", 10)),
 		Array("mail_event_bulk", GetMessage("main_option_mail_bulk"), "5", Array("text", 10)),
 		Array("mail_additional_parameters", GetMessage("MAIN_OPTION_MAIL_ADDITIONAL_PARAMETERS"), "", Array("text", 30)),
@@ -110,6 +112,7 @@ $arAllOptions = array(
 		GetMessage("MAIN_OPTIMIZE_CSS_SETTINGS"),
 		Array("optimize_css_files", GetMessage("MAIN_OPTIMIZE_CSS"), "N", Array("checkbox", "Y")),
 		Array("optimize_js_files", GetMessage("MAIN_OPTIMIZE_JS"), "N", Array("checkbox", "Y")),
+		Array("use_minified_assets", GetMessage("MAIN_USE_MINIFIED_ASSETS"), "Y", Array("checkbox", "Y")),
 		Array("compres_css_js_files", GetMessage("MAIN_COMPRES_CSS_JS"), "N", Array("checkbox", "Y")),
 
 		GetMessage("MAIN_OPTIMIZE_TRANSLATE_SETTINGS"),
@@ -545,7 +548,7 @@ foreach($arGROUPS as $value):
 			{
 				if ($v_gr['ID'] == $value["ID"])
 					continue;
-				?><option value="<?=$v_gr['ID']?>" <?echo (in_array($v_gr['ID'],$arSubordinateGroups) || $v_gr['ID'] == 2) ? 'selected' : ''?>><? echo $v_gr['NAME'].' ['.$v_gr['ID'].']'?></option><?
+				?><option value="<?=$v_gr['ID']?>" <?echo (in_array($v_gr['ID'],$arSubordinateGroups)) ? 'selected' : ''?>><? echo $v_gr['NAME'].' ['.$v_gr['ID'].']'?></option><?
 			}
 			?>
 			</select>

@@ -1,8 +1,4 @@
 /*GRID*/
-.log-popup {
-	/* ToDo: remove this! */
-	width: 1000px !important;
-}
 .bx-otp-wrap-container{
 	padding:20px 25px;
 }
@@ -90,7 +86,7 @@ h3.bx-otp-wrap-container-title{
 	background:url(images/sprite.png) no-repeat center -80px;
 }
 .bx-otp-section.bx-otp-step-2 .bx-otp-section-desc{
-	margin-left:200px;
+	/*margin-left:200px;*/
 }
 
 .bx-otp-section.bx-otp-step-3{
@@ -112,6 +108,7 @@ h3.bx-otp-wrap-container-title{
 	font-weight:normal;
 	margin:0 0 10px 0;
 	padding:0;
+	width: 350px;
 	color:#535b69;
 }
 .bx-otp-section-desc{
@@ -132,7 +129,7 @@ h3.bx-otp-wrap-container-title{
 }
 
 .bx-otp-section-market-list-container{
-	text-align: center;
+	text-align: left;
 	background: #fff;
 	margin: 10px 0;
 	padding: 11px 20px;
@@ -148,7 +145,7 @@ h3.bx-otp-wrap-container-title{
 	/*margin:40px 0 30px;*/
 	padding:0;
 	display: block;
-	text-align: center;
+	text-align: left;
 	list-style:none;
 }
 .bx-otp-section-market-list li{
@@ -179,18 +176,18 @@ h3.bx-otp-wrap-container-title{
 
 
 .bx-otp-section-col{
-	float:left;
+	/*float:left;*/
 	-webkit-box-sizing:border-box;
 	-moz-box-sizing:border-box;
 	box-sizing:border-box;
-	width:50%;
+	/*width:50%;*/
 	padding:20px;
 }
 .bx-otp-section .bx-otp-section .bx-otp-section-col:nth-child(odd){
-	padding-right:40px;
+	/*padding-right:40px;*/
 }
 .bx-otp-section .bx-otp-section .bx-otp-section-col:nth-child(even){
-	padding-left:40px;
+	/*padding-left:40px;*/
 }
 .bx-otp-section-title-small{
 	font-size:21px;
@@ -240,10 +237,10 @@ h3.bx-otp-wrap-container-title{
 	position:absolute;
 	top:50%;
 	left:50%;
-	width:164px;
+	width:230px;
 	height:164px;
 	margin-top:-84px;
-	margin-left:-82px;
+	margin-left:-110px;
 }
 .bx-otp-token-result-code td{
 	font-size:18px;
@@ -263,7 +260,7 @@ h3.bx-otp-wrap-container-title{
 .bx-otp-token-screen-code    {    background:           url(images/s-en-04.png) no-repeat right bottom;}
 
 .ru .bx-otp-section.bx-otp-step-1{    background:#f7f9f9    url(images/s-ru-01.png) no-repeat 93% center;}
-.ru .bx-otp-section.bx-otp-step-2{    background:#f7f9f9    url(images/s-ru-02.png) no-repeat 100% 35%;}
+.ru .bx-otp-section.bx-otp-step-2{    background:#f7f9f9    url(images/s-ru-02.png) no-repeat 140% 35%;}
 .ru .bx-otp-token-screen-QR      {    background:           url(images/s-ru-04.png) no-repeat right bottom;}
 .ru .bx-otp-token-screen-code    {    background:           url(images/s-ru-03.png) no-repeat right bottom;}
 
@@ -405,6 +402,16 @@ h3.bx-otp-wrap-container-title{
 .bx-otp-slt.medium  {line-height:32px;height:32px;font-size:14px;}
 .bx-otp-slt.small   {line-height:29px;height:29px;font-size:14px;}
 .bx-otp-slt.xsmall  {line-height:18px;height:20px;font-size:13px;padding-bottom: 2px;font-weight: normal;}
+
+.bx-otp-section .separator {
+	color: #808080;
+	margin-left: 20px;
+	margin-right: 20px;
+}
+
+.bx-otp-section .current {
+	font-weight: bold;
+}
 
 .bx-notice{
 	font-family:Arial, 'Helvetica Neue', Helvetica, sans-serif;

@@ -34,7 +34,6 @@ SequentialWorkflowActivity = function()
 			var pos = BX.pos(ob.Table.rows[0].cells[2]);
 		 	var scrollPos = BX.GetWindowScrollPos();
 
-			// если край тулбокса выходит за верхнюю границу экрана
 			if(scrollPos.scrollTop > pos.top - d)
 			{
 				ob.swfToolboxDiv.style.position = 'fixed';
@@ -44,12 +43,11 @@ SequentialWorkflowActivity = function()
 				ob.swfToolboxDiv.style.width = '200px';
 				ob.swfToolboxDiv.style.left = (pos.left - scrollPos.scrollLeft + 0) + 'px';
 			}
-			else if(scrollPos.scrollTop < pos.top - d) // если верхушка фиксированного тулбокса выше контейнера
+			else if(scrollPos.scrollTop < pos.top - d)
 			{
 				ob.swfToolboxDiv.style.position = 'static';
 			}
 
-			// если нижн€€ граница фиксированного тулбокса выходит за €чейку контейнера;
 			if(scrollPos.scrollTop + scrollSize.innerHeight > pos.bottom)
 			{
 				ob.swfToolboxDiv.style.height = (pos.bottom - scrollPos.scrollTop - d) + 'px';
@@ -79,12 +77,10 @@ SequentialWorkflowActivity = function()
 							{
 								var r = window.__lastSnippet;
 								var ind = r._ind;
-								//debugger;
 								arUserParams['SNIPPETS'][ind]['Properties']['Title'] = BX('snippstitle').value;
 								r.childNodes[0].rows[0].cells[1].innerHTML = HTMLEncode(document.getElementById('snippstitle').value);
 								this.parentWindow.Close();
 								BCPSaveUserParams();
-								//console.debug(arUserParams);
 							}
 						}, 
 						BX.CDialog.prototype.btnCancel]
@@ -298,6 +294,9 @@ SequentialWorkflowActivity = function()
 					continue;
 
 				if(act_i == 'setstateactivity' && rootActivity.Type == ob.Type)
+					continue;
+				// hide deprecated
+				if(act_i == 'calendaractivity' || act_i == 'taskactivity' )
 					continue;
 				
 				ob.DrawGroupItem(divGroupList, arAllActivities[act_i]);

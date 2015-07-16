@@ -105,7 +105,9 @@ else
 							$arResult["Features"][$feature]["Active"] = true;
 
 						foreach ($arFeature["operations"] as $op => $arOp)
+						{
 							$arResult["Features"][$feature]["Operations"][$op] = CSocNetFeaturesPerms::GetOperationPerm(SONET_ENTITY_GROUP, $arResult["Group"]["ID"], $feature, $op);
+						}
 					}
 				}
 				else
@@ -321,19 +323,22 @@ else
 			{
 				$arResult["ENTITY_TYPE"] = SONET_ENTITY_USER;
 				if (CSocNetUser::IsFriendsAllowed())
+				{
 					$arResult["PermsVar"] = array(
 						SONET_RELATIONS_TYPE_NONE => GetMessage("SONET_C3_PVU_NONE"),
 						SONET_RELATIONS_TYPE_FRIENDS => GetMessage("SONET_C3_PVU_FR"),
-						SONET_RELATIONS_TYPE_FRIENDS2 => GetMessage("SONET_C3_PVU_FR2"),
 						SONET_RELATIONS_TYPE_AUTHORIZED => GetMessage("SONET_C3_PVU_AUTHORIZED"),
 						SONET_RELATIONS_TYPE_ALL => GetMessage("SONET_C3_PVU_ALL"),
 					);
+				}
 				else
+				{
 					$arResult["PermsVar"] = array(
 						SONET_RELATIONS_TYPE_NONE => GetMessage("SONET_C3_PVU_NONE"),
 						SONET_RELATIONS_TYPE_AUTHORIZED => GetMessage("SONET_C3_PVU_AUTHORIZED"),
 						SONET_RELATIONS_TYPE_ALL => GetMessage("SONET_C3_PVU_ALL"),
 					);
+				}
 			}
 		}
 	}

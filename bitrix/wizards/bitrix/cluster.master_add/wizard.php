@@ -256,6 +256,8 @@ class Step4 extends CBaseWizardStep
 
 class FinalStep extends CBaseWizardStep
 {
+	protected $location = '';
+
 	function InitStep()
 	{
 		parent::InitStep();
@@ -268,17 +270,24 @@ class FinalStep extends CBaseWizardStep
 
 	function ShowStepNoError()
 	{
-		$this->content = '
-		<table cellpadding="2" cellspacing="0" border="0" width="100%">
-			<tr>
-				<td width="40%" align="right">'.GetMessage("CLUWIZ_FINALSTEP_NAME").':</td>
-				<td width="60%">'.$this->ShowInputField('text', 'node_name', array(
-					'size' => 40,
-					'maxsize' => 50,
-				)).'</td>
-			</tr>
-		</table>
-		';
+		if ($this->location)
+		{
+			$this->content = '<script>top.window.location = \''.CUtil::JSEscape($this->location).'\';</script>';
+		}
+		else
+		{
+			$this->content = '
+			<table cellpadding="2" cellspacing="0" border="0" width="100%">
+				<tr>
+					<td width="40%" align="right">'.GetMessage("CLUWIZ_FINALSTEP_NAME").':</td>
+					<td width="60%">'.$this->ShowInputField('text', 'node_name', array(
+						'size' => 40,
+						'maxsize' => 50,
+					)).'</td>
+				</tr>
+			</table>
+			';
+		}
 	}
 
 	function OnPostForm()
@@ -307,11 +316,7 @@ class FinalStep extends CBaseWizardStep
 				"SELECTABLE" => "Y",
 				"WEIGHT" => 100,
 			));
-			echo '
-			<script>
-				top.window.location = \'/bitrix/admin/cluster_slave_list.php?lang='.LANGUAGE_ID.'&group_id='.$group_id.'\';
-			</script>
-			';
+			$this->location = '/bitrix/admin/cluster_slave_list.php?lang='.LANGUAGE_ID.'&group_id='.$group_id;
 		}
 	}
 }

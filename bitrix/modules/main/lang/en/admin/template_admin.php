@@ -25,4 +25,7 @@ $MESS["site_templ_edit_screen"] = "Screenshot";
 $MESS["site_templ_edit_sort"] = "Sort order";
 $MESS["MAIN_ADMIN_MENU_EDIT"] = "Edit";
 $MESS["MAIN_ADMIN_MENU_COPY"] = "Copy";
+$MESS["MAIN_T_ADMIN_TITLE_THEME"] = "Visual Themes";
+$MESS["MAIN_ADD_TEMPL_THEME"] = "Add theme";
+$MESS["MAIN_LOAD_THEME"] = "Load theme";
 ?>

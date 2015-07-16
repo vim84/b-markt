@@ -8,19 +8,9 @@ if (!CModule::IncludeModule("sale"))
 }
 $arParams["PATH_TO_BASKET"] = trim($arParams["PATH_TO_BASKET"]);
 $arParams["PATH_TO_ORDER"] = trim($arParams["PATH_TO_ORDER"]);
-if (array_key_exists('SHOW_DELAY', $arParams) && 'N' == $arParams['SHOW_DELAY'])
-	$arParams['SHOW_DELAY'] = 'N';
-else
-	$arParams['SHOW_DELAY'] = 'Y';
-if (array_key_exists('SHOW_NOTAVAIL', $arParams) && 'N' == $arParams['SHOW_NOTAVAIL'])
-	$arParams['SHOW_NOTAVAIL'] = 'N';
-else
-	$arParams['SHOW_NOTAVAIL'] = 'Y';
-if (array_key_exists('SHOW_SUBSCRIBE', $arParams) && 'N' == $arParams['SHOW_SUBSCRIBE'])
-	$arParams['SHOW_SUBSCRIBE'] = 'N';
-else
-	$arParams['SHOW_SUBSCRIBE'] = 'Y';
-
+$arParams['SHOW_DELAY'] = (isset($arParams['SHOW_DELAY']) && $arParams['SHOW_DELAY'] == 'N' ? 'N' : 'Y');
+$arParams['SHOW_NOTAVAIL'] = (isset($arParams['SHOW_NOTAVAIL']) && $arParams['SHOW_NOTAVAIL'] == 'N' ? 'N' : 'Y');
+$arParams['SHOW_SUBSCRIBE'] = (isset($arParams['SHOW_SUBSCRIBE']) && $arParams['SHOW_SUBSCRIBE'] == 'N' ? 'N' : 'Y');
 
 $bReady = false;
 $bDelay = false;
@@ -33,73 +23,79 @@ $allWeight = 0.0;
 $arBasketItems = array();
 $arSetParentWeight = array();
 
-$rsBaskets = CSaleBasket::GetList(
-	array("ID" => "ASC"),
-	array("FUSER_ID" => CSaleBasket::GetBasketUserID(), "LID" => SITE_ID, "ORDER_ID" => "NULL"),
-	false,
-	false,
-	array(
-		"ID", "NAME", "CALLBACK_FUNC", "MODULE", "PRODUCT_ID", "QUANTITY", "DELAY", "CAN_BUY",
-		"PRICE", "WEIGHT", "DETAIL_PAGE_URL", "NOTES", "CURRENCY", "VAT_RATE", "CATALOG_XML_ID",
-		"PRODUCT_XML_ID", "SUBSCRIBE", "DISCOUNT_PRICE", "PRODUCT_PROVIDER_CLASS", "TYPE", "SET_PARENT_ID"
-	)
-);
-while ($arItem = $rsBaskets->GetNext())
+$fuserId = (int)CSaleBasket::GetBasketUserID(true);
+if ($fuserId > 0)
 {
-	$arBasketItems[] = $arItem;
+	$rsBaskets = CSaleBasket::GetList(
+		array("ID" => "ASC"),
+		array("FUSER_ID" => $fuserId, "LID" => SITE_ID, "ORDER_ID" => "NULL"),
+		false,
+		false,
+		array(
+			"ID", "NAME", "CALLBACK_FUNC", "MODULE", "PRODUCT_ID", "QUANTITY", "DELAY", "CAN_BUY",
+			"PRICE", "WEIGHT", "DETAIL_PAGE_URL", "NOTES", "CURRENCY", "VAT_RATE", "CATALOG_XML_ID",
+			"PRODUCT_XML_ID", "SUBSCRIBE", "DISCOUNT_PRICE", "PRODUCT_PROVIDER_CLASS", "TYPE", "SET_PARENT_ID"
+		)
+	);
+	while ($arItem = $rsBaskets->GetNext())
+	{
+		$arBasketItems[] = $arItem;
 
-	if (CSaleBasketHelper::isSetItem($arItem))
-		$arSetParentWeight[$arItem["SET_PARENT_ID"]] += $arItem["WEIGHT"] * $arItem['QUANTITY'];
+		if (CSaleBasketHelper::isSetItem($arItem))
+			$arSetParentWeight[$arItem["SET_PARENT_ID"]] += $arItem["WEIGHT"] * $arItem['QUANTITY'];
+	}
 }
-
-// count weight for set parent products
-foreach ($arBasketItems as &$arItem)
+if (!empty($arBasketItems))
 {
-	if (CSaleBasketHelper::isSetParent($arItem))
-		$arItem["WEIGHT"] = $arSetParentWeight[$arItem["ID"]] / $arItem["QUANTITY"];
-}
-unset($arItem);
+	// count weight for set parent products
+	foreach ($arBasketItems as &$arItem)
+	{
+		if (CSaleBasketHelper::isSetParent($arItem))
+			$arItem["WEIGHT"] = $arSetParentWeight[$arItem["ID"]] / $arItem["QUANTITY"];
+	}
+	unset($arItem);
 
-foreach ($arBasketItems as &$arItem)
-{
-	if (CSaleBasketHelper::isSetItem($arItem))
-		continue;
+	foreach ($arBasketItems as &$arItem)
+	{
+		if (CSaleBasketHelper::isSetItem($arItem))
+			continue;
 
-	$boolOneReady = false;
-	if ($arItem["DELAY"]=="N" && $arItem["CAN_BUY"]=="Y")
-	{
-		$boolOneReady = true;
-		$bReady = true;
-		$allSum += ($arItem["PRICE"] * $arItem["QUANTITY"]);
-		$allWeight += ($arItem["WEIGHT"] * $arItem["QUANTITY"]);
-	}
-	elseif ($arItem["DELAY"]=="Y" && $arItem["CAN_BUY"]=="Y")
-	{
-		if ('N' == $arParams['SHOW_DELAY'])
-			continue;
-		$bDelay = true;
-	}
-	elseif ($arItem["CAN_BUY"]=="N" && $arItem["SUBSCRIBE"]=="N")
-	{
-		if ('N' == $arParams['SHOW_NOTAVAIL'])
-			continue;
-		$bNotAvail = true;
-	}
-	elseif ($arItem["CAN_BUY"]=="N" && $arItem["SUBSCRIBE"]=="Y")
-	{
-		if ('N' == $arParams['SHOW_SUBSCRIBE'])
-			continue;
-		$bSubscribe = true;
-	}
+		$boolOneReady = false;
+		if ($arItem["DELAY"]=="N" && $arItem["CAN_BUY"]=="Y")
+		{
+			$boolOneReady = true;
+			$bReady = true;
+			$allSum += ($arItem["PRICE"] * $arItem["QUANTITY"]);
+			$allWeight += ($arItem["WEIGHT"] * $arItem["QUANTITY"]);
+		}
+		elseif ($arItem["DELAY"]=="Y" && $arItem["CAN_BUY"]=="Y")
+		{
+			if ('N' == $arParams['SHOW_DELAY'])
+				continue;
+			$bDelay = true;
+		}
+		elseif ($arItem["CAN_BUY"]=="N" && $arItem["SUBSCRIBE"]=="N")
+		{
+			if ('N' == $arParams['SHOW_NOTAVAIL'])
+				continue;
+			$bNotAvail = true;
+		}
+		elseif ($arItem["CAN_BUY"]=="N" && $arItem["SUBSCRIBE"]=="Y")
+		{
+			if ('N' == $arParams['SHOW_SUBSCRIBE'])
+				continue;
+			$bSubscribe = true;
+		}
 
-	if (!$boolOneReady)
-	{
-		$arItem["PRICE_FORMATED"] = SaleFormatCurrency($arItem["PRICE"], $arItem["CURRENCY"]);
-		$arItems[] = $arItem;
-	}
-	else
-	{
-		$arReadyItems[] = $arItem;
+		if (!$boolOneReady)
+		{
+			$arItem["PRICE_FORMATED"] = SaleFormatCurrency($arItem["PRICE"], $arItem["CURRENCY"]);
+			$arItems[] = $arItem;
+		}
+		else
+		{
+			$arReadyItems[] = $arItem;
+		}
 	}
 }
 
@@ -138,4 +134,3 @@ $arResult = array(
 );
 
 $this->IncludeComponentTemplate();
-?>

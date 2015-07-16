@@ -452,7 +452,7 @@ foreach($arTypes as $type_id => $arType)
 if($bUserIsAdmin || $bHasWRight || $bHasXRight)
 {
 	$arItems = array();
-	if($bHasWRight)
+	if($bHasXRight)
 	{
 		$arItems[] = array(
 			"text" => GetMessage("IBLOCK_MENU_EXPORT"),

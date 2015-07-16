@@ -876,10 +876,12 @@
 	 * @param params - The parameters
 	 * @returns {*}
 	 */
-	app.hideButtonPanel = function (params)
+	app.hideSlidingPanel = app.hideButtonPanel = function (params)
 	{
-		return this.exec("hideButtonPanel", params);
+		return this.exec("hideSlidingPanel", params);
 	};
+
+
 	/**
 	 * Shows dialog of choosing of the values
 	 * @param params - The parameters
@@ -1970,6 +1972,13 @@
 		return this.exec("enableSliderMenu", enable);
 	};
 
+	app.enableRight = function (enable)
+	{
+		//lock|unlock slider menu
+		var enable = enable || false;
+		return this.exec("enableRight", enable);
+	};
+
 	/**
 	 * @deprecated
 	 * @param counters
@@ -2047,7 +2056,8 @@
 							device_name: (typeof device.name == "undefined"? device.model: device.name),
 							uuid: device.uuid,
 							device_token: token,
-							device_type: dt
+							device_type: dt,
+							sessid: BX.bitrix_sessid()
 						},
 						function (data)
 						{
@@ -2760,7 +2770,7 @@
 		this.offline = null;
 		this.processData = null;
 		this.xhr = null;
-	};
+};
 
 	MobileAjaxWrapper.prototype.Init = function (params)
 	{
@@ -2915,23 +2925,34 @@
 
 	BMAjaxWrapper = new MobileAjaxWrapper;
 
-	document.addEventListener("offline", function ()
+	MobileNetworkStatus = function ()
 	{
-		BMAjaxWrapper.offline = true;
-	}, false);
-	document.addEventListener("online", function ()
-	{
-		BMAjaxWrapper.offline = false;
-	}, false);
+		this.offline = null;
 
-	document.addEventListener('DOMContentLoaded', function ()
-	{
-		BX.addCustomEvent("UIApplicationDidBecomeActiveNotification", function (params)
+		var _this = this;
+
+		document.addEventListener("offline", function()
 		{
-			var networkState = navigator.network.connection.type;
-			BMAjaxWrapper.offline = (networkState == Connection.UNKNOWN || networkState == Connection.NONE);
-		});
-	}, false);
+			_this.offline = true;
+		}, false);
+
+		document.addEventListener("online", function()
+		{
+			_this.offline = false;
+		}, false);
+
+		document.addEventListener('DOMContentLoaded', function()
+		{
+			BX.addCustomEvent("UIApplicationDidBecomeActiveNotification", function(params)
+			{
+				var networkState = navigator.network.connection.type;
+				_this.offline = (networkState == Connection.UNKNOWN || networkState == Connection.NONE);
+			});
+		}, false);
+	};
+
+	BMNetworkStatus = new MobileNetworkStatus;
+
 })();
 
 

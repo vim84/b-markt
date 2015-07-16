@@ -17,6 +17,9 @@ if (array_key_exists("COMPONENT_VERSION", $arParams) && $arParams["COMPONENT_VER
 	if (strlen($arParams["ID"]) <= 0)
 		$arParams["ID"] = trim($_REQUEST["id"]);
 
+	if (strlen($arParams["ID"]) <= 0)
+		$arResult["FatalErrorMessage"] .= GetMessage("BPABL_INVALID_WF").". ";
+
 	$arParams["SET_TITLE"] = ($arParams["SET_TITLE"] == "N" ? "N" : "Y"); //Turn on by default
 	$arParams["INLINE_MODE"] = ($arParams["INLINE_MODE"] == "Y" ? "Y" : "N");
 	$arResult["AJAX_MODE"] = $arParams["AJAX_MODE"] = ($arParams["AJAX_MODE"] == "N" ? "N" : "Y"); //Backward compatibility
@@ -53,31 +56,6 @@ if (array_key_exists("COMPONENT_VERSION", $arParams) && $arParams["COMPONENT_VER
 		$documentService = $runtime->GetService("DocumentService");
 
 		$documentType = $documentService->GetDocumentType($documentId);
-
-		$GLOBALS["__bwl1_ParseStringParameterTmp_arAllowableUserGroups"] = CBPDocument::GetAllowableUserGroups($documentType);
-		function __bwl1_ParseStringParameterTmp($matches)
-		{
-			$result = "";
-			if ($matches[1] == "user")
-			{
-				$user = $matches[2];
-
-				$l = strlen("user_");
-				if (substr($user, 0, $l) == "user_")
-					$result = htmlspecialcharsbx(CBPHelper::ConvertUserToPrintableForm(intval(substr($user, $l))));
-				else
-					$result = $GLOBALS["__bwl1_ParseStringParameterTmp_arAllowableUserGroups"][$user];
-			}
-			elseif ($matches[1] == "group")
-			{
-				$result = $GLOBALS["__bwl1_ParseStringParameterTmp_arAllowableUserGroups"][$matches[2]];
-			}
-			else
-			{
-				$result = $matches[0];
-			}
-			return $result;
-		}
 
 		$arResult["GRID_ID"] = "bizproc_loggrid_".$arWorkflowState["WORKFLOW_TEMPLATE_ID"];
 
@@ -171,23 +149,6 @@ if (array_key_exists("COMPONENT_VERSION", $arParams) && $arParams["COMPONENT_VER
 				if ($arTrack["TYPE"] != CBPTrackingType::Custom && $arTrack["TYPE"] != CBPTrackingType::FaultActivity && $arTrack["TYPE"] != CBPTrackingType::Report)
 					continue;
 			}
-			/*else
-			{
-				if ($arTrack["TYPE"] == CBPTrackingType::CloseActivity)
-				{
-					$level--;
-					$prefix = str_repeat("&nbsp;&nbsp;", $level > 0 ? $level : 0);
-				}
-				elseif ($arTrack["TYPE"] == CBPTrackingType::ExecuteActivity)
-				{
-					$prefix = str_repeat("&nbsp;&nbsp;", $level > 0 ? $level : 0);
-					$level++;
-				}
-				else
-				{
-					$prefix = str_repeat("&nbsp;&nbsp;", $level > 0 ? $level : 0);
-				}
-			}*/
 
 			$date = $arTrack["MODIFIED"];
 
@@ -215,6 +176,7 @@ if (array_key_exists("COMPONENT_VERSION", $arParams) && $arParams["COMPONENT_VER
 					break;
 				case 6:
 					$type = GetMessage("BPABL_TYPE_7");
+					$arTrack["ACTION_NOTE"] = htmlspecialcharsback($arTrack["ACTION_NOTE"]);
 					break;
 				default:
 					$type = GetMessage("BPABL_TYPE_6");
@@ -263,18 +225,14 @@ if (array_key_exists("COMPONENT_VERSION", $arParams) && $arParams["COMPONENT_VER
 			}
 
 			$note = $arTrack["ACTION_NOTE"];
-			$note = preg_replace_callback(
-				"/\{=([A-Za-z0-9_]+)\:([A-Za-z0-9_]+)\}/i",
-				"__bwl1_ParseStringParameterTmp",
-				$note
-			);
+			$note = CBPTrackingService::parseStringParameter($note, $documentType);
 
 			$modified_by = "";
 			if (intval($arTrack["MODIFIED_BY"]) > 0)
 			{
 				$dbUserTmp = CUser::GetByID($arTrack["MODIFIED_BY"]);
 				$arUserTmp = $dbUserTmp->GetNext();
-				$modified_by = CUser::FormatName($arParams["NAME_TEMPLATE"], $arUserTmp, true);
+				$modified_by = CUser::FormatName($arParams["NAME_TEMPLATE"], $arUserTmp, true, false);
 				$modified_by .= " [".$arTrack["MODIFIED_BY"]."]";
 			}
 
@@ -332,6 +290,17 @@ else
 	********************************************************************/
 
 	$arError = array();
+
+	if (strlen($arParams["ID"]) <= 0)
+	{
+		$arError[] = array(
+			"id" => "error",
+			"text" => GetMessage("BPABL_INVALID_WF"));
+
+		$e = new CAdminException($arError);
+		ShowError($e->GetString());
+		return false;
+	}
 
 	$arResult["arWorkflowState"] = CBPStateService::GetWorkflowState($arParams["ID"]);
 	$arParams["DOCUMENT_ID"] = $arResult["arWorkflowState"]["DOCUMENT_ID"];

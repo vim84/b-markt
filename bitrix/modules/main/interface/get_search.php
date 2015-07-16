@@ -17,18 +17,22 @@ if(
 
 CUtil::decodeURIComponent($query);
 
+/**
+ * @var CAdminPage $adminPage
+ * @var CAdminMenu $adminMenu
+ */
 $adminPage->Init();
-//$adminMenu->AddOpenedSections("global_menu_content, global_menu_services, global_menu_store, global_menu_statistics, global_menu_settings");
 $adminMenu->Init($adminPage->aModules);
 
-$arResult = array("CATEGORIES"=>array(
-			"global_menu_content"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_content')),
-			"global_menu_services"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_services')),
-			"global_menu_store"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_store')),
-			"global_menu_statistics"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_stat')),
-			"global_menu_settings"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_settings')),
-		)
-	);
+$arResult = array(
+	"CATEGORIES"=>array(
+		"global_menu_content"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_content')),
+		"global_menu_services"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_services')),
+		"global_menu_store"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_store')),
+		"global_menu_statistics"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_stat')),
+		"global_menu_settings"=>array("ITEMS"=>array(), "TITLE"=>GetMessage('admin_lib_menu_settings')),
+	)
+);
 
 $arStemFunc = stemming_init(LANGUAGE_ID);
 
@@ -39,55 +43,63 @@ $bFound  = false;
 
 function GetStrings(&$item, $key, $p)
 {
+	global $arStemFunc, $arPhrase, $preg_template, $arResult, $bFound;
+
 	$category = $p[0];
 	$icon = $p[1];
-	global $arStemFunc, $arPhrase, $preg_template, $arResult, $bFound;
-	$searchstring = '';
-	if($item["text"])
+	$arRes = null;
+
+	if($item["url"] <> '')
 	{
-		if(preg_match_all($preg_template, ToUpper($item["text"]), $arMatches, PREG_OFFSET_CAPTURE))
+		$searchstring = '';
+		if($item["text"])
 		{
-			$c = count($arMatches[2]);
-			if(defined("BX_UTF"))
+			if(preg_match_all($preg_template, ToUpper($item["text"]), $arMatches, PREG_OFFSET_CAPTURE))
 			{
-				for($j = $c-1; $j >= 0; $j--)
+				$c = count($arMatches[2]);
+				if(defined("BX_UTF"))
 				{
-					$prefix = mb_substr($item["text"], 0, $arMatches[2][$j][1], 'latin1');
-					$instr  = mb_substr($item["text"], $arMatches[2][$j][1], mb_strlen($arMatches[2][$j][0], 'latin1'), 'latin1');
-					$suffix = mb_substr($item["text"], $arMatches[2][$j][1] + mb_strlen($arMatches[2][$j][0], 'latin1'), mb_strlen($item["text"], 'latin1'), 'latin1');
-					$item["text"] = $prefix."<b>".$instr."</b>".$suffix;
+					for($j = $c-1; $j >= 0; $j--)
+					{
+						$prefix = mb_substr($item["text"], 0, $arMatches[2][$j][1], 'latin1');
+						$instr  = mb_substr($item["text"], $arMatches[2][$j][1], mb_strlen($arMatches[2][$j][0], 'latin1'), 'latin1');
+						$suffix = mb_substr($item["text"], $arMatches[2][$j][1] + mb_strlen($arMatches[2][$j][0], 'latin1'), mb_strlen($item["text"], 'latin1'), 'latin1');
+						$item["text"] = $prefix."<b>".$instr."</b>".$suffix;
+					}
+				}
+				else
+				{
+					for($j = $c-1; $j >= 0; $j--)
+					{
+						$prefix = substr($item["text"], 0, $arMatches[2][$j][1]);
+						$instr  = substr($item["text"], $arMatches[2][$j][1], strlen($arMatches[2][$j][0]));
+						$suffix = substr($item["text"], $arMatches[2][$j][1]+strlen($arMatches[2][$j][0]));
+						$item["text"] = $prefix."<b>".$instr."</b>".$suffix;
+					}
 				}
 			}
-			else
+			$searchstring .= $item["text"];
+		}
+
+		if($item["title"])
+			$searchstring .= " ".$item["title"];
+
+		if($item["keywords"])
+			$searchstring .= " ".$item["keywords"];
+
+		if($item["icon"]=='')
+			$item["icon"] = $icon;
+
+		if(preg_match_all($preg_template, ToUpper($searchstring), $arMatches, PREG_OFFSET_CAPTURE))
+		{
+			$ar = Array();
+			foreach($arMatches[0] as $m)
+				$ar[] = trim($m[0], " ,;>");
+			if(count(array_unique($ar)) == count($arPhrase))
 			{
-				for($j = $c-1; $j >= 0; $j--)
-				{
-					$prefix = substr($item["text"], 0, $arMatches[2][$j][1]);
-					$instr  = substr($item["text"], $arMatches[2][$j][1], strlen($arMatches[2][$j][0]));
-					$suffix = substr($item["text"], $arMatches[2][$j][1]+strlen($arMatches[2][$j][0]));
-					$item["text"] = $prefix."<b>".$instr."</b>".$suffix;
-				}
+				$arRes = array("NAME"=>$item["text"], "URL"=>$item["url"], "TITLE"=>$item["title"], "ICON"=>$item['icon']);
 			}
 		}
-		$searchstring .= $item["text"];
-	}
-
-	if($item["title"])
-		$searchstring .= " ".$item["title"];
-
-	if($item["keywords"])
-		$searchstring .= " ".$item["keywords"];
-
-	if($item["icon"]=='')
-		$item["icon"] = $icon;
-
-	if(preg_match_all($preg_template, ToUpper($searchstring), $arMatches, PREG_OFFSET_CAPTURE))
-	{
-		$ar = Array();
-		foreach($arMatches[0] as $m)
-			$ar[] = trim($m[0], " ,;>");
-		if(count(array_unique($ar))==count($arPhrase))
-			$arRes = array("NAME"=>$item["text"], "URL"=>$item["url"], "TITLE"=>$item["title"], "ICON"=>$item['icon']);
 	}
 
 	if(is_array($arRes))
@@ -143,8 +155,6 @@ if($bFound)
 
 
 endif;
-
-//echo (getmicrotime()-$start);
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin_js.php");
 ?>

@@ -75,7 +75,6 @@ $this->setFrameMode(true);
 		"URL_TEMPLATES_READ" => $arParams["URL_TEMPLATES_READ"],
 		"SHOW_LINK_TO_FORUM" => $arParams["SHOW_LINK_TO_FORUM"],
 		"ELEMENT_ID" => $ElementID,
-		"POST_FIRST_MESSAGE" => $arParams["POST_FIRST_MESSAGE"],
 		"URL_TEMPLATES_DETAIL" => $arResult["FOLDER"].$arResult["URL_TEMPLATES"]["detail"],
 	),
 	$component

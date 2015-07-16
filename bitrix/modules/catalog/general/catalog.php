@@ -1,5 +1,7 @@
 <?
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Catalog;
+
 Loc::loadMessages(__FILE__);
 
 class CAllCatalog
@@ -1329,7 +1331,6 @@ class CAllCatalog
 	public function OnBeforeIBlockElementDelete($ID)
 	{
 		global $APPLICATION;
-		global $DB;
 
 		$ID = (int)$ID;
 		if (0 < $ID)
@@ -1340,13 +1341,13 @@ class CAllCatalog
 				$arCatalog = CCatalogSKU::GetInfoByProductIBlock($intIBlockID);
 				if (!empty($arCatalog) && is_array($arCatalog) && 0 < $arCatalog['IBLOCK_ID'] && 0 < $arCatalog['SKU_PROPERTY_ID'])
 				{
-					$arFilter = array('IBLOCK_ID' => $arCatalog['IBLOCK_ID'],'=PROPERTY_'.$arCatalog['SKU_PROPERTY_ID'] => $ID,'ACTIVE' => '');
-					$rsOffers = CIBlockElement::GetList(array(),$arFilter,false,false,array('ID','IBLOCK_ID'));
+					$arFilter = array('IBLOCK_ID' => $arCatalog['IBLOCK_ID'],'=PROPERTY_'.$arCatalog['SKU_PROPERTY_ID'] => $ID);
+					$rsOffers = CIBlockElement::GetList(array(), $arFilter, false, false, array('ID', 'IBLOCK_ID'));
 					while($arOffer = $rsOffers->Fetch())
 					{
 						foreach(GetModuleEvents("iblock", "OnBeforeIBlockElementDelete", true) as $arEvent)
 						{
-							if(ExecuteModuleEventEx($arEvent, array($arOffer['ID']))===false)
+							if (ExecuteModuleEventEx($arEvent, array($arOffer['ID']))===false)
 							{
 								$err = Loc::getMessage("BT_MOD_CATALOG_ERR_BEFORE_DEL_TITLE").' '.$arEvent['TO_NAME'];
 								$err_id = false;
@@ -1359,7 +1360,7 @@ class CAllCatalog
 								return false;
 							}
 						}
-						if (false == CIBlockElement::Delete($arOffer['ID']))
+						if (!CIBlockElement::Delete($arOffer['ID']))
 						{
 							$APPLICATION->ThrowException(Loc::getMessage('BT_MOD_CATALOG_ERR_CANNOT_DELETE_OFFERS'));
 							return false;
@@ -1422,21 +1423,26 @@ class CAllCatalog
 		global $APPLICATION;
 
 		$intPropertyID = (int)$intPropertyID;
-		if (0 >= $intPropertyID)
+		if ($intPropertyID <= 0)
 			return true;
-		$arSkuInfo = CCatalogSKU::GetInfoByLinkProperty($intPropertyID);
-		if (!empty($arSkuInfo))
+		$propertyIterator = Catalog\CatalogIblockTable::getList(array(
+			'select' => array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID'),
+			'filter' => array('=SKU_PROPERTY_ID' => $intPropertyID)
+		));
+		if ($property = $propertyIterator->fetch())
 		{
 			$APPLICATION->ThrowException(Loc::getMessage(
 				'BT_MOD_CATALOG_ERR_CANNOT_DELETE_SKU_PROPERTY',
 				array(
-					'#SKU_PROPERTY_ID#' => $arSkuInfo['SKU_PROPERTY_ID'],
-					'#PRODUCT_IBLOCK_ID#' => $arSkuInfo['PRODUCT_IBLOCK_ID'],
-					'#IBLOCK_ID#' => $arSkuInfo['IBLOCK_ID'],
+					'#SKU_PROPERTY_ID#' => $property['SKU_PROPERTY_ID'],
+					'#PRODUCT_IBLOCK_ID#' => $property['PRODUCT_IBLOCK_ID'],
+					'#IBLOCK_ID#' => $property['IBLOCK_ID'],
 				)
 			));
+			unset($property, $propertyIterator);
 			return false;
 		}
+		unset($property, $propertyIterator);
 		return true;
 	}
 
@@ -1659,4 +1665,3 @@ class CAllCatalog
 		self::$catalogVatCache = array();
 	}
 }
-?>

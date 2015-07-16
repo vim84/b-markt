@@ -25,7 +25,8 @@ if(is_array($arGroupFields) && array_key_exists("NAME", $arGroupFields) && strle
 }
 ?>
 <?$APPLICATION->IncludeComponent("bitrix:search.page", "tags_icons", array(
-	"RESTART" => "N",
+	"RESTART" => $arParams["SEARCH_RESTART"],
+	"USE_LANGUAGE_GUESS" => $arParams["SEARCH_USE_LANGUAGE_GUESS"],
 	"CHECK_DATES" => "N",
 	"USE_TITLE_RANK" => "N",
 	"FILTER_NAME" => $arParams["SEARCH_FILTER_NAME"],

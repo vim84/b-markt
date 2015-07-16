@@ -123,8 +123,7 @@ else
 	{
 		$res["AUTHOR"] = (is_array($res["AUTHOR"]) ? $res["AUTHOR"] : array());
 		$iCount++;
-	?>
-		<div id="record-<?=$arParams["ENTITY_XML_ID"]?>-<?=$res["ID"]?>-cover" class="feed-com-block-cover"><?
+		?><div id="record-<?=$arParams["ENTITY_XML_ID"]?>-<?=$res["ID"]?>-cover" class="feed-com-block-cover"><?
 			$result = $template;
 			$uf = "";
 			if (is_array($res["UF"]))
@@ -134,8 +133,16 @@ else
 				{
 					if(!empty($arPostField["VALUE"]))
 					{
-						$GLOBALS["APPLICATION"]->IncludeComponent("bitrix:system.field.view", $arPostField["USER_TYPE"]["USER_TYPE_ID"],
-							array("arUserField" => $arPostField), null, array("HIDE_ICONS"=>"Y"));
+						$GLOBALS["APPLICATION"]->IncludeComponent(
+							"bitrix:system.field.view", 
+							$arPostField["USER_TYPE"]["USER_TYPE_ID"],
+							array(
+								"arUserField" => $arPostField,
+								"LAZYLOAD" => (isset($arParams["LAZYLOAD"]) && $arParams["LAZYLOAD"] == "Y" ? "Y" : "N")
+							), 
+							null, 
+							array("HIDE_ICONS"=>"Y")
+						);
 					}
 				}
 				$uf = ob_get_clean();

@@ -1502,6 +1502,7 @@ td.bx-cal-view-text-cell-r{
 .bx-cal-view-files, .bx-cal-view-crm{
 	margin: 0 0 10px 16px;
 	max-width: 655px;
+	min-height: 20px;
 }
 
 

@@ -217,6 +217,12 @@ class CSearchStatistic
 				"FIELD_TYPE" => "int",
 				"JOIN" => false,
 			),
+			"RESULT_COUNT" => array(
+				"TABLE_ALIAS" => "sph",
+				"FIELD_NAME" => "sph.RESULT_COUNT",
+				"FIELD_TYPE" => "int",
+				"JOIN" => false,
+			),
 		));
 
 		if(count($arQuerySelect) < 1)
@@ -274,8 +280,7 @@ class CSearchStatistic
 	function IsActive()
 	{
 		$bActive = false;
-		$rsEvents = GetModuleEvents("main", "OnEpilog");
-		while($arEvent = $rsEvents->Fetch())
+		foreach (GetModuleEvents("main", "OnEpilog", true) as $arEvent)
 		{
 			if(
 				$arEvent["TO_MODULE_ID"] == "search"

@@ -190,7 +190,7 @@ class CBPDocumentService
 		return null;
 	}
 
-	public function GetDocumentFields($parameterDocumentType)
+	public function GetDocumentFields($parameterDocumentType, $additionalInfo = false)
 	{
 		list($moduleId, $entity, $documentType) = CBPHelper::ParseDocumentId($parameterDocumentType);
 
@@ -199,7 +199,7 @@ class CBPDocumentService
 
 		if (class_exists($entity))
 		{
-			$ar = call_user_func_array(array($entity, "GetDocumentFields"), array($documentType));
+			$ar = call_user_func_array(array($entity, "GetDocumentFields"), array($documentType, $additionalInfo));
 			if (is_array($ar))
 			{
 				$arKeys = array_keys($ar);
@@ -207,7 +207,9 @@ class CBPDocumentService
 				{
 					foreach ($arKeys as $key)
 					{
-						if (in_array($ar[$key]["Type"], array("int", "datetime", "user", "string", "bool", "file", "text", "select")))
+						if ($ar[$key]["Type"] == 'integer')
+							$ar[$key]["Type"] = 'int';
+						if (in_array($ar[$key]["Type"], array("int", "double", "date", "datetime", "user", "string", "bool", "file", "text", "select")))
 							$ar[$key]["BaseType"] = $ar[$key]["Type"];
 						else
 							$ar[$key]["BaseType"] = "string";
@@ -965,6 +967,32 @@ EOS;
 		return "";
 	}
 
+	public function getDocumentName($parameterDocumentId)
+	{
+		list($moduleId, $entity, $documentId) = CBPHelper::ParseDocumentId($parameterDocumentId);
+
+		if (strlen($moduleId) > 0)
+			CModule::IncludeModule($moduleId);
+
+		if (class_exists($entity) && method_exists($entity, "getDocumentName"))
+			return call_user_func_array(array($entity, "getDocumentName"), array($documentId));
+
+		return "";
+	}
+
+	public function getDocumentIcon($parameterDocumentId)
+	{
+		list($moduleId, $entity, $documentId) = CBPHelper::ParseDocumentId($parameterDocumentId);
+
+		if (strlen($moduleId) > 0)
+			CModule::IncludeModule($moduleId);
+
+		if (class_exists($entity) && method_exists($entity, 'getDocumentIcon'))
+			return call_user_func_array(array($entity, 'getDocumentIcon'), array($documentId));
+
+		return null;
+	}
+
 	public function GetDocumentForHistory($parameterDocumentId, $historyIndex)
 	{
 		list($moduleId, $entity, $documentId) = CBPHelper::ParseDocumentId($parameterDocumentId);
@@ -1045,6 +1073,71 @@ EOS;
 
 		if (class_exists($entity) && method_exists($entity, "SetPermissions"))
 			return call_user_func_array(array($entity, "SetPermissions"), array($documentId, $workflowId, $arPermissions, $bRewrite));
+
+		return false;
+	}
+
+	public function isExtendedPermsSupported($parameterDocumentType)
+	{
+		list($moduleId, $entity, $documentType) = CBPHelper::ParseDocumentId($parameterDocumentType);
+
+		if (strlen($moduleId) > 0)
+			CModule::IncludeModule($moduleId);
+
+		if (class_exists($entity) && method_exists($entity, "isExtendedPermsSupported"))
+			return call_user_func_array(array($entity, "isExtendedPermsSupported"), array($documentType));
+
+		return false;
+	}
+
+	public function toInternalOperations($parameterDocumentType, $permissions)
+	{
+		list($moduleId, $entity, $documentType) = CBPHelper::ParseDocumentId($parameterDocumentType);
+
+		if (strlen($moduleId) > 0)
+			CModule::IncludeModule($moduleId);
+
+		if (class_exists($entity) && method_exists($entity, "toInternalOperations"))
+			return call_user_func_array(array($entity, "toInternalOperations"), array($documentType, $permissions));
+
+		return $permissions;
+	}
+
+	public function toExternalOperations($parameterDocumentType, $permissions)
+	{
+		list($moduleId, $entity, $documentType) = CBPHelper::ParseDocumentId($parameterDocumentType);
+
+		if (strlen($moduleId) > 0)
+			CModule::IncludeModule($moduleId);
+
+		if (class_exists($entity) && method_exists($entity, "toExternalOperations"))
+			return call_user_func_array(array($entity, "toExternalOperations"), array($documentType, $permissions));
+
+		return $permissions;
+	}
+
+	public function onTaskChange($parameterDocumentId, $taskId, $taskData, $status)
+	{
+		list($moduleId, $entity, $documentId) = CBPHelper::ParseDocumentId($parameterDocumentId);
+
+		if (strlen($moduleId) > 0)
+			CModule::IncludeModule($moduleId);
+
+		if (class_exists($entity) && method_exists($entity, "onTaskChange"))
+			return call_user_func_array(array($entity, "onTaskChange"), array($documentId, $taskId, $taskData, $status));
+
+		return false;
+	}
+
+	public function onWorkflowStatusChange($parameterDocumentId, $workflowId, $status)
+	{
+		list($moduleId, $entity, $documentId) = CBPHelper::ParseDocumentId($parameterDocumentId);
+
+		if (strlen($moduleId) > 0)
+			CModule::IncludeModule($moduleId);
+
+		if (class_exists($entity) && method_exists($entity, "onWorkflowStatusChange"))
+			return call_user_func_array(array($entity, "onWorkflowStatusChange"), array($documentId, $workflowId, $status));
 
 		return false;
 	}

@@ -593,3 +593,4 @@ function BxInterfaceForm(name, aTabs)
 			window.location = window.location.href;
 	};
 }
+

@@ -235,12 +235,16 @@ if (!empty($arResult['ITEMS']))
 				}
 				$arMatrix[$keyOffer] = $arRow;
 
+				CIBlockPriceTools::clearProperties($arOffer['DISPLAY_PROPERTIES'], $arParams['OFFER_TREE_PROPS'][$arOffer['IBLOCK_ID']]);
 
 				$newOfferProps = array();
-				if(!empty($arParams['PROPERTY_CODE'][$arOffer['IBLOCK_ID']]))
+				if (!empty($arParams['PROPERTY_CODE'][$arOffer['IBLOCK_ID']]))
 				{
 					foreach($arParams['PROPERTY_CODE'][$arOffer['IBLOCK_ID']] as $propName)
-						$newOfferProps[$propName] = $arOffer['DISPLAY_PROPERTIES'][$propName];
+					{
+						if (isset($arOffer['DISPLAY_PROPERTIES'][$propName]))
+							$newOfferProps[$propName] = $arOffer['DISPLAY_PROPERTIES'][$propName];
+					}
 				}
 				$arOffer['DISPLAY_PROPERTIES'] = $newOfferProps;
 

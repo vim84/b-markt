@@ -137,13 +137,25 @@ class Element
 		);
 		while($price = $priceList->fetch())
 		{
-			if(!$price["QUANTITY_FROM"] && !$price["QUANTITY_TO"])
+			if (!isset($this->elementPrices[$price["CATALOG_GROUP_ID"]][$price["CURRENCY"]]))
 			{
-				if (!isset($this->elementPrices[$price["CATALOG_GROUP_ID"]][$price["CURRENCY"]]))
+				$this->elementPrices[$price["CATALOG_GROUP_ID"]][$price["CURRENCY"]] = array();
+			}
+			$priceValue = doubleval($price["PRICE"]);
+			$this->elementPrices[$price["CATALOG_GROUP_ID"]][$price["CURRENCY"]][$priceValue] = $priceValue;
+		}
+
+		foreach ($this->elementPrices as $catalogGroupId => $currencyPrices)
+		{
+			foreach ($currencyPrices as $currency => $prices)
+			{
+				if (count($prices) > 2)
 				{
-					$this->elementPrices[$price["CATALOG_GROUP_ID"]][$price["CURRENCY"]] = array();
+					$this->elementPrices[$catalogGroupId][$currency] = array(
+						min($prices),
+						max($prices),
+					);
 				}
-				$this->elementPrices[$price["CATALOG_GROUP_ID"]][$price["CURRENCY"]][] = $price["PRICE"];
 			}
 		}
 	}

@@ -1,8 +1,10 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 $tabIndex = $arParams["tabIndex"];
+$id = 'POST_MESSAGE';
 $fileControlId = 'forumfiles'.$arResult["FORUM"]["ID"];?>
 <script type="text/javascript">
 BX.message({
+	recover_message : '<?=GetMessageJS('F_MESSAGE_RECOVER')?>',
 	no_topic_name : '<?=GetMessageJS("JERROR_NO_TOPIC_NAME")?>',
 	no_message : '<?=GetMessageJS("JERROR_NO_MESSAGE")?>',
 	max_len : '<?=GetMessageJS("JERROR_MAX_LEN")?>',
@@ -11,9 +13,11 @@ BX.message({
 	vote_drop_question_confirm : '<?=GetMessageJS("F_VOTE_DROP_QUESTION_CONFIRM")?>',
 	MPL_HAVE_WRITTEN : '<?=GetMessageJS('MPL_HAVE_WRITTEN')?>'
 });
-BX.Forum.Init({
+BX.Forum.Init('<?=$id?>', {
 	formID : '<?=$arParams["FORM_ID"]?>',
 	captcha : '<?=($arParams["FORUM"]["USE_CAPTCHA"]=="Y" && !$USER->IsAuthorized() ? "Y" : "N")?>',
+	bVarsFromForm : '<?=$arParams["bVarsFromForm"]?>',
+	autosave : '<?=($arParams['AUTOSAVE'] ? "Y" : "N")?>',
 	ajaxPost : '<?=$arParams["AJAX_POST"]?>'
 });
 </script>
@@ -51,7 +55,6 @@ endif;
 	<input type="hidden" name="AUTHOR_ID" value="<?=$arResult["DATA"]["AUTHOR_ID"];?>" />
 	<input type="hidden" name="forum_post_action" value="save" />
 	<input type="hidden" name="MESSAGE_MODE" value="NORMAL" />
-	<input type="hidden" name="jsObjName" value="<?=$arParams["jsObjName"]?>" />
 	<?=bitrix_sessid_post()?>
 	<? if ($arParams['AUTOSAVE']) $arParams['AUTOSAVE']->Init(); ?>
 	<?
@@ -271,8 +274,7 @@ if ($arResult["SHOW_PANEL"]["TOPIC"] == "Y" && $arResult["SHOW_PANEL"]["VOTE"] =
 					"PARSER" => forumTextParser::GetEditorToolbar(array('forum' => $arResult['FORUM'])),
 
 					"LHE" => array(
-						'id' => 'POST_MESSAGE',
-						'jsObjName' => $arParams["jsObjName"],
+						'id' => $id,
 						'bSetDefaultCodeView' => ($arParams['EDITOR_CODE_DEFAULT'] == 'Y'),
 						'bResizable' => true,
 						'bAutoResize' => true,
@@ -414,7 +416,3 @@ if ($arResult["FORUM"]["ALLOW_SMILES"] == "Y")
 </div>
 </form>
 </div>
-<?
-if ($arParams['AUTOSAVE'])
-	$arParams['AUTOSAVE']->LoadScript(CUtil::JSEscape($arParams["FORM_ID"]));
-?>

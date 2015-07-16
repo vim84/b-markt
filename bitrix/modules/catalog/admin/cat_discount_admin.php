@@ -1,18 +1,28 @@
 <?
+/** @global CUser $USER */
+/** @global CMain $APPLICATION */
+/** @global CDatabase $DB */
+use Bitrix\Main\Loader;
+use Bitrix\Main;
+use Bitrix\Currency;
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/prolog.php");
 if (!($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_discount')))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
-CModule::IncludeModule("catalog");
+
+Loader::includeModule('catalog');
 $bReadOnly = !$USER->CanDoOperation('catalog_discount');
+$canViewUserList = (
+	$USER->CanDoOperation('view_subordinate_users')
+	|| $USER->CanDoOperation('view_all_users')
+	|| $USER->CanDoOperation('edit_all_users')
+	|| $USER->CanDoOperation('edit_subordinate_users')
+);
 
 if ($ex = $APPLICATION->GetException())
 {
 	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
-
-	$strError = $ex->GetString();
-	ShowError($strError);
-
+	ShowError($ex->GetString());
 	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
 	die();
 }
@@ -21,7 +31,7 @@ IncludeModuleLangFile(__FILE__);
 
 $sTableID = "tbl_catalog_discount";
 
-$oSort = new CAdminSorting($sTableID, "ID", "asc");
+$oSort = new CAdminSorting($sTableID, "ID", "ASC");
 $lAdmin = new CAdminList($sTableID, $oSort);
 
 $arFilterFields = array(
@@ -44,7 +54,7 @@ if (!empty($filter_site_id) && $filter_site_id != "NOT_REF") $arFilter["SITE_ID"
 if (!empty($filter_active)) $arFilter["ACTIVE"] = $filter_active;
 if (!empty($filter_date_active_from)) $arFilter["!>ACTIVE_FROM"] = $filter_date_active_from;
 if (!empty($filter_date_active_to)) $arFilter["!<ACTIVE_TO"] = $filter_date_active_to;
-if (!empty($filter_name)) $arFilter["~NAME"] = $filter_name;
+if (!empty($filter_name)) $arFilter["%NAME"] = $filter_name;
 if (!empty($filter_coupon)) $arFilter["COUPON"] = $filter_coupon;
 if (!empty($filter_renewal)) $arFilter["RENEWAL"] = $filter_renewal;
 if (isset($filter_value_start) && doubleval($filter_value_start) > 0)
@@ -290,26 +300,25 @@ $arSiteList = array();
 $arSiteLinkList = array();
 if ($arSelectFieldsMap['SITE_ID'])
 {
-	$by2 = 'sort';
-	$order2 = 'asc';
-	$rsSites = CSite::GetList($by2,$order2);
-	while ($arSite = $rsSites->Fetch())
+	$siteIterator = Main\SiteTable::getList(array(
+		'select' => array('LID'),
+		'order' => array('SORT' => 'ASC')
+	));
+	while ($oneSite = $siteIterator->fetch())
 	{
-		$arSiteList[$arSite['LID']] = $arSite['LID'];
-		$arSiteLinkList[$arSite['LID']] = '<a href="/bitrix/admin/site_edit.php?lang='.LANGUAGE_ID.'&LID='.urlencode($arSite['LID']).'" title="'.GetMessage('BT_CAT_DISCOUNT_ADM_MESS_SITE_ID').'">'.htmlspecialcharsex($arSite['LID']).'</a>';
+		$arSiteList[$oneSite['LID']] = $oneSite['LID'];
+		$arSiteLinkList[$oneSite['LID']] = '<a href="/bitrix/admin/site_edit.php?lang='.LANGUAGE_ID.'&LID='.$oneSite['LID'].'" title="'.GetMessage('BT_CAT_DISCOUNT_ADM_MESS_SITE_ID').'">'.$oneSite['LID'].'</a>';
 	}
+	unset($oneSite, $siteIterator);
 }
 
 $arCurrencyList = array();
 if ($arSelectFieldsMap['CURRENCY'])
 {
-	$by2 = 'sort';
-	$order2 = 'asc';
-	$rsCurrencies = CCurrency::GetList($by2, $order2);
-	while ($arCurrency = $rsCurrencies->Fetch())
-	{
-		$arCurrencyList[$arCurrency['CURRENCY']] = $arCurrency['CURRENCY'];
-	}
+	$currencyList = array_keys(Currency\CurrencyManager::getCurrencyList());
+	foreach ($currencyList as $currency)
+		$arCurrencyList[$currency] = $currency;
+	unset($currencyList);
 }
 
 $arNavParams = (isset($_REQUEST['mode']) && 'excel' == $_REQUEST["mode"]
@@ -332,7 +341,7 @@ $lAdmin->NavText($dbResultList->GetNavPrint(GetMessage("DSC_NAV")));
 
 $arUserList = array();
 $arUserID = array();
-$strNameFormat = CSite::GetNameFormat(true);
+$nameFormat = CSite::GetNameFormat(true);
 
 $arRows = array();
 
@@ -342,13 +351,13 @@ while ($arDiscount = $dbResultList->Fetch())
 	if ($arSelectFieldsMap['CREATED_BY'])
 	{
 		$arDiscount['CREATED_BY'] = (int)$arDiscount['CREATED_BY'];
-		if (0 < $arDiscount['CREATED_BY'])
+		if ($arDiscount['CREATED_BY'] > 0)
 			$arUserID[$arDiscount['CREATED_BY']] = true;
 	}
 	if ($arSelectFieldsMap['MODIFIED_BY'])
 	{
 		$arDiscount['MODIFIED_BY'] = (int)$arDiscount['MODIFIED_BY'];
-		if (0 < $arDiscount['MODIFIED_BY'])
+		if ($arDiscount['MODIFIED_BY'] > 0)
 			$arUserID[$arDiscount['MODIFIED_BY']] = true;
 	}
 
@@ -420,18 +429,18 @@ while ($arDiscount = $dbResultList->Fetch())
 		}
 		elseif ($arDiscount["VALUE_TYPE"] == CCatalogDiscount::TYPE_SALE)
 		{
-			$strDiscountValue = '= '.FormatCurrency($arDiscount["VALUE"], $arDiscount["CURRENCY"]);
+			$strDiscountValue = '= '.CCurrencyLang::CurrencyFormat($arDiscount["VALUE"], $arDiscount["CURRENCY"], true);
 		}
 		else
 		{
-			$strDiscountValue = FormatCurrency($arDiscount["VALUE"], $arDiscount["CURRENCY"]);
+			$strDiscountValue = CCurrencyLang::CurrencyFormat($arDiscount["VALUE"], $arDiscount["CURRENCY"], true);
 		}
 		$row->AddViewField("VALUE", $strDiscountValue);
 	}
 
 	if ($arSelectFieldsMap['MAX_DISCOUNT'])
 	{
-		$row->AddViewField("MAX_DISCOUNT", (0 < $arDiscount['MAX_DISCOUNT'] ? FormatCurrency($arDiscount['MAX_DISCOUNT'], $arDiscount["CURRENCY"]) : GetMessage('DSC_MAX_DISCOUNT_UNLIM')));
+		$row->AddViewField("MAX_DISCOUNT", (0 < $arDiscount['MAX_DISCOUNT'] ? CCurrencyLang::CurrencyFormat($arDiscount['MAX_DISCOUNT'], $arDiscount["CURRENCY"], true) : GetMessage('DSC_MAX_DISCOUNT_UNLIM')));
 	}
 
 	if ($arSelectFieldsMap['RENEWAL'])
@@ -473,27 +482,28 @@ if ($arSelectFieldsMap['CREATED_BY'] || $arSelectFieldsMap['MODIFIED_BY'])
 {
 	if (!empty($arUserID))
 	{
-		$byUser = 'ID';
-		$byOrder = 'ASC';
-		$rsUsers = CUser::GetList(
-			$byUser,
-			$byOrder,
-			array('ID' => implode(' | ', array_keys($arUserID))),
-			array('FIELDS' => array('ID', 'LOGIN', 'NAME', 'LAST_NAME', 'SECOND_NAME', 'EMAIL'))
-		);
-		while ($arOneUser = $rsUsers->Fetch())
+		$userIterator = Main\UserTable::getList(array(
+			'select' => array('ID', 'LOGIN', 'NAME', 'LAST_NAME', 'SECOND_NAME', 'EMAIL'),
+			'filter' => array('@ID' => array_keys($arUserID)),
+		));
+		while ($oneUser = $userIterator->fetch())
 		{
-			$arOneUser['ID'] = (int)$arOneUser['ID'];
-			$arUserList[$arOneUser['ID']] = '<a href="/bitrix/admin/user_edit.php?lang='.LANGUAGE_ID.'&ID='.$arOneUser['ID'].'">'.CUser::FormatName($strNameFormat, $arOneUser).'</a>';
+			$oneUser['ID'] = (int)$oneUser['ID'];
+			if ($canViewUserList)
+				$arUserList[$oneUser['ID']] = '<a href="/bitrix/admin/user_edit.php?lang='.LANGUAGE_ID.'&ID='.$oneUser['ID'].'">'.CUser::FormatName($nameFormat, $oneUser).'</a>';
+			else
+				$arUserList[$oneUser['ID']] = CUser::FormatName($nameFormat, $oneUser);
 		}
+		unset($oneUser, $userIterator);
 	}
 
+	/** @var CAdminListRow $row */
 	foreach ($arRows as &$row)
 	{
 		if ($arSelectFieldsMap['CREATED_BY'])
 		{
 			$strCreatedBy = '';
-			if (0 < $row->arRes['CREATED_BY'] && isset($arUserList[$row->arRes['CREATED_BY']]))
+			if ($row->arRes['CREATED_BY'] > 0 && isset($arUserList[$row->arRes['CREATED_BY']]))
 			{
 				$strCreatedBy = $arUserList[$row->arRes['CREATED_BY']];
 			}
@@ -502,7 +512,7 @@ if ($arSelectFieldsMap['CREATED_BY'] || $arSelectFieldsMap['MODIFIED_BY'])
 		if ($arSelectFieldsMap['MODIFIED_BY'])
 		{
 			$strModifiedBy = '';
-			if (0 < $row->arRes['MODIFIED_BY'] && isset($arUserList[$row->arRes['MODIFIED_BY']]))
+			if ($row->arRes['MODIFIED_BY'] > 0 && isset($arUserList[$row->arRes['MODIFIED_BY']]))
 			{
 				$strModifiedBy = $arUserList[$row->arRes['MODIFIED_BY']];
 			}
@@ -638,6 +648,5 @@ $oFilter->End();
 </form>
 <?
 $lAdmin->DisplayList();
-?><?
+
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-?>

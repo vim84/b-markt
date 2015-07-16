@@ -25,6 +25,9 @@ $arDefaultUrlTemplates404 = array(
 	"user_features" => "user/#user_id#/features/",
 	"user_subscribe" => "user/#user_id#/subscribe/",
 	"user_requests" => "user/#user_id#/requests/",
+	"user_security" => "user/#user_id#/security/",
+	"user_codes" => "user/#user_id#/codes/",
+	"user_passwords" => "user/#user_id#/passwords/",
 
 	"group_request_group_search" => "group/#user_id#/group_search/",
 	"group_request_user" => "group/#group_id#/user/#user_id#/request/",
@@ -260,6 +263,9 @@ $arDefaultUrlTemplatesN404 = array(
 	"user_request_group" => "page=user_request_group&group_id=#group_id#",
 	"group_request_search" => "page=group_request_search&group_id=#group_id#",
 	"user_requests" => "page=user_requests&user_id=#user_id#",
+	"user_security" => "page=user_security&user_id=#user_id#",
+	"user_codes" => "page=user_codes&user_id=#user_id#",
+	"user_passwords" => "page=user_passwords&user_id=#user_id#",
 
 	"search" => "page=search",
 

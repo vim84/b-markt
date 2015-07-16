@@ -192,10 +192,7 @@ while ($arRes = $rsData->NavNext(true, "f_")):
 	$arRes["SQL_TEXT"] = CPerfomanceSQL::Format($arRes["SQL_TEXT"]);
 	$row =& $lAdmin->AddRow($f_NAME, $arRes);
 
-	if ($_REQUEST["mode"] == "excel")
-		$row->AddViewField("QUERY_TIME", number_format($f_QUERY_TIME, 6, ".", ""));
-	else
-		$row->AddViewField("QUERY_TIME", str_replace(" ", "&nbsp;", number_format($f_QUERY_TIME, 6, ".", " ")));
+	$row->AddViewField("QUERY_TIME", perfmon_NumberFormat($f_QUERY_TIME, 6));
 
 	if (class_exists("geshi") && $f_SQL_TEXT)
 	{
@@ -216,7 +213,19 @@ while ($arRes = $rsData->NavNext(true, "f_")):
 	$row->AddViewField("SQL_TEXT", $html);
 	$row->AddViewField("HIT_ID", '<a href="perfmon_hit_list.php?lang='.LANGUAGE_ID.'&amp;set_filter=Y&amp;find_id='.$f_HIT_ID.'">'.$f_HIT_ID.'</a>');
 	if ($bCluster && $arRes["NODE_ID"] != "")
-		$row->AddViewField("NODE_ID", $arRes["NODE_ID"] > 1? $arClusterNodes[$arRes["NODE_ID"]]: $arClusterNodes[1]);
+	{
+		if ($arRes["NODE_ID"] < 0)
+			$html = '<div class="lamp-red" style="display:inline-block"></div>';
+		else
+			$html = '';
+		
+		if ($arRes["NODE_ID"] > 1)
+			$html .= $arClusterNodes[$arRes["NODE_ID"]];
+		else
+			$html .= $arClusterNodes[1];
+
+		$row->AddViewField("NODE_ID", $html);
+	}
 
 	$arActions = array();
 	if ($DBType == "mysql" || $DBType == "oracle")

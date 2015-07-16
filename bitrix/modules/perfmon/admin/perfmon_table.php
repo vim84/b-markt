@@ -184,17 +184,11 @@ while ($arRes = $rsData->Fetch()):
 		{
 			if ($FIELD_TYPE == "int")
 			{
-				if ($_REQUEST["mode"] == "excel")
-					$val = number_format($arRes[$FIELD_NAME], 0, "", "");
-				else
-					$val = str_replace(" ", "&nbsp;", number_format($arRes[$FIELD_NAME], 0, "", " "));
+				$val = perfmon_NumberFormat($arRes[$FIELD_NAME], 0);
 			}
 			elseif ($FIELD_TYPE == "double")
 			{
-				if ($_REQUEST["mode"] == "excel")
-					$val = number_format($arRes[$FIELD_NAME], 2, ".", "");
-				else
-					$val = str_replace(" ", "&nbsp;", number_format($arRes[$FIELD_NAME], 2, ".", " "));
+				$val = perfmon_NumberFormat($arRes[$FIELD_NAME], 2);
 			}
 			elseif ($FIELD_TYPE == "datetime")
 			{

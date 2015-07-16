@@ -1,13 +1,21 @@
 <?
 function Number2Word_Rus($source, $IS_MONEY = "Y", $currency = "")
 {
-	$result = "";
+	$result = '';
 
-	if (strlen($currency) <= 0 || $currency == "RUR")
-		$currency = "RUB";
+	$IS_MONEY = ((string)($IS_MONEY) == 'Y' ? 'Y' : 'N');
+	$currency = (string)$currency;
+	if ($currency == '' || $currency == 'RUR')
+		$currency = 'RUB';
+	if ($IS_MONEY == 'Y')
+	{
+		if ($currency != 'RUB' && $currency != 'UAH')
+			return $result;
+	}
 
 	$arNumericLang = array(
 		"RUB" => array(
+			"zero" => "ноль",
 			"1c" => "сто ",
 			"2c" => "двести ",
 			"3c" => "триста ",
@@ -75,6 +83,7 @@ function Number2Word_Rus($source, $IS_MONEY = "Y", $currency = "")
 			"k" => " копеек",
 		),
 		"UAH" => array(
+			"zero" => "нyль",
 			"1c" => "сто ",
 			"2c" => "двісті ",
 			"3c" => "триста ",
@@ -143,44 +152,55 @@ function Number2Word_Rus($source, $IS_MONEY = "Y", $currency = "")
 		)
 	);
 
-
-	// k - копейки
+	// k - penny
 	if ($IS_MONEY == "Y")
 	{
-		$source = DoubleVal($source);
-
+		$source = (string)((float)$source);
 		$dotpos = strpos($source, ".");
 		if ($dotpos === false)
 		{
 			$ipart = $source;
-			$fpart = "";
+			$fpart = '';
 		}
 		else
 		{
 			$ipart = substr($source, 0, $dotpos);
 			$fpart = substr($source, $dotpos + 1);
+			if ($fpart === false)
+				$fpart = '';
 		}
-
-		$fpart = substr($fpart, 0, 2);
-		while (strlen($fpart)<2) $fpart .= "0";
+		;
+		if (strlen($fpart) > 2)
+		{
+			$fpart = substr($fpart, 0, 2);
+			if ($fpart === false)
+				$fpart = '';
+		}
+		$fillLen = 2 - strlen($fpart);
+		if ($fillLen > 0)
+			$fpart .= str_repeat('0', $fillLen);
+		unset($fillLen);
 	}
 	else
 	{
-		$source = IntVal($source);
-		$ipart = $source;
-		$fpart = "";
+		$ipart = (string)((int)$source);
+		$fpart = '';
 	}
 
-	while ($ipart[0]=="0") $ipart = substr($ipart, 1);
+	if (is_string($ipart))
+	{
+		$ipart = preg_replace('/^[0]+/', '', $ipart);
+	}
 
-	$ipart1 = StrRev($ipart);
+	$ipart1 = strrev($ipart);
+	$ipart1Len = strlen($ipart1);
 	$ipart = "";
 	$i = 0;
-	while ($i<strlen($ipart1))
+	while ($i < $ipart1Len)
 	{
-		$ipart_tmp = $ipart1[$i];
-		// t - тысячи; m - милионы; b - миллиарды;
-		// e - единицы; d - десятки; c - сотни;
+		$ipart_tmp = substr($ipart1, $i, 1);
+		// t - thousands; m - millions; b - billions;
+		// e - units; d - scores; c - hundreds;
 		if ($i % 3 == 0)
 		{
 			if ($i==0) $ipart_tmp .= "e";
@@ -202,10 +222,12 @@ function Number2Word_Rus($source, $IS_MONEY = "Y", $currency = "")
 	else
 	{
 		$result = $ipart;
+		if ($result == '')
+			$result = $arNumericLang[$currency]['zero'];
 	}
 
-	if ($result[0] == ".")
-		$result = "ноль ".$result;
+	if (substr($result, 0, 1) == ".")
+		$result = $arNumericLang[$currency]['zero']." ".$result;
 
 	$result = str_replace("0c0d0et", "", $result);
 	$result = str_replace("0c0d0em", "", $result);
@@ -263,7 +285,6 @@ function Number2Word_Rus($source, $IS_MONEY = "Y", $currency = "")
 	$result = str_replace("3eb", $arNumericLang[$currency]["3eb"], $result);
 	$result = str_replace("4eb", $arNumericLang[$currency]["4eb"], $result);
 
-
 	if ($IS_MONEY == "Y")
 	{
 		$result = str_replace("1e.", $arNumericLang[$currency]["1e."], $result);
@@ -292,7 +313,12 @@ function Number2Word_Rus($source, $IS_MONEY = "Y", $currency = "")
 	}
 
 	if ($IS_MONEY == "Y")
+	{
+		if (substr($result, 0, 1) == ".")
+			$result = $arNumericLang[$currency]['zero']." ".$result;
+
 		$result = str_replace(".", $arNumericLang[$currency]["."], $result);
+	}
 
 	$result = str_replace("t", $arNumericLang[$currency]["t"], $result);
 	$result = str_replace("m", $arNumericLang[$currency]["m"], $result);
@@ -301,6 +327,5 @@ function Number2Word_Rus($source, $IS_MONEY = "Y", $currency = "")
 	if ($IS_MONEY == "Y")
 		$result = str_replace("k", $arNumericLang[$currency]["k"], $result);
 
-	return (ToUpper(substr($result, 0, 1)) . substr($result, 1));
+	return (ToUpper(substr($result, 0, 1)).substr($result, 1));
 }
-?>

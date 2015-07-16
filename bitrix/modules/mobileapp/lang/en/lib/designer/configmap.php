@@ -84,4 +84,13 @@ $MESS["ADDITIONAL_PUSH_APP_PUSH_ID"] = "Push application ID";
 $MESS["ADDITIONAL_USE_SLIDER"] = "Use slider menu";
 $MESS["ADDITIONAL_USE_TOP_BAR"] = "Show top bar";
 $MESS["ADDITIONAL_PUSH"] = "Push notifications";
+$MESS["CONTROLLER_SETTINGS_PROGRESSBAR_COLOR"] = "Progress bar color (Android)";
+$MESS["PULL_DOWN_TEXT_STYLE"] = "Text style (iOS)";
+$MESS["PULL_DOWN_ARROW_COLOR"] = "Indicator color (Android)";
+$MESS["NORMAL"] = "Normal";
+$MESS["BOLD"] = "Bold";
+$MESS["STATUSBAR_USE_TOP_OFFSET"] = "Offset menu by status bar height (iOS)";
+$MESS["STATUSBAR_OPACITY"] = "Status bar transparency when slider is open (iOS)";
+$MESS["STATUSBAR_COLOR"] = "Status bar color (iOS)";
+$MESS["STATUSBAR"] = "Status bar (iOS)";
 ?>

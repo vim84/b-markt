@@ -78,7 +78,7 @@ class SenderConnectorBuyer extends \Bitrix\Sender\Connector
 			$filter,
 			false,
 			false,
-			array("EMAIL", "NAME", "USER_ID")
+			array("EMAIL", "NAME", "USER_ID", "ID")
 		);
 
 		return $dbBuyerList;

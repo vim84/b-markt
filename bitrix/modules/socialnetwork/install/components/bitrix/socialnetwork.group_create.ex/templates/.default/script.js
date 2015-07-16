@@ -263,6 +263,7 @@ function BXGCESubmitForm(e)
 	var selectFields = document.forms.sonet_group_create_popup_form.getElementsByTagName("select");
 	for (var i = 0; i < selectFields.length; i++) 
 	{
+		obRequestData[selectFields[i].name] = undefined;
 		for (var j = 0; j < selectFields[i].options.length; j++)
 		{
 			if (selectFields[i].options[j].selected)

@@ -192,8 +192,27 @@ else
 		}
 		else 
 		{
-			CBPTrackingService::DeleteByWorkflow($_REQUEST["id"]);
-			CBPStateService::DeleteWorkflow($_REQUEST["id"]);
+			CBPDocument::TerminateWorkflow(
+				$_REQUEST["id"],
+				$arParams["DOCUMENT_ID"],
+				$ar
+			);
+
+			if (count($ar) > 0)
+			{
+				$str = "";
+				foreach ($ar as $a)
+					$str .= $a["message"];
+				$arError[] = array(
+					"id" => "stop_bizproc",
+					"text" => $str);
+			}
+			else
+			{
+				CBPTaskService::DeleteByWorkflow($_REQUEST["id"]);
+				CBPTrackingService::DeleteByWorkflow($_REQUEST["id"]);
+				CBPStateService::DeleteWorkflow($_REQUEST["id"]);
+			}
 		}
 	}
 	elseif ($_SERVER['REQUEST_METHOD'] == "POST" && intval($_REQUEST["bizproc_index"]) > 0)

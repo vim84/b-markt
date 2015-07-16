@@ -304,6 +304,8 @@ class Step3 extends CBaseWizardStep
 //Datamove
 class Step4 extends CBaseWizardStep
 {
+	protected $location = '';
+
 	function InitStep()
 	{
 		parent::InitStep();
@@ -334,30 +336,37 @@ class Step4 extends CBaseWizardStep
 			$module = key($arNodeModules);
 		}
 
-		CJSCore::Init(array("ajax"));
-		$APPLICATION->AddHeadScript($path.'/js/import.js');
-
-		$this->content = '';
-		$this->content .= '<div style="padding: 20px;">';
-		$this->content .= '<div id="output"><br /></div>';
-		$this->content .= '</div>';
-		if ($wizard->GetPrevStepID() == 'step1' || $wizard->GetPrevStepID() == 'step2')
+		if ($this->location)
 		{
-			$this->content .= '
-				<script type="text/javascript">
-					var nextButtonID = "'.$wizard->GetNextButtonID().'";
-					var formID = "'.$wizard->GetFormName().'";
-					var LANG = \''.LANG.'\';
-					var from_node_id = "'.CUtil::JSEscape($from_node_id).'";
-					var to_node_id = "'.CUtil::JSEscape($to_node_id).'";
-					var module = "'.CUtil::JSEscape($module).'";
-					var status = "'.CUtil::JSEscape($wizard->GetVar('status')).'";
-					var path = "'.CUtil::JSEscape($path).'";
-					var sessid = "'.bitrix_sessid().'";
-					BX.ready(DisableButton);
-					BX.ready(MoveTables);
-				</script>
-			';
+			$this->content = '<script>top.window.location = \''.CUtil::JSEscape($this->location).'\';</script>';
+		}
+		else
+		{
+			CJSCore::Init(array("ajax"));
+			$APPLICATION->AddHeadScript($path.'/js/import.js');
+
+			$this->content = '';
+			$this->content .= '<div style="padding: 20px;">';
+			$this->content .= '<div id="output"><br /></div>';
+			$this->content .= '</div>';
+			if ($wizard->GetPrevStepID() == 'step1' || $wizard->GetPrevStepID() == 'step2')
+			{
+				$this->content .= '
+					<script type="text/javascript">
+						var nextButtonID = "'.$wizard->GetNextButtonID().'";
+						var formID = "'.$wizard->GetFormName().'";
+						var LANG = \''.LANG.'\';
+						var from_node_id = "'.CUtil::JSEscape($from_node_id).'";
+						var to_node_id = "'.CUtil::JSEscape($to_node_id).'";
+						var module = "'.CUtil::JSEscape($module).'";
+						var status = "'.CUtil::JSEscape($wizard->GetVar('status')).'";
+						var path = "'.CUtil::JSEscape($path).'";
+						var sessid = "'.bitrix_sessid().'";
+						BX.ready(DisableButton);
+						BX.ready(MoveTables);
+					</script>
+				';
+			}
 		}
 	}
 
@@ -366,11 +375,7 @@ class Step4 extends CBaseWizardStep
 		$wizard =& $this->GetWizard();
 		if($wizard->IsNextButtonClick())
 		{
-			echo '
-			<script>
-				top.window.location = \'/bitrix/admin/cluster_dbnode_list.php?lang='.LANGUAGE_ID.'\';
-			</script>
-			';
+			$this->location = '/bitrix/admin/cluster_dbnode_list.php?lang='.LANGUAGE_ID;
 		}
 	}
 }

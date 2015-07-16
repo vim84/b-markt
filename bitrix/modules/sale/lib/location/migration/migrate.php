@@ -8,9 +8,12 @@ use Bitrix\Sale\Delivery;
 use Bitrix\Sale\Tax\Rate;
 use Bitrix\Sale;
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Sale\Location;
 
-include_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/general/update_class.php");
+use Bitrix\Sale\Location;
+use Bitrix\Sale\Location\DB\Helper;
+use Bitrix\Sale\Location\DB\BlockInserter;
+
+include_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/general/update_class.php");
 
 Loc::loadMessages(__FILE__);
 
@@ -40,6 +43,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 	// temporal tables
 	const TABLE_TEMP_TREE = 'b_sale_location_temp_tree';
+	const TABLE_LEGACY_RELATIONS = 'b_sale_loc_legacy';
 
 	const MODULE_ID = 'sale';
 
@@ -70,6 +74,38 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		global $DBType;
 		$this->Init($curPath = "", $DBType, $updaterName = "", $curDir = "", self::MODULE_ID, "DB");
 		$this->data = unserialize($data);
+	}
+
+	public static function updateDBSchemaRestoreLegacyIndexes()
+	{
+		$dbConnection = \Bitrix\Main\HttpApplication::getConnection();
+
+		$agentName = '\Bitrix\Sale\Location\Migration\CUpdaterLocationPro::updateDBSchemaRestoreLegacyIndexes();';
+
+		if(!Helper::checkIndexNameExists('IX_B_SALE_LOC_EXT_LID_SID', 'b_sale_loc_ext'))
+		{
+			$dbConnection->query('create index IX_B_SALE_LOC_EXT_LID_SID on b_sale_loc_ext (LOCATION_ID, SERVICE_ID)');
+			return $agentName;
+		}
+
+		if(!Helper::checkIndexNameExists('IXS_LOCATION_COUNTRY_ID', 'b_sale_location'))
+		{
+			$dbConnection->query('create index IXS_LOCATION_COUNTRY_ID on b_sale_location (COUNTRY_ID)');
+			return $agentName;
+		}
+
+		if(!Helper::checkIndexNameExists('IXS_LOCATION_REGION_ID', 'b_sale_location'))
+		{
+			$dbConnection->query('create index IXS_LOCATION_REGION_ID on b_sale_location (REGION_ID)');
+			return $agentName;
+		}
+
+		if(!Helper::checkIndexNameExists('IXS_LOCATION_CITY_ID', 'b_sale_location'))
+		{
+			$dbConnection->query('create index IXS_LOCATION_CITY_ID on b_sale_location (CITY_ID)');
+		}
+
+		return false;
 	}
 
 	// only for module_updater
@@ -386,7 +422,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 								SELECT SQ_B_SALE_LOCATION.NEXTVAL INTO :NEW.ID FROM dual;
 							END IF;
 						END;"); // OK
-					
+
 				}
 
 				// new sequence for b_sale_location_group
@@ -804,7 +840,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 				$DB->query('ALTER TABLE b_sale_tax2location ADD CONSTRAINT PK_B_SALE_TAX2LOCATION PRIMARY KEY (TAX_RATE_ID, LOCATION_CODE, LOCATION_TYPE)'); // OK: oracle, mssql
 			}
-			
+
 			if ($delivery2LocationTableExists && $DB->query("select LOCATION_ID from b_sale_delivery2location WHERE 1=0", true)) // OK: oracle
 			{
 				$DB->query('delete from b_sale_delivery2location where LOCATION_ID is null'); // OK: oracle, mssql // useless records to be deleted
@@ -872,44 +908,49 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 	{
 		global $DB;
 
-		$res = Location\ExternalServiceTable::getList(array('filter' => array('=CODE' => 'ZIP')))->fetch();
-		if(!$res['ID'])
+		Helper::truncateTable(self::TABLE_LOCATION_EXTERNAL);
+
+		$zipServiceId = false;
+		$zip = Location\ExternalServiceTable::getList(array('filter' => array('=CODE' => 'ZIP')))->fetch();
+		if(intval($zip['ID']))
+			$zipServiceId = intval($zip['ID']);
+
+		if($zipServiceId === false)
 		{
 			$res = Location\ExternalServiceTable::add(array('CODE' => 'ZIP'));
 			if(!$res->isSuccess())
 				throw new Main\SystemException('Cannot add external system: '.implode(', ', $res->getErrors()), 0, __FILE__, __LINE__);
 
 			$zipServiceId = $res->getId();
+		}
 
-			if($this->TableExists(self::TABLE_LOCATION_ZIP))
+		if($this->TableExists(self::TABLE_LOCATION_ZIP))
+		{
+			$loc2External = new BlockInserter(array(
+				'entityName' => '\Bitrix\Sale\Location\ExternalTable',
+				'exactFields' => array('LOCATION_ID', 'XML_ID', 'SERVICE_ID'),
+				'parameters' => array(
+					//'autoIncrementFld' => 'ID',
+					'mtu' => 9999
+				)
+			));
+
+			$res = $DB->query('select * from '.self::TABLE_LOCATION_ZIP);
+			while($item = $res->fetch())
 			{
-				$loc2External = new Location\DBBlockInserter(array(
-					'entityName' => '\Bitrix\Sale\Location\ExternalTable',
-					'exactFields' => array('LOCATION_ID', 'XML_ID', 'SERVICE_ID'),
-					'parameters' => array(
-						//'autoIncrementFld' => 'ID',
-						'mtu' => 9999
-					)
-				));
+				$item['LOCATION_ID'] = trim($item['LOCATION_ID']);
+				$item['ZIP'] = trim($item['ZIP']);
 
-				$res = $DB->query('select * from '.self::TABLE_LOCATION_ZIP);
-				while($item = $res->fetch())
+				if(strlen($item['LOCATION_ID']) && strlen($item['ZIP']))
 				{
-					$item['LOCATION_ID'] = trim($item['LOCATION_ID']);
-					$item['ZIP'] = trim($item['ZIP']);
-
-					if(strlen($item['LOCATION_ID']) && strlen($item['ZIP']))
-					{
-						$loc2External->insert(array(
-							'LOCATION_ID' => $item['LOCATION_ID'],
-							'XML_ID' => $item['ZIP'],
-							'SERVICE_ID' => $zipServiceId
-						));
-					}
+					$loc2External->insert(array(
+						'LOCATION_ID' => $item['LOCATION_ID'],
+						'XML_ID' => $item['ZIP'],
+						'SERVICE_ID' => $zipServiceId
+					));
 				}
-				$loc2External->flush();
 			}
-
+			$loc2External->flush();
 		}
 	}
 
@@ -1010,9 +1051,8 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		}
 	}
 
-	public function createTypes()
+	public static function createBaseTypes()
 	{
-		$res = \Bitrix\Main\Localization\LanguageTable::getList();
 		$types = array(
 			'COUNTRY' => array(
 				'CODE' => 'COUNTRY',
@@ -1030,26 +1070,54 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 				'NAME' => array()
 			),
 		);
+
+		$langs = array();
+		$res = \Bitrix\Main\Localization\LanguageTable::getList();
 		while($item = $res->Fetch())
 		{
 			$MESS = array();
-			include($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/lang/'.$item['LID'].'/lib/location/migration/migrate.php');
+			@include($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/lang/'.$item['LID'].'/lib/location/migration/migrate.php');
 
-			$types['COUNTRY']['NAME'][$item['LID']]['NAME'] = $MESS['SALE_LOCATION_TYPE_COUNTRY'];
-			$types['REGION']['NAME'][$item['LID']]['NAME'] = $MESS['SALE_LOCATION_TYPE_REGION'];
-			$types['CITY']['NAME'][$item['LID']]['NAME'] = $MESS['SALE_LOCATION_TYPE_CITY'];
+			if(!empty($MESS))
+			{
+				$types['COUNTRY']['NAME'][$item['LID']]['NAME'] = $MESS['SALE_LOCATION_TYPE_COUNTRY'];
+				$types['REGION']['NAME'][$item['LID']]['NAME'] = $MESS['SALE_LOCATION_TYPE_REGION'];
+				$types['CITY']['NAME'][$item['LID']]['NAME'] = $MESS['SALE_LOCATION_TYPE_CITY'];
+			}
+
+			$langs[$item['LID']] = true;
 		}
 
-		$res = Location\TypeTable::getList();
+		$typeCode2Id = array();
+		$res = Location\TypeTable::getList(array('select' => array('ID', 'CODE')));
 		while($item = $res->Fetch())
-			unset($types[$item['CODE']]);
+			$typeCode2Id[$item['CODE']] = $item['ID'];
 
-		foreach($types as $type)
+		foreach($types as $code => &$type)
 		{
-			$res = Location\TypeTable::add($type);
-			if(!($this->data['TYPE'][$type['CODE']] = $res->getId()))
-				throw new Main\SystemException('Cannot add location type: '.implode(', ', $res->getErrors()), 0, __FILE__, __LINE__);
+			foreach($langs as $lid => $f)
+			{
+				$type['NAME'][$lid] = \Bitrix\Sale\Location\Admin\NameHelper::getTranslatedName($type['NAME'], $lid);
+			}
+
+			if(!isset($typeCode2Id[$type['CODE']]))
+			{
+				$typeCode2Id[$type['CODE']] = Location\TypeTable::add($type);
+			}
+			else
+			{
+				// ensure it has all appropriate translations
+				// we can not use ::updateMultipleForOwner() here, because user may rename types manually
+				Location\Name\TypeTable::addAbsentForOwner($typeCode2Id[$type['CODE']], $type['NAME']);
+			}
 		}
+
+		return $typeCode2Id;
+	}
+
+	public function createTypes()
+	{
+		$this->data['TYPE'] = self::createBaseTypes();
 	}
 
 	public function convertTree()
@@ -1061,12 +1129,51 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 			$this->convertCountries();
 			$this->convertRegions();
 			$this->convertCities();
-			
+
 			$this->resort();
 
 			$this->insertTreeInfo();
 			$this->insertNames();
 		}
+	}
+
+	public function resetLegacyPath()
+	{
+		Helper::dropTable(self::TABLE_LEGACY_RELATIONS);
+
+		$dbConnection = \Bitrix\Main\HttpApplication::getConnection();
+		$dbConnection->query("create table ".self::TABLE_LEGACY_RELATIONS." (
+			ID ".Helper::getSqlForDataType('int').",
+			COUNTRY_ID ".Helper::getSqlForDataType('int').",
+			REGION_ID ".Helper::getSqlForDataType('int').",
+			CITY_ID ".Helper::getSqlForDataType('int')."
+		)");
+
+		$dbConnection->query("insert into ".self::TABLE_LEGACY_RELATIONS." (ID, COUNTRY_ID, REGION_ID, CITY_ID) select ID, COUNTRY_ID, REGION_ID, CITY_ID from b_sale_location");
+
+		Location\LocationTable::resetLegacyPath();
+	}
+
+	public function rollBack()
+	{
+		if(Helper::checkTableExists(self::TABLE_LEGACY_RELATIONS))
+		{
+			Helper::mergeTables(
+				'b_sale_location', 
+				self::TABLE_LEGACY_RELATIONS,
+				array(
+					'COUNTRY_ID' => 'COUNTRY_ID',
+					'REGION_ID' => 'REGION_ID',
+					'CITY_ID' => 'CITY_ID',
+				),
+				array('ID' => 'ID')
+			);
+		}
+
+		Helper::truncateTable(self::TABLE_LOCATION_NAME);
+		Helper::truncateTable(self::TABLE_LOCATION_EXTERNAL);
+
+		\CSaleLocation::locationProSetRolledBack();
 	}
 
 	// in this function we track dependences between countries, regions and cities
@@ -1109,7 +1216,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 		// level 2: country - region
 		$res = \CSaleLocation::GetList(array(), array(
-			'!COUNTRY_ID' => false,
+			//'!COUNTRY_ID' => false,
 			'!REGION_ID' => false,
 			'CITY_ID' => false,
 			'LID' => 'en'
@@ -1130,7 +1237,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 		// level 2: country - city
 		$res = \CSaleLocation::GetList(array(), array(
-			'!COUNTRY_ID' => false,
+			//'!COUNTRY_ID' => false,
 			'REGION_ID' => false,
 			'!CITY_ID' => false,
 			'LID' => 'en'
@@ -1148,7 +1255,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 		// level 3: country - region - city
 		$res = \CSaleLocation::GetList(array(), array(
-			'!COUNTRY_ID' => false,
+			//'!COUNTRY_ID' => false,
 			'!REGION_ID' => false,
 			'!CITY_ID' => false,
 			'LID' => 'en'
@@ -1321,7 +1428,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		// We make temporal table, place margins, parent and lang data into it, then perform an update of the old table from the temporal one.
 
 		$this->createTemporalTable(
-			self::TABLE_TEMP_TREE, 
+			self::TABLE_TEMP_TREE,
 			array(
 				'ID' => array(
 					'TYPE' => array(
@@ -1368,13 +1475,13 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 			)
 		);
 
-		$handle = new Location\DBBlockInserter(array(
+		$handle = new BlockInserter(array(
 			'tableName' => self::TABLE_TEMP_TREE,
 			'exactFields' => array(
 				'ID' => array('data_type' => 'integer'),
-				'PARENT_ID' => array('data_type' => 'integer'), 
-				'TYPE_ID' => array('data_type' => 'integer'), 
-				'DEPTH_LEVEL' => array('data_type' => 'integer'), 
+				'PARENT_ID' => array('data_type' => 'integer'),
+				'TYPE_ID' => array('data_type' => 'integer'),
+				'DEPTH_LEVEL' => array('data_type' => 'integer'),
 				'LEFT_MARGIN' => array('data_type' => 'integer'),
 				'RIGHT_MARGIN' => array('data_type' => 'integer'),
 			),
@@ -1409,7 +1516,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 
 	private function insertNames()
 	{
-		$handle = new Location\DBBlockInserter(array(
+		$handle = new BlockInserter(array(
 			'entityName' => '\Bitrix\Sale\Location\Name\LocationTable',
 			'exactFields' => array('LOCATION_ID', 'LANGUAGE_ID', 'NAME', 'SHORT_NAME', 'NAME_UPPER'),
 			'parameters' => array(
@@ -1422,15 +1529,18 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		{
 			foreach($this->data['NAME'] as $id => $nameLang)
 			{
-				foreach($nameLang as $lang => $name)
+				if(is_array($nameLang))
 				{
-					$handle->insert(array(
-						'LOCATION_ID' => $id,
-						'LANGUAGE_ID' => $lang,
-						'NAME' => $name['NAME'],
-						'NAME_UPPER' => ToUpper($name['NAME']),
-						'SHORT_NAME' => $name['SHORT_NAME']
-					));
+					foreach($nameLang as $lang => $name)
+					{
+						$handle->insert(array(
+							'LOCATION_ID' => $id,
+							'LANGUAGE_ID' => $lang,
+							'NAME' => $name['NAME'],
+							'NAME_UPPER' => ToUpper($name['NAME']),
+							'SHORT_NAME' => $name['SHORT_NAME']
+						));
+					}
 				}
 			}
 		}
@@ -1452,7 +1562,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		if($this->TableExists($tableName))
 			$DB->query('drop table '.$DB->ForSql($tableName));
 
-        return true;
+		return true;
 	}
 
 	protected function createTemporalTable($tableName = '', $columns = array())
@@ -1595,7 +1705,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 						FOR EACH ROW
 						BEGIN
 							IF :NEW.ID IS NULL THEN
-						 		SELECT SQ_%TABLE_NAME%.NEXTVAL INTO :NEW.ID FROM dual;
+								SELECT SQ_%TABLE_NAME%.NEXTVAL INTO :NEW.ID FROM dual;
 							END IF;
 						END;';
 				}

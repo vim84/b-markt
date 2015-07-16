@@ -69,4 +69,5 @@ $MESS["IBLOCK_FIELD_CODE"] = "Mnemonic code";
 $MESS["IBLOCK_FIELD_DETAIL_PICTURE"] = "Detailed image";
 $MESS["IBSEC_E_PROP_TABLE_DISPLAY_TYPE"] = "Smart filter view";
 $MESS["IBSEC_E_PROP_TABLE_DISPLAY_EXPANDED"] = "Show expanded";
+$MESS["IBSEC_E_PROP_TABLE_FILTER_HINT"] = "User hint";
 ?>

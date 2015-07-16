@@ -10,4 +10,6 @@ $MESS["CC_BLLE_TITLE_EDIT"] = "Настройка списка: #NAME#";
 $MESS["CC_BLLE_TITLE_NEW"] = "Новый список";
 $MESS["CC_BLLE_NAME_FIELD"] = "Название";
 $MESS["CC_BLLE_CHAIN_EDIT"] = "Настройка списка";
-?>
+$MESS["CC_BLLE_TITLE_EDIT_PROCESS"] = "Настройка процесса: #NAME#";
+$MESS["CC_BLLE_TITLE_NEW_PROCESS"] = "Новый процесс";
+$MESS["CC_BLLE_FIELD_NAME_DEFAULT_PROCESS"] = "Новый процесс";

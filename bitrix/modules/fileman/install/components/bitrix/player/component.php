@@ -8,7 +8,7 @@ $fp = $arParams['PATH'];
 if (strlen($fp) > 0 && strpos($fp, '.') !== false)
 	$ext = (strlen($fp) > 0 && strpos($fp, '.') !== false) ? strtolower(GetFileExtension($fp)) : '';
 
-if ($player_type == 'auto')
+if (empty($player_type) || $player_type == 'auto')
 	$player_type = (in_array($ext, array('wmv', 'wma'))) ? 'wmv' : 'flv';
 
 if ($ext == 'swf' && $arParams['ALLOW_SWF'] != 'Y')
@@ -71,12 +71,15 @@ if (!function_exists(escapeFlashvar))
 					else
 						$punicodedPath = CBXPunycode::ToASCII($path, $arErrors);
 
-					if ($pathPunicoded == $path)
+					if ($punicodedPath == $path)
 						return $originalPath;
 					else
 						$path = $punicodedPath;
 
-					if (($arUrl['port'] && ($arUrl['scheme'] != 'http' || $arUrl['port'] != 80) && ($arUrl['scheme'] != 'https' || $arUrl['port'] != 443)))
+					if (
+						$arUrl['port'] 
+						&& ($arUrl['port'] != 80 && $arUrl['port'] != 443)
+					)
 						$path .= ':'.$arUrl['port'];
 					$path .= $arUrl['path_query'];
 				}
@@ -107,10 +110,6 @@ if (!function_exists(escapeFlashvar))
 							$strWarn .= $warning."<br />";
 						$path = $path_;
 					}
-				}
-				elseif (strpos($_SERVER['HTTP_HOST'], 'xn--') !== false) // It's cyrilyc site
-				{
-					$path = CHTTP::URN2URI($path);
 				}
 			}
 		}
@@ -165,7 +164,7 @@ if ($player_type == 'flv') // FLASH PLAYER
 		'width' => $arResult['WIDTH'],
 		'dock' => true,
 		'id' => $arResult["ID"],
-		'controlbar' => isset($arParams['CONTROLBAR']) ? $arParams['CONTROLBAR'] : 'bottom'
+		'controlbar' => !empty($arParams['CONTROLBAR']) ? $arParams['CONTROLBAR'] : 'bottom'
 	);
 
 	if ($arParams["USE_PLAYLIST"] == 'Y')
@@ -200,6 +199,7 @@ if ($player_type == 'flv') // FLASH PLAYER
 		addFlashvar($jwConfig, 'logo.position', $arParams["LOGO_POSITION"]);
 		addFlashvar($jwConfig, 'logo.file', $logo);
 		addFlashvar($jwConfig, 'logo.link', $logoLink);
+		addFlashvar($jwConfig, 'logo.hide', 'false');
 	}
 	else
 	{
@@ -287,10 +287,11 @@ if ($player_type == 'flv') // FLASH PLAYER
 		addFlashvar($jwConfig, $var_[0], $var_[1]);
 	}
 
-	if (strpos($path, "youtube.") !== false || strpos($path, "y2u.be") !== false)
-		$arParams['PROVIDER'] = "youtube";
+	/*if (strpos($path, "youtube.") !== false || strpos($path, "y2u.be") !== false)
+		$arParams['PROVIDER'] = "youtube";*/
 
-	addFlashvar($jwConfig, 'provider', $arParams['PROVIDER']);
+	if ($arParams["USE_PLAYLIST"] !== 'Y')
+		addFlashvar($jwConfig, 'provider', $arParams['PROVIDER']);
 
 	if (strlen($arParams['STREAMER']) > 0)
 		addFlashvar($jwConfig, 'streamer', $arParams['STREAMER']);

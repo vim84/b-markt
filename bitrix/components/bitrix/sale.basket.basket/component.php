@@ -17,7 +17,7 @@ if (!Loader::includeModule('sale'))
 	return;
 }
 
-include(dirname(__FILE__)."/functions.php");
+include_once(dirname(__FILE__)."/functions.php");
 
 $arResult["WARNING_MESSAGE"] = array();
 
@@ -37,7 +37,7 @@ if (strlen($_REQUEST["BasketRefresh"]) > 0 || strlen($_REQUEST["BasketOrder"]) >
 		if ($id > 0)
 		{
 			$dbBasketItems = CSaleBasket::GetList(
-				array("ID" => "ASC"),
+				array(),
 				array(
 					"FUSER_ID" => CSaleBasket::GetBasketUserID(),
 					"LID" => SITE_ID,
@@ -46,7 +46,7 @@ if (strlen($_REQUEST["BasketRefresh"]) > 0 || strlen($_REQUEST["BasketOrder"]) >
 				),
 				false,
 				false,
-				array("ID", "CALLBACK_FUNC", "MODULE", "PRODUCT_ID", "QUANTITY", "DELAY", "CAN_BUY", "CURRENCY")
+				array('ID', 'DELAY', 'CAN_BUY', 'SET_PARENT_ID', 'TYPE')
 			);
 			$arItem = $dbBasketItems->Fetch();
 			if ($arItem && !CSaleBasketHelper::isSetItem($arItem))
@@ -83,14 +83,13 @@ if (strlen($_REQUEST["BasketRefresh"]) > 0 || strlen($_REQUEST["BasketOrder"]) >
 
 		unset($_SESSION["SALE_BASKET_NUM_PRODUCTS"][SITE_ID]);
 
-		if (strlen($_REQUEST["BasketOrder"]) > 0 && empty($arResult["WARNING_MESSAGE"]))
+		if (!empty($_REQUEST["BasketOrder"]) && empty($arResult["WARNING_MESSAGE"]))
 		{
 			LocalRedirect($arParams["PATH_TO_ORDER"]);
 		}
 		else
 		{
-			unset($_REQUEST["BasketRefresh"]);
-			unset($_REQUEST["BasketOrder"]);
+			unset($_REQUEST["BasketRefresh"], $_REQUEST["BasketOrder"]);
 
 			if (!empty($arResult["WARNING_MESSAGE"]))
 				$_SESSION["SALE_BASKET_MESSAGE"] = $arResult["WARNING_MESSAGE"];
@@ -115,5 +114,3 @@ if (is_array($_SESSION["SALE_BASKET_MESSAGE"]))
 }
 
 $this->IncludeComponentTemplate();
-
-?>

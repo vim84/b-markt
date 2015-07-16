@@ -18,7 +18,7 @@ if (IsModuleInstalled("intranet"))
 	<div class="bx-apps-attached-block">
 		<span class="bx-apps-icon download"></span> <a href="<?=$downloadUrl?>" style="margin-right: 20px;text-transform: uppercase;"><?=GetMessage("main_app_pass_desktop")?></a>
 		<?=GetMessage("main_app_pass_mobile")?>
-		<span class="bx-apps-icon iOS"></span> <a href="https://itunes.apple.com/ru/app/bitrix24/id561683423?l=ru&ls=1&mt=8">iOS</a>
+		<span class="bx-apps-icon iOS"></span> <a href="https://itunes.apple.com/<?=\Bitrix\Main\Localization\Loc::getDefaultLang(LANGUAGE_ID)?>/app/bitrix24/id561683423?l=ru&ls=1&mt=8">iOS</a>
 		<span class="bx-apps-icon android"></span> <a href="https://play.google.com/store/apps/details?id=com.bitrix24.android">android</a>
 	</div>
 <?

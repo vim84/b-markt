@@ -3,6 +3,17 @@ IncludeModuleLangFile(__FILE__);
 
 class CBPHelper
 {
+	static private $serverName;
+	static protected $cAccess;
+	static protected $groupsCache = array();
+
+	protected static function getAccessProvider()
+	{
+		if (self::$cAccess === null)
+			self::$cAccess = new CAccess;
+		return self::$cAccess;
+	}
+
 	private static function UsersArrayToStringInternal($arUsers, $arWorkflowTemplate, $arAllowableUserGroups)
 	{
 		if (is_array($arUsers))
@@ -52,10 +63,15 @@ class CBPHelper
 
 				if ($ar = $db->Fetch())
 				{
-					$str = CUser::FormatName(COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID), $ar, true);
+					$str = CUser::FormatName(COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID), $ar, true, false);
 					$str = $str." [".$ar["ID"]."]";
 					return str_replace(",", " ", $str);
 				}
+			}
+			else if (strpos($arUsers, 'group_') === 0)
+			{
+				$str = htmlspecialcharsex(self::getExtendedGroupName($arUsers));
+				return str_replace(",", " ", $str);
 			}
 
 			return str_replace(",", " ", $arUsers);
@@ -131,7 +147,11 @@ class CBPHelper
 					$bCorrectUser = true;
 					$arResult[] = $k1;
 				}
-				else
+				elseif (preg_match("#\[([A-Z]{1,}[0-9A-Z_]+)\]#i", $user, $arMatches))
+				{
+					$bCorrectUser = true;
+					$arResult[] = "group_".strtolower($arMatches[1]);
+				}
 				{
 					$ar = self::SearchUserByName($user);
 					$cnt = count($ar);
@@ -348,7 +368,8 @@ class CBPHelper
 		elseif (substr($key, 0, 1)=="@")
 		{
 			$key = substr($key, 1);
-			$strOperation = "IN";
+			$strOperation = "=";
+			$strNegative = 'N';
 		}
 		elseif (substr($key, 0, 1)=="~")
 		{
@@ -396,14 +417,18 @@ class CBPHelper
 						$strSqlGroupBy .= ", ";
 					$strSqlGroupBy .= $arFields[$val]["FIELD"];
 
-					if (isset($arFields[$val]["FROM"])
-						&& strlen($arFields[$val]["FROM"]) > 0
-						&& !in_array($arFields[$val]["FROM"], $arAlreadyJoined))
+					if (!empty($arFields[$val]["FROM"]))
 					{
-						if (strlen($strSqlFrom) > 0)
-							$strSqlFrom .= " ";
-						$strSqlFrom .= $arFields[$val]["FROM"];
-						$arAlreadyJoined[] = $arFields[$val]["FROM"];
+						$toJoin = (array)$arFields[$val]["FROM"];
+						foreach ($toJoin as $join)
+						{
+							if (in_array($join, $arAlreadyJoined))
+								continue;
+							if (strlen($strSqlFrom) > 0)
+								$strSqlFrom .= " ";
+							$strSqlFrom .= $join;
+							$arAlreadyJoined[] = $join;
+						}
 					}
 				}
 			}
@@ -455,14 +480,18 @@ class CBPHelper
 					else
 						$strSqlSelect .= $arFields[$arFieldsKeys[$i]]["FIELD"]." as ".$arFieldsKeys[$i];
 
-					if (isset($arFields[$arFieldsKeys[$i]]["FROM"])
-						&& strlen($arFields[$arFieldsKeys[$i]]["FROM"]) > 0
-						&& !in_array($arFields[$arFieldsKeys[$i]]["FROM"], $arAlreadyJoined))
+					if (!empty($arFields[$arFieldsKeys[$i]]["FROM"]))
 					{
-						if (strlen($strSqlFrom) > 0)
-							$strSqlFrom .= " ";
-						$strSqlFrom .= $arFields[$arFieldsKeys[$i]]["FROM"];
-						$arAlreadyJoined[] = $arFields[$arFieldsKeys[$i]]["FROM"];
+						$toJoin = (array)$arFields[$arFieldsKeys[$i]]["FROM"];
+						foreach ($toJoin as $join)
+						{
+							if (in_array($join, $arAlreadyJoined))
+								continue;
+							if (strlen($strSqlFrom) > 0)
+								$strSqlFrom .= " ";
+							$strSqlFrom .= $join;
+							$arAlreadyJoined[] = $join;
+						}
 					}
 				}
 			}
@@ -500,15 +529,18 @@ class CBPHelper
 							else
 								$strSqlSelect .= $arFields[$val]["FIELD"]." as ".$val;
 						}
-
-						if (isset($arFields[$val]["FROM"])
-							&& strlen($arFields[$val]["FROM"]) > 0
-							&& !in_array($arFields[$val]["FROM"], $arAlreadyJoined))
+						if (!empty($arFields[$val]["FROM"]))
 						{
-							if (strlen($strSqlFrom) > 0)
-								$strSqlFrom .= " ";
-							$strSqlFrom .= $arFields[$val]["FROM"];
-							$arAlreadyJoined[] = $arFields[$val]["FROM"];
+							$toJoin = (array)$arFields[$val]["FROM"];
+							foreach ($toJoin as $join)
+							{
+								if (in_array($join, $arAlreadyJoined))
+									continue;
+								if (strlen($strSqlFrom) > 0)
+									$strSqlFrom .= " ";
+								$strSqlFrom .= $join;
+								$arAlreadyJoined[] = $join;
+							}
 						}
 					}
 				}
@@ -611,14 +643,18 @@ class CBPHelper
 					}
 				}
 
-				if (isset($arFields[$key]["FROM"])
-					&& strlen($arFields[$key]["FROM"]) > 0
-					&& !in_array($arFields[$key]["FROM"], $arAlreadyJoined))
+				if (!empty($arFields[$key]["FROM"]))
 				{
-					if (strlen($strSqlFrom) > 0)
-						$strSqlFrom .= " ";
-					$strSqlFrom .= $arFields[$key]["FROM"];
-					$arAlreadyJoined[] = $arFields[$key]["FROM"];
+					$toJoin = (array)$arFields[$key]["FROM"];
+					foreach ($toJoin as $join)
+					{
+						if (in_array($join, $arAlreadyJoined))
+							continue;
+						if (strlen($strSqlFrom) > 0)
+							$strSqlFrom .= " ";
+						$strSqlFrom .= $join;
+						$arAlreadyJoined[] = $join;
+					}
 				}
 
 				$strSqlSearch_tmp = "";
@@ -674,14 +710,18 @@ class CBPHelper
 				else
 					$arSqlOrder[] = " ".$arFields[$by]["FIELD"]." ".$order." ";
 
-				if (isset($arFields[$by]["FROM"])
-					&& strlen($arFields[$by]["FROM"]) > 0
-					&& !in_array($arFields[$by]["FROM"], $arAlreadyJoined))
+				if (!empty($arFields[$by]["FROM"]))
 				{
-					if (strlen($strSqlFrom) > 0)
-						$strSqlFrom .= " ";
-					$strSqlFrom .= $arFields[$by]["FROM"];
-					$arAlreadyJoined[] = $arFields[$by]["FROM"];
+					$toJoin = (array)$arFields[$by]["FROM"];
+					foreach ($toJoin as $join)
+					{
+						if (in_array($join, $arAlreadyJoined))
+							continue;
+						if (strlen($strSqlFrom) > 0)
+							$strSqlFrom .= " ";
+						$strSqlFrom .= $join;
+						$arAlreadyJoined[] = $join;
+					}
 				}
 			}
 		}
@@ -1059,7 +1099,9 @@ class CBPHelper
 		return $arResult;
 	}
 
-	// deprecated
+	/**
+	 * @deprecated
+	 */
 	static public function GetGUIFieldEdit($documentType, $formName, $fieldName, $fieldValue, $arDocumentField, $bAllowSelection)
 	{
 		return self::GetFieldInputControl(
@@ -1591,34 +1633,46 @@ class CBPHelper
 
 		$dbSite = CSite::GetByID($siteId);
 		$arSite = $dbSite->Fetch();
-		$serverName = $arSite["SERVER_NAME"];
-		if (strLen($serverName) <= 0)
+		static::$serverName = $arSite["SERVER_NAME"];
+		if (strLen(static::$serverName) <= 0)
 		{
 			if (defined("SITE_SERVER_NAME") && strlen(SITE_SERVER_NAME) > 0)
-				$serverName = SITE_SERVER_NAME;
+				static::$serverName = SITE_SERVER_NAME;
 			else
-				$serverName = COption::GetOptionString("main", "server_name", "");
+				static::$serverName = COption::GetOptionString("main", "server_name", "");
 		}
 
-		$text = preg_replace(
-			array("/\[url\]([^\]]+?)\[\/url\]/ie".BX_UTF_PCRE_MODIFIER,
-				"/\[url\s*=\s*([^\]]+?)\s*\](.*?)\[\/url\]/ies".BX_UTF_PCRE_MODIFIER),
-			array("CBPHelper::__ConvertAnchorTag('\\1', '', '".$serverName."')",
-				"CBPHelper::__ConvertAnchorTag('\\1', '\\2', '".$serverName."')"),
+		$text = preg_replace_callback(
+			"/\[url\]([^\]]+?)\[\/url\]/i".BX_UTF_PCRE_MODIFIER,
+			array("CBPHelper", "__ConvertAnchorTag"),
+			$text
+		);
+		$text = preg_replace_callback(
+			"/\[url\s*=\s*([^\]]+?)\s*\](.*?)\[\/url\]/is".BX_UTF_PCRE_MODIFIER,
+			array("CBPHelper", "__ConvertAnchorTag"),
 			$text
 		);
 
 		return $text;
 	}
 
-	public static function __ConvertAnchorTag($url, $text, $serverName)
+	public static function __ConvertAnchorTag($url, $text = '', $serverName = '')
 	{
+		if (is_array($url))
+		{
+			$text = isset($url[2]) ? $url[2] : $url[1];
+			$url = $url[1];
+			$serverName = static::$serverName;
+		}
+
 		if (substr($url, 0, 1) != "/" && !preg_match("/^(http|news|https|ftp|aim|mailto)\:\/\//i".BX_UTF_PCRE_MODIFIER, $url))
 			$url = 'http://'.$url;
 		if (!preg_match("/^(http|https|news|ftp|aim):\/\/[-_:.a-z0-9@]+/i".BX_UTF_PCRE_MODIFIER, $url))
 			$url = $serverName.$url;
 		if (!preg_match("/^(http|news|https|ftp|aim|mailto)\:\/\//i".BX_UTF_PCRE_MODIFIER, $url))
 			$url = 'http://'.$url;
+
+		$url = str_replace(' ', '%20', $url);
 
 		if (strlen($text) > 0)
 			return $text." ( ".$url." )";
@@ -1680,13 +1734,144 @@ class CBPHelper
 			}
 			else
 			{
-				$arDSUsers = $documentService->GetUsersFromUserGroup($v, $activity->GetDocumentId());
+				$arDSUsers = self::extractUsersFromExtendedGroup($v);
+				if ($arDSUsers === false)
+					$arDSUsers = $documentService->GetUsersFromUserGroup($v, $activity->GetDocumentId());
 				foreach ($arDSUsers as $v1)
 					$result[] = "user_".$v1;
 			}
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Method return array of user ids, extracting from special codes. Supported: user (U), group (G),
+	 * intranet (IU, D, DR, Dextranet, UA), socnet (SU, SG1_A, SG1_E, SG1_K)
+	 *
+	 * @param string $code - group code, ex. group_D1
+	 * @return bool|array
+	 */
+	public static function extractUsersFromExtendedGroup($code)
+	{
+		if (strpos($code, 'group_') !== 0)
+			return false;
+		$code = strtoupper(substr($code, strlen('group_')));
+
+		if (strpos($code, 'G') === 0)
+		{
+			$group = (int)substr($code, 1);
+			if ($group <= 0)
+				return array();
+			$result = array();
+
+			$iterator = CUser::GetList(($b = "ID"), ($o = "ASC"), array("GROUPS_ID" => $group, "ACTIVE" => "Y"));
+			while ($user = $iterator->fetch())
+				$result[] = $user['ID'];
+
+			return $result;
+		}
+
+		if (preg_match('/^(U|IU|SU)([0-9]+)$/i', $code, $match))
+		{
+			return array($match[2]);
+		}
+
+		if ($code == 'UA' && CModule::IncludeModule('intranet'))
+		{
+			$result = array();
+			$iterator = CUser::GetList(($by="id"), ($order="asc"),
+				array('ACTIVE' => 'Y', '>UF_DEPARTMENT' => 0),
+				array('FIELDS' => array('ID'))
+			);
+			while($user = $iterator->fetch())
+			{
+				$result[] = $user['ID'];
+			}
+			return $result;
+		}
+
+		if (preg_match('/^(D|DR)([0-9]+)$/', $code, $match) && CModule::IncludeModule('intranet'))
+		{
+			$recursive = $match[1] == 'DR';
+			$id = $match[2];
+			$iblockId = COption::GetOptionInt('intranet', 'iblock_structure');
+			$departmentIds = array($id);
+
+			if ($recursive)
+			{
+				$iterator = CIBlockSection::GetList(
+					array('ID' => 'ASC'),
+					array('=IBLOCK_ID' => $iblockId, 'ID'=> $id),
+					false,
+					array('ID', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'DEPTH_LEVEL')
+				);
+				$section = $iterator->fetch();
+				$filter = array (
+					'=IBLOCK_ID' => $iblockId,
+					">LEFT_MARGIN" => $section["LEFT_MARGIN"],
+					"<RIGHT_MARGIN" => $section["RIGHT_MARGIN"],
+					">DEPTH_LEVEL" => $section['DEPTH_LEVEL'],
+				);
+				$iterator = CIBlockSection::GetList(array("left_margin"=>"asc"), $filter, false, array('ID'));
+				while($section = $iterator->fetch())
+				{
+					$departmentIds[] =  $section['ID'];
+				}
+				unset($iterator, $section, $filter);
+			}
+			$result = array();
+			$iterator = CUser::GetList(($by="id"), ($order="asc"),
+				array('ACTIVE' => 'Y', 'UF_DEPARTMENT' => $departmentIds),
+				array('FIELDS' => array('ID'))
+			);
+			while($user = $iterator->fetch())
+			{
+				$result[] = $user['ID'];
+			}
+			return $result;
+		}
+		if ($code == 'Dextranet' && CModule::IncludeModule('extranet'))
+		{
+			$result = array();
+			$iterator = CUser::GetList(($by="id"), ($order="asc"),
+				array(COption::GetOptionString("extranet", "extranet_public_uf_code", "UF_PUBLIC") => "1",
+					"!UF_DEPARTMENT" => false,
+					"GROUPS_ID" => array(CExtranet::GetExtranetUserGroupID())
+				),
+				array('FIELDS' => array('ID'))
+			);
+			while($user = $iterator->fetch())
+			{
+				$result[] = $user['ID'];
+			}
+			return $result;
+		}
+		if (preg_match('/^SG([0-9]+)_?([AEK])?$/', $code, $match) && CModule::IncludeModule('socialnetwork'))
+		{
+			$groupId = (int)$match[1];
+			$role = isset($match[2])? $match[2] : 'K';
+
+			$iterator = CSocNetUserToGroup::GetList(
+				array("USER_ID" => "ASC"),
+				array(
+					"=GROUP_ID" => $groupId,
+					"<=ROLE" => $role,
+					"USER_ACTIVE" => "Y"
+				),
+				false,
+				false,
+				array("USER_ID")
+			);
+			$result = array();
+			while($user = $iterator->fetch())
+			{
+				$result[] = $user['USER_ID'];
+			}
+			return $result;
+		}
+
+		return false;
 	}
 
 	public static function ExtractUsers($arUsersDraft, $documentId, $bFirst = false)
@@ -1707,16 +1892,26 @@ class CBPHelper
 			{
 				$user = intval(substr($user, $l));
 				if (($user > 0) && !in_array($user, $result))
+				{
+					if ($bFirst)
+						return $user;
 					$result[] = $user;
+				}
 			}
 			else
 			{
-				$arDSUsers = $documentService->GetUsersFromUserGroup($user, $documentId);
-				foreach ($arDSUsers as $u)
+				$users = self::extractUsersFromExtendedGroup($user);
+				if ($users === false)
+					$users = $documentService->GetUsersFromUserGroup($user, $documentId);
+				foreach ($users as $u)
 				{
-					$u = intval($u);
+					$u = (int)$u;
 					if (($u > 0) && !in_array($u, $result))
+					{
+						if ($bFirst)
+							return $u;
 						$result[] = $u;
+					}
 				}
 			}
 		}
@@ -1801,6 +1996,148 @@ class CBPHelper
 		}
 
 		return $value;
+	}
+
+	/**
+	 * @param $userId
+	 * @return array
+	 */
+	public static function getUserExtendedGroups($userId)
+	{
+		if (!isset(self::$groupsCache[$userId]))
+		{
+			self::$groupsCache[$userId] = array();
+			$access = self::getAccessProvider();
+			$userCodes = $access->GetUserCodesArray($userId);
+			foreach ($userCodes AS $code)
+			{
+				self::$groupsCache[$userId][] = 'group_'.strtolower($code);
+			}
+		}
+		return self::$groupsCache[$userId];
+	}
+
+	/**
+	 * @param $group
+	 * @return string
+	 */
+
+	public static function getExtendedGroupName($group)
+	{
+		if (strpos($group, 'group_') === 0)
+			$group = substr($group, strlen('group_'));
+		$group = strtoupper($group);
+		$access = self::getAccessProvider();
+		$arNames = $access->GetNames(array($group));
+		return $arNames[$group]['provider'].' '.$arNames[$group]['name'].' ['.$group.']';
+	}
+
+	/**
+	 * @param $users
+	 * @return array
+	 */
+
+	public static function convertToExtendedGroups($users)
+	{
+		$users = (array)$users;
+		foreach ($users as &$user)
+		{
+			if (strpos($user, 'user_') === 0)
+			{
+				$user = 'group_u'.substr($user, strlen('user_'));
+			}
+			elseif (preg_match('#^[0-9]+$#', $user))
+			{
+				$user = 'group_g'.$user;
+			}
+		}
+		return $users;
+	}
+
+	/**
+	 * @param $users
+	 * @param bool $extractUsers
+	 * @return array
+	 */
+
+	public static function convertToSimpleGroups($users, $extractUsers = false)
+	{
+		$users = (array)$users;
+		$converted = array();
+
+		foreach ($users as $user)
+		{
+			$user = strtolower($user);
+			if (strpos($user, 'group_u') === 0)
+			{
+				$converted[] = 'user_'.substr($user, strlen('group_u'));
+			}
+			elseif (strpos($user, 'group_g') === 0)
+			{
+				$converted[] = substr($user, strlen('group_g'));
+			}
+			elseif (strpos($user, 'group_') === 0)
+			{
+				if ($extractUsers)
+				{
+					$extracted = self::extractUsersFromExtendedGroup($user);
+					if ($extracted !== false)
+					{
+						foreach ($extracted as $exUser)
+						{
+							$converted[] = 'user_'.$exUser;
+						}
+					}
+				}
+			}
+			else
+				$converted[] = $user;
+		}
+		return $converted;
+	}
+
+	public static function getForumId()
+	{
+		$forumId = COption::GetOptionString('bizproc', 'forum_id', 0);
+		if (!$forumId && CModule::includeModule('forum'))
+		{
+			$defaultSiteId = CSite::GetDefSite();
+			$forumId = CForumNew::Add(array(
+				'NAME' => 'Bizproc Workflow',
+				'XML_ID' => 'bizproc_workflow',
+				'SITES' => array($defaultSiteId => '/'),
+				'ACTIVE' => 'Y'
+			));
+			COption::SetOptionString("bizproc", "forum_id", $forumId);
+		}
+
+		return $forumId;
+	}
+
+	/**
+	 * @param int $headUserId
+	 * @param int $subUserId
+	 * @return bool
+	 */
+
+	public static function checkUserSubordination($headUserId, $subUserId)
+	{
+		if (CModule::IncludeModule('intranet'))
+		{
+			$headUserId = (int)$headUserId;
+			$subUserId = (int)$subUserId;
+
+			if ($headUserId && $subUserId)
+			{
+				$headDepts = (array) CIntranetUtils::GetSubordinateDepartments($headUserId, true);
+				if (!empty($headDepts))
+				{
+					$subDepts = (array) CIntranetUtils::GetUserDepartments($subUserId);
+					return (sizeof(array_intersect($headDepts, $subDepts)) > 0);
+				}
+			}
+		}
+		return false;
 	}
 }
 

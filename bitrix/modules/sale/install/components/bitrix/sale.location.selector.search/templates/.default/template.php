@@ -27,22 +27,12 @@ Loc::loadMessages(__FILE__);
 			<div class="bx-ui-sls-quick-locations quick-locations">
 
 				<?foreach($arResult['DEFAULT_LOCATIONS'] as $lid => $loc):?>
-					<a href="javascript:void(0)" data-id="<?=$loc['ID']?>" class="quick-location-tag"><?=htmlspecialcharsbx($loc['NAME'])?></a>
+					<a href="javascript:void(0)" data-id="<?=intval($loc['ID'])?>" class="quick-location-tag"><?=htmlspecialcharsbx($loc['NAME'])?></a>
 				<?endforeach?>
 
 			</div>
 
 		<?endif?>
-
-		<div class="bx-ui-sls-inital-errors">
-			<?if(!empty($arResult['ERRORS']['NONFATAL'])):?>
-
-				<?foreach($arResult['ERRORS']['NONFATAL'] as $error):?>
-					<?ShowError($error)?>
-				<?endforeach?>
-
-			<?endif?>
-		</div>
 
 		<div class="dropdown-block bx-ui-sls-input-block">
 
@@ -56,22 +46,33 @@ Loc::loadMessages(__FILE__);
 
 		</div>
 
-		<script type="text/html" data-template-id="bx-ui-sls-error">
-			<div class="bx-ui-sls-error">
-				<div></div>
-				{{message}}
-			</div>
-		</script>
+		<?if(!$arParams['SUPPRESS_ERRORS']):?>
+			<script type="text/html" data-template-id="bx-ui-sls-error">
+				<div class="bx-ui-sls-error">
+					<div></div>
+					{{message}}
+				</div>
+			</script>
+		<?endif?>
 
 		<script type="text/html" data-template-id="bx-ui-sls-dropdown-item">
 			<li class="dropdown-item bx-ui-sls-variant">
-				<?/*<img class="dropdown-img" src="images/img-de.jpg" alt="de"/>*/?>
-				<span class="dropdown-item-text"><?/*{{index}} */?>{{display_wrapped}}{{path}}</span>
+				<span class="dropdown-item-text">{{display_wrapped}}</span>
 				<?if($arResult['ADMIN_MODE']):?>
 					[{{id}}]
 				<?endif?>
 			</li>
 		</script>
+
+		<div class="bx-ui-sls-error-message">
+			<?if(!empty($arResult['ERRORS']['NONFATAL'])):?>
+
+				<?foreach($arResult['ERRORS']['NONFATAL'] as $error):?>
+					<?ShowError($error)?>
+				<?endforeach?>
+
+			<?endif?>
+		</div>
 
 	</div>
 
@@ -90,12 +91,11 @@ Loc::loadMessages(__FILE__);
 				window.BX.locationSelectors['<?=$arParams['JS_CONTROL_GLOBAL_ID']?>'] = 
 			<?endif?>
 
-			new BX.autoCompleteSLS(<?=CUtil::PhpToJSObject(array(
+			new BX.Sale.component.location.selector.search(<?=CUtil::PhpToJSObject(array(
 
 				// common
 				'scope' => 'sls-'.$arResult['RANDOM_TAG'],
 				'source' => $this->__component->getPath().'/get.php',
-
 				'query' => array(
 					'FILTER' => array(
 						'EXCLUDE_ID' => intval($arParams['EXCLUDE_SUBTREE']),
@@ -106,23 +106,25 @@ Loc::loadMessages(__FILE__);
 						'LANGUAGE_ID' => LANGUAGE_ID
 					),
 				),
+
+				'selectedItem' => !empty($arResult['LOCATION']) ? $arResult['LOCATION']['VALUE'] : false,
+				'knownItems' => $arResult['KNOWN_ITEMS'],
+				'provideLinkBy' => $arParams['PROVIDE_LINK_BY'],
+
 				'messages' => array(
 					'nothingFound' => Loc::getMessage('SALE_SLS_NOTHING_FOUND'),
 					'error' => Loc::getMessage('SALE_SLS_ERROR_OCCURED'),
 				),
-				'knownItems' => array($arResult['LOCATION']),
-				'pathNames' => $arResult['PATH_NAMES'],
-				'selectedItem' => !empty($arResult['LOCATION']) ? $arResult['LOCATION']['VALUE'] : false,
-				'types' => $arResult['TYPES'],
-
-				'provideLinkBy' => $arParams['PROVIDE_LINK_BY'],
 
 				// "js logic"-related part
-
 				'callback' => $arParams['JS_CALLBACK'],
 				'useSpawn' => $arParams['USE_JS_SPAWN'] == 'Y',
 				'initializeByGlobalEvent' => $arParams['INITIALIZE_BY_GLOBAL_EVENT'],
 				'globalEventScope' => $arParams['GLOBAL_EVENT_SCOPE'],
+
+				// specific
+				'pathNames' => $arResult['PATH_NAMES'], // deprecated
+				'types' => $arResult['TYPES'],
 
 			), false, false, true)?>);
 

@@ -197,10 +197,13 @@ BX.Security.UserEdit.Otp = (function getUserOtp(BX)
 
 			this.typeMenu.push({
 				'TEXT': this._options.availableTypes[type].title,
-				'ONCLICK': (function onType(type) {
+				'ONCLICK': (function onType(type, isTwoCodeRequired) {
+					if (isTwoCodeRequired === void 0)
+						isTwoCodeRequired = true;
+
 					this.type = type;
-					this.onShow(true);
-				}).bind(this, this._options.availableTypes[type].type)
+					this.onShow(true, isTwoCodeRequired);
+				}).bind(this, this._options.availableTypes[type].type, this._options.availableTypes[type]['required_two_code'])
 			});
 		}
 
@@ -388,6 +391,22 @@ BX.Security.UserEdit.Otp = (function getUserOtp(BX)
 		)
 	};
 
+	BaseModel.prototype.showHideRedundantCodes = function(isTwoCodeRequired)
+	{
+		var elements = this.container.querySelectorAll('[data-require-two-codes="yes"]');
+
+		[].forEach.call(
+			elements,
+			function showHide(el)
+			{
+				if (isTwoCodeRequired)
+					el.style.display = '';
+				else
+					el.style.display = 'none';
+			}
+		);
+	};
+
 	/* -----------/Device popup/--------------*/
 
 	var Device = function(userId, options)
@@ -409,7 +428,7 @@ BX.Security.UserEdit.Otp = (function getUserOtp(BX)
 
 	BX.extend(Device, BaseModel);
 
-	Device.prototype.onShow = function(typeChosen)
+	Device.prototype.onShow = function(typeChosen, isTwoCodeRequired)
 	{
 		if (!typeChosen && this.typeMenu.length)
 		{
@@ -418,6 +437,7 @@ BX.Security.UserEdit.Otp = (function getUserOtp(BX)
 			return;
 		}
 
+		this.showHideRedundantCodes(isTwoCodeRequired);
 		this.showTypeTitle(this.type);
 		this.showPopup();
 	};
@@ -523,22 +543,6 @@ BX.Security.UserEdit.Otp = (function getUserOtp(BX)
 			colorLight : '#ffffff',
 			correctLevel : QRCode.CorrectLevel.H
 		});
-	};
-
-	Mobile.prototype.showHideRedundantCodes = function(isTwoCodeRequired)
-	{
-		var elements = this.container.querySelectorAll('[data-require-two-codes="yes"]');
-
-		[].forEach.call(
-			elements,
-			function showHide(el)
-			{
-				if (isTwoCodeRequired)
-					el.style.display = '';
-				else
-					el.style.display = 'none';
-			}
-		);
 	};
 
 	Mobile.prototype.deactivateOtp = function(event, action, numDays)
@@ -741,3 +745,19 @@ BX.Security.UserEdit.Otp = (function getUserOtp(BX)
 
 	return Manager;
 }(BX));
+
+(function initialize() {
+	// ToDo: change this, when Bitrix implement own "native" way to initialize JS components
+	function initAdminOtp() {
+		var messages = BX('otp-user-edit-messages');
+		var settings = BX('otp-user-edit-settings');
+		if (!messages || !settings)
+			return;
+
+		BX.message(JSON.parse(messages.innerHTML));
+		settings = JSON.parse(settings.innerHTML);
+		new BX.Security.UserEdit.Otp(settings.userId, settings);
+	}
+
+	BX.ready(initAdminOtp);
+})(BX);

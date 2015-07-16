@@ -37,6 +37,9 @@ abstract class NameHelper extends Helper
 		{
 			$preFlds = static::readMap(self::getEntityRoadCode(), $page);
 
+			// actually, NAME is not required when adding through LocationTable::add(), unless SHORT_NAME is set
+			unset($preFlds['NAME']['required']);
+
 			$flds = array();
 			$languages = self::getLanguageList();
 
@@ -70,8 +73,7 @@ abstract class NameHelper extends Helper
 		$class = $road.'Table';
 		$languages = self::getLanguageList();
 
-		// select
-
+		// select all names
 		foreach($languages as $lang)
 		{
 			$lang = ToUpper($lang);
@@ -103,7 +105,9 @@ abstract class NameHelper extends Helper
 					$key = $code.'_'.$lang;
 
 					if(isset($proxed['FILTER'][$key]))
+					{
 						$parameters['filter'][static::getFilterModifier($fld['data_type']).'NAME__'.$lang.'.'.$code] = $proxed['FILTER'][$key];
+					}
 				}
 			}
 		}
@@ -238,6 +242,34 @@ abstract class NameHelper extends Helper
 		return $languages;
 	}
 
+	public static function getTranslatedName($names, $languageId)
+	{
+		if(!is_array($names) || empty($names) || (string) $languageId == '')
+			return '';
+
+		$languageIdMapped = static::mapLanguage($languageId);
+
+		if(is_array($names[$languageId]) && (string) $names[$languageId]['NAME'] != '')
+			return $names[$languageId];
+
+		if(is_array($names[$languageIdMapped]) && (string) $names[$languageIdMapped]['NAME'] != '')
+			return $names[$languageIdMapped];
+
+		$languageId = 		ToUpper($languageId);
+		$languageIdMapped = ToUpper($languageIdMapped);
+
+		if(is_array($names[$languageId]) && (string) $names[$languageId]['NAME'] != '')
+			return $names[$languageId];
+
+		if(is_array($names[$languageIdMapped]) && (string) $names[$languageIdMapped]['NAME'] != '')
+			return $names[$languageIdMapped];
+
+		if((string) $names['EN'] != '')
+			return $names['EN'];
+
+		return '';
+	}
+
 	// extracts NAME data from known data, rather than do a separate query for it
 	public static function extractNames(&$data)
 	{
@@ -270,6 +302,46 @@ abstract class NameHelper extends Helper
 
 	public static function getNameMap()
 	{
-		return static::readMap('name', 'detail');
+		$map = static::readMap('name', 'detail');
+
+		// actually, NAME is not required when adding through LocationTable::add(), unless SHORT_NAME is set
+		unset($map['NAME']['required']);
+
+		return $map;
+	}
+
+	#####################################
+	#### Utilitary functions
+	#####################################
+
+	public static function translitFromUTF8($string)
+	{
+		$match = array( 
+			"\xD0\x90" => "A", "\xD0\x91" => "B", "\xD0\x92" => "V", "\xD0\x93" => "G", "\xD0\x94" => "D", 
+			"\xD0\x95" => "E", "\xD0\x01" => "YO", "\xD0\x96" => "ZH", "\xD0\x97" => "Z", "\xD0\x98" => "I", 
+			"\xD0\x99" => "J", "\xD0\x9A" => "K", "\xD0\x9B" => "L", "\xD0\x9C" => "M", "\xD0\x9D" => "N", 
+			"\xD0\x9E" => "O", "\xD0\x9F" => "P", "\xD0\xA0" => "R", "\xD0\xA1" => "S", "\xD0\xA2" => "T", 
+			"\xD0\xA3" => "U", "\xD0\xA4" => "F", "\xD0\xA5" => "H", "\xD0\xA6" => "C", "\xD0\xA7" => "CH", 
+			"\xD0\xA8" => "SH", "\xD0\xA9" => "SCH", "\xD0\xAC" => "", "\xD0\xAB" => "Y", "\xD0\xAA" => "", 
+			"\xD0\xAD" => "E", "\xD0\xAE" => "YU", "\xD0\xAF" => "YA", 
+
+			"\xD0\xB0" => "a", "\xD0\xB1" => "b", "\xD0\xB2" => "v", "\xD0\xB3" => "g", "\xD0\xB4" => "d", 
+			"\xD0\xB5" => "e", "\xD1\x91" => "yo", "\xD0\xB6" => "zh", "\xD0\xB7" => "z", "\xD0\xB8" => "i", 
+			"\xD0\xB9" => "j", "\xD0\xBA" => "k", "\xD0\xBB" => "l", "\xD0\xBC" => "m", "\xD0\xBD" => "n",
+			"\xD0\xBE" => "o", "\xD0\xBF" => "p", "\xD1\x80" => "r", "\xD1\x81" => "s", "\xD1\x82" => "t", 
+			"\xD1\x83" => "u", "\xD1\x84" => "f", "\xD1\x85" => "h", "\xD1\x86" => "c", "\xD1\x87" => "ch", 
+			"\xD1\x88" => "sh", "\xD1\x89" => "sch", "\xD1\x8C" => "", "\xD1\x8B" => "y", "\xD1\x8A" => "", 
+			"\xD1\x8d" => "e", "\xD1\x8E" => "yu", "\xD1\x8F" => "ya", 
+		); 
+
+		return str_replace(array_keys($match), array_values($match), $string);
+	}
+
+	public static function mapLanguage($lid)
+	{
+		if($lid == 'ua' || $lid == 'kz')
+			return 'ru';
+
+		return 'en';
 	}
 }

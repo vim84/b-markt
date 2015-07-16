@@ -90,6 +90,14 @@ class seo extends CModule
 		$eventManager->registerEventHandler("main", "OnAdminIBlockElementEdit", "seo", "\\Bitrix\\Seo\\AdvTabEngine", "eventHandler");
 		$eventManager->registerEventHandler("main", "OnBeforeProlog", "seo", "\\Bitrix\\Seo\\AdvSession", "checkSession");
 
+		$eventManager->registerEventHandler("sale", "OnOrderSave", "seo", "\\Bitrix\\Seo\\AdvSession", "onOrderSave");
+		$eventManager->registerEventHandler("sale", "OnBasketOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onBasketOrder");
+		$eventManager->registerEventHandler("sale", "onSalePayOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSalePayOrder");
+		$eventManager->registerEventHandler("sale", "onSaleDeductOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleDeductOrder");
+		$eventManager->registerEventHandler("sale", "onSaleDeliveryOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleDeliveryOrder");
+		$eventManager->registerEventHandler("sale", "onSaleStatusOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleStatusOrder");
+
+
 		if (COption::GetOptionString('seo', 'searchers_list', '') == '' && CModule::IncludeModule('statistic'))
 		{
 			$arFilter = array('ACTIVE' => 'Y', 'NAME' => 'Google|MSN|Bing', 'NAME_EXACT_MATCH' => 'Y');
@@ -200,6 +208,13 @@ class seo extends CModule
 
 		$eventManager->unRegisterEventHandler("main", "OnAdminIBlockElementEdit", "seo", "\\Bitrix\\Seo\\AdvTabEngine", "eventHandler");
 		$eventManager->unRegisterEventHandler("main", "OnBeforeProlog", "seo", "\\Bitrix\\Seo\\AdvSession", "checkSession");
+
+		$eventManager->unRegisterEventHandler("sale", "OnOrderSave", "seo", "\\Bitrix\\Seo\\AdvSession", "onOrderSave");
+		$eventManager->unRegisterEventHandler("sale", "OnBasketOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onBasketOrder");
+		$eventManager->unRegisterEventHandler("sale", "onSalePayOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSalePayOrder");
+		$eventManager->unRegisterEventHandler("sale", "onSaleDeductOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleDeductOrder");
+		$eventManager->unRegisterEventHandler("sale", "onSaleDeliveryOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleDeliveryOrder");
+		$eventManager->unRegisterEventHandler("sale", "onSaleStatusOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleStatusOrder");
 
 		UnRegisterModule("seo");
 

@@ -14,9 +14,10 @@ use Bitrix\Sale\Location;
 use Bitrix\Sale\Delivery;
 use Bitrix\Main\Localization;
 
+IncludeModuleLangFile(__FILE__);
+
 class CAllSaleLocation
 {
-	const LOC2_OPT = 					'sale_locationpro_enabled';
 	const LOC2_M_OPT = 					'sale_locationpro_migrated';
 	const LOC2_DEBUG_MODE_OPT = 		'location2_debug_mode';
 
@@ -28,6 +29,7 @@ class CAllSaleLocation
 	const ZIP_EXT_SERVICE_CODE =		'ZIP';
 
 	const MODIFIER_SEARCH_R = 			'#^((!|\+)?(>=|>|<=|<|@|~|%|=)?)#';
+	const KEY_PARSE_R = 				'#^(!|\+)?(>=|>|<=|<|@|~|%|=)?(.+)#';
 	const LEADING_TILDA_SEARCH_R = 		'#^~#';
 
 	/////////////////////////////////////////////
@@ -35,17 +37,35 @@ class CAllSaleLocation
 
 	public static function isLocationProEnabled()
 	{
-		return self::isLocationProMigrated() && Config\Option::get('sale', self::LOC2_OPT, '') == 'Y';
+		return self::isLocationProMigrated();
 	}
 
 	public static function locationProEnable()
 	{
-		Config\Option::set('sale', self::LOC2_OPT, 'Y', '');
+		self::locationProSetMigrated();
 	}
 
 	public static function locationProDisable()
 	{
-		Config\Option::set('sale', self::LOC2_OPT, 'N', '');
+		self::locationProSetRolledBack();
+	}
+
+	/////////////////////////////////////////////
+	// enable this when you had done the migration
+
+	public static function isLocationProMigrated()
+	{
+		return Config\Option::get('sale', self::LOC2_M_OPT, '') == 'Y';
+	}
+
+	public static function locationProSetMigrated()
+	{
+		Config\Option::set('sale', self::LOC2_M_OPT, 'Y', '');
+	}
+
+	public static function locationProSetRolledBack()
+	{
+		Config\Option::set('sale', self::LOC2_M_OPT, 'N', '');
 	}
 
 	// very temporal code
@@ -156,7 +176,12 @@ class CAllSaleLocation
 			if(!strlen($template))
 				$appearance = \Bitrix\Sale\Location\Admin\Helper::getWidgetAppearance();
 			else
-				$appearance = $template == 'popup' ? 'search' : 'steps';
+			{
+				$appearance = 'steps';
+
+				if($template == 'popup' || $template == 'search')
+					$appearance = 'search';
+			}
 
 			$GLOBALS["APPLICATION"]->IncludeComponent(
 				"bitrix:sale.location.selector.".$appearance,
@@ -200,36 +225,20 @@ class CAllSaleLocation
 	}
 
 	/////////////////////////////////////////////
-	// enable this when you had done the migration
-
-	public static function isLocationProMigrated()
-	{
-		return Config\Option::get('sale', self::LOC2_M_OPT, '') == 'Y';
-	}
-
-	public static function locationProSetMigrated()
-	{
-		Config\Option::set('sale', self::LOC2_M_OPT, 'Y', '');
-	}
-
-	public static function locationProSetRolledBack()
-	{
-		Config\Option::set('sale', self::LOC2_M_OPT, 'N', '');
-	}
-
-	/////////////////////////////////////////////
 	/////////////////////////////////////////////
 	/////////////////////////////////////////////
 
 	public static function getLocationIDbyCODE($code)
 	{
-		if(CSaleLocation::isLocationProEnabled() && strlen($code))
+		if(CSaleLocation::isLocationProMigrated() && strlen($code))
 		{
-			// we must convert CODE to ID, kz now we have CODE stored in profile
-			$item = Location\LocationTable::getByCode($code, array(
+			$item = Location\LocationTable::getList(array(
 				'select' => array(
-					'*'
+					'ID'
 				),
+				'filter' => array(
+					'=CODE' => $code
+				)
 			))->fetch();
 
 			if(empty($item))
@@ -243,10 +252,10 @@ class CAllSaleLocation
 
 	public static function getLocationCODEbyID($id)
 	{
-		if(CSaleLocation::isLocationProEnabled() && intval($id))
+		if(CSaleLocation::isLocationProMigrated() && intval($id))
 		{
 			// we must convert ID to CODE
-			$item = Location\LocationTable::getById($id)->fetch();
+			$item = Location\LocationTable::getList(array('filter' => array('=ID' => $id), 'select' => array('ID', 'CODE')))->fetch();
 
 			if(empty($item))
 				return '';
@@ -255,6 +264,70 @@ class CAllSaleLocation
 		}
 
 		return $id;
+	}
+
+	public static function tryTranslateIDToCode($id)
+	{
+		if(!CSaleLocation::isLocationProMigrated())
+			return $id;
+
+		$id = (string) $id;
+
+		if($id != '' && $id === (string) intval($id))
+		{
+			// ID came, need to translate to CODE and store
+			$location = \Bitrix\Sale\Location\LocationTable::getList(array('filter' => array('=ID' => $id), 'select' => array('ID', 'CODE')))->fetch();
+			if((string) $location['CODE'] != '')
+				return $location['CODE'];
+		}
+
+		return $id;
+	}
+
+	public static function checkLocationIsAboveCity($locationId)
+	{
+		if(strlen($locationId))
+		{
+			$tail = CSaleLocation::getLocationCityTail();
+			if(!empty($tail))
+			{
+				$location = Location\LocationTable::getList(array('select' => array('TYPE_ID'), 'filter' => array(
+					'LOGIC' => 'OR',
+					array('=ID' => intval($locationId)),
+					array('=CODE' => $locationId)
+				)))->fetch();
+
+				if(!isset($tail[$location['TYPE_ID']])) // is not a city and not a descendant of it
+					return true;
+			}
+		}
+
+		return false;
+	}
+
+	public static function getLocationCityTail()
+	{
+		static $tail;
+
+		if($tail == null)
+		{
+			$tail = array();
+
+			// spike to emulate previous logic of "city" field
+			$res = Location\TypeTable::getList(array('select' => array('CODE', 'ID'), 'order' => array('SORT' => 'asc')));
+			$types = array();
+			$start = false;
+			while($item = $res->fetch())
+			{
+				if($item['CODE'] == 'CITY')
+					$start = true;
+
+				if($start)
+					$tail[$item['ID']] = true;
+			}
+		}
+
+		return $tail;
 	}
 
 	private static function getLanguages()
@@ -279,10 +352,15 @@ class CAllSaleLocation
 
 	public static function getTypes()
 	{
-		$types = array();
-		$res = Location\TypeTable::getList();
-		while($item = $res->fetch())
-			$types[$item['CODE']] = $item['ID'];
+		static $types;
+
+		if($types == null)
+		{
+			$types = array();
+			$res = Location\TypeTable::getList();
+			while($item = $res->fetch())
+				$types[$item['CODE']] = $item['ID'];
+		}
 
 		return $types;
 	}
@@ -389,156 +467,176 @@ class CAllSaleLocation
 		return false;
 	}
 
+	protected static function checkIsRealInt($val)
+	{
+		return ((string) intval($val) === (string) $val);
+	}
+
 	protected static function GetLocationTypeList($typeCode = '', $arOrder = Array("NAME_LANG"=>"ASC"), $arFilter=Array(), $strLang = LANGUAGE_ID)
 	{
+		global $DB;
+		$arSqlSearch = Array();
+
 		if(!in_array($typeCode, array('COUNTRY', 'REGION', 'CITY')))
-			return false;
-
-		$types = self::getTypes();
-
-		if(empty($types) || !isset($types['COUNTRY']) || !isset($types['REGION']) || !isset($types['CITY']))
 		{
-			// no types, conditions will break
 			$res = new CDBResult();
 			$res->InitFromArray(array());
 			return $res;
 		}
 
-		$query = new Entity\Query(self::SELF_ENTITY_NAME);
+		$types = self::getTypes();
+		if(!isset($types[$typeCode]))
+		{
+			$res = new CDBResult();
+			$res->InitFromArray(array());
+			return $res;
+		}
 
-		$fieldMap = array(
+		$arSqlSearch[] = "L.TYPE_ID = '".intval($types[$typeCode])."'";
 
-			'ID',
-			'NAME_ORIG' => 'NAME_ORIG_.NAME',
-			'SHORT_NAME' => 'NAME_ORIG_.SHORT_NAME',
+		if(!is_array($arFilter))
+			$filter_keys = Array();
+		else
+			$filter_keys = array_keys($arFilter);
 
-			'RNAME' => 'NAME.NAME',
-			'NAME_LANG' => 'NAME_LANG',
+		$joinLCO = false;
+		$joinLRE = false;
 
-			'COUNTRY_ID_' => 'TO_COUNTRY.ID',
-			'REGION_ID_' => 'TO_REGION.ID'
-		);
-		$fieldProxy = array(
-			'RID' => 'ID',
-			'RNAME' => 'NAME',
-			'COUNTRY_ID_' => 'COUNTRY_ID',
-			'REGION_ID_' => 'REGION_ID'
-		);
+		$countFilterKey = count($filter_keys);
+		for($i=0; $i < $countFilterKey; $i++)
+		{
+			$val = $DB->ForSql($arFilter[$filter_keys[$i]]);
+			if (strlen($val)<=0) continue;
 
-		////////////////////////////////////
-		////////////////////////////////////
-		////////////////////////////////////
-		//if(in_array('COUNTRY_ID', $arFilter, true))
-		//{
-			$query->registerRuntimeField(
-					'TO_COUNTRY',
-					array(
-						'data_type' => self::SELF_ENTITY_NAME,
-						'reference' => array(
+			$key = $filter_keys[$i];
+			if ($key[0]=="!")
+			{
+				$key = substr($key, 1);
+				$bInvert = true;
+			}
+			else
+				$bInvert = false;
 
-							// it should be ancestor
-							'<=ref.LEFT_MARGIN' => 'this.LEFT_MARGIN',
-							'>=ref.RIGHT_MARGIN' => 'this.RIGHT_MARGIN',
+			switch(ToUpper($key))
+			{
+				case "ID":
 
-							// it should be COUNTRY
-							'=ref.TYPE_ID' => array('?', $types['COUNTRY']),
-						),
-						'join_type' => 'left'
-					)
-				);
-		//}
+					if(self::checkIsRealInt($val)) // real int
+					{
+						$field = 'ID';
+						$val = intval($val);
+					}
+					else
+					{
+						$field = 'CODE';
+						$val = $DB->ForSql($val);
+					}
 
-		//if(in_array('REGION_ID', $arFilter, true))
-		//{
-			$query->registerRuntimeField(
-				'TO_REGION',
-				array(
-					'data_type' => self::SELF_ENTITY_NAME,
-					'reference' => array(
+					$arSqlSearch[] = "L.".$field." ".($bInvert?"<>":"=")." '".$val."' ";
+					break;
+				case "NAME":
+					$arSqlSearch[] = "LN.NAME ".($bInvert?"<>":"=")." '".$val."' ";
+					break;
+				case "COUNTRY_ID":
 
-						// REGION search for COUNTRY is meaningless
-						array(
-							'LOGIC' => 'OR',
-							array(
-								'=this.TYPE_ID' => array('?', $types['REGION']),
-							),
-							array(
-								'=this.TYPE_ID' => array('?', $types['CITY']),
-							),
-						),
+					if(self::checkIsRealInt($val)) // real int
+					{
+						$val = intval($val);
+						$arSqlSearch[] = "L.COUNTRY_ID ".($bInvert?"<>":"=")." '".$val."' ";
+					}
+					else
+					{
+						$val = $DB->ForSql($val);
+						$joinLCO = true;
+						$arSqlSearch[] = "LCO.CODE ".($bInvert?"<>":"=")." '".$val."' ";
+					}
 
-						// it should be ancestor
-						'<=ref.LEFT_MARGIN' => 'this.LEFT_MARGIN',
-						'>=ref.RIGHT_MARGIN' => 'this.RIGHT_MARGIN',
+					break;
 
-						// it should be REGION
-						'=ref.TYPE_ID' => array('?', $types['REGION']),
-					),
-					'join_type' => 'left'
-				)
-			);
-		//}
+				case "REGION_ID":
 
-		////////////////////////////////////
-		////////////////////////////////////
-		////////////////////////////////////
+					if(self::checkIsRealInt($val)) // real int
+					{
+						$val = intval($val);
+						$arSqlSearch[] = "L.REGION_ID ".($bInvert?"<>":"=")." '".$val."' ";
+					}
+					else
+					{
+						$val = $DB->ForSql($val);
+						$joinLRE = true;
+						$arSqlSearch[] = "LRE.CODE ".($bInvert?"<>":"=")." '".$val."' ";
+					}
 
-		$selectFields = self::processSelectForGetList(array('*'), $fieldMap);
+					break;
+			}
+		}
 
-		// filter
-		list($filterFields, $filterFieldsClean) = self::processFilterForGetList($arFilter, $fieldMap, $fieldProxy, $query);
+		$strSqlSearch = "";
+		$countSqlSearch = count($arSqlSearch);
+		for($i=0; $i < $countSqlSearch; $i++)
+		{
+			$strSqlSearch .= " AND ";
+			$strSqlSearch .= " (".$arSqlSearch[$i].") ";
+		}
 
-		if($filterFields === false)
-			$filterFields = array();
-		$filterFields['=TYPE_ID'] = $types[$typeCode];
+		/*
+		L - location table
+		LN - language-independent
+		LLN - language-dependent
+		*/
 
-		// order
-		$orderFields = self::processOrderForGetList($arOrder, $fieldMap, $fieldProxy);
+		$strSql =
+			"SELECT L.ID as ID, L.CODE as CODE, LN.NAME as NAME_ORIG, LN.SHORT_NAME as SHORT_NAME, LLN.NAME as NAME, ".
+			"	CASE WHEN LLN.LOCATION_ID IS NULL THEN LN.NAME ELSE LLN.NAME END as NAME_LANG ".
+			"FROM b_sale_location L ".
+			"	LEFT JOIN b_sale_loc_name LN ON (L.ID = LN.LOCATION_ID AND LN.LANGUAGE_ID = 'en') ".
+			"	LEFT JOIN b_sale_loc_name LLN ON (L.ID = LLN.LOCATION_ID AND LLN.LANGUAGE_ID = '".$DB->ForSql($strLang, 2)."') ".
 
-		$query->registerRuntimeField(
-			'NAME_ORIG_',
-			array(
-				'data_type' => self::NAME_ENTITY_NAME,
-				'reference' => array(
-					'=this.ID' => 'ref.LOCATION_ID',
-					'=ref.LANGUAGE_ID' => array('?', self::ORIGIN_NAME_LANGUAGE_ID)
-				),
-				'join_type' => 'left'
-			)
-		);
+			($joinLCO ? 
+				" INNER JOIN b_sale_location LCO ON (L.COUNTRY_ID = LCO.ID) " :
+				"").
 
-		$nameJoinCondition = array(
-			'=this.ID' => 'ref.LOCATION_ID',
-		);
-		if(strlen($strLang))
-			$nameJoinCondition['=ref.LANGUAGE_ID'] = array('?', $strLang);
+			($joinLRE ? 
+				" INNER JOIN b_sale_location LRE ON (L.REGION_ID = LRE.ID) " :
+				"").
 
-		$query->registerRuntimeField(
-			'NAME',
-			array(
-				'data_type' => self::NAME_ENTITY_NAME,
-				'reference' => $nameJoinCondition,
-				'join_type' => 'left'
-			)
-		);
+			"	WHERE 1 = 1 ".$strSqlSearch." ";
 
-		$query->registerRuntimeField('NAME_LANG', array(
-			'data_type' => 'string',
-			'expression' => array(
-				"CASE WHEN (%s IS NULL OR %s = '') THEN %s ELSE %s END",
-				'NAME.NAME',
-				'NAME.NAME',
-				'NAME_ORIG_.NAME',
-				'NAME.NAME'
-			),
-		));
+		$arSqlOrder = Array();
+		foreach ($arOrder as $by=>$order)
+		{
+			$by = ToUpper($by);
+			$order = ToUpper($order);
+			if ($order!="ASC") $order = "DESC";
 
-		$query->setFilter($filterFields);
-		$query->setSelect($selectFields);
-		if(is_array($orderFields))
-			$query->setOrder($orderFields);
+			if ($by == "SORT") $arSqlOrder[] = " L.SORT ".$order;
+			elseif ($by == "ID") $arSqlOrder[] = " L.ID ".$order." ";
+			elseif ($by == "NAME") $arSqlOrder[] = " LN.NAME ".$order." ";
+			elseif ($by == "SHORT_NAME") $arSqlOrder[] = " LN.SHORT_NAME ".$order." ";
+			else
+			{
+				$arSqlOrder[] = " LLN.NAME ".$order." ";
+				$by = "NAME_LANG";
+			}
+		}
 
-		return new CDBResult(self::proxyFieldsInResult($query->exec(), $fieldProxy));
+		$strSqlOrder = "";
+		DelDuplicateSort($arSqlOrder);
+		$countSqlOrder = count($arSqlOrder);
+		for ($i=0; $i < $countSqlOrder; $i++)
+		{
+			if ($i==0)
+				$strSqlOrder = " ORDER BY ";
+			else
+				$strSqlOrder .= ", ";
+
+			$strSqlOrder .= $arSqlOrder[$i];
+		}
+
+		$strSql .= $strSqlOrder;
+
+		$db_res = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+		return $db_res;
 	}
 
 	public static function checkLocationIdExists($id)
@@ -597,120 +695,97 @@ class CAllSaleLocation
 		return array($types['COUNTRY'], $types['REGION'], $types['CITY']);
 	}
 
+	protected static $allowedOps = array(
+		'='
+	);
+
+	protected static function parseFilter($filter = array())
+	{
+		$result = array();
+		if(is_array($filter))
+		{
+			foreach($filter as $k => $v)
+			{
+				$found = array();
+				preg_match(self::KEY_PARSE_R, $k, $found);
+
+				if(strlen($found[3]))
+				{
+					$f = array(
+						'NOT' => $found[1] == '!',
+						'OP' => !strlen($found[2]) ? '=' : $found[2],
+						'VALUE' => $v
+					);
+
+					if(in_array($f['OP'], static::$allowedOps))
+						$result[$found[3]] = $f;
+				}
+			}
+		}
+
+		return $result;
+	}
+
 	public static function getDenormalizedLocationList($entityName, $arFilter = array())
 	{
 		$class = 				$entityName.'Table';
 		$linkField = 			$class::getLinkField();
 		$typeField = 			$class::getTypeField();
 		$locationLinkField = 	$class::getLocationLinkField();
-		$useGroups = 			$class::getUseGroups();
+		//$useGroups = 			$class::getUseGroups();
+		$table = 				$class::getTableName();
+		$useCodes = 			$class::getUseCodes();
+		$locationTable = 		Location\LocationTable::getTableName();
+		$groupTable = 			Location\GroupTable::getTableName();
 
-		$query = new Entity\Query($entityName);
+		$locFlag = 				Location\Connector::DB_LOCATION_FLAG;
+		$grpFlag = 				Location\Connector::DB_GROUP_FLAG;
 
-		$fieldMap = array(
-			'D_SPIKE' => 'D_SPIKE',
-			'RLOCATION_ID' => 'RLOCATION_ID',
-			'LCOUNTRY_ID' => 'C.ID',
-			'LREGION_ID' => 'C.REGION_ID',
-			'LCITY_ID' => 'C.CITY_ID',
-			$linkField => $linkField
-		);
-		if($useGroups)
-		{
-			$fieldMap['LLOCATION_TYPE'] = $typeField;
-		}
+		$filter = self::parseFilter($arFilter);
 
-		$fieldProxy = array(
-			'LLOCATION_ID' => $locationLinkField
-		);
-		if($useGroups)
-			$fieldProxy['LLOCATION_TYPE'] = 'LOCATION_TYPE';
+		$where = array();
 
-		$query->registerRuntimeField(
-			'D_SPIKE',
-			array(
-				'data_type' => 'integer',
-				'expression' => array(
-					'distinct %s',
-					$linkField
-				)
-			)
-		);
+		if(intval($filter[$linkField]['VALUE']))
+			$where[] = 'DL.'.$linkField.' '.($filter[$linkField]['NOT'] ? '!' : '').$filter[$linkField]['OP']." '".intval($filter[$linkField]['VALUE'])."'";
 
-		/////////////////////////////////////////////////
-		// denormalized
+		if(intval($filter['LOCATION_ID']['VALUE']))
+			$where[] = 'LINK.ID '.($filter['LOCATION_ID']['NOT'] ? '!' : '').$filter['LOCATION_ID']['OP']." '".intval($filter['LOCATION_ID']['VALUE'])."'";
 
-		$joinCondition = array(
-			self::getTypeJOINCondition('ref'),
-			'=this.'.$locationLinkField => 'ref.ID',
-		);
-		if($useGroups)
-			$joinCondition['=this.'.$typeField] = array('?', Location\Connector::DB_LOCATION_FLAG);
+		if($filter[$typeField]['VALUE'] == Location\Connector::DB_LOCATION_FLAG || $filter[$typeField]['VALUE'] == Location\Connector::DB_GROUP_FLAG)
+			$where[] = 'DL.'.$typeField.' '.($filter[$typeField]['NOT'] ? '!' : '').$filter[$typeField]['OP']." '".$filter[$typeField]['VALUE']."'";
 
-		$types = self::getTypes();
+		$sql = "
 
-		$query->registerRuntimeField(
-			'L',
-			array(
-				'data_type' => self::SELF_ENTITY_NAME,
-				'reference' => $joinCondition,
-				'join_type' => 'left'
-			)
-		);
+			select distinct
+				DL.".$linkField.",
+				LINK.ID as LOCATION_ID,
+				DL.".$typeField."
+			from 
+				".$table." DL
+			inner join 
+				".$locationTable." L on DL.".$typeField." = '".$locFlag."' and DL.".$locationLinkField." = L.".($useCodes ? 'CODE' : 'ID')."
+			inner join
+				".$locationTable." LINK on LINK.LEFT_MARGIN >= L.LEFT_MARGIN and LINK.RIGHT_MARGIN <= L.RIGHT_MARGIN
 
-		$query->registerRuntimeField(
-			'C',
-			array(
-				'data_type' => self::SELF_ENTITY_NAME,
-				'reference' => array(
-					'LOGIC' => 'OR',
-					array(
-						self::getTypeJOINCondition('ref'),
-						'>=ref.LEFT_MARGIN' => 'this.L.LEFT_MARGIN',
-						'<=ref.RIGHT_MARGIN' => 'this.L.RIGHT_MARGIN'
-					),
-					/*
-					array(
-						'=ref.ID' => 'this.L.ID'
-					)
-					*/
-				),
-				'join_type' => 'left'
-			)
-		);
+			".(!empty($where) ? 'where '.implode(' and ', $where) : '')."
 
-		$query->registerRuntimeField(
-			'RLOCATION_ID',
-			array(
-				'data_type' => 'integer',
-				'expression' => array(
-					'case when %s is null then %s else %s end',
-					'C.ID',
-					'LOCATION_ID',
-					'C.ID'
-				)
-			)
-		);
+			union
 
-		// select
-		$selectFields = CSaleLocation::processSelectForGetList(array('*'), $fieldMap);
+			select
+				DL.".$linkField.",
+				LINK.ID as LOCATION_ID,
+				DL.".$typeField."
+			from 
+				".$table." DL
+			inner join 
+				".$groupTable." LINK on DL.".$typeField." = '".$grpFlag."' and DL.".$locationLinkField." = LINK.".($useCodes ? 'CODE' : 'ID')."
 
-		// filter
-		list($filterFields, $filterClean) = CSaleLocation::processFilterForGetList($arFilter, $fieldMap, $fieldProxy, $query);
+			".(!empty($where) ? 'where '.implode(' and ', $where) : '')."
+		";
 
-		$query->setSelect($selectFields);
-		$query->setFilter($filterFields);
+		global $DB;
 
-		$res = $query->exec();
-		$res->addReplacedAliases(array(
-			'RLOCATION_ID' => 'LOCATION_ID',
-			'LLOCATION_TYPE' => 'LOCATION_TYPE',
-			'LCOUNTRY_ID' => 'COUNTRY_ID',
-			'LREGION_ID' => 'REGION_ID',
-			'LCITY_ID' => 'CITY_ID'
-		));
-
-		return $res;
+		return $DB->query($sql);
 	}
 
 	/////////////////////////////////////////////
@@ -1812,476 +1887,316 @@ class CAllSaleLocation
 
 	/////////////////////////////////////////////
 
-	function GetList(
-		$arOrder = array("SORT"=>"ASC", "COUNTRY_NAME_LANG"=>"ASC", "CITY_NAME_LANG"=>"ASC"),
-		$arFilter = array(),
-		$arGroupBy = false,
-		$arNavStartParams = false,
-		$arSelectFields = array()
-	)
+	function getFilterForGetList($arFilter)
 	{
-		$query = new Entity\Query(self::SELF_ENTITY_NAME);
-
-		////////////////////
-		// mapping
-		////////////////////
-
-		$fieldMap = array(
-			'ID' => 'ID',
-			'COUNTRY_ID_' => 'TO_COUNTRY.ID',
-			'REGION_ID_' => 'TO_REGION.ID',
-			'CITY_ID_' => 'TO_CITY.ID',
-			'SORT' => 'SORT',
-			'COUNTRY_NAME_ORIG' => 'COUNTRY_NAME_ORIG_.NAME',
-			'COUNTRY_SHORT_NAME' => 'COUNTRY_NAME_.SHORT_NAME',
-			'REGION_NAME_ORIG' => 'REGION_NAME_ORIG_.NAME',
-			'CITY_NAME_ORIG' => 'CITY_NAME_ORIG_.NAME',
-			'REGION_SHORT_NAME' => 'REGION_NAME_.SHORT_NAME',
-			'CITY_SHORT_NAME' => 'CITY_NAME_.SHORT_NAME',
-			'COUNTRY_LID' => 'COUNTRY_NAME_.LANGUAGE_ID',
-			'COUNTRY_NAME' => 'COUNTRY_NAME_.NAME',
-			'COUNTRY_NAME_LANG' => 'COUNTRY_NAME_.NAME',
-			'REGION_LID' => 'REGION_NAME_.LANGUAGE_ID',
-			'CITY_LID' => 'CITY_NAME_.LANGUAGE_ID',
-			'REGION_NAME' => 'REGION_NAME_.NAME',
-			'REGION_NAME_LANG' => 'REGION_NAME_.NAME',
-			'CITY_NAME' => 'CITY_NAME_.NAME',
-			'CITY_NAME_LANG' => 'CITY_NAME_.NAME',
-			'LOC_DEFAULT' => 'LOC_DEFAULT'
-		);
-		$fieldProxy = array(
-			'COUNTRY_ID_' => 'COUNTRY_ID',
-			'REGION_ID_' => 'REGION_ID',
-			'CITY_ID_' => 'CITY_ID',
-		);
-		$fieldSum = array_unique(array_merge(
-			is_array($arOrder) ? array_keys($arOrder) : array(), 
-			is_array($arFilter) ? array_keys(self::stripModifiers($arFilter)) : array(),
-			is_array($arGroupBy) ? $arGroupBy : array(),
-			is_array($arSelectFields) ? array_keys($arSelectFields) : array()
-		));
-
-		$types = self::getTypes();
-
-		if(empty($types) || !isset($types['COUNTRY']) || !isset($types['REGION']) || !isset($types['CITY']))
+		if(self::isLocationProMigrated())
 		{
-			// no types, conditions will break
-			$res = new CDBResult();
-			$res->InitFromArray(array());
-			return $res;
+			$types = self::getTypes();
+
+			$arFilter['TYPE_ID'] = array();
+
+			if(intval($types['COUNTRY']))
+				$arFilter['TYPE_ID'][] = intval($types['COUNTRY']);
+
+			if(intval($types['REGION']))
+				$arFilter['TYPE_ID'][] = intval($types['REGION']);
+
+			if(intval($types['CITY']))
+				$arFilter['TYPE_ID'][] = intval($types['CITY']);
 		}
 
-		////////////////////
-		// select
-		////////////////////
-
-		if(in_array('COUNTRY_ID', $arSelectFields))
-			$arSelectFields[] = 'COUNTRY_ID_';
-
-		if(in_array('REGION_ID', $arSelectFields))
-			$arSelectFields[] = 'REGION_ID_';
-
-		if(in_array('CITY_ID', $arSelectFields))
-			$arSelectFields[] = 'CITY_ID_';
-
-		$selectFields = self::processSelectForGetList($arSelectFields, $fieldMap);
-
-		////////////////////
-		// filter
-		////////////////////
-		$filterByLang = false;
-
-		// function may have another signature
-		if(is_string($arGroupBy) && strlen($arGroupBy) == 2)
-		{
-			$filterByLang = $arGroupBy;
-			$arGroupBy = false;
-		}
-
-		if(strlen($arFilter['LID']))
-		{
-			$filterByLang = $arFilter['LID'];
-			unset($arFilter['LID']);
-		}
-
-		if(isset($arFilter['COUNTRY_ID']))
-		{
-			$arFilter['COUNTRY_ID_'] = $arFilter['COUNTRY_ID'];
-			unset($arFilter['COUNTRY_ID']);
-		}
-		if(isset($arFilter['REGION_ID']))
-		{
-			$arFilter['REGION_ID_'] = $arFilter['REGION_ID'];
-			unset($arFilter['REGION_ID']);
-		}
-		if(isset($arFilter['CITY_ID']))
-		{
-			$arFilter['CITY_ID_'] = $arFilter['CITY_ID'];
-			unset($arFilter['CITY_ID']);
-		}
-
-
-		list($filterFields, $filterFieldsClean) = self::processFilterForGetList($arFilter, $fieldMap, array(), $query);
-
-		$filterFields['TYPE_ID'] = array($types['COUNTRY'], $types['REGION'], $types['CITY']);
-
-		////////////////////
-		// order
-		////////////////////
-		$orderFields = self::processOrderForGetList($arOrder, $fieldMap);
-
-		////////////////////
-		// group
-		////////////////////
-		$groupFields = false;
-		$showCount = false;
-		if(is_array($arGroupBy))
-		{
-			$arGroupBy = array_map("strtoupper", $arGroupBy);
-			$arGroupBy = array_change_key_case($arGroupBy, CASE_UPPER);
-
-			if(empty($arGroupBy))
-			{
-				$query->registerRuntimeField(
-						'CNT',
-						array(
-							'data_type' => 'integer',
-							'expression' => array(
-								'COUNT(*)'
-							)
-						)
-					);
-
-				$selectFields = array('CNT');
-				$showCount = true;
-			}
-			else
-			{
-				$funcList = array('COUNT', 'AVG', 'MIN', 'MAX', 'SUM');
-				$groupFields = array();
-				$selectFields = array();
-				foreach($arGroupBy as $k => $fld)
-				{
-					if(isset($fieldMap[$fld]))
-					{
-						if(in_array($k, $funcList, true))
-						{
-							$f = $fld.'_GROUP';
-
-							$query->registerRuntimeField(
-									$f,
-									array(
-										'data_type' => 'integer',
-										'expression' => array(
-											$k.'(%s)',
-											$fld
-										)
-									)
-								);
-
-							$selectFields[] = $f;
-							$fieldProxy[$f] = $fld; // orm has a limitation: cannot add field alias that is equal to an existing field name
-						}
-						else
-						{
-							$selectFields[] = $fld;
-							$groupFields[] = $fld;
-						}
-					}
-				}
-			}
-
-			//$orderFields = false;
-		}
-
-		////////////////////
-		// less joins much joy
-		////////////////////
-
-		// selected fields
-		$sselect = array();
-		foreach($selectFields as $k => $v)
-		{
-			if(is_numeric($k))
-				$sselect[] = $v;
-			else
-				$sselect[] = $k;
-		}
-
-		$fieldSum = array_unique(array_merge(
-			$fieldSum,
-			is_array($orderFields) ? array_keys($orderFields) : array(),
-			is_array($filterFields) ? $filterFieldsClean : array(),
-			is_array($groupFields) ? $groupFields : array(),
-			$sselect
-		));
-
-		$fetchCountryLangNames = self::checkLangPresenceInSelect('COUNTRY', $fieldSum);
-		$fetchRegionLangNames = self::checkLangPresenceInSelect('REGION', $fieldSum);
-		$fetchCityLangNames = self::checkLangPresenceInSelect('CITY', $fieldSum);
-
-		$fetchCountryOrigNames = in_array('COUNTRY_NAME_ORIG', $fieldSum, true);
-		$fetchRegionOrigNames = in_array('REGION_NAME_ORIG', $fieldSum, true);
-		$fetchCityOrigNames = in_array('REGION_NAME_ORIG', $fieldSum, true);
-
-		$fetchDefault = in_array('LOC_DEFAULT', $fieldSum, true);
-
-		////////////////////
-		// query
-		////////////////////
-
-		if($fetchCountryLangNames || $fetchCountryOrigNames || in_array('COUNTRY_ID', $fieldSum, true) || in_array('COUNTRY_ID_', $fieldSum, true))
-		{
-			$query->registerRuntimeField(
-					'TO_COUNTRY',
-					array(
-						'data_type' => self::SELF_ENTITY_NAME,
-						'reference' => array(
-
-							// it should be ancestor
-							'<=ref.LEFT_MARGIN' => 'this.LEFT_MARGIN',
-							'>=ref.RIGHT_MARGIN' => 'this.RIGHT_MARGIN',
-
-							// it should be COUNTRY
-							'=ref.TYPE_ID' => array('?', $types['COUNTRY']),
-						),
-						'join_type' => 'left'
-					)
-				);
-		}
-
-		if($fetchRegionLangNames || $fetchRegionOrigNames || in_array('REGION_ID', $fieldSum, true) || in_array('REGION_ID_', $fieldSum, true))
-		{
-			$query->registerRuntimeField(
-				'TO_REGION',
-				array(
-					'data_type' => self::SELF_ENTITY_NAME,
-					'reference' => array(
-
-						// REGION search for COUNTRY is meaningless
-						array(
-							'LOGIC' => 'OR',
-							array(
-								'=this.TYPE_ID' => array('?', $types['REGION']),
-							),
-							array(
-								'=this.TYPE_ID' => array('?', $types['CITY']),
-							),
-						),
-
-						// it should be ancestor
-						'<=ref.LEFT_MARGIN' => 'this.LEFT_MARGIN',
-						'>=ref.RIGHT_MARGIN' => 'this.RIGHT_MARGIN',
-
-						// it should be REGION
-						'=ref.TYPE_ID' => array('?', $types['REGION']),
-					),
-					'join_type' => 'left'
-				)
-			);
-		}
-
-		if($fetchCityLangNames || $fetchCityOrigNames  || in_array('CITY_ID', $fieldSum, true) || in_array('CITY_ID_', $fieldSum, true))
-		{
-			$query->registerRuntimeField(
-				'TO_CITY',
-				array(
-					'data_type' => self::SELF_ENTITY_NAME,
-					'reference' => array(
-
-						// if we seach for CITY, it is a CITY itself
-						'=this.TYPE_ID' => array('?', $types['CITY']),
-						'=this.ID' => 'ref.ID'
-					),
-					'join_type' => 'left'
-				)
-			);
-		}
-		////////////////////////////////////
-		////////////////////////////////////
-		////////////////////////////////////
-
-		// lang names
-
-		if($fetchCountryLangNames)
-		{
-			$joinCondition = array();
-			if($filterByLang !== false)
-				$joinCondition['=ref.LANGUAGE_ID'] = array('?', $filterByLang);
-			$joinCondition['=this.TO_COUNTRY.ID'] = 'ref.LOCATION_ID';
-
-			$query->registerRuntimeField(
-				'COUNTRY_NAME_',
-				array(
-					'data_type' => self::NAME_ENTITY_NAME,
-					'reference' => $joinCondition,
-					'join_type' => 'left'
-				)
-			);
-		}
-
-		if($fetchRegionLangNames)
-		{
-			$joinCondition = array();
-			if($filterByLang !== false)
-				$joinCondition['=ref.LANGUAGE_ID'] = array('?', $filterByLang);
-			$joinCondition['=this.TO_REGION.ID'] = 'ref.LOCATION_ID';
-
-			$query->registerRuntimeField(
-				'REGION_NAME_',
-				array(
-					'data_type' => self::NAME_ENTITY_NAME,
-					'reference' => $joinCondition,
-					'join_type' => 'left'
-				)
-			);
-		}
-
-		if($fetchCityLangNames)
-		{
-			$joinCondition = array();
-			if($filterByLang !== false)
-				$joinCondition['=ref.LANGUAGE_ID'] = array('?', $filterByLang);
-			$joinCondition['=this.TO_CITY.ID'] = 'ref.LOCATION_ID';
-
-			$query->registerRuntimeField(
-				'CITY_NAME_',
-				array(
-					'data_type' => self::NAME_ENTITY_NAME,
-					'reference' => $joinCondition,
-					'join_type' => 'left'
-				)
-			);
-		}
-
-		// origin names
-		if($fetchCountryOrigNames)
-		{
-			$query->registerRuntimeField(
-				'COUNTRY_NAME_ORIG_',
-				array(
-					'data_type' => self::NAME_ENTITY_NAME,
-					'reference' => array(
-						'=this.TO_COUNTRY.ID' => 'ref.LOCATION_ID',
-						'=ref.LANGUAGE_ID' => array('?', self::ORIGIN_NAME_LANGUAGE_ID)
-					),
-					'join_type' => 'left'
-				)
-			);
-		}
-
-		if($fetchRegionOrigNames)
-		{
-			$query->registerRuntimeField(
-				'REGION_NAME_ORIG_',
-				array(
-					'data_type' => self::NAME_ENTITY_NAME,
-					'reference' => array(
-						'=this.TO_REGION.ID' => 'ref.LOCATION_ID',
-						'=ref.LANGUAGE_ID' => array('?', self::ORIGIN_NAME_LANGUAGE_ID)
-					),
-					'join_type' => 'left'
-				)
-			);
-		}
-
-		if($fetchCityOrigNames)
-		{
-			$query->registerRuntimeField(
-				'CITY_NAME_ORIG_',
-				array(
-					'data_type' => self::NAME_ENTITY_NAME,
-					'reference' => array(
-						'=this.TO_CITY.ID' => 'ref.LOCATION_ID',
-						'=ref.LANGUAGE_ID' => array('?', self::ORIGIN_NAME_LANGUAGE_ID)
-					),
-					'join_type' => 'left'
-				)
-			);
-		}
-
-		if($fetchDefault)
-		{
-			$query->registerRuntimeField(
-				'DEFAULT_ID',
-				array(
-					'data_type' => self::DEFAULT_SITE_ENTITY_NAME,
-					'reference' => array(
-						'=this.CODE' => 'ref.LOCATION_CODE'
-					),
-					'join_type' => 'left'
-				)
-			);
-			$query->registerRuntimeField('LOC_DEFAULT', array(
-				'data_type' => 'string',
-				'expression' => array(
-					"CASE WHEN %s IS NULL THEN 'N' ELSE 'Y' END",
-					'DEFAULT_ID.LOCATION_CODE'
-				),
-			));
-		}
-
-		////////////////////////////////////
-		////////////////////////////////////
-		////////////////////////////////////
-
-		$query->setSelect($selectFields);
-
-		if($filterFields !== false)
-			$query->setFilter($filterFields);
-
-		if($orderFields !== false)
-			$query->setOrder($orderFields);
-
-		if($groupFields !== false)
-			$query->setGroup($groupFields);
-
-		////////////////////
-		// nav
-		////////////////////
-
-		if(!$showCount && is_array($arNavStartParams) && !empty($arNavStartParams))
-		{
-			if(isset($arNavStartParams['nTopCount']))
-			{
-				$query->setLimit(intval($arNavStartParams['nTopCount']));
-				$res = $query->exec();
-			}
-			else
-			{
-				// more complicated nav with outer args involved
-				$res = new CDBResult();
-				$res->NavQuery(
-					$query->getQuery(),
-					self::GetList(false, $arFilter, array(), false, array('ID')), // returns record count actually
-					$arNavStartParams
-				);
-			}
-		}
-		else
-			$res = $query->exec();
-
-		if($showCount)
-		{
-			$item = $res->fetch();
-			return $item['CNT'];
-		}
-
-		$res->addReplacedAliases($fieldProxy);
-
-		return new CDBResult($res); // we want GetNext() method supported by the result
+		return $arFilter;
 	}
 
-	function GetByID($id, $strLang = LANGUAGE_ID)
+	function getFieldMapForGetList($arFilter)
 	{
-		if(!($id = intval($id)))
+		global $DB;
+
+		$additionalFilter = "";
+		if (isset($arFilter["LID"]) || strlen($arFilter["LID"]) > 0)
+		{
+
+			if(self::isLocationProMigrated())
+			{
+				$additionalFilterLCL = " AND COL.LANGUAGE_ID = '".$DB->ForSql($arFilter["LID"], 2)."'";
+				$additionalFilterLRL = " AND REL.LANGUAGE_ID = '".$DB->ForSql($arFilter["LID"], 2)."'";
+				$additionalFilterLGL = " AND CIL.LANGUAGE_ID = '".$DB->ForSql($arFilter["LID"], 2)."'";
+			}
+			else
+			{
+				$additionalFilterLCL = " AND LCL.LID = '".$DB->ForSql($arFilter["LID"], 2)."'";
+				$additionalFilterLRL = " AND LRL.LID = '".$DB->ForSql($arFilter["LID"], 2)."'";
+				$additionalFilterLGL = " AND LGL.LID = '".$DB->ForSql($arFilter["LID"], 2)."'";
+			}
+		}
+		if(self::isLocationProMigrated())
+		{
+			$tableDefault = \Bitrix\Sale\Location\DefaultSiteTable::getTableName();
+
+			// FIELDS -->
+			$arFields = array(
+
+					"LOC_DEFAULT" => array("FIELD" => "CASE WHEN DEF.LOCATION_CODE IS NULL THEN 'N' ELSE 'Y' END", "TYPE" => "string", "FROM" => "LEFT JOIN ".$tableDefault." DEF ON (DEF.LOCATION_CODE = L.CODE)"),
+
+					/*
+					COO = COuntry Original
+					COL = Country Language
+					REO = REgion Original
+					REL = REgion Language
+					CIO = CIty Original
+					CIL = CIty Language
+					*/
+
+					// lang-independent
+					"COUNTRY_NAME_ORIG" => array("FIELD" => "COO.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name COO ON (L.COUNTRY_ID = COO.LOCATION_ID and COO.LANGUAGE_ID = 'en')"),
+					"COUNTRY_SHORT_NAME" => array("FIELD" => "COO.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name COO ON (L.COUNTRY_ID = COO.LOCATION_ID and COO.LANGUAGE_ID = 'en')"),
+
+					// lang-dependent
+					"COUNTRY_NAME" => array("FIELD" => "COL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name COL ON (L.COUNTRY_ID = COL.LOCATION_ID".$additionalFilterLCL.")"),
+					"COUNTRY_LID" => array("FIELD" => "COL.LANGUAGE_ID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name COL ON (L.COUNTRY_ID = COL.LOCATION_ID".$additionalFilterLCL.")"),
+					"COUNTRY_NAME_LANG" => array("FIELD" => "COL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name COL ON (L.COUNTRY_ID = COL.LOCATION_ID".$additionalFilterLCL.")"),
+					"COUNTRY_SHORT_NAME_LANG" => array("FIELD" => "COL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name COL ON (L.COUNTRY_ID = COL.LOCATION_ID".$additionalFilterLCL.")"),
+
+
+					// lang-independent
+					"CITY_NAME_ORIG" => array("FIELD" => "CIO.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name CIO ON (L.CITY_ID = CIO.LOCATION_ID and CIO.LANGUAGE_ID = 'en')"),
+					"CITY_SHORT_NAME" => array("FIELD" => "CIO.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name CIO ON (L.CITY_ID = CIO.LOCATION_ID and CIO.LANGUAGE_ID = 'en')"),
+
+					// lang-dependent
+					"CITY_NAME" => array("FIELD" => "CIL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name CIL ON (L.CITY_ID = CIL.LOCATION_ID".$additionalFilterLGL.")"),
+					"CITY_LID" => array("FIELD" => "CIL.LANGUAGE_ID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name CIL ON (L.CITY_ID = CIL.LOCATION_ID".$additionalFilterLGL.")"),
+					"CITY_NAME_LANG" => array("FIELD" => "CIL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name CIL ON (L.CITY_ID = CIL.LOCATION_ID".$additionalFilterLGL.")"),
+					"CITY_SHORT_NAME_LANG" => array("FIELD" => "CIL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name CIL ON (L.CITY_ID = CIL.LOCATION_ID".$additionalFilterLGL.")"),
+
+
+					// lang-independent
+					"REGION_NAME_ORIG" => array("FIELD" => "REO.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name REO ON (L.REGION_ID = REO.LOCATION_ID and REO.LANGUAGE_ID = 'en')"),
+					"REGION_SHORT_NAME" => array("FIELD" => "REO.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name REO ON (L.REGION_ID = REO.LOCATION_ID and REO.LANGUAGE_ID = 'en')"),
+
+					// lang-dependent
+					"REGION_NAME" => array("FIELD" => "REL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name REL ON (L.REGION_ID = REL.LOCATION_ID".$additionalFilterLRL.")"),
+					"REGION_LID" => array("FIELD" => "REL.LANGUAGE_ID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name REL ON (L.REGION_ID = REL.LOCATION_ID".$additionalFilterLRL.")"),
+					"REGION_NAME_LANG" => array("FIELD" => "REL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name REL ON (L.REGION_ID = REL.LOCATION_ID".$additionalFilterLRL.")"),
+					"REGION_SHORT_NAME_LANG" => array("FIELD" => "REL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name REL ON (L.REGION_ID = REL.LOCATION_ID".$additionalFilterLRL.")"),
+
+					"COUNTRY" => array("FIELD" => "COL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name COL ON (L.COUNTRY_ID = COL.LOCATION_ID".$additionalFilterLCL.")"),
+					"CITY" => array("FIELD" => "CIL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name CIL ON (L.CITY_ID = CIL.LOCATION_ID".$additionalFilterLGL.")"),
+					"REGION" => array("FIELD" => "REL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_loc_name REL ON (L.REGION_ID = REL.LOCATION_ID".$additionalFilterLRL.")"),
+
+					"TYPE_ID" => array("FIELD" => "L.TYPE_ID", "TYPE" => "int")
+				);
+		}
+		else
+		{
+
+			// FIELDS -->
+			$arFields = array(
+
+					"LOC_DEFAULT" => array("FIELD" => "L.LOC_DEFAULT", "TYPE" => "string"),
+
+					"COUNTRY_NAME_ORIG" => array("FIELD" => "LC.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country LC ON (L.COUNTRY_ID = LC.ID)"),
+					"COUNTRY_SHORT_NAME" => array("FIELD" => "LC.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country LC ON (L.COUNTRY_ID = LC.ID)"),
+
+					"CITY_NAME_ORIG" => array("FIELD" => "LG.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city LG ON (L.CITY_ID = LG.ID)"),
+					"CITY_SHORT_NAME" => array("FIELD" => "LG.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city LG ON (L.CITY_ID = LG.ID)"),
+				
+					"REGION_NAME_ORIG" => array("FIELD" => "LR.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region LR ON (L.REGION_ID = LR.ID)"),
+					"REGION_SHORT_NAME" => array("FIELD" => "LR.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region LR ON (L.REGION_ID = LR.ID)"),
+				
+					"COUNTRY_LID" => array("FIELD" => "LCL.LID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
+					"COUNTRY_NAME" => array("FIELD" => "LCL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
+					"COUNTRY_NAME_LANG" => array("FIELD" => "LCL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
+					"COUNTRY_SHORT_NAME_LANG" => array("FIELD" => "LCL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
+
+					"REGION_LID" => array("FIELD" => "LRL.LID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
+					"REGION_NAME" => array("FIELD" => "LRL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
+					"REGION_NAME_LANG" => array("FIELD" => "LRL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
+					"REGION_SHORT_NAME_LANG" => array("FIELD" => "LRL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
+				
+					"CITY_LID" => array("FIELD" => "LGL.LID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
+					"CITY_NAME" => array("FIELD" => "LGL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
+					"CITY_NAME_LANG" => array("FIELD" => "LGL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
+					"CITY_SHORT_NAME_LANG" => array("FIELD" => "LGL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
+
+					"COUNTRY" => array("FIELD" => "LCL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
+					"CITY" => array("FIELD" => "LGL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
+					"REGION" => array("FIELD" => "LRL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")")
+				);
+
+		}
+
+		return array_merge(array(
+			"ID" => array("FIELD" => "L.ID", "TYPE" => "int"),
+			"COUNTRY_ID" => array("FIELD" => "L.COUNTRY_ID", "TYPE" => "int"),
+			"CITY_ID" => array("FIELD" => "L.CITY_ID", "TYPE" => "int"),
+			"REGION_ID" => array("FIELD" => "L.REGION_ID", "TYPE" => "int"),
+			"SORT" => array("FIELD" => "L.SORT", "TYPE" => "int")
+		), $arFields);
+	}
+
+	protected static function getNameOfParentOfType($item, $typeCode, $strLang = LANGUAGE_ID)
+	{
+		/*
+		$item = Location\LocationTable::getList(array('filter' => array(
+			'<=LEFT_MARGIN' => $item['LEFT_MARGIN'],
+			'>=RIGHT_MARGIN' => $item['RIGHT_MARGIN'],
+			'=TYPE.CODE' => $typeCode,
+			'=NAME.LANGUAGE_ID' => $strLang
+		), 'select' => array(
+			ToUpper($typeCode).'_NAME' => 'NAME.NAME',
+			ToUpper($typeCode).'_NAME_ORIG' => 'NAME.NAME',
+			ToUpper($typeCode).'_SHORT_NAME' => 'NAME.SHORT_NAME',
+			ToUpper($typeCode).'_NAME_LANG' => 'NAME.LANGUAGE_ID'
+		)))->fetch();
+		*/
+
+		global $DB;
+
+		$dbConnection = Main\HttpApplication::getConnection();
+		$dbHelper = $dbConnection->getSqlHelper();
+
+		$types = self::getTypes();
+		$typeCode = ToUpper($dbHelper->forSql($typeCode));
+		$strLang = substr($dbHelper->forSql($strLang), 0, 2);
+
+		$mappedTypes = array("'".intval($types[$typeCode])."'");
+
+		if($typeCode == 'CITY' && intval($types['VILLAGE'])) // VILLAGE is also can be CITY in the old terms
+		{
+			$mappedTypes[] = "'".intval($types['VILLAGE'])."'";
+		}
+
+		$query = "
+			select 
+				N.NAME as ".$typeCode."_NAME,
+				N.SHORT_NAME as ".$typeCode."_SHORT_NAME,
+				L.ID as ".$typeCode."_ID
+			from 
+				b_sale_loc_name N
+				inner join b_sale_location L on 
+					N.LOCATION_ID = L.ID 
+					and
+					N.LANGUAGE_ID = '".$strLang."'
+					and
+					L.LEFT_MARGIN <= '".intval($item['LEFT_MARGIN'])."'
+					and
+					L.RIGHT_MARGIN >= '".intval($item['RIGHT_MARGIN'])."'
+					and
+					L.TYPE_ID in (".implode(', ', $mappedTypes).")
+		";
+
+		$item = $DB->query($query)->fetch();
+
+		$item[$typeCode.'_NAME_ORIG'] = $item[$typeCode.'_NAME'];
+		$item[$typeCode.'_NAME_LANG'] = $item[$typeCode.'_NAME'];
+
+		if(!is_array($item))
+			return array();
+
+		return $item;
+	}
+
+	protected static $city2RegionMap = array(
+		'0000073738' => '0000028025', // moscow => moskovskaya oblast
+		'0000103664' => '0000028043', // stpetersburg => leningradskaya oblast
+	);
+
+	protected static $specialCities = array('MOSCOW', 'STPETERSBURG');
+
+	public static function GetByIDForLegacyDelivery($primary, $strLang = LANGUAGE_ID)
+	{
+		$primary = trim($primary);
+		$regLoc = false;
+
+		$loc = CSaleLocation::GetByID($primary, $strLang);
+
+		if(!intval($loc['REGION_ID'])) // no region
+		{
+			if(isset(self::$city2RegionMap[(string) $primary])) // got CODE and this code in The List
+			{
+				$regLoc = CSaleLocation::GetByID(self::$city2RegionMap[(string) $primary], $strLang);
+			}
+			elseif((string) $loc['CITY_NAME_LANG'] != '') // search by name
+			{
+				$name = ToUpper(trim($loc['CITY_NAME_LANG']));
+				$regionName = false;
+
+				foreach(self::$specialCities as $city)
+				{
+					if($name == ToUpper(GetMessage('CITY_'.$city)))
+						$regionName = GetMessage('REGION_'.$city);
+				}
+
+				if($regionName !== false)
+				{
+					$regLoc = CSaleLocation::GetList(
+						false, 
+						array('~REGION_NAME_LANG' => $regionName.'%', 'LID' => $strLang), 
+						false, 
+						array('nTopCount' => 1), 
+						array('REGION_ID', 'REGION_NAME', 'REGION_SHORT_NAME', 'REGION_NAME_ORIG', 'REGION_NAME_LANG')
+					)->fetch();
+				}
+			}
+		}
+
+		if($regLoc !== false)
+		{
+			if(intval($regLoc['REGION_ID']))
+			{
+				$loc['REGION_ID'] = 		$regLoc['REGION_ID'];
+				$loc['REGION_NAME'] = 		$regLoc['REGION_NAME'];
+				$loc['REGION_SHORT_NAME'] = $regLoc['REGION_SHORT_NAME'];
+				$loc['REGION_NAME_ORIG'] = 	$regLoc['REGION_NAME_ORIG'];
+				$loc['REGION_NAME_LANG'] = 	$regLoc['REGION_NAME_LANG'];
+			}
+		}
+
+		return $loc;
+	}
+
+	function GetByID($primary, $strLang = LANGUAGE_ID)
+	{
+		if(!strlen($primary))
 			return false;
 
-		$filter = array('ID' => $id);
-		if(strlen($strLang))
-			$filter['LID'] = $strLang;
+		try
+		{
+			// try code
+			$item = Location\LocationTable::getList(array('filter' => array(
+				array('=CODE' => $primary)
+			), 'select' => 
+				array('ID', 'SORT', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'CODE')
+			))->fetch();
 
-		return self::GetList(false, $filter)->fetch();
+			if(!is_array($item))
+			{
+				// try id
+				$item = Location\LocationTable::getList(array('filter' => array(
+					array('=ID' => $primary)
+				), 'select' => 
+					array('ID', 'SORT', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'CODE')
+				))->fetch();
+			}
+		}
+		catch(\Exception $e)
+		{
+			return false;
+		}
+
+		if(!is_array($item) || !intval($item['ID']))
+			return false;
+
+		$country = self::getNameOfParentOfType($item, 'COUNTRY', $strLang);
+		$region = self::getNameOfParentOfType($item, 'REGION', $strLang);
+		$city = self::getNameOfParentOfType($item, 'CITY', $strLang);
+
+		$item = array_merge($item, $country, $region, $city);
+
+		unset($item['LEFT_MARGIN']);
+		unset($item['RIGHT_MARGIN']);
+
+		return $item;
 	}
 
 	function LocationCheckFields($ACTION, &$arFields)

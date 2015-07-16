@@ -160,6 +160,7 @@ if (0 > $arParams["OFFERS_LIMIT"])
 	$arParams["OFFERS_LIMIT"] = 0;
 
 $arParams['USE_ELEMENT_COUNTER'] = (isset($arParams['USE_ELEMENT_COUNTER']) && 'N' == $arParams['USE_ELEMENT_COUNTER'] ? 'N' : 'Y');
+$arParams["SHOW_DEACTIVATED"] = (isset($arParams['SHOW_DEACTIVATED']) && 'Y' == $arParams['SHOW_DEACTIVATED'] ? 'Y' : 'N');
 
 /*************************************************************************
 			Processing of the Buy link
@@ -379,21 +380,26 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 
 	//Handle case when ELEMENT_CODE used
 	if($arParams["ELEMENT_ID"] <= 0)
+	{
+		$findFilter = array(
+			"IBLOCK_ID" => $arParams["IBLOCK_ID"],
+			"IBLOCK_LID" => SITE_ID,
+			"IBLOCK_ACTIVE" => "Y",
+			"ACTIVE_DATE" => "Y",
+			"CHECK_PERMISSIONS" => "Y",
+			"MIN_PERMISSION" => 'R',
+		);
+		if ($arParams["SHOW_DEACTIVATED"] !== "Y")
+			$findFilter["ACTIVE"] = "Y";
+
 		$arParams["ELEMENT_ID"] = CIBlockFindTools::GetElementID(
 			$arParams["ELEMENT_ID"],
 			$arParams["ELEMENT_CODE"],
 			false,
 			false,
-			array(
-				"IBLOCK_ID" => $arParams["IBLOCK_ID"],
-				"IBLOCK_LID" => SITE_ID,
-				"IBLOCK_ACTIVE" => "Y",
-				"ACTIVE_DATE" => "Y",
-				"ACTIVE" => "Y",
-				"CHECK_PERMISSIONS" => "Y",
-				"MIN_PERMISSION" => 'R',
-			)
+			$findFilter
 		);
+	}
 
 	if($arParams["ELEMENT_ID"] > 0)
 	{
@@ -496,6 +502,8 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 		);
 		if ($bIBlockCatalog)
 			$arSelect[] = 'CATALOG_QUANTITY';
+		if ($arParams['SET_CANONICAL_URL'] === 'Y')
+			$arSelect[] = 'CANONICAL_PAGE_URL';
 		//WHERE
 		$arFilter = array(
 			"ID" => $arParams["ELEMENT_ID"],
@@ -503,14 +511,17 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 			"IBLOCK_LID" => SITE_ID,
 			"IBLOCK_ACTIVE" => "Y",
 			"ACTIVE_DATE" => "Y",
-			"ACTIVE" => "Y",
 			"CHECK_PERMISSIONS" => "Y",
 			"MIN_PERMISSION" => 'R',
 			"SHOW_HISTORY" => $WF_SHOW_HISTORY,
 		);
+		if ($arParams["SHOW_DEACTIVATED"] !== "Y")
+			$arFilter["ACTIVE"] = "Y";
+
 		//ORDER BY
 		$arSort = array(
 		);
+
 		//PRICES
 		$arPriceTypeID = array();
 		if(!$arParams["USE_PRICE_COUNT"])
@@ -946,6 +957,7 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 				"IBLOCK_SECTION_ID",
 				"NAME",
 				"LIST_PAGE_URL",
+				"CANONICAL_PAGE_URL",
 				"PROPERTIES",
 				"SECTION",
 				"IPROPERTY_VALUES",
@@ -992,6 +1004,7 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 				$counterData = array(
 					'user_id' => $USER->GetID() ?: 0,
 					'product_id' => $arResult["ID"],
+					'iblock_id' => $arParams['IBLOCK_ID'],
 					'product_title' => $productTitle,
 					'category_id' => $categoryId,
 					'category' => $categoryPath,
@@ -1073,11 +1086,16 @@ if(isset($arResult["ID"]))
 		}
 	}
 
+	if ($arParams['SET_CANONICAL_URL'] === 'Y' && $arResult["CANONICAL_PAGE_URL"])
+	{
+		$APPLICATION->AddHeadString('<link rel="canonical" href="'.$arResult["CANONICAL_PAGE_URL"].'" />');
+	}
+
 	if (!isset($_SESSION["VIEWED_ENABLE"]) && isset($_SESSION["VIEWED_PRODUCT"]) && $_SESSION["VIEWED_PRODUCT"] != $arResult["ID"] && Loader::includeModule("sale"))
 	{
 		$_SESSION["VIEWED_ENABLE"] = "Y";
 		$arFields = array(
-			"PRODUCT_ID" => IntVal($_SESSION["VIEWED_PRODUCT"]),
+			"PRODUCT_ID" => (int)$_SESSION["VIEWED_PRODUCT"],
 			"MODULE" => "catalog",
 			"LID" => SITE_ID
 		);
@@ -1096,7 +1114,6 @@ if(isset($arResult["ID"]))
 	}
 
 	$_SESSION["VIEWED_PRODUCT"] = $arResult["ID"];
-
 
 	$arTitleOptions = null;
 	if($USER->IsAuthorized())

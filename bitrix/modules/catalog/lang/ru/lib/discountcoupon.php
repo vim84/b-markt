@@ -12,4 +12,7 @@ $MESS["DISCOUNT_COUPON_ENTITY_CREATED_BY_FIELD"] = "Кем создан";
 $MESS["DISCOUNT_COUPON_ENTITY_DESCRIPTION_FIELD"] = "Описание купона";
 $MESS["DISCOUNT_COUPON_VALIDATOR_COUPON_EMPTY"] = "Купон не указан";
 $MESS["DISCOUNT_COUPON_VALIDATOR_COUPON_EXIST"] = "Такой купон уже существует";
+$MESS["DISCOUNT_COUPON_TABLE_TYPE_ONE_ROW"] = "Купон на одну позицию заказа";
+$MESS["DISCOUNT_COUPON_TABLE_TYPE_ONE_ORDER"] = "Купон на один заказ";
+$MESS["DISCOUNT_COUPON_TABLE_TYPE_NO_LIMIT"] = "Многоразовый купон";
 ?>

@@ -37,7 +37,10 @@ class Result
 	 */
 	public function isSuccess($internalCall = false)
 	{
-		$this->wereErrorsChecked = !$internalCall;
+		if (!$internalCall && !$this->wereErrorsChecked)
+		{
+			$this->wereErrorsChecked = true;
+		}
 
 		return $this->isSuccess;
 	}

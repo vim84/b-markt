@@ -3,6 +3,16 @@
 $pageId = "user_files";
 include("util_menu.php");
 include("util_profile.php");
+
+if (
+	isset($arUserProfileResult) 
+	&& isset($arUserProfileResult["ID"])
+	&& intval($arUserProfileResult["ID"]) <= 0
+)
+{
+	return;
+}
+
 ?><?
 if ($arParams["FATAL_ERROR"] == "Y"):
 	if (!empty($arParams["ERROR_MESSAGE"])):

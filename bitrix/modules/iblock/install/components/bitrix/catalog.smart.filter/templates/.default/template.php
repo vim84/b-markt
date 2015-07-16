@@ -29,8 +29,15 @@ $templateData = array(
 			{
 				$key = $arItem["ENCODED_ID"];
 				if(isset($arItem["PRICE"])):
-					if (!$arItem["VALUES"]["MIN"]["VALUE"] || !$arItem["VALUES"]["MAX"]["VALUE"] || $arItem["VALUES"]["MIN"]["VALUE"] == $arItem["VALUES"]["MAX"]["VALUE"])
+					if ($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"] <= 0)
 						continue;
+
+					$precision = 2;
+					if (Bitrix\Main\Loader::includeModule("currency"))
+					{
+						$res = CCurrencyLang::GetFormatDescription($arItem["VALUES"]["MIN"]["CURRENCY"]);
+						$precision = $res['DECIMALS'];
+					}
 					?>
 					<div class="bx_filter_parameters_box active">
 						<span class="bx_filter_container_modef"></span>
@@ -67,11 +74,13 @@ $templateData = array(
 
 								<div class="bx_ui_slider_track" id="drag_track_<?=$key?>">
 									<?
-									$price1 = $arItem["VALUES"]["MIN"]["VALUE"];
-									$price2 = $arItem["VALUES"]["MIN"]["VALUE"] + round(($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"])/4);
-									$price3 = $arItem["VALUES"]["MIN"]["VALUE"] + round(($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"])/2);
-									$price4 = $arItem["VALUES"]["MIN"]["VALUE"] + round((($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"])*3)/4);
-									$price5 = $arItem["VALUES"]["MAX"]["VALUE"];
+									$precision = $arItem["DECIMALS"]? $arItem["DECIMALS"]: 0;
+									$step = ($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"]) / 4;
+									$price1 = number_format($arItem["VALUES"]["MIN"]["VALUE"], $precision, ".", "");
+									$price2 = number_format($arItem["VALUES"]["MIN"]["VALUE"] + $step, $precision, ".", "");
+									$price3 = number_format($arItem["VALUES"]["MIN"]["VALUE"] + $step * 2, $precision, ".", "");
+									$price4 = number_format($arItem["VALUES"]["MIN"]["VALUE"] + $step * 3, $precision, ".", "");
+									$price5 = number_format($arItem["VALUES"]["MAX"]["VALUE"], $precision, ".", "");
 									?>
 									<div class="bx_ui_slider_part p1"><span><?=$price1?></span></div>
 									<div class="bx_ui_slider_part p2"><span><?=$price2?></span></div>
@@ -92,12 +101,6 @@ $templateData = array(
 						</div>
 					</div>
 					<?
-					$presicion = 2;
-					if (Bitrix\Main\Loader::includeModule("currency"))
-					{
-						$res = CCurrencyLang::GetFormatDescription($arItem["VALUES"]["MIN"]["CURRENCY"]);
-						$presicion = $res['DECIMALS'];
-					}
 					$arJsParams = array(
 						"leftSlider" => 'left_slider_'.$key,
 						"rightSlider" => 'right_slider_'.$key,
@@ -111,7 +114,7 @@ $templateData = array(
 						"curMaxPrice" => $arItem["VALUES"]["MAX"]["HTML_VALUE"],
 						"fltMinPrice" => intval($arItem["VALUES"]["MIN"]["FILTERED_VALUE"]) ? $arItem["VALUES"]["MIN"]["FILTERED_VALUE"] : $arItem["VALUES"]["MIN"]["VALUE"] ,
 						"fltMaxPrice" => intval($arItem["VALUES"]["MAX"]["FILTERED_VALUE"]) ? $arItem["VALUES"]["MAX"]["FILTERED_VALUE"] : $arItem["VALUES"]["MAX"]["VALUE"],
-						"precision" => $presicion,
+						"precision" => $precision,
 						"colorUnavailableActive" => 'colorUnavailableActive_'.$key,
 						"colorAvailableActive" => 'colorAvailableActive_'.$key,
 						"colorAvailableInactive" => 'colorAvailableInactive_'.$key,
@@ -137,9 +140,7 @@ $templateData = array(
 				if (
 					$arItem["DISPLAY_TYPE"] == "A"
 					&& (
-						!$arItem["VALUES"]["MIN"]["VALUE"]
-						|| !$arItem["VALUES"]["MAX"]["VALUE"]
-						|| $arItem["VALUES"]["MIN"]["VALUE"] == $arItem["VALUES"]["MAX"]["VALUE"]
+						$arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"] <= 0
 					)
 				)
 					continue;
@@ -147,6 +148,20 @@ $templateData = array(
 				<div class="bx_filter_parameters_box <?if ($arItem["DISPLAY_EXPANDED"]== "Y"):?>active<?endif?>">
 					<span class="bx_filter_container_modef"></span>
 					<div class="bx_filter_parameters_box_title" onclick="smartFilter.hideFilterProps(this)"><?=$arItem["NAME"]?></div>
+					<?if ($arItem["FILTER_HINT"] <> ""):?>
+					<div class="bx_filter_parameters_box_hint" id="item_title_hint_<?echo $arItem["ID"]?>"></div>
+					<script type="text/javascript">
+					new top.BX.CHint({
+						parent: top.BX("item_title_hint_<?echo $arItem["ID"]?>"),
+						show_timeout: 10,
+						hide_timeout: 200,
+						dx: 2,
+						preventHide: true,
+						min_width: 250,
+						hint: '<?= CUtil::JSEscape($arItem["FILTER_HINT"])?>'
+					});
+					</script>
+					<?endif?>
 					<div class="bx_filter_block">
 						<div class="bx_filter_parameters_box_container">
 						<?
@@ -178,18 +193,20 @@ $templateData = array(
 											value="<?echo $arItem["VALUES"]["MAX"]["HTML_VALUE"]?>"
 											size="5"
 											onkeyup="smartFilter.keyup(this)"
-											/>
+										/>
 									</div>
 								</div>
 								<div style="clear: both;"></div>
 
 								<div class="bx_ui_slider_track" id="drag_track_<?=$key?>">
 									<?
-									$value1 = $arItem["VALUES"]["MIN"]["VALUE"];
-									$value2 = $arItem["VALUES"]["MIN"]["VALUE"] + round(($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"])/4);
-									$value3 = $arItem["VALUES"]["MIN"]["VALUE"] + round(($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"])/2);
-									$value4 = $arItem["VALUES"]["MIN"]["VALUE"] + round((($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"])*3)/4);
-									$value5 = $arItem["VALUES"]["MAX"]["VALUE"];
+									$precision = $arItem["DECIMALS"]? $arItem["DECIMALS"]: 0;
+									$step = ($arItem["VALUES"]["MAX"]["VALUE"] - $arItem["VALUES"]["MIN"]["VALUE"]) / 4;
+									$value1 = number_format($arItem["VALUES"]["MIN"]["VALUE"], $precision, ".", "");
+									$value2 = number_format($arItem["VALUES"]["MIN"]["VALUE"] + $step, $precision, ".", "");
+									$value3 = number_format($arItem["VALUES"]["MIN"]["VALUE"] + $step * 2, $precision, ".", "");
+									$value4 = number_format($arItem["VALUES"]["MIN"]["VALUE"] + $step * 3, $precision, ".", "");
+									$value5 = number_format($arItem["VALUES"]["MAX"]["VALUE"], $precision, ".", "");
 									?>
 									<div class="bx_ui_slider_part p1"><span><?=$value1?></span></div>
 									<div class="bx_ui_slider_part p2"><span><?=$value2?></span></div>
@@ -219,7 +236,7 @@ $templateData = array(
 									"curMaxPrice" => $arItem["VALUES"]["MAX"]["HTML_VALUE"],
 									"fltMinPrice" => intval($arItem["VALUES"]["MIN"]["FILTERED_VALUE"]) ? $arItem["VALUES"]["MIN"]["FILTERED_VALUE"] : $arItem["VALUES"]["MIN"]["VALUE"] ,
 									"fltMaxPrice" => intval($arItem["VALUES"]["MAX"]["FILTERED_VALUE"]) ? $arItem["VALUES"]["MAX"]["FILTERED_VALUE"] : $arItem["VALUES"]["MAX"]["VALUE"],
-									"precision" => 0,
+									"precision" => $arItem["DECIMALS"]? $arItem["DECIMALS"]: 0,
 									"colorUnavailableActive" => 'colorUnavailableActive_'.$key,
 									"colorAvailableActive" => 'colorAvailableActive_'.$key,
 									"colorAvailableInactive" => 'colorAvailableInactive_'.$key,
@@ -310,9 +327,10 @@ $templateData = array(
 												<span class="bx_filter_btn_color_icon" style="background-image:url('<?=$ar["FILE"]["SRC"]?>');"></span>
 											<?endif?>
 										</span>
-										<span class="bx_filter_param_text">
-											<?=$ar["VALUE"]?>
-										</span>
+										<span class="bx_filter_param_text" title="<?=$ar["VALUE"];?>"><?=$ar["VALUE"];?><?
+										if ($arParams["DISPLAY_ELEMENT_COUNT"] !== "N" && isset($ar["ELEMENT_COUNT"])):
+											?> (<span data-role="count_<?=$ar["CONTROL_ID"]?>"><? echo $ar["ELEMENT_COUNT"]; ?></span>)<?
+										endif;?></span>
 									</label>
 								<?endforeach?>
 								<?
@@ -485,10 +503,51 @@ $templateData = array(
 												<? echo $ar["CHECKED"]? 'checked="checked"': '' ?>
 												onclick="smartFilter.click(this)"
 											/>
-											<span class="bx_filter_param_text"><? echo $ar["VALUE"]; ?></span>
+											<span class="bx_filter_param_text" title="<?=$ar["VALUE"];?>"><?=$ar["VALUE"];?><?
+											if ($arParams["DISPLAY_ELEMENT_COUNT"] !== "N" && isset($ar["ELEMENT_COUNT"])):
+												?> (<span data-role="count_<?=$ar["CONTROL_ID"]?>"><? echo $ar["ELEMENT_COUNT"]; ?></span>)<?
+											endif;?></span>
 										</span>
 									</label>
 								<?endforeach;?>
+								<?
+								break;
+							case "U"://CALENDAR
+								?>
+								<div class="bx_filter_parameters_box_container_block"><div class="bx_filter_input_container bx_filter_calendar_container">
+									<?$APPLICATION->IncludeComponent(
+										'bitrix:main.calendar',
+										'',
+										array(
+											'FORM_NAME' => $arResult["FILTER_NAME"]."_form",
+											'SHOW_INPUT' => 'Y',
+											'INPUT_ADDITIONAL_ATTR' => 'class="calendar" placeholder="'.FormatDate("SHORT", $arItem["VALUES"]["MIN"]["VALUE"]).'" onkeyup="smartFilter.keyup(this)" onchange="smartFilter.keyup(this)"',
+											'INPUT_NAME' => $arItem["VALUES"]["MIN"]["CONTROL_NAME"],
+											'INPUT_VALUE' => $arItem["VALUES"]["MIN"]["HTML_VALUE"],
+											'SHOW_TIME' => 'N',
+											'HIDE_TIMEBAR' => 'Y',
+										),
+										null,
+										array('HIDE_ICONS' => 'Y')
+									);?>
+								</div></div>
+								<div class="bx_filter_parameters_box_container_block"><div class="bx_filter_input_container bx_filter_calendar_container">
+									<?$APPLICATION->IncludeComponent(
+										'bitrix:main.calendar',
+										'',
+										array(
+											'FORM_NAME' => $arResult["FILTER_NAME"]."_form",
+											'SHOW_INPUT' => 'Y',
+											'INPUT_ADDITIONAL_ATTR' => 'class="calendar" placeholder="'.FormatDate("SHORT", $arItem["VALUES"]["MAX"]["VALUE"]).'" onkeyup="smartFilter.keyup(this)" onchange="smartFilter.keyup(this)"',
+											'INPUT_NAME' => $arItem["VALUES"]["MAX"]["CONTROL_NAME"],
+											'INPUT_VALUE' => $arItem["VALUES"]["MAX"]["HTML_VALUE"],
+											'SHOW_TIME' => 'N',
+											'HIDE_TIMEBAR' => 'Y',
+										),
+										null,
+										array('HIDE_ICONS' => 'Y')
+									);?>
+								</div></div>
 								<?
 								break;
 							default://CHECKBOXES
@@ -504,7 +563,10 @@ $templateData = array(
 												<? echo $ar["CHECKED"]? 'checked="checked"': '' ?>
 												onclick="smartFilter.click(this)"
 											/>
-											<span class="bx_filter_param_text"><? echo $ar["VALUE"]; ?></span>
+											<span class="bx_filter_param_text" title="<?=$ar["VALUE"];?>"><?=$ar["VALUE"];?><?
+											if ($arParams["DISPLAY_ELEMENT_COUNT"] !== "N" && isset($ar["ELEMENT_COUNT"])):
+												?> (<span data-role="count_<?=$ar["CONTROL_ID"]?>"><? echo $ar["ELEMENT_COUNT"]; ?></span>)<?
+											endif;?></span>
 										</span>
 									</label>
 								<?endforeach;?>

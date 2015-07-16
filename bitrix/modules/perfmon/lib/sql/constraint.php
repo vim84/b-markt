@@ -15,7 +15,11 @@ class Constraint extends BaseObject
 	 */
 	public static function create(Tokenizer $tokenizer, $constraintName = '')
 	{
-		if (!$constraintName)
+		if ($constraintName === false)
+		{
+			$constraintName = '';
+		}
+		elseif (!$constraintName)
 		{
 			$constraintName = $tokenizer->getCurrentToken()->text;
 			$tokenizer->nextToken();

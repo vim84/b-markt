@@ -77,7 +77,7 @@ class CForumNew extends CAllForumNew
 
 		$strSql =
 			"SELECT STRAIGHT_JOIN FT.ID as TID, FM.ID as MID, FM.ID as ID, FT.FORUM_ID, FT.TITLE, ".
-				CForumNew::Concat("-", array("FT.ID", "FT.TITLE_SEO")).",
+				CForumNew::Concat("-", array("FT.ID", "FT.TITLE_SEO"))." as TITLE_SEO,
 				FT.DESCRIPTION, FT.TAGS, FT.HTML as FT_HTML,
 				FM.PARAM1, FM.PARAM2, FM.POST_MESSAGE, FM.POST_MESSAGE_FILTER, FM.POST_MESSAGE_HTML, FM.AUTHOR_NAME, FM.AUTHOR_ID, FM.NEW_TOPIC,
 				".$DB->DateToCharFunction("FM.POST_DATE")." as POST_DATE, ".$DB->DateToCharFunction("FM.EDIT_DATE")." as EDIT_DATE, FT.SOCNET_GROUP_ID, FT.OWNER_ID
@@ -130,7 +130,8 @@ class CForumNew extends CAllForumNew
 						", ".$res["DESCRIPTION"] : ""),
 				"TAGS" => ($res["NEW_TOPIC"] == "Y" ? $res["TAGS"] : ""),
 				"BODY" => GetMessage("AVTOR_PREF")." ".$res["AUTHOR_NAME"].". ".
-					forumTextParser::clearAllTags(COption::GetOptionString("forum", "FILTER", "Y") != "Y" ? $res["POST_MESSAGE"] : $res["POST_MESSAGE_FILTER"]),
+					forumTextParser::clearAllTags(
+						COption::GetOptionString("forum", "FILTER", "Y") != "Y" ? $res["POST_MESSAGE"] : $res["POST_MESSAGE_FILTER"]),
 				"URL" => "",
 				"INDEX_TITLE" => $res["NEW_TOPIC"] == "Y",
 			);
@@ -138,7 +139,9 @@ class CForumNew extends CAllForumNew
 			foreach ($arParams["SITE"][$res["FORUM_ID"]] as $key => $val)
 			{
 				$arResult["LID"][$key] = CForumNew::PreparePath2Message($val,
-					array("FORUM_ID"=>$res["FORUM_ID"], "TOPIC_ID"=>$res["TID"], "MESSAGE_ID"=>$res["MID"],
+					array("FORUM_ID"=>$res["FORUM_ID"],
+						"TOPIC_ID"=>$res["TID"], "TITLE_SEO"=>$res["TITLE_SEO"],
+						"MESSAGE_ID"=>$res["MID"],
 						"SOCNET_GROUP_ID" => $res["SOCNET_GROUP_ID"], "OWNER_ID" => $res["OWNER_ID"],
 						"PARAM1" => $res["PARAM1"], "PARAM2" => $res["PARAM2"]));
 				if (empty($arResult["URL"]) && !empty($arResult["LID"][$key]))

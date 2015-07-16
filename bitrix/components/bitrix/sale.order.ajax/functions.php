@@ -37,15 +37,6 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 				$arUserPropsValues["VALUE"] = explode(",", $arUserPropsValues["VALUE"]);
 			}
 			$curVal = $arUserPropsValues["VALUE"];
-
-			if(CSaleLocation::isLocationProMigrated())
-			{
-				// SPIKE: map here LOCATION CODE to ID, kz now we keep CODE, not ID in the DB
-				if($arProperties['TYPE'] == 'LOCATION')
-				{
-					$curVal = CSaleLocation::getLocationIDbyCODE($curVal);
-				}
-			}
 		}
 	}
 	elseif($arUserResult["PROFILE_CHANGE"] == "Y" && intval($arUserResult["PROFILE_ID"]) <= 0)
@@ -140,8 +131,6 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 
 			if ($arPropertiesLoc["ID"] > 0)
 			{
-				// proxy location here?
-
 				$arZipLocation = array();
 				if(strlen($curVal) > 0)
 					$arZipLocation = CSaleLocation::GetByZIP($curVal);
@@ -237,20 +226,92 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 	{
 		if(CSaleLocation::isLocationProEnabled())
 		{
-			// default value for location is always kept in CODE
-			if(!strlen($curVal) && strlen($arProperties["DEFAULT_VALUE"]))
-				$curVal = CSaleLocation::getLocationIDbyCODE($arProperties["DEFAULT_VALUE"]);
-
 			$arProperties["VALUE"] = $curVal;
 
-			$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
+			// variants
+			$locationFound = false;
+			$dbVariants = CSaleLocation::GetList(
+					array("SORT" => "ASC", "COUNTRY_NAME_LANG" => "ASC", "CITY_NAME_LANG" => "ASC"),
+					array("LID" => LANGUAGE_ID),
+					false,
+					false,
+					array("ID", "COUNTRY_NAME", "CITY_NAME", "SORT", "COUNTRY_NAME_LANG", "CITY_NAME_LANG", "CITY_ID")
+				);
+			while ($arVariants = $dbVariants->GetNext())
+			{
+				if (intval($arVariants["ID"]) == intval($curVal) || (!isset($curVal) && intval($arVariants["ID"]) == intval($arProperties["DEFAULT_VALUE"])) || (strlen($curLocation) > 0 && ToUpper($curLocation) == ToUpper($arVariants["CITY_NAME"])))
+				{
+					// set formatted value
+					$arProperties["VALUE_FORMATED"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 
-			if($arProperties["IS_LOCATION4TAX"]=="Y")
-				$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
+					// location found, set it as DELIVERY_LOCATION and TAX_LOCATION
+					$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
+					if($arProperties["IS_LOCATION4TAX"]=="Y")
+						$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
 
-			$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
+					$locationFound = $arVariants;
+					$arVariants["SELECTED"] = "Y";
+				}
+				$arVariants["NAME"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 
-			$arProperties["VARIANTS"][] = array('ID' => $curVal, 'SELECTED' => 'Y'); // dumb
+				// save to variants
+				$arProperties["VARIANTS"][] = $arVariants;
+			}
+
+			// this is not a COUNTRY, REGION or CITY, but must appear in $arProperties["VARIANTS"]
+			if(!$locationFound && IntVal($curVal))
+			{
+				$item = CSaleLocation::GetById($curVal);
+				if($item)
+				{
+					// set formatted value
+					$arProperties["VALUE_FORMATED"] = $item["COUNTRY_NAME"].((strlen($item["CITY_NAME"]) > 0) ? " - " : "").$item["CITY_NAME"];
+
+					// location found, set it as DELIVERY_LOCATION and TAX_LOCATION
+					$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
+					if($arProperties["IS_LOCATION4TAX"]=="Y")
+						$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
+
+					$locationFound = $item;
+					$item['SELECTED'] = 'Y';
+					$item['NAME'] = $item["COUNTRY_NAME"].((strlen($item["CITY_NAME"]) > 0) ? " - " : "").$item["CITY_NAME"];
+
+					// save to variants
+					$arProperties["VARIANTS"][] = $item;
+				}
+			}
+
+			if($locationFound)
+			{
+
+				// enable location town text
+				if(isset($arResult['LOCATION_ALT_PROP_DISPLAY_MANUAL'])) // its an ajax-hit and sale.location.selector.steps is used
+				{
+					if(intval($arResult['LOCATION_ALT_PROP_DISPLAY_MANUAL'][$arProperties["ID"]])) // user MANUALLY selected "Other location" in the selector
+					{
+						// Manually chosen, decide...
+
+						//if(intval($locationFound['CITY_ID'])) // we are already selected CITY, no town property needed
+						//	$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
+						//else // somewhere above
+							unset($arDeleteFieldLocation[$arProperties["ID"]]);
+					}
+					else
+					{
+						$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
+					}
+				}
+				else
+				{
+					// first load, dont know what to do. default: hide
+					$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
+				}
+
+			}
+			else
+			{
+				$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
+			}
 		}
 		else
 		{

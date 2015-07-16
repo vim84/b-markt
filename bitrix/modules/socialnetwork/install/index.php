@@ -66,6 +66,7 @@ Class socialnetwork extends CModule
 			)
 		);
 		if (IsModuleInstalled("blog"))
+		{
 			$arValue[] = array(
 				"ID" => "important",
 				"SORT" => 350,
@@ -74,15 +75,30 @@ Class socialnetwork extends CModule
 					"EXACT_EVENT_ID" => "blog_post_important"
 				)
 			);
+		}
+		if (
+			IsModuleInstalled("lists")
+			&& IsModuleInstalled("bizproc")
+			&& IsModuleInstalled("intranet")
+		)
+		{
+			$arValue[] = array(
+				"ID" => "bizproc",
+				"SORT" => 400,
+				"NAME" => "#BIZPROC#",
+				"FILTER" => array(
+					"EXACT_EVENT_ID" => "lists_new_element"
+				)
+			);
+		}
 
-		if (strlen($site_id) > 0)
-			$arFilter = array("ID" => $site_id);
-		else
-			$arFilter = array();
+		$arFilter = (strlen($site_id) > 0 ? array("ID" => $site_id) : array());
 
 		$dbSites = CSite::GetList(($b = ""), ($o = ""), $arFilter);
 		while ($arSite = $dbSites->Fetch())
+		{
 			CUserOptions::SetOption("socialnetwork", "~log_filter_".$arSite["ID"], $arValue, true, false);
+		}
 	}
 
 	function InstallDB($install_wizard = true)
@@ -134,6 +150,9 @@ Class socialnetwork extends CModule
 		RegisterModuleDependences("main", "OnAfterRegisterModule", "main", "socialnetwork", "InstallUserFields", 100, "/modules/socialnetwork/install/index.php"); // check webdav UF
 		RegisterModuleDependences("forum", "OnAfterCommentAdd", "socialnetwork", "CSocNetForumComments", "onAfterCommentAdd");
 		RegisterModuleDependences("forum", "OnAfterCommentUpdate", "socialnetwork", "CSocNetForumComments", "OnAfterCommentUpdate");
+		RegisterModuleDependences("main", "OnAfterSetUserGroup", "socialnetwork", "CSocNetUser", "DeleteUserAdminCache");
+		RegisterModuleDependences("main", "OnAfterSetGroupRight", "socialnetwork", "CSocNetUser", "DeleteUserAdminCache");
+		RegisterModuleDependences("main", "OnAfterDelGroupRight", "socialnetwork", "CSocNetUser", "DeleteUserAdminCache");
 
 		CAgent::AddAgent("CSocNetMessages::SendEventAgent();", "socialnetwork", "N", 600);
 
@@ -318,6 +337,9 @@ Class socialnetwork extends CModule
 		UnRegisterModuleDependences("main", "OnAfterRegisterModule", "main", "socialnetwork", "InstallUserFields", "/modules/socialnetwork/install/index.php"); // check webdav UF
 		UnRegisterModuleDependences("forum", "OnAfterCommentAdd", "socialnetwork", "CSocNetForumComments", "onAfterCommentAdd");
 		UnRegisterModuleDependences("forum", "OnAfterCommentUpdate", "socialnetwork", "CSocNetForumComments", "OnAfterCommentUpdate");
+		UnRegisterModuleDependences("main", "OnAfterSetUserGroup", "socialnetwork", "CSocNetUser", "DeleteUserAdminCache");
+		UnRegisterModuleDependences("main", "OnAfterSetGroupRight", "socialnetwork", "CSocNetUser", "DeleteUserAdminCache");
+		UnRegisterModuleDependences("main", "OnAfterDelGroupRight", "socialnetwork", "CSocNetUser", "DeleteUserAdminCache");
 
 		UnRegisterModule("socialnetwork");
 		return true;
@@ -328,7 +350,7 @@ Class socialnetwork extends CModule
 		global $APPLICATION, $USER_FIELD_MANAGER;
 		$errors = null;
 
-		$id = (empty($id) ? "all" : (in_array($id, array("all", "webdav", "vote"/*, "blog"*/)) ? $id : false));
+		$id = (empty($id) ? "all" : (in_array($id, array("all", "webdav", "disk", "vote"/*, "blog"*/)) ? $id : false));
 		if (!!$id)
 		{
 			$USER_FIELD_MANAGER->CleanCache();
@@ -384,6 +406,11 @@ Class socialnetwork extends CModule
 					}
 					$arFields[] = $arImportantPostUF;
 				}
+			}
+
+			if($id == 'all' || $id == 'disk')
+			{
+				$errors = self::installDiskUserFields();
 			}
 
 			if (IsModuleInstalled("webdav"))
@@ -467,6 +494,63 @@ Class socialnetwork extends CModule
 				}
 			}
 		}
+		return $errors;
+	}
+
+	public static function installDiskUserFields()
+	{
+		global $APPLICATION;
+		$errors = null;
+
+		if(!IsModuleInstalled('disk'))
+		{
+			return null;
+		}
+
+		$props = array(
+			array(
+				"ENTITY_ID" => "SONET_COMMENT",
+				"FIELD_NAME" => "UF_SONET_COM_VER",
+				"USER_TYPE_ID" => "disk_version"
+			),
+			array(
+				"ENTITY_ID" => "SONET_LOG",
+				"FIELD_NAME" => "UF_SONET_LOG_DOC",
+				"USER_TYPE_ID" => "disk_file"
+			),
+			array(
+				"ENTITY_ID" => "SONET_COMMENT",
+				"FIELD_NAME" => "UF_SONET_COM_DOC",
+				"USER_TYPE_ID" => "disk_file"
+			),
+		);
+		$uf = new CUserTypeEntity;
+		foreach ($props as $prop)
+		{
+			$rsData = CUserTypeEntity::getList(array("ID" => "ASC"), array("ENTITY_ID" => $prop["ENTITY_ID"], "FIELD_NAME" => $prop["FIELD_NAME"]));
+			if (!($rsData && ($arRes = $rsData->Fetch())))
+			{
+				$intID = $uf->add(array(
+					"ENTITY_ID" => $prop["ENTITY_ID"],
+					"FIELD_NAME" => $prop["FIELD_NAME"],
+					"XML_ID" => $prop["FIELD_NAME"],
+					"USER_TYPE_ID" => $prop["USER_TYPE_ID"],
+					"SORT" => 100,
+					"MULTIPLE" => ($prop["USER_TYPE_ID"] == "disk_version" ? "N" : "Y"),
+					"MANDATORY" => "N",
+					"SHOW_FILTER" => "N",
+					"SHOW_IN_LIST" => "N",
+					"EDIT_IN_LIST" => "Y",
+					"IS_SEARCHABLE" => ($prop["USER_TYPE_ID"] == "disk_file" ? "Y" : "N")
+				), false);
+
+				if (false == $intID && ($strEx = $APPLICATION->getException()))
+				{
+					$errors[] = $strEx->getString();
+				}
+			}
+		}
+
 		return $errors;
 	}
 

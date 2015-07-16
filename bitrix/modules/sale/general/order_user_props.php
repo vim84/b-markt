@@ -3,6 +3,7 @@ IncludeModuleLangFile(__FILE__);
 
 class CAllSaleOrderUserProps
 {
+	/*
 	public static function TranslateLocationPropertyValues($personTypeId, &$orderProps)
 	{
 		if(CSaleLocation::isLocationProMigrated())
@@ -24,6 +25,7 @@ class CAllSaleOrderUserProps
 			}
 		}
 	}
+	*/
 
 	static function DoSaveUserProfile($userId, $profileId, $profileName, $personTypeId, $orderProps, &$arErrors)
 	{
@@ -82,11 +84,14 @@ class CAllSaleOrderUserProps
 			while ($arOrderPropsValue = $dbOrderPropsValues->Fetch())
 				$orderProps[$arOrderPropsValue["ORDER_PROPS_ID"]] = $arOrderPropsValue["VALUE"];
 		}
+		/*
+		TRANSLATION_CUT_OFF
 		else
 		{
 			// map location ID to CODE, if taken from parameters
 			static::TranslateLocationPropertyValues($personTypeId, $orderProps);
 		}
+		*/
 
 		$dbOrderProperties = CSaleOrderProps::GetList(
 			array(),

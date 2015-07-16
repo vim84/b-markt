@@ -21,6 +21,8 @@ $edit_php = $USER->CanDoOperation('edit_php');
 if(!$edit_php && !$USER->CanDoOperation('view_other_settings') && !$USER->CanDoOperation('lpa_template_edit'))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
+$isEditingMessageThemePage = $APPLICATION->GetCurPage() == '/bitrix/admin/message_theme_admin.php';
+	
 IncludeModuleLangFile(__FILE__);
 
 $sTableID = "tbl_template";
@@ -81,7 +83,7 @@ exportData('<?=CUtil::JSEscape($ID)?>');
 }
 /** @global string $by */
 /** @global string $order */
-$rsData = CSiteTemplate::GetList(array($by => $order), array(), array("ID", "NAME", "DESCRIPTION", "SCREENSHOT", "SORT"));
+$rsData = CSiteTemplate::GetList(array($by => $order), array('TYPE' => ($isEditingMessageThemePage ? 'mail' : '')), array("ID", "NAME", "DESCRIPTION", "SCREENSHOT", "SORT"));
 $rsData = new CAdminResult($rsData, $sTableID);
 $rsData->NavStart();
 
@@ -98,10 +100,10 @@ $lAdmin->AddHeaders(array(
 while($arRes = $rsData->NavNext(true, "f_"))
 {
 	$u_ID = urlencode($f_ID);
-	$row =& $lAdmin->AddRow($f_ID, $arRes, "template_edit.php?ID=".$u_ID, GetMessage("MAIN_EDIT_TITLE"));
+	$row =& $lAdmin->AddRow($f_ID, $arRes, ($isEditingMessageThemePage ? "message_theme_edit.php" : "template_edit.php")."?ID=".$u_ID, GetMessage("MAIN_EDIT_TITLE"));
 
 	$row->AddViewField("SCREENSHOT", ($f_SCREENSHOT <> ''? CFile::Show2Images(($f_PREVIEW <> ''? $f_PREVIEW:$f_SCREENSHOT), $f_SCREENSHOT, 130, 100, "border=0") : ''));
-	$row->AddViewField("ID", '<a href="template_edit.php?lang='.LANGUAGE_ID.'&amp;ID='.$u_ID.'" title="'.GetMessage("MAIN_EDIT_TITLE").'">'.$f_ID.'</a>');
+	$row->AddViewField("ID", '<a href="'.($isEditingMessageThemePage ? "message_theme_edit.php" : "template_edit.php").'?lang='.LANGUAGE_ID.'&amp;ID='.$u_ID.'" title="'.GetMessage("MAIN_EDIT_TITLE").'">'.$f_ID.'</a>');
 
 	if ($edit_php)
 	{
@@ -118,7 +120,7 @@ while($arRes = $rsData->NavNext(true, "f_"))
 
 	$arActions = Array();
 
-	$arActions[] = array("ICON"=>"edit", "TEXT"=>($USER->CanDoOperation('edit_other_settings') || $USER->CanDoOperation('lpa_template_edit')? GetMessage("MAIN_ADMIN_MENU_EDIT") : GetMessage("MAIN_ADMIN_MENU_VIEW")), "ACTION"=>$lAdmin->ActionRedirect("template_edit.php?ID=".$u_ID));
+	$arActions[] = array("ICON"=>"edit", "TEXT"=>($USER->CanDoOperation('edit_other_settings') || $USER->CanDoOperation('lpa_template_edit')? GetMessage("MAIN_ADMIN_MENU_EDIT") : GetMessage("MAIN_ADMIN_MENU_VIEW")), "ACTION"=>$lAdmin->ActionRedirect(($isEditingMessageThemePage ? "message_theme_edit.php" : "template_edit.php")."?ID=".$u_ID));
 	if ($edit_php)
 	{
 		$arActions[] = array("ICON"=>"copy", "TEXT"=>GetMessage("MAIN_ADMIN_MENU_COPY"), "ACTION"=>$lAdmin->ActionDoGroup($u_ID, "copy"));
@@ -145,24 +147,23 @@ $aContext = array();
 if ($edit_php)
 {
 	$aContext[] = array(
-		"TEXT"	=> GetMessage("MAIN_ADD_TEMPL"),
-		"LINK"	=> "template_edit.php?lang=".LANGUAGE_ID,
-		"TITLE"	=> GetMessage("MAIN_ADD_TEMPL_TITLE"),
-		"ICON"	=> "btn_new"
-	);
+			"TEXT"	=> ($isEditingMessageThemePage ? GetMessage("MAIN_ADD_TEMPL_THEME") : GetMessage("MAIN_ADD_TEMPL")),
+			"LINK"	=> ($isEditingMessageThemePage ? "message_theme_edit.php" : "template_edit.php")."?lang=".LANGUAGE_ID,
+			"TITLE"	=> GetMessage("MAIN_ADD_TEMPL_TITLE"),
+			"ICON"	=> "btn_new"
+		);
 	$aContext[] = array(
-		"TEXT"	=> GetMessage("MAIN_LOAD"),
-		"LINK"	=> "template_load.php?lang=".LANGUAGE_ID,
-		"TITLE"	=> GetMessage("MAIN_T_IMPORT"),
-		"ICON"	=> ""
-	);
+			"TEXT"	=> ($isEditingMessageThemePage ? GetMessage("MAIN_LOAD_THEME") : GetMessage("MAIN_LOAD")),
+			"LINK"	=> "template_load.php?lang=".LANGUAGE_ID,
+			"TITLE"	=> GetMessage("MAIN_T_IMPORT"),
+			"ICON"	=> ""
+		);
 }
 $lAdmin->AddAdminContextMenu($aContext);
 
-// проверка на вывод только списка (в случае списка, скрипт дальше выполняться не будет)
 $lAdmin->CheckListMode();
 
-$APPLICATION->SetTitle(GetMessage("MAIN_T_ADMIN_TITLE"));
+$APPLICATION->SetTitle(($isEditingMessageThemePage ? GetMessage("MAIN_T_ADMIN_TITLE_THEME") : GetMessage("MAIN_T_ADMIN_TITLE")));
 
 require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/prolog_admin_after.php");
 ?>

@@ -26,8 +26,7 @@ if (!extension_loaded('zlib') || !function_exists("gzcompress"))
 
 $butf = defined('BX_UTF') && BX_UTF == 'Y';
 
-function __CopyDirFiles($path_from, $path_to, $ReWrite = True, $Recursive = False,
-	$bConvert = False, $strEncodingIn = '', $strEncodingOut = '')
+function __CopyDirFiles($path_from, $path_to, $ReWrite = True, $Recursive = False, $bConvert = False, $strEncodingIn = '', $strEncodingOut = '')
 {
 	global $APPLICATION;
 
@@ -47,13 +46,12 @@ function __CopyDirFiles($path_from, $path_to, $ReWrite = True, $Recursive = Fals
 	{
 		while (($file = readdir($handle)) !== false)
 		{
-			if ($file == "." || $file == "..")
+			if ($file == "." || $file == ".." || $file == '.access.php' || $file == '.htaccess')
 				continue;
 
 			if (is_dir($path_from."/".$file) && $Recursive)
 			{
-				__CopyDirFiles($path_from."/".$file, $path_to."/".$file,
-						$ReWrite, $Recursive, $bConvert, $strEncodingIn, $strEncodingOut);
+				__CopyDirFiles($path_from."/".$file, $path_to."/".$file, $ReWrite, $Recursive, $bConvert, $strEncodingIn, $strEncodingOut);
 
 			}
 			elseif (is_file($path_from."/".$file))
@@ -63,11 +61,12 @@ function __CopyDirFiles($path_from, $path_to, $ReWrite = True, $Recursive = Fals
 
 				@copy($path_from."/".$file, $path_to."/".$file);
 				@chmod($path_to."/".$file, BX_FILE_PERMISSIONS);
-				if ($bConvert) {
-					$filesrc_tmp = $APPLICATION->GetFileContent($path_to."/".$file);
+				$filesrc_tmp = $APPLICATION->GetFileContent($path_to."/".$file);
+				$filesrc_tmp = str_replace("\r\n", "\n", $filesrc_tmp);
+				$filesrc_tmp = str_replace("\r", "\n", $filesrc_tmp);
+				if ($bConvert)
 					$filesrc_tmp = $APPLICATION->ConvertCharset($filesrc_tmp, $strEncodingIn, $strEncodingOut);
-					$APPLICATION->SaveFileContent($path_to."/".$file, $filesrc_tmp);
-				}
+				$APPLICATION->SaveFileContent($path_to."/".$file, $filesrc_tmp);
 			}
 		}
 		@closedir($handle);
@@ -85,7 +84,7 @@ function __ReWalkDirs($pathFrom, $pathTo, $language_id, $bConvert = false, $strE
 	{
 		while (false !== ($dir = readdir($handle)))
 		{
-			if (!is_dir($pathFrom."/".$dir) || $dir == "." || $dir == "..")
+			if (!is_dir($pathFrom."/".$dir) || $dir == "." || $dir == ".." || $dir == ".hg" || $dir == ".svn")
 				continue;
 
 			if ($dir == "lang" || (strlen($pathFrom) -  strrpos($pathFrom, 'payment')) == 7)
@@ -93,8 +92,7 @@ function __ReWalkDirs($pathFrom, $pathTo, $language_id, $bConvert = false, $strE
 				if (file_exists($pathFrom."/".$dir."/".$language_id))
 				{
 					CheckDirPath($pathTo."/".$dir."/".$language_id."/");
-					__CopyDirFiles($pathFrom."/".$dir."/".$language_id, $pathTo."/".$dir."/".$language_id,
-							true, true, $bConvert, $strEncodingIn, $strEncodingOut);
+					__CopyDirFiles($pathFrom."/".$dir."/".$language_id, $pathTo."/".$dir."/".$language_id, true, true, $bConvert, $strEncodingIn, $strEncodingOut);
 				}
 			}
 			else
@@ -106,9 +104,16 @@ function __ReWalkDirs($pathFrom, $pathTo, $language_id, $bConvert = false, $strE
 	}
 }
 
+$language_id = $_REQUEST["language_id"];
+$lang_date = $_REQUEST["lang_date"];
+$encoding = $_REQUEST["encoding"];
+$pack_files = $_REQUEST["pack_files"];
+$strEncodingIn = '';
+$strEncodingOut = '';
+
 $strErrorMessage = "";
 $strOKMessage = "";
-if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_collect=="Y" && check_bitrix_sessid())
+if ($_SERVER["REQUEST_METHOD"]=="POST" && $_REQUEST["start_collect"]=="Y" && check_bitrix_sessid())
 {
 	if (strlen($language_id)!=2)
 		$strErrorMessage .= GetMessage('TR_ERROR_SELECT_LANGUAGE').'<br>';
@@ -119,7 +124,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_collect=="Y" && check_bitrix_se
 		$strErrorMessage .= GetMessage('TR_ERROR_LANGUAGE_DATE');
 
 	$bConvert = isset($_REQUEST['convert_encoding']) && $_REQUEST['convert_encoding'] == 'Y';
-	if ($butf && $bConvert && (!isset($encoding) || !array_key_exists($encoding, $arrTransEncoding)))
+	if ($butf && $bConvert && (!isset($_REQUEST["encoding"]) || !array_key_exists($_REQUEST["encoding"], $arrTransEncoding)))
 		$strErrorMessage .= GetMessage('TR_ERROR_ENCODING').'<br>';
 
 	if (strlen($strErrorMessage)<=0)
@@ -154,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_collect=="Y" && check_bitrix_se
 			if ($butf)
 			{
 				$strEncodingIn = 'utf-8';
-				$strEncodingOut = $encoding;
+				$strEncodingOut = $_REQUEST["encoding"];
 			}
 			else
 			{
@@ -164,8 +169,8 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_collect=="Y" && check_bitrix_se
 					$bConvert = false;
 			}
 		}
-		__ReWalkDirs($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules", $targetLanguagePath, $language_id,
-				$bConvert, $strEncodingIn, $strEncodingOut);
+
+		__ReWalkDirs($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules", $targetLanguagePath, $language_id, $bConvert, $strEncodingIn, $strEncodingOut);
 
 		if ($fp1 = fopen($targetLanguagePath."/main/lang/".$language_id."/supd_lang_date.dat", "wb"))
 		{
@@ -212,7 +217,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_collect=="Y" && check_bitrix_se
 		$strOKMessage = GetMessage('TR_LANGUAGE_COLLECTED_FOLDER', array('%LANG%' => $language_id, '%PATH%' => $targetLanguagePath));
 	}
 }
-else if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_download=="Y" && check_bitrix_sessid())
+else if ($_SERVER["REQUEST_METHOD"]=="POST" && $_REQUEST["start_download"]=="Y" && check_bitrix_sessid())
 {
 	if (!(array_key_exists('tarfile', $_FILES) &&
 		array_key_exists('tmp_name', $_FILES['tarfile']) &&
@@ -224,7 +229,7 @@ else if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_download=="Y" && check_bit
 		$strErrorMessage .= GetMessage('TR_ERROR_SELECT_LANGUAGE').'<br>';
 
 	$bConvert = isset($_REQUEST['convert_encoding']) && $_REQUEST['convert_encoding'] == 'Y';
-	if ($butf && $bConvert && (!isset($encoding) || !in_array($encoding, $arrTransEncoding)))
+	if ($butf && $bConvert && (!isset($_REQUEST["encoding"]) || !in_array($_REQUEST["encoding"], $arrTransEncoding)))
 		$strErrorMessage .= GetMessage('TR_ERROR_ENCODING').'<br>';
 
 	$tempLanguagePathNoRoot = '/bitrix/tmp/translate/'.time().'/';
@@ -257,16 +262,15 @@ else if ($_SERVER["REQUEST_METHOD"]=="POST" && $start_download=="Y" && check_bit
 		{
 			if ($butf)
 			{
-				$strEncodingIn = $encoding;
+				$strEncodingIn = $_REQUEST["encoding"];
 				$strEncodingOut = 'utf-8';
 			}
 			else
 			{
 				$strEncodingIn = 'utf-8';
 				$strEncodingOut = LANG_CHARSET;
-				if (LANG_CHARSET == 'utf-8') {
+				if (LANG_CHARSET == 'utf-8')
 					$bConvert = false;
-				}
 			}
 		}
 
@@ -299,11 +303,13 @@ $aTabs = array(
 
 $tabControl = new CAdminTabControl("tabControl", $aTabs, false, true);
 
-if ($strErrorMessage != '') {
+if ($strErrorMessage != '')
+{
 	$message = new CAdminMessage(array('MESSAGE' => $strErrorMessage, 'TYPE' => 'ERROR'));
 	echo $message->Show();
 }
-if ($strOKMessage != '') {
+if ($strOKMessage != '')
+{
 	$message = new CAdminMessage(array('MESSAGE' => $strOKMessage, 'TYPE' => 'OK', 'HTML' => true));
 	echo $message->Show();
 }
@@ -338,12 +344,15 @@ $tabControl->BeginNextTab();
 		<td><?echo GetMessage("TR_COLLECT_DATE")?>:</td>
 		<td><input type="text" name="lang_date" size="10" maxlength="8" value="<?= htmlspecialcharsbx($lang_date) ?>"></td>
 	</tr>
-	<? if (!$butf) { ?>
+	<? if (!$butf)
+	{ ?>
 	<tr>
 		<td><?echo GetMessage("TR_CONVERT_UTF8")?>:</td>
 		<td><input type="checkbox" name="convert_encoding" value="Y" <? echo $bConvert ? 'checked="checked"' : '' ?>></td>
 	</tr>
-	<? } else { ?>
+	<? }
+	else
+	{ ?>
 	<tr>
 		<td><?echo GetMessage("TR_CONVERT_NATIONAL")?>:</td>
 		<td><input type="checkbox" name="convert_encoding" value="Y" <? echo $bConvert ? 'checked="checked"' : '' ?> onClick="EncodeClicked()"></td>
@@ -406,12 +415,15 @@ $tabControl->BeginNextTab();
 		</td>
 	</tr>
 
-	<? if (!$butf) { ?>
+	<? if (!$butf)
+	{ ?>
 	<tr>
 		<td><?echo GetMessage("TR_CONVERT_FROM_UTF8")?>:</td>
 		<td><input type="checkbox" name="localize_encoding" value="Y" <? echo $bConvert ? 'checked="checked"' : '' ?>></td>
 	</tr>
-	<? } else { ?>
+	<? }
+	else
+	{ ?>
 	<tr>
 		<td><?echo GetMessage("TR_CONVERT_FROM_NATIONAL")?>:</td>
 		<td><input type="checkbox" name="localize_encoding" value="Y" <? echo $bConvert ? 'checked="checked"' : '' ?>></td>

@@ -1,21 +1,12 @@
 <?
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
-// functions for custom columns view
-if (!function_exists("getIblockNames"))
-{
-	function getIblockNames($arIblockIDs, $arIblockNames)
-	{
-		$str = "";
-		foreach ($arIblockIDs as $iblockID)
-		{
-			$str .= "\"".$arIblockNames[$iblockID]."\", ";
-		}
-		$str .= "#";
+use Bitrix\Main\Loader;
+use Bitrix\Catalog;
+use Bitrix\Iblock;
 
-		return str_replace(", #", "", $str);
-	}
-}
+if (!Loader::includeModule('sale'))
+	return;
 
 $arColumns = array(
 	"NAME" => GetMessage("SBB_BNAME"),
@@ -30,76 +21,76 @@ $arColumns = array(
 	"SUM" => GetMessage("SBB_BSUM")
 );
 
-if (CModule::IncludeModule("catalog"))
+if (Loader::includeModule('catalog'))
 {
-	// get iblock props from all catalog iblocks including sku iblocks
 	$arIblockIDs = array();
 	$arIblockNames = array();
-	$catalogFilter = array();
-
-	if (array_key_exists('src_site', $_REQUEST))
+	$catalogIterator = Catalog\CatalogIblockTable::getList(array(
+		'select' => array('IBLOCK_ID', 'NAME' => 'IBLOCK.NAME'),
+		'order' => array('IBLOCK_ID' => 'ASC')
+	));
+	while ($catalog = $catalogIterator->fetch())
 	{
-		$siteID = $_REQUEST['src_site'];
-		if($siteID !== '' && preg_match('/^[a-z0-9_]{2}$/i', $siteID) === 1)
+		$catalog['IBLOCK_ID'] = (int)$catalog['IBLOCK_ID'];
+		$arIblockIDs[] = $catalog['IBLOCK_ID'];
+		$arIblockNames[$catalog['IBLOCK_ID']] = $catalog['NAME'];
+	}
+	unset($catalog, $catalogIterator);
+
+	if (!empty($arIblockIDs))
+	{
+		$arProps = array();
+		$propertyIterator = Iblock\PropertyTable::getList(array(
+			'select' => array('ID', 'CODE', 'NAME', 'IBLOCK_ID'),
+			'filter' => array('@IBLOCK_ID' => $arIblockIDs, '=ACTIVE' => 'Y', '!=XML_ID' => CIBlockPropertyTools::XML_SKU_LINK),
+			'order' => array('IBLOCK_ID' => 'ASC', 'SORT' => 'ASC', 'ID' => 'ASC')
+		));
+		while ($property = $propertyIterator->fetch())
 		{
-			$catalogFilter = array('LID' => $siteID);
+			$property['ID'] = (int)$property['ID'];
+			$property['IBLOCK_ID'] = (int)$property['IBLOCK_ID'];
+			$property['CODE'] = (string)$property['CODE'];
+			if ($property['CODE'] == '')
+				$property['CODE'] = $property['ID'];
+			if (!isset($arProps[$property['CODE']]))
+			{
+				$arProps[$property['CODE']] = array(
+					'CODE' => $property['CODE'],
+					'TITLE' => $property['NAME'].' ['.$property['CODE'].']',
+					'ID' => array($property['ID']),
+					'IBLOCK_ID' => array($property['IBLOCK_ID'] => $property['IBLOCK_ID']),
+					'IBLOCK_TITLE' => array($property['IBLOCK_ID'] => $arIblockNames[$property['IBLOCK_ID']]),
+					'COUNT' => 1
+				);
+			}
+			else
+			{
+				$arProps[$property['CODE']]['ID'][] = $property['ID'];
+				$arProps[$property['CODE']]['IBLOCK_ID'][$property['IBLOCK_ID']] = $property['IBLOCK_ID'];
+				if ($arProps[$property['CODE']]['COUNT'] < 2)
+					$arProps[$property['CODE']]['IBLOCK_TITLE'][$property['IBLOCK_ID']] = $arIblockNames[$property['IBLOCK_ID']];
+				$arProps[$property['CODE']]['COUNT']++;
+			}
 		}
+		unset($property, $propertyIterator, $arIblockNames, $arIblockIDs);
 
-	}
-
-	$dbCatalog = CCatalog::GetList(array(), $catalogFilter);
-	while ($arCatalog = $dbCatalog->GetNext())
-	{
-		$arIblockIDs[] = $arCatalog["IBLOCK_ID"];
-		$arIblockNames[$arCatalog["IBLOCK_ID"]] = $arCatalog["NAME"];
-	}
-
-	// iblock props
-	$arProps = array();
-	$arPropNameCodeCount = array();
-	foreach ($arIblockIDs as $iblockID)
-	{
-		$dbProps = CIBlockProperty::GetList(
-			array(
-				"SORT"=>"ASC",
-				"NAME"=>"ASC"
-			),
-			array(
-				"IBLOCK_ID" => $iblockID,
-				"ACTIVE" => "Y",
-				"CHECK_PERMISSIONS" => "N",
-			)
-		);
-
-		while ($arProp = $dbProps->GetNext())
+		$propList = array();
+		foreach ($arProps as &$property)
 		{
-			$arProps[] = $arProp;
-			if (isset($arProp["NAME"]))
-				$arPropNameCodeCount[$arProp["NAME"]][$arProp["CODE"]]++;
+			$iblockList = '';
+			if ($property['COUNT'] > 1)
+			{
+				$iblockList = ($property['COUNT'] > 2 ? ' ( ... )' : ' ('.implode(', ', $property['IBLOCK_TITLE']).')');
+			}
+			$propList['PROPERTY_'.$property['CODE']] = $property['TITLE'].$iblockList;
 		}
-	}
+		unset($property, $arProps);
 
-	// create properties array where properties with the same codes are considered the same (TODO: use property IDs instead)
-	$arTmpProperty2Iblock = array();
-	foreach ($arProps as $id => $arProperty)
-	{
-		$arTmpProperty2Iblock["PROPERTY_".$arProperty["CODE"]][] = $arProperty["IBLOCK_ID"];
-
-		if (
-			isset($arProperty["NAME"])
-			&& count($arPropNameCodeCount[$arProperty["NAME"]]) > 1
-		)
-			$name = $arProperty["NAME"]." [".$arProperty["CODE"]."] ";
-		else
-			$name = $arProperty["NAME"];
-
-		if (array_key_exists("PROPERTY_".$arProperty["CODE"], $arColumns))
-			$arColumns["PROPERTY_".$arProperty["CODE"]] = $name." (".getIblockNames($arTmpProperty2Iblock["PROPERTY_".$arProperty["CODE"]], $arIblockNames).")";
-		else
-			$arColumns["PROPERTY_".$arProperty["CODE"]] = $name;
+		if (!empty($propList))
+			$arColumns = array_merge($arColumns, $propList);
+		unset($propList);
 	}
 }
-// end of custom columns view functions
 
 $arYesNo = Array(
 	"Y" => GetMessage("SBB_DESC_YES"),
@@ -198,4 +189,3 @@ $arComponentParameters = Array(
 		),
 	)
 );
-?>

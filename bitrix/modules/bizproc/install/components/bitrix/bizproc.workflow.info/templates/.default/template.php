@@ -7,136 +7,124 @@ if ($arResult["NeedAuth"] == "Y")
 elseif (strlen($arResult["FatalErrorMessage"]) > 0)
 {
 	?>
-	<span class='errortext'><?= $arResult["FatalErrorMessage"] ?></span><br /><br />
+	<span class='errortext' style="color: red"><?= $arResult["FatalErrorMessage"] ?></span>
 	<?
 }
 else
 {
-	?>
-	<table class="bizproc-task-form" cellspacing="0" cellpadding="0">
-		<tr>
-			<th colspan="2">Рабочий поток</th>
-		</tr>
-		<tr>
-			<td align="right" valign="top" width="50%">Название шаблона рабочего потока:</td>
-			<td width="50%" valign="top"><?= $arResult["WorkflowState"]["NAME"] ?></td>
-		</tr>
-		<tr>
-			<td align="right" valign="top" width="50%">Описание шаблона рабочего потока:</td>
-			<td width="50%" valign="top"><?= $arResult["WorkflowState"]["DESCRIPTION"] ?></td>
-		</tr>
-		<tr>
-			<td align="right" valign="top" width="50%">Код рабочего потока:</td>
-			<td width="50%" valign="top"><?= $arResult["WorkflowState"]["ID"] ?></td>
-		</tr>
-		<tr>
-			<td align="right" valign="top" width="50%">Текущее состояние рабочего потока:</td>
-			<td width="50%" valign="top"><?
-			if (strlen($arResult["WorkflowState"]["STATE"]) > 0)
-			{
-				if (strlen($arResult["WorkflowState"]["STATE_TITLE"]) > 0)
-					echo $arResult["WorkflowState"]["STATE_TITLE"]." (".$arResult["WorkflowState"]["STATE"].")";
-				else
-					echo $arResult["WorkflowState"]["STATE"];
-			}
-			else
-			{
-				echo "&nbsp;";
-			}
-			?></td>
-		</tr>
-		<tr>
-			<td colspan="2">&nbsp;</td>
-		</tr>
-		<tr>
-			<th colspan="2">История выполнения рабочего потока:</th>
-		</tr>
-		<tr>
-			<td colspan="2">
-				<?
-				foreach ($arResult["WorkflowTrack"] as $track)
-				{
-					echo $track["PREFIX"];
+	\Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/bizproc/tools.js');
+?>
 
-					$strMessageTemplate = "";
-					switch ($track["TYPE"])
-					{
-						case 1:
-							$strMessageTemplate = "Запущено действие '#ACTIVITY#'#NOTE#";
-							break;
-						case 2:
-							$strMessageTemplate = "Завершено действие '#ACTIVITY#' со статусом '#STATUS#' и результатом '#RESULT#'#NOTE#";
-							break;
-						case 3:
-							$strMessageTemplate = "Отменено действие '#ACTIVITY#'#NOTE#";
-							break;
-						case 4:
-							$strMessageTemplate = "Ошибка действия '#ACTIVITY#'#NOTE#";
-							break;
-						case 5:
-							$strMessageTemplate = "Действие '#ACTIVITY#'#NOTE#";
-							break;
-						default:
-							$strMessageTemplate = "Что-то сделали с действием '#ACTIVITY#'#NOTE#";
-					}
+	<?if ($arParams['POPUP']):?>
+	<div class="bp-popup-title"><?=GetMessage('BPWFI_PAGE_TITLE')?></div>
+	<div class="bp-popup">
+	<?endif?>
+	<div class="bp-task-page bp-lent <?if (empty($arResult['startedByPhotoSrc'])):?>no-photo<?endif?>">
+		<?if (!empty($arResult['startedByPhotoSrc'])):?>
+			<span class="bp-avatar" id="bp-task-started-by-<?=$arResult['WorkflowState']['ID']?>">
+				<img src="<?=$arResult['startedByPhotoSrc']?>" alt="">
+			</span>
+			<script>
+				BX.tooltip(<?php echo (int)$arResult['WorkflowState']['STARTED_BY']?>, "bp-task-started-by-<?=$arResult['WorkflowState']['ID']?>", "", 'intrantet-user-selector-tooltip');
+			</script>
+		<?endif?>
+		<span class="bp-title"><?=htmlspecialcharsbx($arResult['WorkflowState']['TEMPLATE_NAME'])?></span>
+	<span class="bp-title-desc">
+		<span class="bp-title-desc-icon">
+			<?if (empty($arResult['DOCUMENT_ICON'])):?>
+				<img src="<?=htmlspecialcharsbx($templateFolder)?>/images/icon-bp-process.png" width="36" height="30" border="0" />
+			<?else:?>
+				<img src="<?=htmlspecialcharsbx($arResult['DOCUMENT_ICON'])?>" width="36" height="30" border="0" />
+			<?endif?>
+		</span>
+		<span class=""><?=htmlspecialcharsbx($arResult['DOCUMENT_NAME'])?></span>
+	</span>
+		<div class="bp-short-process-inner">
+			<?$APPLICATION->IncludeComponent(
+				'bitrix:bizproc.workflow.faces',
+				'',
+				array(
+					'WORKFLOW_ID' => $arResult['WorkflowState']['ID']
+				),
+				$component
+			);
+			?>
+			<span class="bp-status">
+				<span class="bp-status-inner"><span><?=htmlspecialcharsbx($arResult["WorkflowState"]['STATE_TITLE'])?></span></span>
+			</span>
+		</div>
+		<?if (!$arParams['POPUP']):?>
+		<div class="bp-tab-container">
+			<div id="bp-task-tabs-header" class="bp-tabs-block">
+			<span id="bp-task-tab-1" class="bp-tab bp-tab-active" onclick="return function(){
+			var t1 = BX('bp-task-tab-1'),
+				t2 = BX('bp-task-tab-2'),
+				t1c = BX('bp-task-tab-1-content'),
+				t2c = BX('bp-task-tab-2-content');
 
-					$name = (strlen($track["ACTION_TITLE"]) > 0 ? $track["ACTION_TITLE"]." (".$track["ACTION_NAME"].")" : $track["ACTION_NAME"]);
+				BX.addClass(t1, 'bp-tab-active'); BX.removeClass(t2, 'bp-tab-active');
+				BX.addClass(t1c, 'active'); BX.removeClass(t2c, 'active');
+				return false;
+			}()"><?=GetMessage("BPWFITPL_COMMENTS")?></span>
+			<span id="bp-task-tab-2" class="bp-tab" onclick="return function(){
+			var t1 = BX('bp-task-tab-2'),
+				t2 = BX('bp-task-tab-1'),
+				t1c = BX('bp-task-tab-2-content'),
+				t2c = BX('bp-task-tab-1-content');
 
-					switch ($track["EXECUTION_STATUS"])
-					{
-						case CBPActivityExecutionStatus::Initialized:
-							$status = "Инициализировано";
-							break;
-						case CBPActivityExecutionStatus::Executing:
-							$status = "Выполняется";
-							break;
-						case CBPActivityExecutionStatus::Canceling:
-							$status = "Отменяется";
-							break;
-						case CBPActivityExecutionStatus::Closed:
-							$status = "Завершено";
-							break;
-						case CBPActivityExecutionStatus::Faulting:
-							$status = "Ошибка";
-							break;
-						default:
-							$status = "Не определено";
-					}
+				BX.addClass(t1, 'bp-tab-active'); BX.removeClass(t2, 'bp-tab-active');
+				BX.addClass(t1c, 'active'); BX.removeClass(t2c, 'active');
+				return false;
+			}()"><?=GetMessage("BPWFITPL_DOC_HISTORY")?></span>
+			</div>
 
-					switch ($track["EXECUTION_RESULT"])
-					{
-						case CBPActivityExecutionResult::None:
-							$result = "Нет";
-							break;
-						case CBPActivityExecutionResult::Succeeded:
-							$result = "Успешно";
-							break;
-						case CBPActivityExecutionResult::Canceled:
-							$result = "Отменено";
-							break;
-						case CBPActivityExecutionResult::Faulted:
-							$result = "Ошибка";
-							break;
-						case CBPActivityExecutionResult::Uninitialized:
-							$result = "Не инициализировано";
-							break;
-						default:
-							$status = "Не определено";
-					}
+			<div id="bp-task-tabs-content" class="bp-tab-contents">
+				<div id="bp-task-tab-1-content" class="bp-tab-content active">
 
-					$note = ((strlen($track["ACTION_NOTE"]) > 0) ? ": ".$track["ACTION_NOTE"] : "");
-
-					echo str_replace(
-						array("#ACTIVITY#", "#STATUS#", "#RESULT#", "#NOTE#"),
-						array($name, $status, $result, $note),
-						$strMessageTemplate
+					<?endif?>
+					<?
+					// A < E < I < M < Q < U < Y
+					// A - NO ACCESS, E - READ, I - ANSWER
+					// M - NEW TOPIC
+					// Q - MODERATE, U - EDIT, Y - FULL_ACCESS
+					$APPLICATION->IncludeComponent("bitrix:forum.comments", "bitrix24", array(
+						"FORUM_ID" => CBPHelper::getForumId(),
+						"ENTITY_TYPE" => "WF",
+						"ENTITY_ID" => CBPStateService::getWorkflowIntegerId($arResult['WorkflowState']['ID']),
+						"ENTITY_XML_ID" => "WF_".$arResult['WorkflowState']['ID'],
+						"PERMISSION" => "Y",
+						"URL_TEMPLATES_PROFILE_VIEW" => "/company/personal/user/#user_id#/",
+						"SHOW_RATING" => "Y",
+						"SHOW_LINK_TO_MESSAGE" => "N",
+						"BIND_VIEWER" => "Y"
+					),
+						false,
+						array('HIDE_ICONS' => 'Y')
 					);
-					echo "<br />";
-				}
-				?>
-			</td>
-		</tr>
-		</table>
-	<?
+					?>
+					<?if (!$arParams['POPUP']):?>
+				</div>
+
+				<div id="bp-task-tab-2-content" class="bp-tab-content">
+					<?
+					$APPLICATION->IncludeComponent(
+						"bitrix:bizproc.log",
+						"",
+						array(
+							"COMPONENT_VERSION" => 2,
+							"ID" => $arResult['WorkflowState']['ID'],
+							"SET_TITLE" => "N",
+							"INLINE_MODE" => "Y",
+							"NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"]
+						),
+						$component
+					);
+					?>
+				</div>
+			</div>
+		</div>
+	<?endif?>
+	</div>
+<?
 }
 ?>

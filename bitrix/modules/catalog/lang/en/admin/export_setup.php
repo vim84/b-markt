@@ -90,4 +90,5 @@ $MESS["CES_DATE_CREATE"] = "Created on";
 $MESS["CES_MODIFIED_BY"] = "Modified by";
 $MESS["CES_TIMESTAMP_X"] = "Modified on";
 $MESS["CES_DEFAULT_PROFILE"] = "system";
+$MESS["CES_CRON_AGENT_ERRORS"] = "The profiles are set to run using an agent and cron. It is not recommended to use both simultaneously.";
 ?>

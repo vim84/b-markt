@@ -1,15 +1,36 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?>
 <?
-$arParams["SEARCH_FILTER_NAME"] = "sonet_search_filter";
-$arParams["SEARCH_FILTER_DATE_NAME"] = "sonet_search_filter_date";
+$arParams["SEARCH_FILTER_NAME"] = (
+	isset($arParams["SEARCH_FILTER_NAME"])
+	&& strlen($arParams["SEARCH_FILTER_NAME"]) > 0
+		? $arParams["SEARCH_FILTER_NAME"]
+		: "sonet_search_filter"
+);
+
+$arParams["SEARCH_FILTER_DATE_NAME"] = (
+	isset($arParams["SEARCH_FILTER_DATE_NAME"])
+	&& strlen($arParams["SEARCH_FILTER_DATE_NAME"]) > 0
+		? $arParams["SEARCH_FILTER_DATE_NAME"]
+		: "sonet_search_filter_date"
+);
+
+$arParams["SEARCH_RESTART"] = (
+	isset($arParams["SEARCH_RESTART"])
+	&& $arParams["SEARCH_RESTART"] == "Y"
+		? $arParams["SEARCH_RESTART"]
+		: "N"
+);
+
+$arParams["SEARCH_USE_LANGUAGE_GUESS"] = (
+	isset($arParams["SEARCH_USE_LANGUAGE_GUESS"])
+	&& $arParams["SEARCH_USE_LANGUAGE_GUESS"] == "N"
+		? $arParams["SEARCH_USE_LANGUAGE_GUESS"]
+		: "Y"
+);
 
 global $$arParams["SEARCH_FILTER_NAME"], $sonet_search_settings;
 $sonet_search_filter = array();
-
-if (strpos($componentPage, "group_content_search") !== false)
-	$EntityType = SONET_ENTITY_GROUP;
-else
-	$EntityType = SONET_ENTITY_USER;
+$EntityType = (strpos($componentPage, "group_content_search") !== false ? SONET_ENTITY_GROUP : SONET_ENTITY_USER);
 
 $sFilterDateTo = $_REQUEST[$arParams["SEARCH_FILTER_DATE_NAME"]."_to"];
 if ($arr = ParseDateTime($_REQUEST[$arParams["SEARCH_FILTER_DATE_NAME"]."_to"]))
@@ -111,7 +132,7 @@ else
 	$arUser = $dbUser->Fetch();
 	
 	if (strlen($arParams["NAME_TEMPLATE"]) <= 0)		
-			$arParams["NAME_TEMPLATE"] = CSite::GetNameFormat();
+		$arParams["NAME_TEMPLATE"] = CSite::GetNameFormat();
 				
 	$arParams["TITLE_NAME_TEMPLATE"] = str_replace(
 		array("#NOBR#", "#/NOBR#"), 

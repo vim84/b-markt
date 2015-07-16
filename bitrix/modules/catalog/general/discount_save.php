@@ -1,5 +1,6 @@
 <?
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main;
 
 Loc::loadMessages(__FILE__);
 
@@ -24,6 +25,8 @@ class CAllCatalogDiscountSave
 
 	static protected $intDisable = 0;
 	static protected $intDiscountUserID = 0;
+	static protected $userGroups = array();
+	static protected $discountFilterCache = array();
 
 	public static function Enable()
 	{
@@ -467,6 +470,8 @@ class CAllCatalogDiscountSave
 	{
 		global $DB, $USER;
 
+		$adminSection = (defined('ADMIN_SECTION') && ADMIN_SECTION === true);
+
 		$arResult = array();
 
 		if (!CCatalog::IsUserExists() || !$USER->IsAuthorized() || !self::IsEnabled())
@@ -486,7 +491,7 @@ class CAllCatalogDiscountSave
 		$arUserGroups = array();
 		$strSiteID = false;
 		if (isset($arParams['USER_ID']))
-			$intUserID = $arParams['USER_ID'];
+			$intUserID = (int)$arParams['USER_ID'];
 		if (isset($arParams['USER_GROUPS']))
 			$arUserGroups = $arParams['USER_GROUPS'];
 		if (isset($arParams['SITE_ID']))
@@ -494,41 +499,44 @@ class CAllCatalogDiscountSave
 
 		if (self::GetDiscountUserID() > 0)
 		{
-			$intUserID = self::GetDiscountUserID();
-			$arUserGroups = $USER->GetUserGroup($intUserID);
+			$intUserID = (int)self::GetDiscountUserID();
+			$arUserGroups = array();
 		}
-		else
+		if ($intUserID <= 0 && !$adminSection)
 		{
-			$intUserID = (int)$intUserID;
-			if ($intUserID <= 0)
-			{
-				$intUserID = $USER->GetID();
-				$arUserGroups = $USER->GetUserGroupArray();
-			}
-			else
-			{
-				if (empty($arUserGroups))
-					$arUserGroups = $USER->GetUserGroup($intUserID);
-			}
+			$intUserID = (int)$USER->GetID();
+			$arUserGroups = array();
+		}
+		if (empty($arUserGroups))
+		{
+			if (!isset(self::$userGroups[$intUserID]))
+				self::$userGroups[$intUserID] = $USER->GetUserGroup($intUserID);
+			$arUserGroups = self::$userGroups[$intUserID];
 		}
 		if (empty($arUserGroups) || !is_array($arUserGroups) || $intUserID <= 0)
 			return $arResult;
-		$key = array_search(2,$arUserGroups);
+		$key = array_search(2, $arUserGroups);
 		if ($key !== false)
 			unset($arUserGroups[$key]);
 		if (empty($arUserGroups))
 			return $arResult;
+		Main\Type\Collection::normalizeArrayValuesByInt($arUserGroups, true);
+		if (empty($arUserGroups))
+			return $arResult;
 		if ($strSiteID === false)
 			$strSiteID = SITE_ID;
+		$cacheKey = md5('U'.implode('_', $arUserGroups));
+		if (!isset(self::$discountFilterCache[$cacheKey]))
+			self::$discountFilterCache[$cacheKey] = CCatalogDiscountSave::__GetDiscountIDByGroup($arUserGroups);
+		if (empty(self::$discountFilterCache[$cacheKey]))
+			return $arResult;
 
-		$arCurrentDiscountID = CCatalogDiscountSave::__GetDiscountIDByGroup($arUserGroups);
+		$arCurrentDiscountID = self::$discountFilterCache[$cacheKey];
 		if (isset($arParams['ID']))
 		{
-			CatalogClearArray($arParams['ID'], false);
+			Main\Type\Collection::normalizeArrayValuesByInt($arUserGroups, true);
 			if (!empty($arParams['ID']))
-			{
 				$arCurrentDiscountID = array_intersect($arCurrentDiscountID, $arParams['ID']);
-			}
 		}
 
 		if (!empty($arCurrentDiscountID))
@@ -761,13 +769,15 @@ class CAllCatalogDiscountSave
 						$arOneResult['VALUE'] = $arRange['VALUE'];
 						$arOneResult['VALUE_TYPE'] = $arRange['TYPE'];
 						$arOneResult['RANGE_FROM'] = $arRange['RANGE_FROM'];
+						$arOneResult['MAX_DISCOUNT'] = 0;
 					}
 					else
 					{
 						$arOneResult['VALUE'] = 0;
 						$arOneResult['VALUE_TYPE'] = self::TYPE_PERCENT;
+						$arOneResult['MAX_DISCOUNT'] = 0;
 						$rsRanges = CCatalogDiscountSave::GetRangeByDiscount(
-							array('RANGE_FROM' => 'asc'),
+							array('RANGE_FROM' => 'ASC'),
 							array('DISCOUNT_ID' => $arDiscSave['ID']),
 							false,
 							array('nTopCount' => 1)

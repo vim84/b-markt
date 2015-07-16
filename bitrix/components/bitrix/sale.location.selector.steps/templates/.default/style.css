@@ -1,3 +1,5 @@
+/* absolute path to images is required to make crm-sale proxy work */
+
 .bx-slst .dropdown-block {
 	border: 1px solid #bdbdbd;
 	border-radius: 2px;
@@ -12,7 +14,7 @@
 }
 
 .bx-slst .dropdown-arrow {
-	background: url(images/dropdown-errow.png) no-repeat center center;
+	background: url(/bitrix/components/bitrix/sale.location.selector.steps/templates/.default/images/dropdown-errow.png) no-repeat center center;
 	height: 100%;
 	top: 0;
 	right: 0;
@@ -108,7 +110,7 @@
 }
 
 .bx-slst .dropdown-icon {
-	background: url(images/lens.png) no-repeat center center;
+	background: url(/bitrix/components/bitrix/sale.location.selector.steps/templates/.default/images/lens.png) no-repeat center center;
 	height: 14px;
 	left: 10px;
 	position: absolute;
@@ -199,10 +201,12 @@
 	padding: 10px 0 0 0;
 }
 
-/* OLD STYLES */
-
 .bx-slst input[type="text"]{
 	position: relative;
+}
+
+.bx-slst input::-ms-clear {
+	display: none;
 }
 
 .bx-slst .bx-ui-combobox-dropdown{

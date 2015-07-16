@@ -128,4 +128,5 @@ $MESS["IBLOCK_YES"] = "Да";
 $MESS["IBLOCK_NO"] = "Нет";
 $MESS["IBLIST_A_CLEAR_COUNTER"] = "Сбросить счетчик просмотров";
 $MESS["IBLIST_A_CLEAR_COUNTER_TITLE"] = "Обнулить счетчик и дату начала просмотров элемента";
+$MESS["IBLIST_A_CLEAR_COUNTER_CONFIRM"] = "Вы уверены, что хотите обнулить счетчик и дату начала просмотров элемента?";
 ?>

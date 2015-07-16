@@ -353,5 +353,9 @@ $MESS["SOD_DELIVERY_SERVICE_NAME"] = "Service";
 $MESS["SOD_DELIVERY_DELIVERY_DISCOUNT_DIFF"] = "Delivery discount";
 $MESS["SOD_SHOW_SET"] = "Expand";
 $MESS["SOD_HIDE_SET"] = "Hide";
+$MESS["SOD_POPUP_ORDER_ACTION"] = "Send request to freight company";
 $MESS["SOD_POPUP_SEEND_AND_SAVE"] = "Save and send";
+$MESS["SOD_POPUP_REQUEST_ERROR"] = "Error sending request to freight company";
+$MESS["SOD_POPUP_REQUEST_SUCCESS"] = "Request has been sent to freight company";
+$MESS["SOA_ERROR_PS"] = "There are issues with the parameters of the selected payment method.";
 ?>

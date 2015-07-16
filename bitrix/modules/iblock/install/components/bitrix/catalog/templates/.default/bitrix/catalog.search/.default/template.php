@@ -10,7 +10,7 @@
 /** @var string $templateFolder */
 /** @var string $componentPath */
 /** @var CBitrixComponent $component */
-$this->setFrameMode(false);
+$this->setFrameMode(true);
 ?>
 <?
 $arElements = $APPLICATION->IncludeComponent(
@@ -36,7 +36,8 @@ $arElements = $APPLICATION->IncludeComponent(
 		"PAGER_SHOW_ALWAYS" => "N",
 		"PAGER_TEMPLATE" => "N",
 	),
-	$component
+	$component,
+	array('HIDE_ICONS' => 'Y')
 );
 if (!empty($arElements) && is_array($arElements))
 {
@@ -130,7 +131,8 @@ if (!empty($arElements) && is_array($arElements))
 			'SHOW_CLOSE_POPUP' => (isset($arParams['SHOW_CLOSE_POPUP']) ? $arParams['SHOW_CLOSE_POPUP'] : ''),
 			'COMPARE_PATH' => $arParams['COMPARE_PATH']
 		),
-		$arResult["THEME_COMPONENT"]
+		$arResult["THEME_COMPONENT"],
+		array('HIDE_ICONS' => 'Y')
 	);
 }
 else

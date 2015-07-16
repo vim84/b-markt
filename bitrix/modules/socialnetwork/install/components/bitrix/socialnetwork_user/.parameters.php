@@ -6,11 +6,11 @@ if(!CModule::IncludeModule("socialnetwork"))
 $site_dir = "/";
 
 $tmp_site_id = (
-	isset($_REQUEST["site"]) 
+	isset($_REQUEST["site"])
 	&& is_string($_REQUEST["site"])
-		? trim($_REQUEST["site"]) 
+		? trim($_REQUEST["site"])
 		: (
-			isset($_REQUEST["src_site"]) 
+			isset($_REQUEST["src_site"])
 			&& is_string($_REQUEST["src_site"])
 				? trim($_REQUEST["src_site"])
 				: false
@@ -37,7 +37,7 @@ if ($tmp_site_id)
 		}
 	}
 }
-	
+
 $arRes = $GLOBALS["USER_FIELD_MANAGER"]->GetUserFields("USER", 0, LANGUAGE_ID);
 $userProp = array();
 if (!empty($arRes))
@@ -309,6 +309,11 @@ $arComponentParameters = array(
 				"NAME" => GetMessage("SONET_SEF_VIDEO_CALL"),
 				"DEFAULT" => "video/#user_id#/",
 				"VARIABLES" => array("user_id"),
+			),
+			"processes" => array(
+				"NAME" => GetMessage("SONET_SEF_PATH_PROCESSES"),
+				"DEFAULT" => "processes/",
+				"VARIABLES" => array(),
 			),
 		),
 		"PATH_TO_SMILE" => Array(
@@ -1522,20 +1527,24 @@ if(!empty($arIBlockType) || CModule::IncludeModule("iblock"))
 			"TYPE" => "STRING",
 			"DEFAULT" => "1280");
 
-		$arComponentParameters["PARAMETERS"]["PHOTO_UPLOADER_TYPE"] = array(
-			"PARENT" => "PHOTO_SETTINGS",
-			"NAME" => GetMessage("P_UPLOADER_TYPE"),
-			"TYPE" => "LIST",
-			"VALUES" => array(
-				"form" => GetMessage("P_UPLOADER_TYPE_FORM_SIMPLE"),
-				"applet" => GetMessage("P_UPLOADER_TYPE_APPLET"),
-				"flash" => GetMessage("P_UPLOADER_TYPE_FLASH")
-			),
-			"DEFAULT" => "applet",
-			"REFRESH" => "Y");
+		if ($arCurrentValues["PHOTO_UPLOADER_TYPE"])
+		{
+			$arComponentParameters["PARAMETERS"]["PHOTO_UPLOADER_TYPE"] = array(
+				"PARENT" => "PHOTO_SETTINGS",
+				"NAME" => GetMessage("P_UPLOADER_TYPE"),
+				"TYPE" => "LIST",
+				"VALUES" => array(
+					"form" => GetMessage("P_UPLOADER_TYPE_FORM_SIMPLE"),
+					"applet" => GetMessage("P_UPLOADER_TYPE_APPLET"),
+					"flash" => GetMessage("P_UPLOADER_TYPE_FLASH")
+				),
+				"HIDDEN" => $arCurrentValues["PHOTO_UPLOADER_TYPE"] == "form" ? "Y" : "N",
+				"DEFAULT" => "form",
+				"REFRESH" => "Y"
+			);
+		}
 
-
-		if (!$arCurrentValues["PHOTO_UPLOADER_TYPE"] || $arCurrentValues["PHOTO_UPLOADER_TYPE"] == "applet")
+		if ($arCurrentValues["PHOTO_UPLOADER_TYPE"] == "applet")
 		{
 			$arComponentParameters["PARAMETERS"]["PHOTO_APPLET_LAYOUT"] = array(
 					"PARENT" => "UPLOADER",
@@ -1955,6 +1964,18 @@ if (IsModuleInstalled("search"))
 		"NAME" => GetMessage("SONET_SEARCH_FILTER_DATE_NAME"),
 		"TYPE" => "STRING",
 		"DEFAULT" => "sonet_search_filter_date");
+	$arComponentParameters["PARAMETERS"]["SEARCH_RESTART"] = Array(
+		"PARENT" => "SEARCH_SETTINGS",
+		"NAME" => GetMessage("SONET_SEARCH_RESTART"),
+		"TYPE" => "CHECKBOX",
+		"MULTIPLE" => "N",
+		"DEFAULT" => "N");
+	$arComponentParameters["PARAMETERS"]["SEARCH_USE_LANGUAGE_GUESS"] = Array(
+		"PARENT" => "SEARCH_SETTINGS",
+		"NAME" => GetMessage("SONET_SEARCH_USE_LANGUAGE_GUESS"),
+		"TYPE" => "CHECKBOX",
+		"MULTIPLE" => "N",
+		"DEFAULT" => "Y");
 }
 
 $arSMThemesMessages = array(

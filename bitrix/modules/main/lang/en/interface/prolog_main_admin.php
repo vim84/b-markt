@@ -42,4 +42,32 @@ $MESS["MAIN_PR_ADMIN_FAV_ADD"] = "Add to favorites";
 $MESS["MAIN_PR_ADMIN_FAV_DEL"] = "Remove from favorites";
 $MESS["admin_panel_browser"] = "Control Panel doesn't support Internet Explorer 7 or below. Please install a modern browser: <a href=\"http://www.firefox.com\">Firefox</a>, <a href=\"http://www.google.com/chrome/\">Chrome</a>, <a href=\"http://www.opera.com\">Opera</a> or <a href=\"http://www.microsoft.com/windows/internet-explorer/\">a new version of Internet Explorer</a>.";
 $MESS["MAIN_PR_ADMIN_FAV"] = "Favorites";
+$MESS["prolog_main_support_wit"] = "What's this?";
+$MESS["prolog_main_support_wit_descr1"] = "What is subscription expiration?";
+$MESS["prolog_main_support_wit_descr2"] = "As soon as your technical support and updates subscription expires, you will no longer have access Marketplace. Effectively
+it means that you will be unable to install platform updates, buy, install or
+update Marketplace solutions. Your techsupport priority will be downgraded to
+that for common users with a response time of up to 24 hours. You still can
+continue using the product as long as you want. To get access to system updates and Marketplace, you have to renew your subscription.<br/><br/>
+ You are granted a grace period of one month (30 days) after expiration within which the
+renewal cost is only 22% of the price of your product edition (early renewal).<br/><br/>
+ After that period, the renewal cost is 60% of the price of your product
+edition (late renewal).";
+$MESS["prolog_main_support_wit_descr2_cp"] = "After your subscription for technical support and product updates is expired, no platform updates can be installed for your product copy; you won't be able to get new product versions, install or update Marketplace solutions, use web telephony services, or the free \"Cloud Backup\" feature. Also, your support tickets submitted to our HelpDesk will be processed with a lower priority (you may need to wait up to 48 hours).<br /><br />
+Although renewing the technical support and product updates subscription is not mandatory, we encourage you to renew your subscription for another year. Product updates include critical bug fixes, patches and new functionality. With an active subscription, you can install new modules, features, and site templates that become available with each new product release, and upgrade your product copy to the latest version.
+<br /><br />
+You can renew your technical support and product updates subscription for one additional year for as low as 22% of the current product price. Please note that the Early Renewal option is only available within the next 30 days after your current subscription has expired. After the 30-day grace period, the Late Renewal option will be available for your any time later (60% of the current product price).
+<br /><br />
+For more details, please feel free to refer to the <a href=\"https://store.bitrix24.com/help/licensing-policy.php\">Licensing Policy</a> page.
+";
+$MESS["prolog_main_support_button_prolong"] = "Renew Subscription";
+$MESS["prolog_main_support_button_no_prolong"] = "No, thanks";
+$MESS["prolog_main_support11"] = "<span class=\"required\">Attention!</span> Your techsupport and update subscription <b>will expire</b> on #FINISH_DATE#, #DAYS_AGO#.#WHAT_IS_IT#<br /> Your early renewal grace period will end on #SUP_FINISH_DATE#.";
+$MESS["prolog_main_support21"] = "<span class=\"required\">Attention!</span> Your techsupport and update subscription has expired on #FINISH_DATE#, <b>#DAYS_AGO#&nbsp;</b> days ago.#WHAT_IS_IT#<br />Your early renewal garce period will end on #SUP_FINISH_DATE#.";
+$MESS["prolog_main_support31"] = "<span class=\"required\"><span class=\"required\">Attention!</span> Your techsupport and update subscription has expired on #FINISH_DATE#.#WHAT_IS_IT#<br />You can now renew your subscription.";
+$MESS["prolog_main_support_button_no_prolong2"] = "Remind me later";
+$MESS["prolog_main_support_menu1"] = "in:";
+$MESS["prolog_main_support_menu2"] = "week";
+$MESS["prolog_main_support_menu3"] = "two weeks";
+$MESS["prolog_main_support_menu4"] = "<span style=\"color:red;\">month</span>";
 ?>

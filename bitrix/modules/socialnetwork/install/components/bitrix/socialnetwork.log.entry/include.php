@@ -518,6 +518,7 @@ if (!function_exists('__SLGetLogRecord'))
 				{
 					$dateTimeFormated = ToLower($dateTimeFormated);
 					$dateFormated = ToLower($dateFormated);
+					$timeFormated =  ToLower($timeFormated);
 				}
 				// strip current year
 				if (!empty($arParams['DATE_TIME_FORMAT']) && ($arParams['DATE_TIME_FORMAT'] == 'j F Y G:i' || $arParams['DATE_TIME_FORMAT'] == 'j F Y g:i a'))
@@ -838,7 +839,7 @@ if (!function_exists('__SLEGetLogCommentRecord'))
 					$arParams["DATE_TIME_FORMAT"] == 'FULL' 
 					&& IsAmPmMode()
 				) !== false
-					? (strpos(FORMAT_DATETIME, 'TT')!==false ? 'H:MI TT' : 'H:MI T')
+					? (strpos(FORMAT_DATETIME, 'TT')!==false ? 'G:MI TT' : 'G:MI T')
 					: 'HH:MI'
 			)
 		);
@@ -958,14 +959,15 @@ if (!function_exists('__SLEGetLogCommentRecord'))
 			&& array_key_exists("METHOD_FORMAT", $arEvent)
 		)
 		{
-			if ($arParams["USER_COMMENTS"] == "Y")
-				$arLog = array();
-			else
-				$arLog = array(
-					"TITLE" => $arComments["~LOG_TITLE"],
-					"URL" => $arComments["~LOG_URL"],
-					"PARAMS" => $arComments["~LOG_PARAMS"]
-				);
+			$arLog = (
+				$arParams["USER_COMMENTS"] == "Y"
+					? array()
+					: array(
+						"TITLE" => $arComments["~LOG_TITLE"],
+						"URL" => $arComments["~LOG_URL"],
+						"PARAMS" => $arComments["~LOG_PARAMS"]
+					)
+			);
 
 			$arFIELDS_FORMATTED = call_user_func(array($arEvent["CLASS_FORMAT"], $arEvent["METHOD_FORMAT"]), $arComments, $arParams, false, $arLog);
 
@@ -991,11 +993,17 @@ if (!function_exists('__SLEGetLogCommentRecord'))
 		);
 
 		if (strlen($message) > 0)
+		{
 			$arFIELDS_FORMATTED["EVENT_FORMATTED"]["FULL_MESSAGE_CUT"] = CSocNetTextParser::closetags(htmlspecialcharsback($message));
+		}
 
 		if (is_array($arTmpCommentEvent))
 		{
-			$arFIELDS_FORMATTED["EVENT_FORMATTED"]["DATETIME"] = ($arTmpCommentEvent["LOG_DATE_DAY"] == ConvertTimeStamp() ? $timeFormated : $dateTimeFormated);
+			$arFIELDS_FORMATTED["EVENT_FORMATTED"]["DATETIME"] = (
+				$arTmpCommentEvent["LOG_DATE_DAY"] == ConvertTimeStamp()
+					? $timeFormated
+					: $dateTimeFormated
+			);
 			$arTmpCommentEvent["EVENT_FORMATTED"] = $arFIELDS_FORMATTED["EVENT_FORMATTED"];
 			$arTmpCommentEvent["UF"] = $arComments["UF"];
 
@@ -1020,6 +1028,15 @@ if (!function_exists('__SLEGetLogCommentRecord'))
 				&& is_array($arTmpCommentEvent["EVENT"])
 			)
 			{
+				if (!empty($arTmpCommentEvent["EVENT"]["URL"]))
+				{
+					$arTmpCommentEvent["EVENT"]["URL"] = str_replace(
+						"#GROUPS_PATH#",
+						COption::GetOptionString("socialnetwork", "workgroups_page", "/workgroups/", SITE_ID),
+						$arTmpCommentEvent["EVENT"]["URL"]
+					);
+				}
+
 				$arFields2Cache = array(
 					"ID",
 					"SOURCE_ID",
@@ -1069,15 +1086,23 @@ if (!function_exists('__SLEGetLogCommentRecord'))
 						"EMAIL"
 					);
 					foreach ($arTmpCommentEvent["CREATED_BY"]["TOOLTIP_FIELDS"] as $field => $value)
+					{
 						if (!in_array($field, $arFields2Cache))
+						{
 							unset($arTmpCommentEvent["CREATED_BY"]["TOOLTIP_FIELDS"][$field]);
+						}
+					}
 				}
 			}
 		}
 
 		foreach($arTmpCommentEvent["EVENT"] as $key => $value)
+		{
 			if (strpos($key, "~") === 0)
+			{
 				unset($arTmpCommentEvent["EVENT"][$key]);
+			}
+		}
 
 		return $arTmpCommentEvent;
 	}

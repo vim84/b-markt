@@ -22,5 +22,6 @@ $MESS["SEARCH_SORT_BY_RANK"] = "Sort by relevance";
 $MESS["SEARCH_SORTED_BY_DATE"] = "Sorted by date";
 $MESS["SEARCH_SORTED_BY_RANK"] = "Sorted by relevance";
 $MESS["SEARCH_SORT_BY_DATE"] = "Sort by date";
+$MESS["CT_BSP_ADDITIONAL_PARAMS"] = "Additional search criteria";
 $MESS["CT_BSP_KEYBOARD_WARNING"] = "Query input language changed for \"#query#\".";
 ?>

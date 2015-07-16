@@ -71,19 +71,25 @@ $aMenu[] = array(
 
 ?>
 <script>
+var BCPEmptyWorkflow =  <?=$ID>0 ? 'false' : 'true'?>;
 function BCPProcessExport()
 {
+	if (BCPEmptyWorkflow)
+	{
+		alert('<?= GetMessageJS("BIZPROC_EMPTY_EXPORT") ?>');
+		return false;
+	}
 	<?$v = str_replace("&amp;", "&", str_replace("#ID#", $ID, $arResult["EDIT_PAGE_TEMPLATE"]));?>
 	window.open('<?=CUtil::JSEscape($v)?><?if(strpos($v, "?")):?>&<?else:?>?<?endif?>export_template=Y&<?=bitrix_sessid_get()?>');
 }
 
 function BCPProcessImport()
 {
-	if (!confirm("<?= GetMessage("BIZPROC_WFEDIT_MENU_IMPORT_PROMT") ?>"))
+	if (!confirm("<?= GetMessageJS("BIZPROC_WFEDIT_MENU_IMPORT_PROMT") ?>"))
 		return;
 
 	var btnOK = new BX.CWindowButton({
-		'title': '<?= GetMessage("BIZPROC_IMPORT_BUTTON") ?>',
+		'title': '<?= GetMessageJS("BIZPROC_IMPORT_BUTTON") ?>',
 		'action': function()
 		{
 			BX.showWait();
@@ -107,8 +113,8 @@ function BCPProcessImport()
 	});
 
 	new BX.CDialog({
-		title: '<?= GetMessage("BIZPROC_IMPORT_TITLE") ?>',
-		content: '<form action="<?= CUtil::JSEscape(POST_FORM_ACTION_URI) ?>" method="POST" id="import_template_form" enctype="multipart/form-data"><table cellspacing="0" cellpadding="0" border="0" width="100%"><tr valign="top"><td width="50%" align="right"><?= GetMessage("BIZPROC_IMPORT_FILE") ?>:</td><td width="50%" align="left"><input type="file" size="35" name="import_template_file" value=""></td></tr></table><input type="hidden" name="import_template" value="Y"><input type="hidden" id="id_import_template_name" name="import_template_name" value=""><input type="hidden" name="import_template_description" id="id_import_template_description" value=""><input type="hidden" id="id_import_template_autostart" name="import_template_autostart" value=""><?= bitrix_sessid_post() ?></form>',
+		title: '<?= GetMessageJS("BIZPROC_IMPORT_TITLE") ?>',
+		content: '<fo'+'rm action="<?= CUtil::JSEscape(POST_FORM_ACTION_URI) ?>" method="POST" id="import_template_form" enctype="multipart/form-data"><table cellspacing="0" cellpadding="0" border="0" width="100%"><tr valign="top"><td width="15%" align="right"><?= GetMessageJS("BIZPROC_IMPORT_FILE") ?>:</td><td align="left"><input type="file" size="35" name="import_template_file" value=""></td></tr></table><input type="hidden" name="import_template" value="Y"><input type="hidden" id="id_import_template_name" name="import_template_name" value=""><input type="hidden" name="import_template_description" id="id_import_template_description" value=""><input type="hidden" id="id_import_template_autostart" name="import_template_autostart" value=""><?= bitrix_sessid_post() ?></form>',
 		buttons: [btnOK, BX.CDialog.btnCancel],
 		width: 500,
 		height: 150
@@ -117,6 +123,7 @@ function BCPProcessImport()
 
 function BCPSaveTemplateComplete()
 {
+	BCPEmptyWorkflow = false;
 }
 
 <?$v = str_replace("&amp;", "&", POST_FORM_ACTION_URI);?>
@@ -138,18 +145,13 @@ function BCPSaveTemplate(save)
 			'workflowTemplateAutostart=' + encodeURIComponent(workflowTemplateAutostart) + '&' +
 			JSToPHP(arWorkflowParameters, 'arWorkflowParameters') + '&' +
 			JSToPHP(arWorkflowVariables, 'arWorkflowVariables') + '&' +
+			JSToPHP(arWorkflowConstants, 'arWorkflowConstants') + '&' +
 			JSToPHP(arWorkflowTemplate, 'arWorkflowTemplate');
 
 	jsExtLoader.onajaxfinish = BCPSaveTemplateComplete;
-	// TODO: add sessid
 	jsExtLoader.startPost('<?=CUtil::JSEscape($v)?><?if(strpos($v, "?")):?>&<?else:?>?<?endif?><?=bitrix_sessid_get()?>&saveajax=Y'+
 		(save ? '': '&apply=Y'),
 		data);
-
-/*	jsExtLoader.startPost('<?=str_replace("#ID#", intval($ID), $arResult["EDIT_PAGE_TEMPLATE"])?><?if(strpos($arResult["EDIT_PAGE_TEMPLATE"], "?")):?>&<?else:?>?<?endif?>'+
-		'saveajax=Y'+
-		(save ? '': '&apply=Y')
-		, data);*/
 }
 
 function BCPShowParams()
@@ -163,11 +165,12 @@ function BCPShowParams()
 			'<?= bitrix_sessid_get() ?>' + '&' +
 			JSToPHP(arWorkflowParameters, 'arWorkflowParameters')  + '&' +
 			JSToPHP(arWorkflowVariables, 'arWorkflowVariables')  + '&' +
+			JSToPHP(arWorkflowConstants, 'arWorkflowConstants') + '&' +
 			JSToPHP(Array(rootActivity.Serialize()), 'arWorkflowTemplate'), 
 	'height': 500,
 	'width': 800,
 	'resizable' : false
-	})).Show(); 
+	})).Show();
 }
 </script>
 <div style="background-color: #FFFFFF;">
@@ -263,6 +266,7 @@ var arAllActivities = <?=CUtil::PhpToJSObject($arResult['ACTIVITIES'])?>;
 var arAllActGroups = <?=CUtil::PhpToJSObject($arResult['ACTIVITY_GROUPS'])?>;
 var arWorkflowParameters = <?=CUtil::PhpToJSObject($arResult['PARAMETERS'])?>;
 var arWorkflowVariables = <?=CUtil::PhpToJSObject($arResult['VARIABLES'])?>;
+var arWorkflowConstants = <?=CUtil::PhpToJSObject($arResult['CONSTANTS'])?>;
 var arWorkflowTemplate = <?=CUtil::PhpToJSObject($arResult['TEMPLATE'][0])?>;
 
 var workflowTemplateName = <?=CUtil::PhpToJSObject($arResult['TEMPLATE_NAME'])?>;

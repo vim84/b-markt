@@ -38,4 +38,10 @@ $MESS["SUP_RED_ALT"] = "последний раз в обращение писа
 $MESS["SUP_GREY_ALT"] = "обращение закрыто";
 $MESS["SUP_F_SITE"] = "Сайты";
 $MESS["SUP_OVERDUE_MESSAGES"] = "Просроченные сообщения";
+$MESS["SUP_NO"] = "нет";
+$MESS["MAIN_ADMIN_MENU_EDIT"] = "Изменить";
+$MESS["MAIN_NO"] = "нет";
+$MESS["MAIN_YES"] = "да";
+$MESS["SUP_ALL"] = "(все)";
+$MESS["SUP_EXACT_MATCH"] = "Искать точное совпадение при фильтрации";
 ?>

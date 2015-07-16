@@ -22,24 +22,29 @@ $success =
 if(!$success)
 	qiwiWalletXmlResponse(QIWI_WALLET_ERROR_CODE_NONE);
 
-$authType = CSalePaySystemAction::GetParamValue("AUTHORIZATION");;
+if(!isset($GLOBALS["SALE_INPUT_PARAMS"]))
+	$GLOBALS["SALE_INPUT_PARAMS"] = array();
+
+$authType = CSalePaySystemAction::GetParamValue("AUTHORIZATION");
 if($authType == "OPEN")
 {
 	$login 		= CSalePaySystemAction::GetParamValue("SHOP_ID");
 	$password	= CSalePaySystemAction::GetParamValue("NOTICE_PASSWORD");
-
 
 	if(!qiwiWalletCheckAuth($login, $password))
 		qiwiWalletXmlResponse(QIWI_WALLET_ERROR_CODE_AUTH);
 }
 else
 {
-	if(isset($_SERVER['HTTP_X_API_SIGNATURE']))
+	$key = CSalePaySystemAction::GetParamValue("API_PASSWORD");
+
+	if(isset($_SERVER['HTTP_X_API_SIGNATURE']) && strlen($key) > 0)
 	{
 		$key	= CSalePaySystemAction::GetParamValue("API_PASSWORD");
 		$params = $_POST;
 		ksort($params);
 		$check = base64_encode(sha1($key, implode("|", array_values($params))));
+
 		if($check != $_SERVER['HTTP_X_API_SIGNATURE'])
 			qiwiWalletXmlResponse(QIWI_WALLET_ERROR_CODE_AUTH);
 	}

@@ -180,7 +180,7 @@ class CSearchSphinx extends CSearchFullText
 		if($DATE_CHANGE > 0)
 			$DATE_CHANGE -= CTimeZone::GetOffset();
 
-		$result = mysql_query("
+		$sql = "
 			REPLACE INTO ".$this->indexName." (
 				id
 				,title
@@ -221,12 +221,13 @@ class CSearchSphinx extends CSearchFullText
 				,(".$this->rights($arFields["PERMISSIONS"]).")
 				,(".$this->sites($arFields["SITE_ID"]).")
 				,(".$this->params($arFields["PARAMS"]).")
-			)", $this->db
-		);
+			)
+		";
+		$result = mysql_query($sql, $this->db);
 		if ($result)
 			$this->tagsRegister($arFields["SITE_ID"], $arFields["TAGS"]);
 		else
-			throw new \Bitrix\Main\Db\ConnectionException('Sphinx select error', mysql_error($this->db));
+			throw new \Bitrix\Main\Db\SqlQueryException('Sphinx select error', mysql_error($this->db), $sql);
 	}
 
 	public function update($ID, $arFields)
@@ -515,15 +516,10 @@ class CSearchSphinx extends CSearchFullText
 			$arParams[] = $aParamsEx;
 		}
 
-		$arWhere = $this->prepareFilter($arParams);
 		$this->SITE_ID = $arParams["SITE_ID"];
 
-		$cond1 = "";
-		if (isset($arWhere["cond1"]))
-		{
-			$cond1 = $arWhere["cond1"];
-			unset($arWhere["cond1"]);
-		}
+		$arWhere = array();
+		$cond1 = implode("\n\t\t\t\t\t\tand ", $this->prepareFilter($arParams, true));
 
 		$rights = $this->CheckPermissions();
 		if ($rights)
@@ -535,6 +531,9 @@ class CSearchSphinx extends CSearchFullText
 			$arWhere[] = "MATCH('".$this->Escape($strQuery)."')";
 			$this->query = $strQuery;
 		}
+
+		if ($cond1 != "")
+			$arWhere[] = "cond1 = 1";
 
 		if ($strQuery || $this->tags || $bTagsCloud)
 		{
@@ -554,7 +553,6 @@ class CSearchSphinx extends CSearchFullText
 					".($cond1 != ""? ",$cond1 as cond1": "")."
 					from ".$this->indexName."
 					where ".implode("\nand\t", $arWhere)."
-					".($cond1 != ""? " and cond1 = 1": "")."
 					group by tags
 					order by cnt desc
 				";
@@ -569,7 +567,7 @@ class CSearchSphinx extends CSearchFullText
 
 				if (!$r)
 				{
-					throw new \Bitrix\Main\Db\ConnectionException('Sphinx select error', mysql_error($this->db));
+					throw new \Bitrix\Main\Db\SqlQueryException('Sphinx select error', mysql_error($this->db), $sql);
 				}
 				else
 				{
@@ -589,7 +587,6 @@ class CSearchSphinx extends CSearchFullText
 					,if(date_from, date_from, ".$ts.") date_from_nvl
 					from ".$this->indexName."
 					where ".implode("\nand\t", $arWhere)."
-					".($cond1 != ""? " and cond1 = 1": "")."
 					".$this->__PrepareSort($aSort)."
 					limit 0, ".$limit."
 					option max_matches = ".$limit."
@@ -605,7 +602,7 @@ class CSearchSphinx extends CSearchFullText
 
 				if (!$r)
 				{
-					throw new \Bitrix\Main\Db\ConnectionException('Sphinx select error', mysql_error($this->db));
+					throw new \Bitrix\Main\Db\SqlQueryException('Sphinx select error', mysql_error($this->db), $sql);
 				}
 				else
 				{
@@ -701,7 +698,7 @@ class CSearchSphinx extends CSearchFullText
 
 		if (!$r)
 		{
-			throw new \Bitrix\Main\Db\ConnectionException('Sphinx select error', mysql_error($this->db));
+			throw new \Bitrix\Main\Db\SqlQueryException('Sphinx select error', mysql_error($this->db), $sql);
 		}
 		else
 		{
@@ -717,6 +714,36 @@ class CSearchSphinx extends CSearchFullText
 	function getRowFormatter()
 	{
 		return new CSearchSphinxFormatter($this);
+	}
+
+	function filterField($field, $value, $inSelect)
+	{
+		$arWhere = array();
+		if(is_array($value))
+		{
+			if (!empty($value))
+			{
+				$s = "";
+				if ($inSelect)
+				{
+					foreach ($value as $i => $v)
+						$s .= ",".sprintf("%u", crc32($v));
+					$arWhere[] = "in($field $s)";
+				}
+				else
+				{
+					foreach ($value as $i => $v)
+						$s .= ($s? " or ": "")."$field = ".sprintf("%u", crc32($v));
+					$arWhere[] = "($s)";
+				}
+			}
+		}
+		else
+		{
+			if($value !== false)
+				$arWhere[] = "$field = ".sprintf("%u", crc32($value));
+		}
+		return $arWhere;
 	}
 
 	function prepareFilter($arFilter, $inSelect = false)
@@ -747,8 +774,8 @@ class CSearchSphinx extends CSearchFullText
 			switch($field)
 			{
 			case "ITEM_ID":
-				if($val !== false)
-					$arWhere[] = "item_id = ".sprintf("%u", crc32($val));
+			case "=ITEM_ID":
+				$arWhere = array_merge($arWhere, $this->filterField("item_id", $val, $inSelect));
 				break;
 			case "!ITEM_ID":
 				if($val !== false)
@@ -761,30 +788,7 @@ class CSearchSphinx extends CSearchFullText
 				break;
 			case "PARAM1":
 			case "=PARAM1":
-				if(is_array($val))
-				{
-					if (!empty($val))
-					{
-						$s = "";
-						if ($inSelect)
-						{
-							foreach ($val as $i => $v)
-								$s .= ",".sprintf("%u", crc32($v));
-							$arWhere[] = "in(param1_id $s)";
-						}
-						else
-						{
-							foreach ($val as $i => $v)
-								$s .= ($i? " or ": "")."param1_id = ".sprintf("%u", crc32($v));
-							$arWhere[] = "($s)";
-						}
-					}
-				}
-				else
-				{
-					if($val !== false)
-						$arWhere[] = "param1_id = ".sprintf("%u", crc32($val));
-				}
+				$arWhere = array_merge($arWhere, $this->filterField("param1_id", $val, $inSelect));
 				break;
 			case "!PARAM1":
 			case "!=PARAM1":
@@ -793,30 +797,7 @@ class CSearchSphinx extends CSearchFullText
 				break;
 			case "PARAM2":
 			case "=PARAM2":
-				if(is_array($val))
-				{
-					if (!empty($val))
-					{
-						$s = "";
-						if ($inSelect)
-						{
-							foreach ($val as $i => $v)
-								$s .= ",".sprintf("%u", crc32($v));
-							$arWhere[] = "in(param2_id $s)";
-						}
-						else
-						{
-							foreach ($val as $i => $v)
-								$s .= ($i? " or ": "")."param2_id = ".sprintf("%u", crc32($v));
-							$arWhere[] = "($s)";
-						}
-					}
-				}
-				else
-				{
-					if($val !== false)
-						$arWhere[] = "param2_id = ".sprintf("%u", crc32($val));
-				}
+				$arWhere = array_merge($arWhere, $this->filterField("param2_id", $val, $inSelect));
 				break;
 			case "!PARAM2":
 			case "!=PARAM2":
@@ -861,16 +842,15 @@ class CSearchSphinx extends CSearchFullText
 				}
 				break;
 			case "TAGS":
-				$arTags = explode("\",\"", substr($val, 1, -1));
+				$arTags = explode(",", $val);
 				foreach($arTags as $i => $strTag)
 				{
-					$strTag = trim($strTag);
-					if($strTag != "")
-					{
-						$arWhere[] = "tags = ".sprintf("%u", crc32($strTag));
-						$this->tags .= " ".$strTag;
-					}
+					$strTag = trim($strTag, " \n\r\t\"");
+					if ($strTag == "")
+						unset($arTags[$i]);
 				}
+
+				$arWhere = array_merge($arWhere, $this->filterField("tags", $arTags, $inSelect));
 				break;
 			case "PARAMS":
 				if (is_array($val))
@@ -909,7 +889,7 @@ class CSearchSphinx extends CSearchFullText
 				}
 				else
 				{
-					AddMessage2Log("field: $field; val: ".print_r($val,1));
+					AddMessage2Log("field: $field; val: ".$val);
 				}
 				break;
 			}
@@ -1144,12 +1124,13 @@ class CSearchSphinxFormatter
 
 	public function buildExcerpts($str)
 	{
-		$result = mysql_query("CALL SNIPPETS(
+		$sql = "CALL SNIPPETS(
 			'".$this->sphinx->Escape2($str)."'
 			,'".$this->sphinx->Escape($this->sphinx->indexName)."'
 			,'".$this->sphinx->Escape($this->sphinx->query.$this->sphinx->tags)."'
 			,500 as limit
-		)", $this->sphinx->db);
+		)";
+		$result = mysql_query($sql, $this->sphinx->db);
 
 		if ($result)
 		{
@@ -1165,7 +1146,7 @@ class CSearchSphinxFormatter
 		}
 		else
 		{
-			throw new \Bitrix\Main\Db\ConnectionException('Sphinx select error', mysql_error($this->sphinx->db));
+			throw new \Bitrix\Main\Db\SqlQueryException('Sphinx select error', mysql_error($this->sphinx->db), $sql);
 		}
 	}
 }

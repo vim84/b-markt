@@ -423,7 +423,7 @@ BX.adminFormTools = {
 
 	modifyFile: function(el)
 	{
-		if (!BX.hasClass(el, 'adm-designed-file'))
+		if (!BX.hasClass(el, 'adm-designed-file') && !el.hasAttribute('data-fileinput'))
 		{
 			var wrap = BX.create('SPAN', {
 				props: {className: 'adm-input-file'},
@@ -1326,7 +1326,7 @@ BX.adminFav = {
 	lastId: null,
 	add: function(nameToSave,urlToSave,menu_id,module_id,callback)
 	{
-		var urlToSend = BX.adminFav.url + "?act=add",
+		var urlToSend = BX.adminFav.url + "?act=add&lang="+BX.message('LANGUAGE_ID'),
 			data = {
 				sessid: BX.bitrix_sessid(),
 				name: nameToSave

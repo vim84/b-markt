@@ -282,9 +282,19 @@
 					BX.adjust(this.nav, {attrs : {href : "javascript:void(0);", "bx-visibility-status" : "visible"}, html : BX.message("BLOG_C_HIDE")});
 					this.status = "done";
 				}
-				BX.defer(function(){
-					BX.ajax.processScripts(ob.SCRIPT);
-				})();
+				var cnt = 0,
+					func = BX.delegate(function()
+				{
+					cnt++;
+					if (cnt < 100)
+					{
+						if (this.container.childNodes.length > 0)
+							BX.ajax.processScripts(ob.SCRIPT);
+						else
+							BX.defer(func)();
+					}
+				}, this);
+				BX.defer(func)();
 			}
 		},
 		wait : function(status)
@@ -419,9 +429,21 @@
 					}
 				}
 			}
-			BX.defer(function(){
-				BX.ajax.processScripts(ob.SCRIPT);
-			})();
+
+			var cnt = 0,
+			func = function()
+			{
+				cnt++;
+				if (cnt < 100)
+				{
+					var node = BX("record-" + id.join('-') + '-cover');
+					if (node && node.childNodes.length > 0)
+						BX.ajax.processScripts(ob.SCRIPT);
+					else
+						BX.defer(func)();
+				}
+			};
+			BX.defer(func)();
 			BX.onCustomEvent(window, 'OnUCRecordHaveDrawn', [this.ENTITY_XML_ID, data]);
 			BX.onCustomEvent(window, "OnUCFeedChanged", [id]);
 			return true;
@@ -482,8 +504,8 @@
 						this.add([this.ENTITY_XML_ID, parseInt(params["ID"])], data);
 						var node = BX('record-' + id.join('-') + '-cover'),
 							node1 = BX.findChild(node, {className: 'feed-com-block'}, true, false);
-						node1.style.backgroundColor = '#fbf2c8';
 						BX.addClass(node, 'comment-new-answer');
+						BX.addClass(node1, 'feed-com-block-pointer-to-new feed-com-block-new');
 						this.pullNewRecords[id.join('-')] = "done";
 						if (BX('record-' + id[0] + '-corner'))
 						{
@@ -506,9 +528,11 @@
 					BX.addClass(BX('record-' + id[0] + '-corner'), (params["NEW"] == "Y" ? "feed-post-block-yellow-corner" :""));
 					BX('record-' + id[0] + '-corner').removeAttribute("id");
 				}
-				if (params["NEW"] == "Y")
-					node1.style.backgroundColor = '#fbf2c8';
 				BX.addClass(node, 'comment-new-answer');
+				if (params["NEW"] == "Y")
+				{
+					BX.addClass(node1, 'feed-com-block-pointer-to-new feed-com-block-new');
+				}
 				this.pullNewRecords[id.join('-')] = "done";
 				BX.onCustomEvent(window, "OnUCCommentWasPulled", [id, {"messageFields" : params}])
 			}
@@ -550,11 +574,22 @@
 							var container = BX('record-' + this.ENTITY_XML_ID + '-' + id + '-cover');
 							if (!!data['message'] && !!container)
 							{
-								var ob = BX.processHTML(data["message"], false);
+								var
+									ob = BX.processHTML(data["message"], false);
 								container.innerHTML = ob.HTML;
-								BX.defer(function(){
-									BX.ajax.processScripts(ob.SCRIPT);
-								})();
+								var cnt = 0,
+								func = function()
+								{
+									cnt++;
+									if (cnt < 100)
+									{
+										if (container.childNodes.length > 0)
+											BX.ajax.processScripts(ob.SCRIPT);
+										else
+											BX.defer(func)();
+									}
+								};
+								BX.defer(func)();
 								data['okMessage'] = '';
 							}
 							else if (act == "DELETE" && !!data['okMessage'])
@@ -579,13 +614,13 @@
 			{
 				var curPos = BX.pos(node);
 				window.scrollTo(0, curPos["top"]);
-				BX.fx.colorAnimate.addRule('animationRule4',"#fbf2c8","#ffffff", "background-color", 150, 20, false);
-				BX.fx.colorAnimate(BX.findChild(node, {className: 'feed-com-block'}, true, false), 'animationRule4');
-				BX.removeClass(node, 'comment-new-answer');
+				node = BX.findChild(node, {className: 'feed-com-block'}, true, false);
+				BX.removeClass(node, "feed-com-block-pointer-to-new feed-com-block-new");
+				BX.addClass(node, "feed-com-block-pointer");
 			}
 		}
 	};
-	window.FCList.getQuoteData = function(){ return quoteData; }
+	window.FCList.getQuoteData = function(){ return quoteData; };
 
 	window["fcExpandComment"] = function(id, source)
 	{
@@ -620,6 +655,7 @@
 			complete : function(){
 				el.style.cssText = '';
 				el.style.maxHeight = 'none';
+				BX.LazyLoad.showImages(true);
 			}
 		})).animate();
 
@@ -1008,17 +1044,18 @@
 
 			var commentsReadToCounter = 0,
 				size = BX.GetWindowInnerSize(),
-				res = [];
+				res = [],
+				node, pos, node1;
 			for(var i = 0; i < window["UC"]["PULLED"].length; i++)
 			{
-				var
-					node = BX('record-' + window["UC"]["PULLED"][i].join('-') + '-cover'),
-					pos = BX.pos(node);
+				node = BX('record-' + window["UC"]["PULLED"][i].join('-') + '-cover');
+				pos = BX.pos(node);
 				if (pos.top >= scroll.scrollTop && pos.top <= (scroll.scrollTop +size.innerHeight - 20))
 				{
-					BX.fx.colorAnimate.addRule('animationRule3',"#fbf2c8","#fdf9e5", "background-color", 50, 20, false);
-					BX.fx.colorAnimate(BX.findChild(node, {className: 'feed-com-block'}, true, false), 'animationRule3');
 					BX.removeClass(node, 'comment-new-answer');
+					node1 = BX.findChild(node, {className: 'feed-com-block'}, true, false);
+					BX.removeClass(node1, 'feed-com-block-pointer-to-new feed-com-block-new');
+					BX.addClass(node1, 'feed-com-block-read');
 					commentsReadToCounter++;
 				}
 				else

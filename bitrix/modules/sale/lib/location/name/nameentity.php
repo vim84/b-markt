@@ -10,7 +10,8 @@ namespace Bitrix\Sale\Location\Name;
 use Bitrix\Main;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Sale\Location\Assert;
+
+use Bitrix\Sale\Location\Util\Assert;
 
 Loc::loadMessages(__FILE__);
 
@@ -23,9 +24,16 @@ abstract class NameEntity extends Entity\DataManager
 
 	abstract public function getReferenceFieldName();
 
+	/**
+	 * Add translations for $primaryOwner
+	 * @param mixed $primaryOwner Primary key of the item
+	 * @param string[] $names A set of translations for the item
+	 * 
+	 * @return void
+	 */
 	public static function addMultipleForOwner($primaryOwner, $names = array())
 	{
-		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, false, Loc::getMessage('SALE_LOCATION_NAME_NAME_ENTITY_OWNER_NOT_SET_EXCEPTION'));
+		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, '$primaryOwner');
 
 		// nothing to connect to, simply exit
 		if(!is_array($names) || empty($names))
@@ -65,9 +73,19 @@ abstract class NameEntity extends Entity\DataManager
 		$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
 	}
 
+	/**
+	 * Update translations for $primaryOwner
+	 * @param mixed $primaryOwner Primary key of the item
+	 * @param string[] $names A set of translations for the item
+	 * 
+	 * @return void
+	 */
 	public static function updateMultipleForOwner($primaryOwner, $names)
 	{
-		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, false, Loc::getMessage('SALE_LOCATION_NAME_NAME_ENTITY_OWNER_NOT_SET_EXCEPTION'));
+		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, '$primaryOwner');
+
+		if(!is_array($names))
+			$names = array();
 
 		$langField = static::getLanguageFieldName();
 		$refField = static::getReferenceFieldName();
@@ -128,9 +146,15 @@ abstract class NameEntity extends Entity\DataManager
 		}
 	}
 
+	/**
+	 * Delete translations for $primaryOwner
+	 * @param mixed $primaryOwner Primary key of the item
+	 * 
+	 * @return void
+	 */
 	public static function deleteMultipleForOwner($primaryOwner)
 	{
-		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, false, Loc::getMessage('SALE_LOCATION_NAME_NAME_ENTITY_OWNER_NOT_SET_EXCEPTION'));
+		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, '$primaryOwner');
 
 		// hunt existed
 		$listRes = static::getList(array(
@@ -148,6 +172,66 @@ abstract class NameEntity extends Entity\DataManager
 	}
 
 	/**
+	 * Get existed translations for $primaryOwner and add only non-existed ones from $names
+	 * @param mixed $primaryOwner Primary key of the item
+	 * @param string[] $names A set of translations for the item
+	 * 
+	 * @return void
+	 */
+	public static function addAbsentForOwner($primaryOwner, $names, $behaviour = array('TREAT_EMPTY_AS_ABSENT' => true))
+	{
+		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, '$primaryOwner');
+
+		if(!is_array($names))
+			$names = array();
+
+		if(!is_array($behaviour))
+			$behaviour = array();
+		if(!isset($behaviour['TREAT_EMPTY_AS_ABSENT']))
+			$behaviour['TREAT_EMPTY_AS_ABSENT'] = true;
+
+		if(empty($names))
+			return;
+
+		$namesLC = array();
+		foreach($names as $lid => $data)
+		{
+			$namesLC[Assert::castTrimLC($lid)] = $data;
+		}
+		$names = $namesLC;
+
+		$langField = static::getLanguageFieldName();
+		$refField = static::getReferenceFieldName();
+
+		$names2Update = array();
+		$res = static::getList(array('filter' => array('='.$refField => $primaryOwner)));
+		while($item = $res->fetch())
+		{
+			$isEmpty = static::checkEmpty($item);
+
+			if($isEmpty && $behaviour['TREAT_EMPTY_AS_ABSENT'])
+			{
+				$names2Update[$item['ID']] = $names[$item[$langField]];
+			}
+
+			unset($names[$item[$langField]]);
+		}
+
+		foreach($names as $lid => $data)
+		{
+			$data[$langField] = $lid;
+			$data[$refField] = $primaryOwner;
+
+			static::add($data);
+		}
+
+		foreach($names2Update as $id => $data)
+		{
+			static::update($id, $data);
+		}
+	}
+
+	/**
 	 * This method is for internal use only. It may be changed without any notification further, or even mystically disappear.
 	 * 
 	 * @access private
@@ -160,5 +244,10 @@ abstract class NameEntity extends Entity\DataManager
 		$dbConnection = Main\HttpApplication::getConnection();
 
 		$dbConnection->query('delete from '.static::getTableName().' where '.static::getReferenceFieldName().' in ('.$sql.')');
+	}
+
+	protected static function checkEmpty($item)
+	{
+		return !is_array($item) || (string) $item['NAME'] == '';
 	}
 }

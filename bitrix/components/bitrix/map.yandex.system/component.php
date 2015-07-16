@@ -31,10 +31,16 @@ if (!defined('BX_YMAP_SCRIPT_LOADED'))
 	$arResult['MAPS_SCRIPT_URL'] = $scheme.'://api-maps.yandex.ru/'.$arParams['YANDEX_VERSION'].'/?load=package.full&mode=release&lang='.$arParams['LOCALE'].'&wizard=bitrix';
 	if ($arParams['DEV_MODE'] != 'Y')
 	{
-
-		$APPLICATION->AddHeadString(
-			'<script src="'.$arResult['MAPS_SCRIPT_URL'].'" type="text/javascript" charset="utf-8"></script>'
-		);
+		?>
+		<script>
+			var script = document.createElement('script');
+			script.src = '<?=$arResult['MAPS_SCRIPT_URL']?>';
+			(document.head || document.documentElement).appendChild(script);
+			script.onload = function () {
+				this.parentNode.removeChild(script);
+			};
+		</script>
+		<?
 		define('BX_YMAP_SCRIPT_LOADED', 1);
 	}
 }

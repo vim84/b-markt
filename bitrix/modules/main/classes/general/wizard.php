@@ -64,7 +64,7 @@ class CWizardBase
 
 		$this->variablePrefix = "__wiz_";
 		$this->formName = "__wizard_form";
-		$this->formActionScript = $_SERVER["REQUEST_URI"];
+		$this->formActionScript = "/".ltrim($_SERVER["REQUEST_URI"], "/");
 
 		$this->returnOutput = false;
 		$this->defaultVars = Array();

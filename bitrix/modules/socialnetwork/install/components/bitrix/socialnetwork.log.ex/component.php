@@ -12,7 +12,9 @@ if (!CModule::IncludeModule("socialnetwork"))
 }
 
 if (!array_key_exists("CHECK_PERMISSIONS_DEST", $arParams) || strLen($arParams["CHECK_PERMISSIONS_DEST"]) <= 0)
+{
 	$arParams["CHECK_PERMISSIONS_DEST"] = "N";
+}
 
 if (!array_key_exists("USE_FOLLOW", $arParams) || strLen($arParams["USE_FOLLOW"]) <= 0)
 	$arParams["USE_FOLLOW"] = "Y";
@@ -155,7 +157,7 @@ $arParams["SET_LOG_COUNTER"] = (
 $arParams["SET_LOG_PAGE_CACHE"] = ($arParams["LOG_ID"] <= 0 ? "Y" : "N");
 
 $arParams["COMMENT_PROPERTY"] = array("UF_SONET_COM_FILE");
-if (IsModuleInstalled("webdav"))
+if (IsModuleInstalled("webdav") || IsModuleInstalled("disk"))
 	$arParams["COMMENT_PROPERTY"][] = "UF_SONET_COM_DOC";
 
 $arResult["SHOW_UNREAD"] = $arParams["SHOW_UNREAD"] = ($arParams["SET_LOG_COUNTER"] == "Y" ? "Y" : "N");
@@ -206,7 +208,7 @@ if (
 	if(array_key_exists("preset_filter_id", $_REQUEST))
 		CUserOptions::DeleteOption("socialnetwork", "~log_".$arParams["ENTITY_TYPE"]."_".($arParams["ENTITY_TYPE"] == SONET_ENTITY_GROUP ? $arParams["GROUP_ID"] : $arParams["USER_ID"]));
 
-	$arResultPresetFilters = CSocNetLogComponent::ConvertPresetToFilters($arPresetFilters);
+	$arResultPresetFilters = CSocNetLogComponent::ConvertPresetToFilters($arPresetFilters, $arParams);
 
 	// to filter component
 	$oLFC = new CSocNetLogComponent(array(
@@ -1102,7 +1104,9 @@ if (
 
 		$events = GetModuleEvents("socialnetwork", "OnBuildSocNetLogFilter");
 		while ($arEvent = $events->Fetch())
+		{
 			ExecuteModuleEventEx($arEvent, array(&$arFilter, &$filterParams, &$arParams));
+		}
 
 		$arListParams['CUSTOM_FILTER_PARAMS'] = $filterParams;
 	}
@@ -1131,10 +1135,14 @@ if (
 	$arResult["MY_GROUPS_ONLY"] = (isset($arListParams["MY_GROUPS_ONLY"]) ? $arListParams["MY_GROUPS_ONLY"] : false);
 
 	if ($bCurrentUserIsAdmin)
+	{
 		$arListParams["USER_ID"] = "A";
+	}
 
 	if ($arParams["USE_FOLLOW"] == "Y")
+	{
 		$arListParams["USE_FOLLOW"] = "Y";
+	}
 	else
 	{
 		$arListParams["USE_FOLLOW"] = "N";
@@ -1160,8 +1168,25 @@ if (
 	}
 
 	if ($GLOBALS["DB"]->type == "MYSQL")
+	{
 		$arSelectFields[] = "LOG_DATE_TS";
-
+	}
+/*
+	if (
+		!$arResult["IS_FILTERED"]
+		&& (
+			!isset($arListParams["IS_CRM"])
+			|| $arListParams["IS_CRM"] != "Y"
+		)
+	)
+	{
+		$arFilter["__INNER_FILTER"] = array(
+			"LOGIC" => "OR",
+			"!COMMENTS_COUNT" => 0,
+			"!EVENT_ID" => "tasks"
+		);
+	}
+*/
 	$dbEventsID = CSocNetLog::GetList(
 		$arOrder,
 		$arFilter,
@@ -1188,6 +1213,8 @@ if (
 	$cnt = 0;
 	$arResult["arLogTmpID"] = array();
 
+	$arActivity2Log = array();
+
 	$arDiskUFEntity = array(
 		"BLOG_POST" => array(),
 		"SONET_LOG" => array()
@@ -1212,6 +1239,11 @@ if (
 		)
 		{
 			continue;
+		}
+
+		if (in_array($arEventsID["EVENT_ID"], array("crm_activity_add")))
+		{
+			$arActivity2Log[$arEventsID["ENTITY_ID"]] = $arEventsID["ID"];
 		}
 
 		$cnt++;
@@ -1241,8 +1273,47 @@ if (
 		}
 	}
 
+	if(isset($arDiskUFEntity) && (!empty($arDiskUFEntity["SONET_LOG"]) || !empty($arDiskUFEntity["BLOG_POST"])))
+	{
+		$events = GetModuleEvents("socialnetwork", "OnAfterFetchDiskUfEntity");
+		while ($arEvent = $events->Fetch())
+			ExecuteModuleEventEx($arEvent, array($arDiskUFEntity));
+	}
+
+	if (
+		!empty($arActivity2Log)
+		&& CModule::IncludeModule('crm')
+		&& CModule::IncludeModule('tasks')
+	)
+	{
+		$rsActivity = CCrmActivity::GetList(
+			array(),
+			array(
+				"@ID" => array_keys($arActivity2Log),
+				"TYPE_ID" => CCrmActivityType::Task,
+				"CHECK_PERMISSIONS" => "N"
+			),
+			false, 
+			false, 
+			array("ID", "ASSOCIATED_ENTITY_ID")
+		);
+		while(
+			($arActivity = $rsActivity->Fetch())
+			&& (intval($arActivity["ASSOCIATED_ENTITY_ID"]) > 0)
+		)
+		{
+			$taskItem = new CTaskItem(intval($arActivity["ASSOCIATED_ENTITY_ID"]), $GLOBALS["USER"]->GetId());
+			if (!$taskItem->CheckCanRead())
+			{
+				unset($arActivity2Log[$arActivity["ID"]]);
+			}
+		}
+	}
+
 	if ($bFirstPage)
+	{
 		$last_date = $arTmpEventsNew[count($arTmpEventsNew)-1][($arParams["USE_FOLLOW"] == "Y" ? "DATE_FOLLOW" : "LOG_UPDATE")];
+	}
 	elseif (
 		$dbEventsID
 		&& $dbEventsID->NavContinue() 
@@ -1250,10 +1321,12 @@ if (
 	)
 	{
 		$next_page_date = ($arParams["USE_FOLLOW"] == "Y" ? $arEvents["DATE_FOLLOW"] : $arEvents["LOG_UPDATE"]);
-		if ($GLOBALS["USER"]->IsAuthorized())
+		if (
+			$GLOBALS["USER"]->IsAuthorized()
+			&& ($arResult["LAST_LOG_TS"] < MakeTimeStamp($next_page_date))
+		)
 		{
-			if ($arResult["LAST_LOG_TS"] < MakeTimeStamp($next_page_date))
-				$next_page_date = $arResult["LAST_LOG_TS"];
+			$next_page_date = $arResult["LAST_LOG_TS"];
 		}
 	}
 
@@ -1267,9 +1340,18 @@ if (
 		CSocNetLogPages::DeleteEx($user_id, SITE_ID, $arParams["PAGE_SIZE"], (strlen($arResult["COUNTER_TYPE"]) > 0 ? $arResult["COUNTER_TYPE"] : "**"));
 	}
 
+	$bArActivity2LogEmpty = empty($arActivity2Log);
 	foreach ($arTmpEventsNew as $key => $arTmpEvent)
 	{
 		if (
+			$arTmpEvent["EVENT_ID"] == "crm_activity_add"
+			&& !$bArActivity2LogEmpty
+			&& !in_array($arTmpEvent["ID"], $arActivity2Log)
+		)
+		{
+			unset($arTmpEventsNew[$key]);
+		}
+		elseif (
 			!is_array($arPrevPageLogID)
 			|| !in_array($arTmpEvent["ID"], $arPrevPageLogID)
 		)

@@ -42,6 +42,7 @@
 
 		this.path = {};
 		this.path.mainUserOptions = '/desktop_app/options.ajax.php';
+		this.path.pathToAjax = '/desktop_app/im.ajax.php';
 
 		this.tabItems = {};
 		this.tabRedrawTimeout = null;
@@ -63,7 +64,7 @@
 		BX.bind(window, "keydown", BX.delegate(function(e) {
 			if (e.keyCode == 82 && (e.ctrlKey == true || e.metaKey == true))
 			{
-				if (e.shiftKey == true && BXIM)
+				if (e.shiftKey == true && typeof(BXIM) != 'undefined')
 				{
 					BXIM.setLocalConfig('global_msz', false);
 					BX.desktop.apiReady = false;
@@ -107,7 +108,7 @@
 			document.body.insertBefore(this.content, document.body.firstChild);
 		}
 
-		if (this.ready() && !this.enableInVersion(28))
+		if (this.ready() && !this.enableInVersion(26))
 		{
 			BX.PULL.tryConnectSet(null, false);
 			this.notSupported();
@@ -140,11 +141,20 @@
 			}
 		});
 
+		BX.addCustomEvent("onPullRevisionUp", function(newRevision, oldRevision) {
+			BX.PULL.closeConfirm();
+			console.log('NOTICE: Window reload, becouse PULL REVISION UP ('+oldRevision+' -> '+newRevision+')');
+			location.reload();
+		});
 		BX.addCustomEvent("onPullError", BX.delegate(function(error, code) {
 			if (error == 'AUTHORIZE_ERROR')
 			{
 				this.setIconStatus('offline');
-				this.login();
+				this.login(function(){
+					console.log('DESKTOP LOGIN: success after PullError');
+					BX.PULL.setPrivateVar('_pullTryConnect', true);
+					BX.PULL.updateState('13', true);
+				});
 			}
 			else if (error == 'RECONNECT')
 			{
@@ -156,7 +166,18 @@
 			if (error == 'AUTHORIZE_ERROR' || error == 'SEND_ERROR' && sendErrorCode == 'AUTHORIZE_ERROR')
 			{
 				this.setIconStatus('offline');
-				this.login();
+				this.login(BX.delegate(function(){
+					this.setIconStatus('online');
+
+					var textError = 'DESKTOP LOGIN: success after ImError';
+					console.log(textError);
+
+					if (typeof(BXIM) != 'undefined')
+					{
+						BX.desktop.log('phone.'+BXIM.userEmail+'.log', textError);
+						BXIM.messenger.connectionStatus('online', false);
+					}
+				},this));
 			}
 			else if (error == 'CONNECT_ERROR')
 			{
@@ -197,7 +218,6 @@
 			}, this));
 		}
 
-
 		BX.bind(window, "resize", BX.delegate(function(){
 			this.adjustSize();
 		}, this));
@@ -235,6 +255,8 @@
 				BX.desktop.finalizeTrayMenu();
 			});
 		}, this));
+
+		BX.onCustomEvent(window, 'onDesktopInit', [this]);
 	}
 
 	BX.desktop.prototype.notSupported = function ()
@@ -251,6 +273,7 @@
 		BX.ready(function(){
 			document.body.innerHTML = '';
 			document.body.appendChild(updateContent);
+			BX.onCustomEvent(window, 'onDesktopOutdated', [this]);
 		});
 	}
 
@@ -266,6 +289,13 @@
 
 	BX.desktop.prototype.login = function (callback)
 	{
+		var textError = 'DESKTOP LOGIN: try to login';
+		console.log(textError);
+
+		if (typeof(BXIM) != 'undefined')
+		{
+			BX.desktop.log('phone.'+BXIM.userEmail+'.log', textError);
+		}
 		if (!this.ready())
 		{
 			this.windowReload();
@@ -276,9 +306,13 @@
 
 		if (typeof(callback)=='function')
 		{
-			params.success = BX.delegate(function() {
-				callback();
-				this.onCustomEvent('main','BXLoginSuccess', [])
+			params.success = BX.delegate(function(sessid) {
+				if (typeof(sessid) == "string")
+				{
+					BX.message({'bitrix_sessid': sessid});
+				}
+				callback(sessid);
+				this.onCustomEvent('main','BXLoginSuccess', [sessid]);
 			}, this);
 		}
 		else
@@ -290,8 +324,14 @@
 
 		return true;
 	}
-	BX.desktop.prototype.loginSuccessCallback = function ()
+	
+	BX.desktop.prototype.loginSuccessCallback = function (sessid)
 	{
+		if (typeof(sessid) == "string")
+		{
+			BX.message({'bitrix_sessid': sessid});
+		}
+
 		if (!this.ready()) return false;
 
 		this.windowReload()
@@ -341,7 +381,7 @@
 		this.apiReady = false;
 
 		BX.ajax({
-			url: '/bitrix/components/bitrix/im.messenger/im.ajax.php?DESKTOP_LOGOUT',
+			url: this.path.pathToAjax+'?DESKTOP_LOGOUT',
 			method: 'POST',
 			dataType: 'json',
 			timeout: 30,

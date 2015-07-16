@@ -5,4 +5,5 @@ $MESS["IBLOCK_SECTION_PROPERTY_ENTITY_PROPERTY_ID_FIELD"] = "Идентифик�
 $MESS["IBLOCK_SECTION_PROPERTY_ENTITY_SMART_FILTER_FIELD"] = "Показывать в умном фильтре";
 $MESS["IBLOCK_SECTION_PROPERTY_ENTITY_DISPLAY_TYPE_FIELD"] = "Внешний вид";
 $MESS["IBLOCK_SECTION_PROPERTY_ENTITY_DISPLAY_EXPANDED_FIELD"] = "Показать свёрнутым";
+$MESS["IBLOCK_SECTION_PROPERTY_ENTITY_FILTER_HINT_FIELD"] = "Подсказка в умном фильтре";
 ?>

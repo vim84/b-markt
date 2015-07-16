@@ -13,7 +13,9 @@ class CBPVirtualDocument
 
 		static $arDocumentFieldTypes = array();
 		if (!array_key_exists($documentType, $arDocumentFieldTypes))
+		{
 			$arDocumentFieldTypes[$documentType] = self::GetDocumentFieldTypes($documentType);
+		}
 
 		if (!array_key_exists($arFieldType["Type"], $arDocumentFieldTypes[$documentType])
 			|| !$arDocumentFieldTypes[$documentType][$arFieldType["Type"]]["Complex"])
@@ -206,7 +208,7 @@ class CBPVirtualDocument
 		elseif ($arFieldType["Type"] == "S:UserID")
 		{
 			$fieldValue = CBPHelper::UsersArrayToString($fieldValue, null, array("bizproc", "CBPVirtualDocument", $documentType));
-			?><input type="text" size="40" id="id_<?= $arFieldName["Field"] ?>" name="<?= $arFieldName["Field"] ?>" value="<?= htmlspecialcharsbx($fieldValue) ?>"><input type="button" value="..." onclick="BPAShowSelector('id_<?= $arFieldName["Field"] ?>', 'user');"><?
+			?><input type="text" size="40" style="max-width: 85%" id="id_<?= $arFieldName["Field"] ?>" name="<?= $arFieldName["Field"] ?>" value="<?= htmlspecialcharsbx($fieldValue) ?>"><input type="button" value="..." onclick="BPAShowSelector('id_<?= $arFieldName["Field"] ?>', 'user');"><?
 		}
 		elseif ((strpos($arFieldType["Type"], ":") !== false)
 			&& $arFieldType["Multiple"]
@@ -244,7 +246,12 @@ class CBPVirtualDocument
 			{
 				static $fl = true;
 				if ($fl)
+				{
+					if (!empty($_SERVER['HTTP_BX_AJAX']))
+						$GLOBALS["APPLICATION"]->ShowAjaxHead();
 					$GLOBALS["APPLICATION"]->AddHeadScript('/bitrix/js/iblock/iblock_edit.js');
+				}
+
 				$fl = false;
 			}
 
@@ -283,7 +290,7 @@ class CBPVirtualDocument
 					echo htmlspecialcharsbx($a[0]);
 				}
 				?>">
-				<input type="button" value="..." onclick="BPAShowSelector('id_<?= htmlspecialcharsbx($arFieldName["Field"]) ?>_text', 'user');">
+				<input type="button" value="..." onclick="BPAShowSelector('id_<?= htmlspecialcharsbx($arFieldName["Field"]) ?>_text', '<?= htmlspecialcharsbx($arFieldType["BaseType"]) ?>');">
 				<?
 			}
 		}
@@ -352,6 +359,9 @@ class CBPVirtualDocument
 				echo '<table width="100%" border="0" cellpadding="2" cellspacing="2" id="CBPVirtualDocument_'.$arFieldName["Field"].'_Table">';
 
 			$fieldValueTmp = $fieldValue;
+
+			if (sizeof($fieldValue) == 0)
+				$fieldValue[] = null;
 
 			$ind = -1;
 			foreach ($fieldValue as $key => $value)
@@ -788,14 +798,16 @@ class CBPVirtualDocument
 			{
 				if (is_array($fieldValue) && !CBPHelper::IsAssociativeArray($fieldValue))
 				{
+					$checkValue = $arCustomType["GetPublicViewHTML"][0] == "CIBlockPropertyElementList";
 					$result = array();
 					foreach ($fieldValue as $value)
 					{
+						$v = $checkValue && isset($value['VALUE']) ? $value : array('VALUE' => $value);
 						$r = call_user_func_array(
 							$arCustomType["GetPublicViewHTML"],
 							array(
 								array("LINK_IBLOCK_ID" => $arFieldType["Options"]),
-								array("VALUE" => $value),
+								$v,
 								""
 							)
 						);
@@ -892,9 +904,9 @@ class CBPVirtualDocument
 			$arParameters["DocumentStates"]
 		);
 
-		// $arAllowableOperations == null - поток не является автоматом
-		// $arAllowableOperations == array() - в автомате нет допустимых операций
-		// $arAllowableOperations == array("read", ...) - допустимые операции
+		// $arAllowableOperations == null - workflow is not a statemachine
+		// $arAllowableOperations == array() - no allowable operations
+		// $arAllowableOperations == array("read", ...) - allowable operations list
 		if (!is_array($arAllowableOperations))
 			return in_array("author", $arParameters["AllUserGroups"]);
 
@@ -974,9 +986,9 @@ class CBPVirtualDocument
 			$arParameters["DocumentStates"]
 		);
 
-		// $arAllowableOperations == null - поток не является автоматом
-		// $arAllowableOperations == array() - в автомате нет допустимых операций
-		// $arAllowableOperations == array("read", ...) - допустимые операции
+		// $arAllowableOperations == null - workflow is not a statemachine
+		// $arAllowableOperations == array() - no allowable operations
+		// $arAllowableOperations == array("read", ...) - allowable operations list
 		if (!is_array($arAllowableOperations) && $operation != 4)
 			return true;
 
@@ -1190,10 +1202,8 @@ class CBPVirtualDocument
 	}
 
 	/**
-	* Метод по коду документа возвращает ссылку на страницу документа в административной части.
-	*
-	* @param string $documentId - код документа.
-	* @return string - ссылка на страницу документа в административной части.
+	* @param string $documentId
+	* @return string - document admin page url.
 	*/
 	public function GetDocumentAdminPage($documentId)
 	{
@@ -1938,13 +1948,12 @@ class CBPVirtualDocument
 		return $id;
 	}
 
-	// array("read" => "Ета чтение", "write" => "Ета запысь")
 	public function GetAllowableOperations($documentType)
 	{
 		return array("read" => GetMessage("BPVDX_OP_READ"), "create" => GetMessage("BPVDX_OP_CREATE")/*, "admin" => GetMessage("BPVDX_OP_ADMIN")*/);
 	}
 
-	// array("1" => "Админы", 2 => "Гости", 3 => ..., "Author" => "Афтар")
+	// array("1" => "Admins", 2 => "Guests", 3 => ..., "Author" => "Author")
 	public function GetAllowableUserGroups($documentType)
 	{
 		$documentType = trim($documentType);
@@ -1972,7 +1981,8 @@ class CBPVirtualDocument
 
 	public function GetUsersFromUserGroup($group, $documentId)
 	{
-		if (strtolower($group) == "author")
+		$group = strtolower($group);
+		if ($group == "author")
 		{
 			$documentId = intval($documentId);
 			if ($documentId <= 0)
@@ -1984,8 +1994,7 @@ class CBPVirtualDocument
 
 			return array();
 		}
-
-		$group = intval($group);
+		$group = (int)$group;
 		if ($group <= 0)
 			return array();
 
@@ -1994,7 +2003,6 @@ class CBPVirtualDocument
 		$dbUsersList = CUser::GetList(($b = "ID"), ($o = "ASC"), array("GROUPS_ID" => $group, "ACTIVE" => "Y"));
 		while ($arUser = $dbUsersList->Fetch())
 			$arResult[] = $arUser["ID"];
-
 		return $arResult;
 	}
 
@@ -2216,13 +2224,16 @@ class CBPVirtualDocument
 		$documentId = intval($documentId);
 		if ($documentId <= 0)
 			throw new CBPArgumentNullException("documentId");
-
-
 	}
 
 	public function OnAfterIBlockElementDelete($arFields)
 	{
 		CBPDocument::OnDocumentDelete(array("bizproc", "CBPVirtualDocument", $arFields["ID"]), $arErrorsTmp);
+	}
+
+	public static function isExtendedPermsSupported($documentType)
+	{
+		return false;
 	}
 }
 ?>

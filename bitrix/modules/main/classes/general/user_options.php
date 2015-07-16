@@ -137,7 +137,9 @@ class CUserOptions
 				}
 
 				if (!isset(self::$cache[$user_id][$category][$name]))
-					return $default_value;
+				{
+					self::$cache[$user_id][$category][$name] = $default_value;
+				}
 			}
 			else
 			{
@@ -160,7 +162,9 @@ class CUserOptions
 				}
 
 				if (!isset(self::$cache[$user_id][$category][$name]))
-					return $default_value;
+				{
+					self::$cache[$user_id][$category][$name] = $default_value;
+				}
 			}
 		}
 

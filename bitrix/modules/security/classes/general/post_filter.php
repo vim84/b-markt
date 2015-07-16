@@ -43,30 +43,25 @@ class CSecurityXSSDetect
 		if (CSecurityFilterMask::Check(SITE_ID, $_SERVER["REQUEST_URI"]))
 			return;
 
+		if (!preg_match('#</script#', $content)) // Probably does not include the scripts
+			return;
+
 		$filter = new CSecurityXSSDetect();
-		$content = $filter->process($content);
+		$filter->process($content);
 	}
 
 	/**
 	 * @param string $content
-	 * @return string
+	 * @return void
 	 */
-	public function process($content)
+	public function process(&$content)
 	{
-		if(!preg_match('#</script#' ,$content))
-		{
-			// Probably does not include the scripts
-			return $content;
-		}
-
 		$this->variables = new CSecurityXSSDetectVariables();
 		$this->extractVariablesFromArray("\$_GET", $_GET);
 		$this->extractVariablesFromArray("\$_POST", $_POST);
 		$this->extractVariablesFromArray("\$_COOKIE", $_COOKIE);
 		if(!$this->variables->isEmpty())
-			return $this->filter($content);
-		else
-			return $content;
+			$content = $this->filter($content);
 	}
 
 	/**
@@ -284,7 +279,7 @@ class CSecurityXSSDetect
 			return;
 		if(strlen($value) <= 2)
 			return; //too short
-		if(preg_match("/^[^,;\'\"+\-*\/\{\}\[\]\(\)&\\|=\\\\]*\$/D", $value))
+		if(preg_match("/^(?P<quot>[\"']?)[^,;+\-*\/\{\}\[\]\(\)&\\|=\\\\]*(?P=quot)\$/D", $value))
 			return; //there is no potantially dangerous code
 		if(preg_match("/^[,0-9_-]*\$/D", $value))
 			return; //there is no potantially dangerous code
@@ -300,10 +295,16 @@ class CSecurityXSSDetect
 	 */
 	protected function extractVariablesFromArray($name, $array)
 	{
-		if(is_array($array))
+		if(!is_array($array))
+			return;
+
+		foreach($array as $key => $value)
 		{
-			foreach($array as $key => $value)
-				$this->addVariable($name."[".$key."]", $value);
+			$variableName = sprintf('%s[%s]', $name, $key);
+			if (is_array($value))
+				$this->extractVariablesFromArray($variableName, $value);
+			else
+				$this->addVariable($variableName, $value);
 		}
 	}
 

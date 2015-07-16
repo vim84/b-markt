@@ -246,7 +246,6 @@ BizProcActivity = function()
 		this.height = 0;
 		this.width = 0;
 
-		// размещаем его детей
 		var activity;
 		this.childActivities = [];
 
@@ -301,7 +300,7 @@ BizProcActivity = function()
 	ob.Settings = function (e)
 	{
 		(new BX.CDialog({
-			'content_url': "/bitrix/admin/"+MODULE_ID+"_bizproc_activity_settings.php?mode=public&bxpublic=Y&lang=&entity="+ENTITY,
+			'content_url': "/bitrix/admin/"+MODULE_ID+"_bizproc_activity_settings.php?mode=public&bxpublic=Y&lang="+BX.message('LANGUAGE_ID')+"&entity="+ENTITY,
 			'content_post': 'id='+encodeURIComponent(ob.Name)+ '&' +
 				'decode=Y&' +
 				'document_type=' + encodeURIComponent(document_type) + '&' +
@@ -335,7 +334,6 @@ BizProcActivity = function()
 			{
 				while(ch.childActivities.length > 0)
 				{
-					//debugger;
 					ch.childActivities[0].parentActivity.RemoveChild(ch.childActivities[0]);
 				}
 
@@ -366,7 +364,6 @@ BizProcActivity = function()
 			ob.div.className = 'activityerr';
 	}
 
-	// любое действие должно уметь рисовать себя
 	ob.Draw = function (divC)
 	{
 		ob.div = divC.appendChild(document.createElement('DIV'));
@@ -547,7 +544,6 @@ function _DragNDrop()
 
 	ob.RemoveHandler = function (eventName, i)
 	{
-		//debugger;
 		if(ob.Handlers[eventName][i])
 			delete ob.Handlers[eventName][i];
 	}

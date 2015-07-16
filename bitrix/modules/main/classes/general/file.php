@@ -6,10 +6,14 @@
  * @copyright 2001-2013 Bitrix
  */
 
+use Bitrix\Main\IO;
+
 IncludeModuleLangFile(__FILE__);
 
 class CAllFile
 {
+	protected static $enableTrackingResizeImage = false;
+
 	public static function SaveForDB(&$arFields, $field, $strSavePath)
 	{
 		$arFile = $arFields[$field];
@@ -74,11 +78,8 @@ class CAllFile
 			}
 		}
 
-		//safe extention without "."
-		$fileExt = GetFileExtension($fileName);
-
 		//.jpe is not image type on many systems
-		if($bSkipExt == false && strtolower($fileExt) == "jpe")
+		if($bSkipExt == false && strtolower(GetFileExtension($fileName)) == "jpe")
 		{
 			$fileName = substr($fileName, 0, -4).".jpg";
 		}
@@ -89,7 +90,7 @@ class CAllFile
 		if(!$originalName)
 		{
 			//name is md5-generated:
-			$fileName = md5(uniqid("", true)).($bSkipExt == true? '' : ".".$fileExt);
+			$fileName = md5(uniqid("", true)).($bSkipExt == true || ($ext = GetFileExtension($fileName)) == ''? '' : ".".$ext);
 		}
 
 		return $fileName;
@@ -145,14 +146,24 @@ class CAllFile
 			return false;
 		}
 
-		if (array_key_exists("content", $arFile))
+		if (isset($arFile["content"]))
 		{
-			if (!array_key_exists("size", $arFile))
+			if (!isset($arFile["size"]))
+			{
 				$arFile["size"] = CUtil::BinStrlen($arFile["content"]);
+			}
 		}
-		elseif(file_exists($arFile["tmp_name"]))
+		else
 		{
-			$arFile["size"] = filesize($arFile["tmp_name"]);
+			try
+			{
+				$file = new IO\File($arFile["tmp_name"]);
+				$arFile["size"] = $file->getSize();
+			}
+			catch(IO\IoException $e)
+			{
+				$arFile["size"] = 0;
+			}
 		}
 
 		$arFile["ORIGINAL_NAME"] = $strFileName;
@@ -224,7 +235,7 @@ class CAllFile
 			}
 			else
 			{
-				$strFileExt = ($bSkipExt == true? '' : ".".GetFileExtension($strFileName));
+				$strFileExt = ($bSkipExt == true || ($ext = GetFileExtension($strFileName)) == ''? '' : ".".$ext);
 				while(true)
 				{
 					if(substr($strSavePath, -1, 1) <> "/")
@@ -369,7 +380,7 @@ class CAllFile
 			) VALUES (
 				".intval($arFields["HEIGHT"]).",
 				".intval($arFields["WIDTH"]).",
-				".intval($arFields["FILE_SIZE"]).",
+				".round(floatval($arFields["FILE_SIZE"])).",
 				'".$DB->ForSql($arFields["CONTENT_TYPE"], 255)."',
 				'".$DB->ForSql($arFields["SUBDIR"], 255)."',
 				'".$DB->ForSQL($arFields["FILE_NAME"], 255)."',
@@ -921,7 +932,7 @@ class CAllFile
 			return $error;
 		}
 
-		if($intMaxSize > 0 && intval($arFile["size"]) > $intMaxSize)
+		if($intMaxSize > 0 && $arFile["size"] > $intMaxSize)
 		{
 			return GetMessage("FILE_BAD_SIZE")." (".CFile::FormatSize($intMaxSize).").";
 		}
@@ -2074,6 +2085,10 @@ function ImgShw(ID, width, height, alt)
 			}
 		}
 
+		if(CFile::isEnabledTrackingResizeImage())
+		{
+			header("X-Bitrix-Resize-Image: {$arSize["width"]}_{$arSize["height"]}_{$resizeType}");
+		}
 		if (class_exists("imagick") && function_exists('memory_get_usage'))
 		{
 			//When memory limit reached we'll try to use ImageMagic
@@ -2281,8 +2296,8 @@ function ImgShw(ID, width, height, alt)
 						array( -$k,    -$k, -$k)
 					);
 
-					if(function_exists("imageconvolution") && !$bHasAlpha)
-						imageconvolution($picture, $mask, 1, 0);
+					if(function_exists("imageconvolution"))
+						CFile::imageconvolution_fix($picture, $mask, 1, 0);
 					else
 						CFile::imageconvolution($picture, $mask, 1, 0);
 				}
@@ -2341,6 +2356,51 @@ function ImgShw(ID, width, height, alt)
 			}
 		}
 		imagedestroy($backup);
+	}
+
+	function imageconvolution_fix($picture, $matrix, $div = 1, $offset = 0)
+	{
+		$x = 0;
+		$y = 0;
+		$sx = imagesx($picture);
+		$sy = imagesy($picture);
+
+		$alpha = (imagecolorat($picture, $x, $y) >> 24) & 0xFF;
+		$new_r = $new_g = $new_b = 0;
+
+		for ($j = 0; $j < 3; ++$j)
+		{
+			$yv = $y - 1 + $j;
+			if($yv < 0)
+				$yv = 0;
+			elseif($yv >= $sy)
+				$yv = $sy - 1;
+
+			for ($i = 0; $i < 3; ++$i)
+			{
+				$xv = $x - 1 + $i;
+				if($xv < 0)
+					$xv = 0;
+				elseif($xv >= $sx)
+					$xv = $sx - 1;
+
+				$m = $matrix[$j][$i];
+				$rgb = imagecolorat($picture, $xv, $yv);
+				$new_r += (($rgb >> 16) & 0xFF) * $m;
+				$new_g += (($rgb >> 8) & 0xFF) * $m;
+				$new_b += ($rgb & 0xFF) * $m;
+			}
+		}
+
+		$new_r = ($new_r > 255)? 255 : (($new_r < 0)? 0: $new_r);
+		$new_g = ($new_g > 255)? 255 : (($new_g < 0)? 0: $new_g);
+		$new_b = ($new_b > 255)? 255 : (($new_b < 0)? 0: $new_b);
+
+		$new_pxl = imagecolorallocatealpha($picture, $new_r, $new_g, $new_b, $alpha);
+
+		imageconvolution($picture, $matrix, $div, $offset);
+		//Fix left top corner
+		imagesetpixel($picture, $x, $y, $new_pxl);
 	}
 
 	function ImageFlipHorizontal($picture)
@@ -2414,6 +2474,7 @@ function ImgShw(ID, width, height, alt)
 
 		$fastDownload = (COption::GetOptionString('main', 'bx_fast_download', 'N') == 'Y');
 
+		$attachment_name = "";
 		$content_type = "";
 		$specialchars = false;
 		$force_download = false;
@@ -2430,6 +2491,8 @@ function ImgShw(ID, width, height, alt)
 				$force_download = $arOptions["force_download"];
 			if(isset($arOptions["cache_time"]))
 				$cache_time = intval($arOptions["cache_time"]);
+			if(isset($arOptions["attachment_name"]))
+				$attachment_name = $arOptions["attachment_name"];
 		}
 
 		if($cache_time < 0)
@@ -2496,6 +2559,11 @@ function ImgShw(ID, width, height, alt)
 
 		$name = str_replace(array("\n", "\r"), '', $name);
 
+		if($attachment_name)
+			$attachment_name = str_replace(array("\n", "\r"), '', $attachment_name);
+		else
+			$attachment_name = $name;
+
 		if(!$force_download)
 		{
 			if(!static::IsImage($name, $content_type) || $arFile["HEIGHT"] <= 0 || $arFile["WIDTH"] <= 0)
@@ -2512,21 +2580,24 @@ function ImgShw(ID, width, height, alt)
 			$specialchars = false;
 		}
 
-		$io = CBXVirtualIo::GetInstance();
-
 		$src = null;
+		$file = new IO\File($_SERVER["DOCUMENT_ROOT"].$filename);
 		if(substr($filename, 0, 1) == "/")
 		{
-			$src = fopen($io->GetPhysicalName($_SERVER["DOCUMENT_ROOT"].$filename), "rb");
-			if(!$src)
+			try
+			{
+				$src = $file->open(IO\FileStreamOpenMode::READ);
+			}
+			catch(IO\IoException $e)
+			{
 				return false;
+			}
 		}
 		else
 		{
 			if(!$fastDownload)
 			{
-				$src = new CHTTP;
-				$src->follow_redirect = true;
+				$src = new \Bitrix\Main\Web\HttpClient();
 			}
 			elseif(intval($arFile['HANDLER_ID']) > 0)
 			{
@@ -2538,7 +2609,7 @@ function ImgShw(ID, width, height, alt)
 		while(ob_end_clean());
 
 		$cur_pos = 0;
-		$filesize = intval($arFile["FILE_SIZE"]) > 0 ? $arFile["FILE_SIZE"] : $arFile["size"];
+		$filesize = ($arFile["FILE_SIZE"] > 0? $arFile["FILE_SIZE"] : $arFile["size"]);
 		$size = $filesize-1;
 		$p = strpos($_SERVER["HTTP_RANGE"], "=");
 		if(intval($p)>0)
@@ -2547,8 +2618,8 @@ function ImgShw(ID, width, height, alt)
 			$p = strpos($bytes, "-");
 			if($p !== false)
 			{
-				$cur_pos = intval(substr($bytes, 0, $p));
-				$size = intval(substr($bytes, $p+1));
+				$cur_pos = floatval(substr($bytes, 0, $p));
+				$size = floatval(substr($bytes, $p+1));
 				if ($size <= 0)
 				{
 					$size = $filesize - 1;
@@ -2562,9 +2633,14 @@ function ImgShw(ID, width, height, alt)
 		}
 
 		if($arFile["tmp_name"] <> '')
-			$filetime = filemtime($io->GetPhysicalName($arFile["tmp_name"]));
+		{
+			$tmpFile = new IO\File($arFile["tmp_name"]);
+			$filetime = $tmpFile->getModificationTime();
+		}
 		else
+		{
 			$filetime = intval(MakeTimeStamp($arFile["TIMESTAMP_X"]));
+		}
 
 		if($_SERVER["REQUEST_METHOD"] == "HEAD")
 		{
@@ -2604,7 +2680,8 @@ function ImgShw(ID, width, height, alt)
 				}
 			}
 
-			$utfName = CHTTP::urnEncode($name, "UTF-8");
+			$utfName = CHTTP::urnEncode($attachment_name, "UTF-8");
+			$translitName = CUtil::translit($attachment_name, LANGUAGE_ID, array("max_len"=>1024, "safe_chars"=>".", "replace_space" => '-'));
 
 			if($force_download)
 			{
@@ -2619,7 +2696,7 @@ function ImgShw(ID, width, height, alt)
 					CHTTP::SetStatus("200 OK");
 
 				header("Content-Type: ".$content_type);
-				header("Content-Disposition: attachment; filename=\"".$name."\"; filename*=utf-8''".$utfName);
+				header("Content-Disposition: attachment; filename=\"".$translitName."\"; filename*=utf-8''".$utfName);
 				header("Content-Transfer-Encoding: binary");
 				header("Content-Length: ".($size-$cur_pos+1));
 				if(is_resource($src))
@@ -2631,7 +2708,7 @@ function ImgShw(ID, width, height, alt)
 			else
 			{
 				header("Content-Type: ".$content_type);
-				header("Content-Disposition: inline; filename=\"".$name."\"; filename*=utf-8''".$utfName);
+				header("Content-Disposition: inline; filename=\"".$translitName."\"; filename*=utf-8''".$utfName);
 			}
 
 			if($cache_time > 0)
@@ -2673,11 +2750,11 @@ function ImgShw(ID, width, height, alt)
 					{
 						while(!feof($src))
 							echo htmlspecialcharsbx(fread($src, 32768));
-						fclose($src);
+						$file->close();
 					}
 					else
 					{
-						echo htmlspecialcharsbx($src->Get($filename));
+						echo htmlspecialcharsbx($src->get($filename));
 					}
 					echo "<", "/pre", ">";
 				}
@@ -2685,25 +2762,27 @@ function ImgShw(ID, width, height, alt)
 				{
 					if(is_resource($src))
 					{
-						fseek($src, $cur_pos);
+						$file->seek($cur_pos);
 						while(!feof($src) && ($cur_pos <= $size))
 						{
 							$bufsize = 131072; //128K
-							if($bufsize+$cur_pos > $size)
+							if($cur_pos + $bufsize > $size)
 								$bufsize = $size - $cur_pos + 1;
 							$cur_pos += $bufsize;
 							echo fread($src, $bufsize);
 						}
-						fclose($src);
+						$file->close();
 					}
 					else
 					{
 						$fp = fopen("php://output", "wb");
-						$src->Download($filename, $fp);
+						$src->setOutputStream($fp);
+						$src->get($filename);
 					}
 				}
 			}
 		}
+		CMain::FinalActions();
 		die();
 	}
 
@@ -3140,7 +3219,7 @@ function ImgShw(ID, width, height, alt)
 	function NormalizeContentType($contentType)
 	{
 		$ct = strtolower($contentType);
-		$ct = str_replace(array("\r", "\n"), "", $ct);
+		$ct = str_replace(array("\r", "\n", "\0"), "", $ct);
 
 		if (strpos($ct, "excel") !== false || strpos($ct, "officedocument.spreadsheetml.sheet") !== false)
 		{
@@ -3278,6 +3357,21 @@ function ImgShw(ID, width, height, alt)
 		{
 			return false;
 		}
+	}
+
+	public static function isEnabledTrackingResizeImage()
+	{
+		 return static::$enableTrackingResizeImage;
+	}
+
+	public static function enableTrackingResizeImage()
+	{
+		static::$enableTrackingResizeImage = true;
+	}
+
+	public static function disableTrackingResizeImage()
+	{
+		static::$enableTrackingResizeImage = false;
 	}
 }
 

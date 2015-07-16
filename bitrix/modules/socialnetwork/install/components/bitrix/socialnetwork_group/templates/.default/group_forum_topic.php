@@ -52,7 +52,7 @@ include("util_group_profile.php");
 	$component,
 	array("HIDE_ICONS" => "Y"));
 ?><?
-if (!empty($arInfo) && $arInfo["PERMISSION"] >= "E" && !$arInfo["HideArchiveLinks"]):
+if (!empty($arInfo) && $arInfo["PERMISSION"] > "E" && !$arInfo["HideArchiveLinks"]):
 ?><div class='forum_post_form'><?$APPLICATION->IncludeComponent(
 	"bitrix:socialnetwork.forum.post_form", 
 	"", 

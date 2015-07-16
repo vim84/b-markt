@@ -31,7 +31,6 @@ SequenceActivity = function()
 		oActivity.Init({'id': Math.random(), 'childs': []});
 		ob.AddActivity(oActivity, this.ind);
 		*/
-		//debugger;
 		_SequenceActivityCurClick = ob;
 		var jsMnu_WFAct = [];
 		var groupId;
@@ -44,6 +43,9 @@ SequenceActivity = function()
 					continue;
 
 				if(act_i == 'setstateactivity' && rootActivity.Type == ob.Type)
+					continue;
+				// hide deprecated
+				if(act_i == 'calendaractivity' || act_i == 'taskactivity' )
 					continue;
 
 				oSubMenu.push({'ICON': 'url('+arAllActivities[act_i]['ICON']+')', 'TEXT': '<img src="'+(arAllActivities[act_i]['ICON']?arAllActivities[act_i]['ICON']:'/bitrix/images/bizproc/act_icon.gif')+'" align="left" style="margin-right: 7px;margin-left: 0px">' + '<b>' + HTMLEncode(arAllActivities[act_i]['NAME']) + '</b><br>' + HTMLEncode(arAllActivities[act_i]['DESCRIPTION']), 
@@ -106,7 +108,6 @@ SequenceActivity = function()
 			if(DragNDrop.obj.parentActivity)
 			{
 
-				// найдем на какой позиции перетаскиваемый элемент был в своем действии
 				var i, pos = -1, pa = DragNDrop.obj.parentActivity;
 				for(i = 0; i<pa.childActivities.length; i++)
 				{
@@ -117,10 +118,8 @@ SequenceActivity = function()
 					}
 				}
 
-				// найдем на какую позицию его перетаскивают
 				if(pa.Name != ob.Name || (pos != ob.lastDrop.ind && pos+1 != ob.lastDrop.ind))
 				{
-					// проверить чтобы не в самого себя был перенос
 					var d = ob, s = false;
 
 					while(d)
@@ -135,15 +134,13 @@ SequenceActivity = function()
 
 					if(s)
 					{
-						alert('Вы не можете переместить действие в подчиненное этому же действию!');
+						alert(BPMESS['BPSA_ERROR_MOVE']);
 					}
 					else
 					{
-						// удалим его со старого места
 						pa.childsContainer.deleteRow(pos*2 + 1 + pa.iHead);
 						pa.childsContainer.deleteRow(pos*2 + 1 + pa.iHead);
 
-						// пересчитаем все счетчики на прошлом месте
 						for(var j = pos; j<pa.childActivities.length - 1; j++)
 							pa.childActivities[j] = pa.childActivities[j+1];
 
@@ -152,7 +149,6 @@ SequenceActivity = function()
 						for(j = 0; j <= pa.childActivities.length; j++)
 							pa.childsContainer.rows[j*2 + pa.iHead].cells[0].childNodes[0].ind = j;
 
-						// переставим все действие на новое место
 						oActivity = DragNDrop.obj;
 						ob.AddActivity(oActivity, ob.lastDrop.ind);
 					}

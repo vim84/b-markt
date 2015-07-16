@@ -529,25 +529,35 @@ class PHPParser
 			self::$arAllStr = $arAllStr;
 			$func_name = preg_replace_callback("'\x01([0-9]+)\x02's", "PHPParser::getString", $func_name);
 
-			switch (strtoupper($func_name))
+			$isComponent2Begin = false;
+			$arIncludeComponentFunctionStrings = self::getComponentFunctionStrings();
+			foreach($arIncludeComponentFunctionStrings as $functionName)
 			{
-				case '$APPLICATION->INCLUDECOMPONENT(':
-					$params = substr($new_str, $pos + 1);
-					$arParams = PHPParser::GetParams($params);
+				$component2Begin = strtoupper($functionName).'(';
+				if(strtoupper($func_name) == $component2Begin)
+				{
+					$isComponent2Begin = true;
+					break;
+				}
+			}
+			if($isComponent2Begin)
+			{
+				$params = substr($new_str, $pos + 1);
+				$arParams = PHPParser::GetParams($params);
 
-					$arIncludeParams = array();
-					$arFuncParams = array();
-					PHPParser::GetParamsRec($arParams[2], $arAllStr, $arIncludeParams);
-					PHPParser::GetParamsRec($arParams[4], $arAllStr, $arFuncParams);
+				$arIncludeParams = array();
+				$arFuncParams = array();
+				PHPParser::GetParamsRec($arParams[2], $arAllStr, $arIncludeParams);
+				PHPParser::GetParamsRec($arParams[4], $arAllStr, $arFuncParams);
 
-					return array(
-						"COMPONENT_NAME" => PHPParser::ReplString($arParams[0], $arAllStr),
-						"TEMPLATE_NAME" => PHPParser::ReplString($arParams[1], $arAllStr),
-						"PARAMS" => $arIncludeParams,
-						"PARENT_COMP" => $arParams[3],
-						"VARIABLE" => $var_name,
-						"FUNCTION_PARAMS" => $arFuncParams,
-					);
+				return array(
+					"COMPONENT_NAME" => PHPParser::ReplString($arParams[0], $arAllStr),
+					"TEMPLATE_NAME" => PHPParser::ReplString($arParams[1], $arAllStr),
+					"PARAMS" => $arIncludeParams,
+					"PARENT_COMP" => $arParams[3],
+					"VARIABLE" => $var_name,
+					"FUNCTION_PARAMS" => $arFuncParams,
+				);
 			}
 		}
 		return false;
@@ -846,5 +856,13 @@ class PHPParser
 			$title = $regs[1];
 
 		return $title;
+	}
+
+	function getComponentFunctionStrings()
+	{
+		return array(
+			'$APPLICATION->IncludeComponent',
+			'EventMessageThemeCompiler::includeComponent'
+		);
 	}
 }

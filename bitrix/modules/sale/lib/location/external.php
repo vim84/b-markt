@@ -11,6 +11,8 @@ use Bitrix\Main;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location\Util\Assert;
+
 Loc::loadMessages(__FILE__);
 
 class ExternalTable extends Entity\DataManager
@@ -27,7 +29,7 @@ class ExternalTable extends Entity\DataManager
 
 	public static function addMultipleForOwner($primaryOwner, $external = array())
 	{
-		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, false, Loc::getMessage('SALE_LOCATION_EXTERNAL_ENTITY_OWNER_NOT_SET_EXCEPTION'));
+		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, '$primaryOwner');
 
 		// nothing to connect to, simply exit
 		if(!is_array($external) || empty($external))
@@ -54,7 +56,7 @@ class ExternalTable extends Entity\DataManager
 
 	public static function updateMultipleForOwner($primaryOwner, $external)
 	{
-		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, false, Loc::getMessage('SALE_LOCATION_EXTERNAL_ENTITY_OWNER_NOT_SET_EXCEPTION'));
+		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, '$primaryOwner');
 
 		$res = self::getList(array(
 			'filter' => array('LOCATION_ID' => $primaryOwner)
@@ -102,7 +104,7 @@ class ExternalTable extends Entity\DataManager
 
 	public static function deleteMultipleForOwner($primaryOwner)
 	{
-		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, false, Loc::getMessage('SALE_LOCATION_EXTERNAL_ENTITY_OWNER_NOT_SET_EXCEPTION'));
+		$primaryOwner = Assert::expectIntegerPositive($primaryOwner, '$primaryOwner');
 
 		$listRes = self::getList(array(
 			'filter' => array('LOCATION_ID' => $primaryOwner),

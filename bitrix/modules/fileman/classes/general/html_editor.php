@@ -108,6 +108,62 @@ class CHTMLEditor
 									return BXHtmlEditor.editors[id].config.beforeUnloadMessage || BX.message('BXEdExitConfirm');
 								}
 							}
+						},
+
+						ReplaceNewLines : function(content)
+						{
+							content = content.replace(/<[^<>]*br>\n/ig, '#BX_BR#');
+							var contentTmp;
+							while (true)
+							{
+								contentTmp = content.replace(/([\s|\S]+)\n([\s|\S]+)/gi, function (s, s1, s2)
+									{
+										if (s1.match(/>\s*$/) || s2.match(/^\s*</))
+											return s;
+										return s1 + '#BX_BR#' + s2;
+									}
+								);
+								if (contentTmp == content)
+								{
+									break;
+								}
+								else
+								{
+									content = contentTmp;
+								}
+							}
+
+							content = content.replace(/#BX_BR#/ig, "<br>\n");
+
+							return content;
+						},
+
+						ReplaceNewLinesBack: function(content)
+						{
+							content = content.replace(/<[^<>]*br>\n/ig, '#BX_BR#');
+							var contentTmp;
+							while (true)
+							{
+								contentTmp = content.replace(/([\s|\S]+)#BX_BR#([\s|\S]+)/gi, function (s, s1, s2)
+									{
+										if (s1.match(/>\s*$/) || s2.match(/^\s*</))
+											return s;
+										return s1 + '\n' + s2;
+									}
+								);
+								if (contentTmp == content)
+								{
+									break;
+								}
+								else
+								{
+									content = contentTmp;
+								}
+							}
+
+							content = content.replace(/#BX_BR#/ig, "<br>\n");
+
+							return content;
 						}
 					};
 
@@ -152,11 +208,8 @@ class CHTMLEditor
 		));
 		CUtil::InitJSCore(array('html_editor'));
 
-		$db_events = GetModuleEvents("fileman", "OnBeforeHTMLEditorScriptRuns");
-		while($arEvent = $db_events->Fetch())
-		{
+		foreach(GetModuleEvents("fileman", "OnBeforeHTMLEditorScriptRuns", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent);
-		}
 
 		$this->bAutorized = is_object($USER) && $USER->IsAuthorized();
 		if (isset($arParams['allowPhp']) && !isset($arParams['bAllowPhp']))
@@ -172,7 +225,7 @@ class CHTMLEditor
 		$arParams["bodyId"] = COption::GetOptionString("fileman", "editor_body_id", "");
 
 		$this->content = $arParams['content'];
-		$this->inputName = isset($arParams['inputName']) ? $arParams['inputName'] : 'html_editor_content';
+		$this->inputName = isset($arParams['inputName']) ? $arParams['inputName'] : $this->name;
 		$this->inputId = isset($arParams['inputId']) ? $arParams['inputId'] : 'html_editor_content_id';
 
 		$arParams["bbCode"] = (isset($arParams["bbCode"]) && $arParams["bbCode"]) || (isset($arParams["BBCode"]) && $arParams["BBCode"]);
@@ -206,9 +259,14 @@ class CHTMLEditor
 		{
 			$templateId = $arParams['templateId'];
 		}
-		elseif (defined(SITE_TEMPLATE_ID))
+		elseif (defined('SITE_TEMPLATE_ID'))
 		{
 			$templateId = SITE_TEMPLATE_ID;
+		}
+
+		if (!isset($templateId) && isset($_GET['siteTemplateId']))
+		{
+			$templateId = $_GET['siteTemplateId'];
 		}
 
 		if ($arParams["bbCode"])
@@ -247,7 +305,7 @@ class CHTMLEditor
 
 				if (!isset($templateId))
 				{
-					$templateId = $first;
+					$templateId = $first ? $first : '';
 				}
 			}
 
@@ -262,9 +320,13 @@ class CHTMLEditor
 			'taskbar_shown' => 0,
 			'taskbar_width' => 250,
 			'specialchars' => false,
-			'clean_empty_spans' => 'Y'
+			'clean_empty_spans' => 'Y',
+			'paste_clear_colors' => 'Y',
+			'paste_clear_borders' => 'Y',
+			'paste_clear_decor' => 'Y',
+			'link_dialog_type' => 'internal'
 		);
-		$settingsKey = "user_settings_".$arParams["bbCode"];
+		$settingsKey = "user_settings_".$arParams["bbCode"]."_".$this->id;
 
 		$curSettings = CUserOptions::GetOption("html_editor", $settingsKey, false, $USER->GetId());
 		if (is_array($curSettings))
@@ -300,7 +362,7 @@ class CHTMLEditor
 
 		$this->jsConfig = array(
 			'id' => $this->id,
-			'inputName' => $this->name,
+			'inputName' => $this->inputName,
 			'content' => $this->content,
 			'width' => $arParams['width'],
 			'height' => $arParams['height'],
@@ -309,6 +371,7 @@ class CHTMLEditor
 			'templates' => $arTemplates,
 			'templateId' => $templateId,
 			'templateParams' => $templateParams,
+			'componentFilter' => $arParams['componentFilter'],
 			'snippets' => $arSnippets,
 			'placeholder' => isset($arParams['placeholder']) ? $arParams['placeholder'] : 'Text here...',
 			'actionUrl' => $arParams["actionUrl"],
@@ -331,12 +394,23 @@ class CHTMLEditor
 			'taskbarWidth' => $userSettings['taskbar_width'],
 			'lastSpecialchars' => $userSettings['specialchars'] ? explode('|', $userSettings['specialchars']) : false,
 			'cleanEmptySpans' => $userSettings['clean_empty_spans'] != 'N',
+			'pasteSetColors' => $userSettings['paste_clear_colors'] != 'N',
+			'pasteSetBorders' => $userSettings['paste_clear_borders'] != 'N',
+			'pasteSetDecor' => $userSettings['paste_clear_decor'] != 'N',
+			'linkDialogType' => $userSettings['link_dialog_type'],
 			'lazyLoad' => $arParams["lazyLoad"]
 		);
+
 		if (($this->bAllowPhp || $arParams['limitPhpAccess']) && $arParams["showTaskbars"] !== false)
 		{
-			$this->jsConfig['components'] = self::GetComponents($templateId);
+			$this->jsConfig['components'] = self::GetComponents($templateId, false, $arParams['componentFilter']);
 		}
+
+		if (isset($arParams["initAutosave"]))
+			$this->jsConfig["initAutosave"] = $arParams["initAutosave"];
+
+		if (isset($arParams["useFileDialogs"]))
+			$this->jsConfig["useFileDialogs"] = $arParams["useFileDialogs"];
 
 		if (isset($arParams["showTaskbars"]))
 			$this->jsConfig["showTaskbars"] = $arParams["showTaskbars"];
@@ -358,6 +432,9 @@ class CHTMLEditor
 
 		if (isset($arParams["setFocusAfterShow"]))
 			$this->jsConfig["setFocusAfterShow"] = $arParams["setFocusAfterShow"];
+
+		if (isset($arParams["relPath"]))
+			$this->jsConfig["relPath"] = $arParams["relPath"];
 
 		// autoresize
 		if (isset($arParams["autoResize"]))
@@ -488,7 +565,7 @@ class CHTMLEditor
 		);
 	}
 
-	public static function GetComponents($Params, $bClearCache = false)
+	public static function GetComponents($Params, $bClearCache = false, $arFilter = array())
 	{
 		global $CACHE_MANAGER;
 
@@ -496,7 +573,11 @@ class CHTMLEditor
 		$mask = $allowed === '' ? 0 : substr(md5($allowed), 0, 10);
 
 		$lang = isset($Params['lang']) ? $Params['lang'] : LANGUAGE_ID;
-		$cache_name = 'component_tree_array_'.$lang.'_'.$mask;
+		$component_type = '';
+		if(isset($arFilter['TYPE']))
+			$component_type = '_'.$arFilter['TYPE'];
+
+		$cache_name = 'component_tree_array_'.$lang.'_'.$mask.$component_type;
 		$table_id = "fileman_component_tree";
 
 		if ($bClearCache)
@@ -532,7 +613,7 @@ class CHTMLEditor
 				$namespace = false;
 			}
 
-			$arTree = CComponentUtil::GetComponentsTree($namespace, $arAllowed);
+			$arTree = CComponentUtil::GetComponentsTree($namespace, $arAllowed, $arFilter);
 			self::$arComponents = array(
 				'items' => array(),
 				'groups' => array()
@@ -565,6 +646,7 @@ class CHTMLEditor
 						self::$arComponents['items'][] = array(
 							"path" => $path,
 							"name" => $name,
+							"type" => $comp['TYPE'],
 							"title" => $comp['TITLE'],
 							"complex" => $comp['COMPLEX'],
 							"params" => array("DESCRIPTION" => $comp['DESCRIPTION']),
@@ -595,6 +677,7 @@ class CHTMLEditor
 					self::$arComponents['items'][] = array(
 						"path" => $realPath,
 						"name" => $name,
+						"type" => $comp['TYPE'],
 						"title" => $comp['TITLE'],
 						"complex" => $comp['COMPLEX'],
 						"params" => array("DESCRIPTION" => $comp['DESCRIPTION']),
@@ -635,7 +718,8 @@ class CHTMLEditor
 				if (!$USER->CanDoOperation('fileman_view_file_structure'))
 					break;
 				$siteTemplate = $_REQUEST['site_template'];
-				$result = self::GetComponents($siteTemplate, true);
+				$componentFilter = isset($_REQUEST['componentFilter']) ? $_REQUEST['componentFilter'] : false;
+				$result = self::GetComponents($siteTemplate, true, $componentFilter);
 				break;
 
 			case "video_oembed":
@@ -821,31 +905,29 @@ class CHTMLEditor
 						"operation" => 'O',
 						"showUploadTab" => true,
 						"showAddToMenuTab" => false,
-						"fileFilter" => '',
+						"fileFilter" => 'image',
 						"allowAllFiles" => true,
 						"SaveConfig" => true
 					)
 				);
-
-				CAdminFileDialog::ShowScript(Array
-					(
-						"event" => "BxOpenFileBrowserImgFile".$editorId,
-						"arResultDest" => Array("FUNCTION_NAME" => "OnFileDialogImgSelect".$editorId),
-						//"arPath" => Array("SITE" => $_GET["site"], "PATH" =>(strlen($str_FILENAME) > 0 ? GetDirPath($str_FILENAME) : '')),
-						"select" => 'F',
-						"operation" => 'O',
-						"showUploadTab" => true,
-						"showAddToMenuTab" => false,
-						"fileFilter" => 'image',
-						"allowAllFiles" => true,
-						"SaveConfig" => true
+				CMedialib::ShowBrowseButton(
+					array(
+						'value' => '...',
+						'event' => "BxOpenFileBrowserWindFile".$editorId,
+						'button_id' => "bx-open-file-link-medialib-but-".$editorId,
+						'id' => "bx_open_file_link_medialib_button_".$editorId,
+						'MedialibConfig' => array(
+							"event" => "BxOpenFileBrowserFileMl".$editorId,
+							"arResultDest" => Array("FUNCTION_NAME" => "OnFileDialogSelect".$editorId)
+						),
+						'useMLDefault' => false
 					)
 				);
 
 				CMedialib::ShowBrowseButton(
 					array(
 						'value' => '...',
-						'event' => "BxOpenFileBrowserImgFile".$editorId,
+						'event' => "BxOpenFileBrowserWindFile".$editorId,
 						'button_id' => "bx-open-file-medialib-but-".$editorId,
 						'id' => "bx_open_file_medialib_button_".$editorId,
 						'MedialibConfig' => array(
@@ -855,6 +937,7 @@ class CHTMLEditor
 						)
 					)
 				);
+
 
 				$result = array('result' => true);
 				break;
@@ -986,7 +1069,19 @@ class CHTMLEditor
 
 	public static function GetSiteTemplateParams($templateId, $siteId)
 	{
-		return CFileman::GetAllTemplateParams($templateId, $siteId);
+		$params = CFileman::GetAllTemplateParams($templateId, $siteId);
+
+		$params["STYLES"] = preg_replace("/(url\(\"?)images\//is", "\\1".$params['SITE_TEMPLATE_PATH'].'/images/', $params["STYLES"]);
+
+		if (is_array($params['EDITOR_STYLES']))
+		{
+			for ($i = 0, $l = count($params['EDITOR_STYLES']); $i < $l; $i++)
+			{
+				$params['EDITOR_STYLES'][$i] = $params['EDITOR_STYLES'][$i].'?'.@filemtime($_SERVER['DOCUMENT_ROOT'].$params['EDITOR_STYLES'][$i]);
+			}
+		}
+
+		return $params;
 	}
 
 	public static function GetVideoOembed($url = '')
@@ -995,26 +1090,43 @@ class CHTMLEditor
 		$oembed = self::GetOembedUrlInfo($url);
 		$output = array('result' => false, 'error' => "");
 
-		$io = CBXVirtualIo::GetInstance();
-		$path = $url;
-		$serverPath = self::GetServerPath();
-		if (strpos($path, $serverPath) !== false)
+		$http = new \Bitrix\Main\Web\HttpClient();
+		$resp = $http->get($oembed['url']);
+		if ($resp === false)
 		{
-			$path = str_replace($serverPath, '', $path);
-		}
-		if ($io->FileExists($io->RelativeToAbsolutePath($path)))
-		{
-			$output['data'] = array(
-				'local' => true,
-				'path' => $path
-			);
-			$output['result'] = true;
-		}
-		else
-		{
-			$http = new \Bitrix\Main\Web\HttpClient();
-			$resp = $http->get($oembed['url']);
-			if ($resp === false)
+			$io = CBXVirtualIo::GetInstance();
+			$path = $url;
+			$serverPath = self::GetServerPath();
+
+			if (strpos($path, $serverPath) !== false)
+			{
+				$path = str_replace($serverPath, '', $path);
+			}
+
+			if ($io->FileExists($io->RelativeToAbsolutePath($path)))
+			{
+				$output['data'] = array(
+					'local' => true,
+					'path' => $path
+				);
+				$output['result'] = true;
+			}
+			else
+			{
+				$path = $url;
+				$http = new \Bitrix\Main\Web\HttpClient();
+				$resp1 = $http->get($path);
+				if ($resp1 !== false)
+				{
+					$output['data'] = array(
+						'local' => true,
+						'path' => $url
+					);
+				}
+				$output['result'] = true;
+			}
+
+			if (!$output['result'])
 			{
 				$error = $http->getError();
 				foreach($error as $errorCode => $errorMessage)
@@ -1022,33 +1134,33 @@ class CHTMLEditor
 					$output['error'] .=  '['.$errorCode.'] '.$errorMessage.";\n";
 				}
 			}
+		}
+		else
+		{
+			$resParams = json_decode($resp, true);
+			if ($resParams && is_array($resParams))
+			{
+				if (!defined('BX_UTF') || BX_UTF !== true)
+				{
+					$resParams['title'] = CharsetConverter::ConvertCharset($resParams['title'], 'UTF-8', SITE_CHARSET);
+					$resParams['html'] = CharsetConverter::ConvertCharset($resParams['html'], 'UTF-8', SITE_CHARSET);
+					$resParams['provider_name'] = CharsetConverter::ConvertCharset($resParams['provider_name'], 'UTF-8', SITE_CHARSET);
+
+				}
+
+				$resParams['html'] = preg_replace("/https?:\/\//is", '//', $resParams['html']);
+				$output['result'] = true;
+				$output['data'] = array(
+					'html' => $resParams['html'],
+					'title' => $resParams['title'],
+					'width' => intval($resParams['width']),
+					'height' => intval($resParams['height']),
+					'provider' => $resParams['provider_name']
+				);
+			}
 			else
 			{
-				$resParams = json_decode($resp, true);
-				if ($resParams && is_array($resParams))
-				{
-					if (!defined('BX_UTF') || BX_UTF !== true)
-					{
-						$resParams['title'] = CharsetConverter::ConvertCharset($resParams['title'], 'UTF-8', SITE_CHARSET);
-						$resParams['html'] = CharsetConverter::ConvertCharset($resParams['html'], 'UTF-8', SITE_CHARSET);
-						$resParams['provider_name'] = CharsetConverter::ConvertCharset($resParams['provider_name'], 'UTF-8', SITE_CHARSET);
-
-					}
-
-					$resParams['html'] = preg_replace("/https?:\/\//is", '//', $resParams['html']);
-					$output['result'] = true;
-					$output['data'] = array(
-						'html' => $resParams['html'],
-						'title' => $resParams['title'],
-						'width' => intval($resParams['width']),
-						'height' => intval($resParams['height']),
-						'provider' => $resParams['provider_name']
-					);
-				}
-				else
-				{
-					$output['error'] .=  '[FVID404] '.GetMessage('HTMLED_VIDEO_NOT_FOUND').";\n";
-				}
+				$output['error'] .=  '[FVID404] '.GetMessage('HTMLED_VIDEO_NOT_FOUND').";\n";
 			}
 		}
 

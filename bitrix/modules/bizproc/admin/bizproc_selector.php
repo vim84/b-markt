@@ -41,9 +41,10 @@ if(!$canWrite)
 	die();
 }
 
-$arWorkflowTemplate = $_POST['arWorkflowTemplate'];
-$arWorkflowParameters = $_POST['arWorkflowParameters'];
-$arWorkflowVariables = $_POST['arWorkflowVariables'];
+$arWorkflowTemplate = isset($_POST['arWorkflowTemplate']) && is_array($_POST['arWorkflowTemplate'])? $_POST['arWorkflowTemplate']: array();
+$arWorkflowParameters = isset($_POST['arWorkflowParameters']) && is_array($_POST['arWorkflowParameters'])? $_POST['arWorkflowParameters']: array();
+$arWorkflowVariables = isset($_POST['arWorkflowVariables']) && is_array($_POST['arWorkflowVariables'])? $_POST['arWorkflowVariables']: array();
+$arWorkflowConstants = isset($_POST['arWorkflowConstants']) && is_array($_POST['arWorkflowConstants'])? $_POST['arWorkflowConstants']: array();
 
 $runtime = CBPRuntime::GetRuntime();
 $runtime->StartRuntime();
@@ -141,7 +142,7 @@ function BPSHideShow(id)
 						elseif ($_POST['fieldType']=='string' || $_POST['fieldType']=='text')
 							$fieldId .= '_printable';
 						?>
-						<option value="{=<?=htmlspecialcharsbx($arWorkflowTemplate[0]['Name'])?>:<?=$fieldId?>}<?if($_POST['fieldType']=='user')echo '; '?>"><?=htmlspecialcharsbx($documentField['Name'])?></option>
+						<option value="{=<?=htmlspecialcharsbx($arWorkflowTemplate[0]['Name'])?>:<?=htmlspecialcharsbx($fieldId)?>}<?if($_POST['fieldType']=='user')echo '; '?>"><?=htmlspecialcharsbx($documentField['Name'])?></option>
 					<?endif?>
 				<?endforeach?>
 			</select>
@@ -162,7 +163,28 @@ function BPSHideShow(id)
 						elseif ($_POST['fieldType']=='string' || $_POST['fieldType']=='text')
 							$fieldId .= '_printable';
 						?>
-						<option value="{=Variable:<?=$fieldId?>}<?if($_POST['fieldType']=='user')echo '; '?>"><?=htmlspecialcharsbx($documentField['Name'])?></option>
+						<option value="{=Variable:<?=htmlspecialcharsbx($fieldId)?>}<?if($_POST['fieldType']=='user')echo '; '?>"><?=htmlspecialcharsbx($documentField['Name'])?></option>
+					<?endif?>
+				<?endforeach?>
+			</select>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<a href="javascript:void(0)" onclick="BPSHideShow('BPSId6')"><b><?echo GetMessage("BP_SEL_CONSTANTS")?></b></a>
+		</td>
+	</tr>
+	<tr id="BPSId6" style="display:none">
+		<td>
+			<select id="BPSId6S" size="13" style="width:100%" ondblclick="BPSVInsert(this.value)">
+				<?foreach($arWorkflowConstants as $fieldId => $documentField):?>
+					<?if($arFilter===false || in_array($documentFieldTypes[$documentField["Type"]]["BaseType"], $arFilter)):
+						if($_POST['fieldType']!='user' && $_POST['fieldType']!='file' && in_array($documentFieldTypes[$documentField["Type"]]["BaseType"], array('user', 'file')))
+							$fieldId .= '_printable';
+						elseif ($_POST['fieldType']=='string' || $_POST['fieldType']=='text')
+							$fieldId .= '_printable';
+						?>
+						<option value="{=Constant:<?=htmlspecialcharsbx($fieldId)?>}<?if($_POST['fieldType']=='user')echo '; '?>"><?=htmlspecialcharsbx($documentField['Name'])?></option>
 					<?endif?>
 				<?endforeach?>
 			</select>
@@ -334,9 +356,9 @@ _RecFindParams($arWorkflowTemplate, $arFilter, $arReturns);
 					$i += $mcnt;
 					$str .= ") AND ACTIVE='Y' ORDER BY LAST_NAME, EMAIL, ID";
 					$dbuser = $DB->Query($str);
-					while($user = $dbuser->GetNext())
+					while($user = $dbuser->fetch())
 					{
-						$n = CUser::FormatName(str_replace(",","", COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID)), $user, true);
+						$n = CUser::FormatName(str_replace(",","", COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID)), $user, true, true);
 						?>
 						<option value="<?= $n ?> [<?=$user['ID']?>]; "><?=$n?> &lt;<?=$user['EMAIL']?>&gt; [<?=$user['ID']?>]</option>
 						<?

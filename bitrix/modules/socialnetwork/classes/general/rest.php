@@ -29,9 +29,11 @@ class CSocNetLogRestService extends IRestService
 	public static function AddBlogPost($arFields)
 	{
 		if (!is_array($_POST))
+		{
 			$_POST = array();
+		}
 
-		$_POST = array_merge($_POST, array("apply" => "Y", "decode" => "Y"), $arFields);
+		$_POST = array_merge($_POST, array("apply" => "Y", "decode" => "N"), $arFields);
 
 		$strPathToPost = COption::GetOptionString("socialnetwork", "userblogpost_page", false, SITE_ID);
 		$strPathToSmile = COption::GetOptionString("socialnetwork", "smile_page", false, SITE_ID);
@@ -59,9 +61,54 @@ class CSocNetLogRestService extends IRestService
 		ob_end_clean();
 
 		if (!$result)
+		{
 			throw new Exception('Error');
+		}
 		else
-			return true;
+		{
+
+			if (
+				isset($arFields["FILES"])
+				&& \Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false)
+				&& CModule::includeModule('disk')
+				&& ($storage = \Bitrix\Disk\Driver::getInstance()->getStorageByUserId($GLOBALS["USER"]->GetID()))
+				&& ($folder = $storage->getFolderForUploadedFiles($GLOBALS["USER"]->GetID()))
+			)
+			{
+				// upload to storage
+				$arResultFile = array();
+
+				foreach($arFields["FILES"] as $tmp)
+				{
+					$arFile = CRestUtil::saveFile($tmp);
+
+					if(is_array($arFile))
+					{
+						$file = $folder->uploadFile(
+							$arFile, // file array
+							array(
+								'NAME' => $arFile["name"],
+								'CREATED_BY' => $GLOBALS["USER"]->GetID()
+							),
+							array(),
+							true
+						);
+
+						if ($file)
+						{
+							$arResultFile[] = \Bitrix\Disk\Uf\FileUserType::NEW_FILE_PREFIX.$file->getId();
+						}
+					}
+				}
+
+				if (!empty($arResultFile)) // update post
+				{
+					CBlogPost::Update($result, array("HAS_PROPS" => "Y", "UF_BLOG_POST_FILE" => $arResultFile));
+				}
+			}
+
+			return $result;
+		}
 	}
 
 	public static function createGroup($arFields)
@@ -88,7 +135,7 @@ class CSocNetLogRestService extends IRestService
 		}
 
 		if (
-			!is_set($arFields, "SITE_ID") 
+			!is_set($arFields, "SITE_ID")
 			|| strlen($arFields["SITE_ID"]) <= 0
 		)
 		{
@@ -96,7 +143,7 @@ class CSocNetLogRestService extends IRestService
 		}
 
 		if (
-			!is_set($arFields, "SUBJECT_ID") 
+			!is_set($arFields, "SUBJECT_ID")
 			|| intval($arFields["SUBJECT_ID"]) <= 0
 		)
 		{
@@ -232,7 +279,7 @@ class CSocNetLogRestService extends IRestService
 		{
 			$arOrder = array("ID" => "DESC");
 		}
-		
+
 		if ($arFields['IS_ADMIN'] == 'Y')
 		{
 			if (!CSocNetUser::IsCurrentUserModuleAdmin(SITE_ID, false))
@@ -280,7 +327,7 @@ class CSocNetLogRestService extends IRestService
 			unset($arRes['INITIATE_PERMS']);
 			unset($arRes['SPAM_PERMS']);
 			unset($arRes['IMAGE_ID']);
-			
+
 			$result[] = $arRes;
 		}
 

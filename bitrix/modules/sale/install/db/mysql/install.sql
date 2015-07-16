@@ -166,6 +166,7 @@ create table if not exists b_sale_order
 	VERSION_1C varchar(15) null,
 	VERSION INT(11) not null default '0',
 	EXTERNAL_ORDER char(1) not null default 'N',
+	BX_USER_ID varchar(32) null,
 	primary key (ID),
 	index IXS_ORDER_USER_ID(USER_ID),
 	index IXS_ORDER_PERSON_TYPE_ID(PERSON_TYPE_ID),
@@ -444,7 +445,8 @@ create table if not exists b_sale_loc_ext
 	SERVICE_ID int not null,
 	LOCATION_ID int not null,
 	XML_ID varchar(100) not null,
-	primary key (ID)
+	primary key (ID),
+	index IX_B_SALE_LOC_EXT_LID_SID(LOCATION_ID, SERVICE_ID)
 );
 
 create table if not exists b_sale_loc_type
@@ -541,14 +543,38 @@ create table if not exists b_sale_discount
 	ACTIONS mediumtext null,
 	APPLICATION mediumtext null,
 	USE_COUPONS char(1) not null default 'N',
+	EXECUTE_MODULE varchar(50) not null default 'all',
 	primary key (ID),
 	index IXS_DISCOUNT_LID(LID),
 	index IX_SSD_ACTIVE_DATE(ACTIVE_FROM, ACTIVE_TO)
 );
 
-create table if not exists b_sale_discount_group (
+create table if not exists b_sale_discount_coupon
+(
 	ID int not null auto_increment,
 	DISCOUNT_ID int not null,
+	ACTIVE char(1) not null default 'Y',
+	ACTIVE_FROM datetime null,
+	ACTIVE_TO datetime null,
+	COUPON varchar(32) not null,
+	TYPE int not null default 0,
+	MAX_USE int not null default 0,
+	USE_COUNT int not null default 0,
+	USER_ID int not null default 0,
+	DATE_APPLY datetime null,
+	TIMESTAMP_X datetime null,
+	MODIFIED_BY int(18) null,
+	DATE_CREATE datetime null,
+	CREATED_BY int(18) null,
+	DESCRIPTION text null,
+	primary key (ID)
+);
+
+create table if not exists b_sale_discount_group
+(
+	ID int not null auto_increment,
+	DISCOUNT_ID int not null,
+	ACTIVE char(1) null,
 	GROUP_ID int not null,
 	PRIMARY KEY (ID),
 	INDEX IX_S_DISGRP_D (DISCOUNT_ID),
@@ -563,6 +589,18 @@ create table if not exists b_sale_discount_module
 	MODULE_ID varchar(50) not null,
 	primary key (ID),
 	index IX_SALE_DSC_MOD(DISCOUNT_ID)
+);
+
+create table if not exists b_sale_discount_entities
+(
+	ID int not null auto_increment,
+	DISCOUNT_ID int not null,
+	MODULE_ID varchar(50) not null,
+	ENTITY varchar(255) not null,
+	FIELD_ENTITY varchar(255) not null,
+	FIELD_TABLE varchar(255) not null,
+	primary key (ID),
+	index IX_SALE_DSC_ENT_DISCOUNT_ID(DISCOUNT_ID)
 );
 
 create table if not exists b_sale_user_props

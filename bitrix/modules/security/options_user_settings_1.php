@@ -42,21 +42,19 @@ for($i=1; $i <= 10; $i++)
 {
 	$deactivateDays[$i] = FormatDate("ddiff", time()-60*60*24*$i);
 }
+$jsMessages = array(
+	'SEC_OTP_ERROR_TITLE' => GetMessage('SEC_OTP_ERROR_TITLE'),
+	'SEC_OTP_UNKNOWN_ERROR' => GetMessage('SEC_OTP_UNKNOWN_ERROR')
+);
+$jsSettings = array(
+	'userId' => (int) $ID,
+	'successfulUrl' => $currentPage,
+	'deactivateDays' => $deactivateDays,
+	'availableTypes' => $availableTypesDescription
+)
 ?>
-<script>
-	BX.ready(function createOtp()
-	{
-		BX.message({
-			'SEC_OTP_ERROR_TITLE': '<?=GetMessageJS('SEC_OTP_ERROR_TITLE')?>',
-			'SEC_OTP_UNKNOWN_ERROR': '<?=GetMessageJS('SEC_OTP_UNKNOWN_ERROR')?>'
-		});
-		new BX.Security.UserEdit.Otp(<?=(int) $ID?>, {
-			'successfulUrl': '<?=CUtil::JSEscape($currentPage)?>',
-			'deactivateDays': <?=CSecurityJsonHelper::encode($deactivateDays)?>,
-			'availableTypes': <?=CSecurityJsonHelper::encode($availableTypesDescription)?>
-		});
-	});
-</script>
+<script id="otp-user-edit-messages" type="application/json"><?=CSecurityJsonHelper::encode($jsMessages)?></script>
+<script id="otp-user-edit-settings" type="application/json"><?=CSecurityJsonHelper::encode($jsSettings)?></script>
 <!--Popup starts-->
 <tr style="display: none;">
 	<td colspan="2">
@@ -148,7 +146,7 @@ for($i=1; $i <= 10; $i++)
 				<input type="text" autocomplete="off" data-autoclear="yes" data-role="check-code" size="8" maxlength="8" value="">
 			</td>
 		</tr>
-		<tr>
+		<tr data-require-two-codes="yes">
 			<td>
 				<?=GetMessage("SEC_OTP_PASS2")?>:
 			</td>
@@ -262,11 +260,17 @@ for($i=1; $i <= 10; $i++)
 						getMessage('SEC_OTP_DESCRIPTION_INTRO_INTRANET'):
 						getMessage('SEC_OTP_DESCRIPTION_INTRO_SITE'))?>
 				</div>
+				<?
+				if (in_array(LANGUAGE_ID, array('en', 'ru', 'de'), true))
+					$imageLanguage = LANGUAGE_ID;
+				else
+					$imageLanguage = \Bitrix\Main\Localization\Loc::getDefaultLang(LANGUAGE_ID);
+				?>
 				<h3 style="clear:both"><br><?=getMessage('SEC_OTP_DESCRIPTION_USING_TITLE')?></h3>
 				<div style="float: left; margin-right: 20px">
 					<div style="-webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; border: 2px solid #e0e3e5; border-radius: 2px; padding: 5px 10px; background: white; height: 150px;">
-						<div style="float: left; background: url(/bitrix/images/security/ru_login_step0.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px;" ><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_0')?></div>
-						<div style="float: left; background: url(/bitrix/images/security/ru_login_step1.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px; margin-left:20px;"><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_1')?></div>
+						<div style="float: left; background: url(/bitrix/images/security/<?=$imageLanguage?>_login_step0.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px;" ><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_0')?></div>
+						<div style="float: left; background: url(/bitrix/images/security/<?=$imageLanguage?>_login_step1.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px; margin-left:20px;"><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_1')?></div>
 					</div>
 				</div>
 				<div>

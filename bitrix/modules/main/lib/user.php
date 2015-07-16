@@ -159,6 +159,12 @@ class UserTable extends Entity\DataManager
 			'TITLE' => array(
 				'data_type' => 'string'
 			),
+			'BX_USER_ID' => array(
+				'data_type' => 'string'
+			),
+			'CONFIRM_CODE' => array(
+				'data_type' => 'string'
+			),
 		);
 	}
 

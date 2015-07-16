@@ -141,6 +141,10 @@ class CAllSocNetFeaturesPerms
 					$GLOBALS["APPLICATION"]->ThrowException(str_replace("#ID#", $arFields["ROLE"], GetMessage("SONET_GFP_ERROR_NO_ROLE")), "ERROR_NO_SITE");
 					return false;
 				}
+				elseif($arFields["ROLE"] == SONET_RELATIONS_TYPE_FRIENDS2)
+				{
+					$arFields["ROLE"] = SONET_RELATIONS_TYPE_FRIENDS;
+				}
 			}
 		}
 
@@ -561,7 +565,7 @@ class CAllSocNetFeaturesPerms
 			}
 			else // not array of groups
 			{
-				$group_id = IntVal($id);
+				$id = IntVal($id);
 
 				if ($featureOperationPerms == false)
 					return false;
@@ -700,28 +704,12 @@ class CAllSocNetFeaturesPerms
 						continue;
 					}
 
-					if ($featureOperationPerms[$entity_id] == SONET_RELATIONS_TYPE_FRIENDS)
+					if (
+						$featureOperationPerms[$entity_id] == SONET_RELATIONS_TYPE_FRIENDS
+						|| $featureOperationPerms[$entity_id] == SONET_RELATIONS_TYPE_FRIENDS2
+					)
 					{
 						if (CSocNetUserRelations::IsFriends($userID, $entity_id))
-						{
-							$arReturn[$entity_id] = true;
-							continue;
-						}
-						else
-						{
-							$arReturn[$entity_id] = false;
-							continue;
-						}
-					}
-
-					if ($featureOperationPerms[$entity_id] == SONET_RELATIONS_TYPE_FRIENDS2)
-					{
-						if (CSocNetUserRelations::IsFriends($userID, $entity_id))
-						{
-							$arReturn[$entity_id] = true;
-							continue;
-						}
-						elseif (CSocNetUserRelations::IsFriends2($userID, $entity_id))
 						{
 							$arReturn[$entity_id] = true;
 							continue;
@@ -763,28 +751,15 @@ class CAllSocNetFeaturesPerms
 
 				if ($featureOperationPerms == SONET_RELATIONS_TYPE_AUTHORIZED)
 				{
-					if ($userID > 0)
-						return true;
-					else
-						return false;
+					return ($userID > 0);
 				}
 
-				if ($featureOperationPerms == SONET_RELATIONS_TYPE_FRIENDS)
+				if (
+					$featureOperationPerms == SONET_RELATIONS_TYPE_FRIENDS
+					|| $featureOperationPerms == SONET_RELATIONS_TYPE_FRIENDS2
+				)
 				{
-					if (CSocNetUserRelations::IsFriends($userID, $id))
-						return true;
-					else
-						return false;
-				}
-
-				if ($featureOperationPerms == SONET_RELATIONS_TYPE_FRIENDS2)
-				{
-					if (CSocNetUserRelations::IsFriends($userID, $id))
-						return true;
-					elseif (CSocNetUserRelations::IsFriends2($userID, $id))
-						return true;
-					else
-						return false;
+					return CSocNetUserRelations::IsFriends($userID, $id);
 				}
 			}
 
@@ -888,7 +863,11 @@ class CAllSocNetFeaturesPerms
 			{
 				$dbResult = CSocNetFeaturesPerms::GetList(
 					Array(),
-					Array("FEATURE_ENTITY_ID" => $arGroupToGet, "FEATURE_ENTITY_TYPE" => $type, "GROUP_FEATURE_ACTIVE" => "Y"),
+					Array(
+						"FEATURE_ENTITY_ID" => $arGroupToGet,
+						"FEATURE_ENTITY_TYPE" => $type,
+						"GROUP_FEATURE_ACTIVE" => "Y"
+					),
 					false,
 					false,
 					array("OPERATION_ID", "FEATURE_ENTITY_ID", "FEATURE_FEATURE", "ROLE")
@@ -909,8 +888,6 @@ class CAllSocNetFeaturesPerms
 
 				if ($type == SONET_ENTITY_GROUP)
 				{
-					$featureOperationPerms = SONET_ROLES_OWNER;
-
 					if (!array_key_exists($feature, $arFeaturesPerms[$TmpEntityID]))
 					{
 						$featureOperationPerms = $arSocNetFeaturesSettings[$feature]["operations"][$operation][SONET_ENTITY_GROUP];
@@ -926,8 +903,6 @@ class CAllSocNetFeaturesPerms
 				}
 				else
 				{
-					$featureOperationPerms = SONET_RELATIONS_TYPE_NONE;
-
 					if (!array_key_exists($feature, $arFeaturesPerms[$TmpEntityID]))
 					{
 						$featureOperationPerms = $arSocNetFeaturesSettings[$feature]["operations"][$operation][SONET_ENTITY_USER];
@@ -940,10 +915,14 @@ class CAllSocNetFeaturesPerms
 					{
 						$featureOperationPerms = $arFeaturesPerms[$TmpEntityID][$feature][$operation];
 					}
+
+					if ($featureOperationPerms == SONET_RELATIONS_TYPE_FRIENDS2)
+					{
+						$featureOperationPerms = SONET_RELATIONS_TYPE_FRIENDS;
+					}
 				}
 
 				$arReturn[$TmpEntityID] = $featureOperationPerms;
-
 			}
 
 			return $arReturn;
@@ -1041,8 +1020,6 @@ class CAllSocNetFeaturesPerms
 
 			if ($type == SONET_ENTITY_GROUP)
 			{
-				$featureOperationPerms = SONET_ROLES_OWNER;
-
 				if (!array_key_exists($feature, $arFeaturesPerms))
 				{
 					$featureOperationPerms = $arSocNetFeaturesSettings[$feature]["operations"][$operation][SONET_ENTITY_GROUP];
@@ -1058,8 +1035,6 @@ class CAllSocNetFeaturesPerms
 			}
 			else
 			{
-				$featureOperationPerms = SONET_RELATIONS_TYPE_NONE;
-
 				if (!array_key_exists($feature, $arFeaturesPerms))
 				{
 					$featureOperationPerms = $arSocNetFeaturesSettings[$feature]["operations"][$operation][SONET_ENTITY_USER];
@@ -1072,11 +1047,15 @@ class CAllSocNetFeaturesPerms
 				{
 					$featureOperationPerms = $arFeaturesPerms[$feature][$operation];
 				}
+
+				if ($featureOperationPerms == SONET_RELATIONS_TYPE_FRIENDS2)
+				{
+					$featureOperationPerms = SONET_RELATIONS_TYPE_FRIENDS;
+				}
 			}
 
 			return $featureOperationPerms;
 		}
-
 	}
 }
 ?>

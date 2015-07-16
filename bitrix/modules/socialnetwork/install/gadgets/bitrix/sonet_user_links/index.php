@@ -72,14 +72,14 @@ if ($GLOBALS["USER"]->IsAuthorized()):
 		?>
 		<div class="bx-user-control">
 			<ul>
-				<?if ($arGadgetParams["URL_SECURITY"]):
+				<?if ($arGadgetParams["URL_SECURITY"] && $arParams["G_SONET_USER_OTP"]["IS_ENABLED"] !== "N"):
 					?><li class="bx-icon-action bx-icon-security"><a href="<?=$arGadgetParams["URL_SECURITY"]?>"><?= GetMessage("GD_SONET_USER_LINKS_SECURITY") ?></a></li><?
 				endif;?>
 				<?if ($arGadgetParams["URL_PASSWORDS"]):
 					?><li class="bx-icon-action bx-icon-passwords"><a href="<?=$arGadgetParams["URL_PASSWORDS"]?>"><?= GetMessage("GD_SONET_USER_LINKS_PASSWORDS") ?></a></li><?
 				endif;?>
 				<?if ($arParams["G_SONET_USER_OTP"]["IS_ACTIVE"] && $arParams["G_SONET_USER_OTP"]["ARE_RECOVERY_CODES_ENABLED"]):
-					?><li class="bx-icon-action bx-icon-passwords"><a href="<?=$arGadgetParams["URL_CODES"]?>"><?= GetMessage("GD_SONET_USER_LINKS_CODES") ?></a></li><?
+					?><li class="bx-icon-action bx-icon-codes"><a href="<?=$arGadgetParams["URL_CODES"]?>"><?= GetMessage("GD_SONET_USER_LINKS_CODES") ?></a></li><?
 				endif?>
 			</ul>
 		</div>

@@ -1,12 +1,19 @@
 ;(function(window){
+
 	if (window.BX["Uploader"])
-		return false;
+		return;
 	var
 		BX = window.BX,
-		statuses = { "new" : 0, ready : 1, preparing : 2, inprogress : 3, done : 4, failed : 5, stopped : 6, changed : 7, uploaded : 8},
-		repo = {};
+		statuses = { "new" : 0, ready : 1, preparing : 2, inprogress : 3, done : 4, failed : 5, error : 5.2, stopped : 6, changed : 7, uploaded : 8},
+		repo = {},
+		settings = {
+			phpPostMinSize : 1.5 * 1024 * 1024, // Bytes
+			phpUploadMaxFilesize : 1024 * 1024, // Bytes
+			phpPostMaxSize : 10 * 1024 * 1024, // Bytes
+			estimatedTimeForUploadFile : 10 * 60, // in sec
+			maxTimeForUploadFile : 15 * 60 // in sec
+		};
 	/**
-	 * @return {BX.Uploader} || bool
 	 * @params array
 	 * @params[input] - BX(id).
 	 *  DOM-node with id="uploader_somehash" should exist and will be replaced	 *
@@ -20,142 +27,144 @@
 		if (!(typeof params == "object" && params && (BX(params["input"]) || params["input"] === null)))
 		{
 			BX.debug(BX.message("UPLOADER_INPUT_IS_NOT_DEFINED"));
-			return false;
-		}
-		this.fileInput = (params["input"] === null ? null : BX(params["input"]));
-		this.controlID = this.controlId = (params["controlId"] || "bitrixUploader");
-
-		this.dialogName = "BX.Uploader";
-		this.id = (!!params["id"] ? params["id"] : Math.random());
-		this.CID = (!!params["CID"] ? !!params["CID"] : ("CID" + BX.UploaderUtils.getId()));
-		this.streams = new BX.UploaderStreams(params['streams']);
-
-		// Limits
-		this.limits = {
-			phpMaxFileUploads : parseInt(BX.message('phpMaxFileUploads')),
-			phpPostMaxSize : parseInt(BX.message('phpPostMaxSize')),
-			phpUploadMaxFilesize : parseInt(BX.message('phpUploadMaxFilesize')),
-			uploadMaxFilesize : (params["uploadMaxFilesize"] > 0 ? params["uploadMaxFilesize"] : 0),
-			uploadFileWidth : (params["uploadFileWidth"] > 0 ? params["uploadFileWidth"] : 0),
-			uploadFileHeight : (params["uploadFileHeight"] > 0 ? params["uploadFileHeight"] : 0),
-			allowUpload : ((params["allowUpload"] == "A" || params["allowUpload"] == "I" || params["allowUpload"] == "F") ? params["allowUpload"] : "A"),
-			allowUploadExt : (typeof params["allowUploadExt"] === "string" ? params["allowUploadExt"] : "")};
-		var keys = ["phpMaxFileUploads", "phpPostMaxSize", "phpUploadMaxFilesize"];
-		for (ii = 0; ii < keys.length; ii++)
-		{
-			this.limits[keys[ii]] = (typeof params[keys[ii]] == "number" && params[keys[ii]] < this.limits[keys[ii]] ? params[keys[ii]] : this.limits[keys[ii]]);
-		}
-		this.CEF = !!window["BXDesktopSystem"];
-		if (this.CEF)
-		{
-			this.limits["phpUploadMaxFilesize"] = (this.limits["phpUploadMaxFilesize"] > 200*1024*1024 ? 200*1024*1024 : this.limits["phpUploadMaxFilesize"]);
-			this.limits["phpPostMaxSize"] = (this.limits["phpPostMaxSize"] > 210*1024*1024 ? 210*1024*1024 : this.limits["phpPostMaxSize"]);
-			this.limits["uploadMaxFilesize"] = this.limits["phpUploadMaxFilesize"];
 		}
 		else
 		{
-			this.limits["phpUploadMaxFilesize"] = (this.limits["phpUploadMaxFilesize"] > 10*1024*1024 ? 10*1024*1024 : this.limits["phpUploadMaxFilesize"]);
-			this.limits["phpPostMaxSize"] = (this.limits["phpPostMaxSize"] > 50*1024*1024 ? 50*1024*1024 : this.limits["phpPostMaxSize"]);
-		}
+			this.fileInput = (params["input"] === null ? null : BX(params["input"]));
+			this.controlID = this.controlId = (params["controlId"] || "bitrixUploader");
 
-// ALLOW_UPLOAD = 'A'll files | 'I'mages | 'F'iles with selected extensions
-// ALLOW_UPLOAD_EXT = comma-separated list of allowed file extensions (ALLOW_UPLOAD='F')
-		this.limits["uploadFile"] = (params["allowUpload"] == "I" ? "image/*" : "");
-		this.limits["uploadFileExt"] = this.limits["allowUploadExt"];
+			this.dialogName = "BX.Uploader";
+			this.id = (!!params["id"] ? params["id"] : Math.random());
+			this.CID = (!!params["CID"] ? !!params["CID"] : ("CID" + BX.UploaderUtils.getId()));
+			this.streams = new BX.UploaderStreams(params['streams'], this);
 
-		if (this.limits["uploadFileExt"].length > 0)
-		{
-			var ext = this.limits["uploadFileExt"].split(this.limits["uploadFileExt"].indexOf(",") >= 0 ? "," : " ");
-			for (ii = 0; ii < ext.length; ii++)
-				ext[ii] = (ext[ii].charAt(0) == "." ? ext[ii].substr(1) : ext[ii]);
-			this.limits["uploadFileExt"] = ext.join(",");
-		}
-		this.params = params;
-
-		this.params["filesInputName"] = (this.fileInput && this.fileInput["name"] ? this.fileInput["name"] : "FILES");
-		this.params["filesInputMultiple"] = (this.fileInput && this.fileInput["multiple"] || this.params["filesInputMultiple"] ? "multiple" : false);
-		this.params["uploadFormData"] = (this.params["uploadFormData"] == "N" ? "N" : "Y");
-		this.params["uploadMethod"] = (this.params["uploadMethod"] == "immediate" ? "immediate" : "deferred"); // Should we start upload immediately or by event
-		this.params["uploadFilesForPackage"] = parseInt(this.params["uploadFilesForPackage"] > 0 ? this.params["uploadFilesForPackage"] : 0);
-		this.params["imageExt"] = "jpg,bmp,jpeg,jpe,gif,png";
-		this.params["uploadInputName"] = (!!this.params["uploadInputName"] ? this.params["uploadInputName"] : "bxu_files");
-		this.params["uploadInputInfoName"] = (!!this.params["uploadInputInfoName"] ? this.params["uploadInputInfoName"] : "bxu_info");
-		this.params["deleteFileOnServer"] = !(this.params["deleteFileOnServer"] === false || this.params["deleteFileOnServer"] === "N");
-		this.params["pasteFileHashInForm"] = !(this.params["pasteFileHashInForm"] === false || this.params["pasteFileHashInForm"] === "N");
-
-
-		repo[this.id] = this;
-		if (this.init(this.fileInput)) // init fileInput
-		{
-			if (!!params["dropZone"])
-				this.initDropZone(BX(params["dropZone"]));
-
-			if (!!params["events"])
+			// Limits
+			this.limits = {
+				phpMaxFileUploads : parseInt(BX.message('phpMaxFileUploads')),
+				phpPostMaxSize : Math.min(parseInt(BX.message('phpPostMaxSize')), settings.phpPostMaxSize),
+				phpUploadMaxFilesize : Math.min(parseInt(BX.message('phpUploadMaxFilesize')), settings.phpUploadMaxFilesize),
+				uploadMaxFilesize : (params["uploadMaxFilesize"] > 0 ? params["uploadMaxFilesize"] : 0),
+				uploadFileWidth : (params["uploadFileWidth"] > 0 ? params["uploadFileWidth"] : 0),
+				uploadFileHeight : (params["uploadFileHeight"] > 0 ? params["uploadFileHeight"] : 0),
+				allowUpload : ((params["allowUpload"] == "A" || params["allowUpload"] == "I" || params["allowUpload"] == "F") ? params["allowUpload"] : "A"),
+				allowUploadExt : (typeof params["allowUploadExt"] === "string" ? params["allowUploadExt"] : "")};
+			var keys = ["phpMaxFileUploads", "phpPostMaxSize", "phpUploadMaxFilesize"];
+			for (ii = 0; ii < keys.length; ii++)
 			{
-				for(ii in params["events"])
+				this.limits[keys[ii]] = (typeof params[keys[ii]] == "number" && params[keys[ii]] < this.limits[keys[ii]] ? params[keys[ii]] : this.limits[keys[ii]]);
+			}
+			this.limits["phpPostSize"] = Math.min(this.limits["phpPostMaxSize"], settings.phpPostMinSize);
+
+			this.CEF = !!window["BXDesktopSystem"];
+			if (this.CEF)
+			{
+				this.limits["phpUploadMaxFilesize"] = Math.min(200*1024*1024, parseInt(BX.message('phpUploadMaxFilesize')), parseInt(params["phpUploadMaxFilesize"] ? params["phpUploadMaxFilesize"] : BX.message('phpUploadMaxFilesize')));
+				this.limits["phpPostMaxSize"] = Math.min(210*1024*1024, parseInt(BX.message('phpPostMaxSize')), parseInt(params["phpPostMaxSize"] ? params["phpPostMaxSize"] : BX.message('phpPostMaxSize')));
+				this.limits["uploadMaxFilesize"] = this.limits["phpUploadMaxFilesize"];
+				this.limits["phpPostSize"] = this.limits["phpPostMaxSize"];
+			}
+
+	// ALLOW_UPLOAD = 'A'll files | 'I'mages | 'F'iles with selected extensions
+	// ALLOW_UPLOAD_EXT = comma-separated list of allowed file extensions (ALLOW_UPLOAD='F')
+			this.limits["uploadFile"] = (params["allowUpload"] == "I" ? "image/*" : "");
+			this.limits["uploadFileExt"] = this.limits["allowUploadExt"];
+
+			if (this.limits["uploadFileExt"].length > 0)
+			{
+				var ext = this.limits["uploadFileExt"].split(this.limits["uploadFileExt"].indexOf(",") >= 0 ? "," : " ");
+				for (ii = 0; ii < ext.length; ii++)
+					ext[ii] = (ext[ii].charAt(0) == "." ? ext[ii].substr(1) : ext[ii]);
+				this.limits["uploadFileExt"] = ext.join(",");
+			}
+			this.params = params;
+
+			this.params["filesInputName"] = (this.fileInput && this.fileInput["name"] ? this.fileInput["name"] : "FILES");
+			this.params["filesInputMultiple"] = (this.fileInput && this.fileInput["multiple"] || this.params["filesInputMultiple"] ? "multiple" : false);
+			this.params["uploadFormData"] = (this.params["uploadFormData"] == "N" ? "N" : "Y");
+			this.params["uploadMethod"] = (this.params["uploadMethod"] == "immediate" ? "immediate" : "deferred"); // Should we start upload immediately or by event
+			this.params["uploadFilesForPackage"] = parseInt(this.params["uploadFilesForPackage"] > 0 ? this.params["uploadFilesForPackage"] : 0);
+			this.params["imageExt"] = "jpg,bmp,jpeg,jpe,gif,png";
+			this.params["uploadInputName"] = (!!this.params["uploadInputName"] ? this.params["uploadInputName"] : "bxu_files");
+			this.params["uploadInputInfoName"] = (!!this.params["uploadInputInfoName"] ? this.params["uploadInputInfoName"] : "bxu_info");
+			this.params["deleteFileOnServer"] = !(this.params["deleteFileOnServer"] === false || this.params["deleteFileOnServer"] === "N");
+			this.params["pasteFileHashInForm"] = !(this.params["pasteFileHashInForm"] === false || this.params["pasteFileHashInForm"] === "N");
+
+			repo[this.id] = this;
+			if (this.init(this.fileInput)) // init fileInput
+			{
+				if (!!params["dropZone"])
+					this.initDropZone(BX(params["dropZone"]));
+
+				if (!!params["events"])
 				{
-					if (params["events"].hasOwnProperty(ii))
+					for(ii in params["events"])
 					{
-						BX.UploaderUtils.bindEvents(this, ii, params["events"][ii]);
+						if (params["events"].hasOwnProperty(ii))
+						{
+							BX.UploaderUtils.bindEvents(this, ii, params["events"][ii]);
+						}
 					}
 				}
-			}
-
-			this.uploadFileUrl = (!!params["uploadFileUrl"] ? params["uploadFileUrl"] : (this.form ? this.form.getAttribute("action") : ""));
-			if (!this.uploadFileUrl || this.uploadFileUrl.length <= 0)
-			{
-				BX.debug(BX.message("UPLOADER_ACTION_URL_NOT_DEFINED"));
-			}
-			this.status = statuses.ready;
+				this.uploadFileUrl = (!!params["uploadFileUrl"] ? params["uploadFileUrl"] : (this.form ? this.form.getAttribute("action") : ""));
+				if (!this.uploadFileUrl || this.uploadFileUrl.length <= 0)
+				{
+					BX.debug(BX.message("UPLOADER_ACTION_URL_NOT_DEFINED"));
+				}
+				this.status = statuses.ready;
 
 
-			/* This params only for files. They are here for easy way to change them */
-			this.fileFields = params["fields"];
-			this.fileCopies = params["copies"];
-			var queueFields = (!!params["queueFields"] ? params["queueFields"] : {});
-			queueFields["placeHolder"] = BX(queueFields["placeHolder"] || params["placeHolder"]);
-			queueFields["showImage"] = (queueFields["showImage"] || params["showImage"]);
-			queueFields["thumb"] = (queueFields["thumb"] || params["thumb"]);
-			this.queue = new BX.UploaderQueue(queueFields, this.limits, this);
+				/* This params only for files. They are here for easy way to change them */
+				this.fileFields = params["fields"];
+				this.fileCopies = params["copies"];
+				var queueFields = (!!params["queueFields"] ? params["queueFields"] : {});
+				queueFields["placeHolder"] = BX(queueFields["placeHolder"] || params["placeHolder"]);
+				queueFields["showImage"] = (queueFields["showImage"] || params["showImage"]);
+				queueFields["thumb"] = (queueFields["thumb"] || params["thumb"]);
+				this.queue = new BX.UploaderQueue(queueFields, this.limits, this);
 
-			this.params["doWeHaveStorage"] = true;
-			BX.addCustomEvent(this, 'onDone', BX.delegate(function(){
-				this.init(this.fileInput);
-			}, this));
-			if (!!this.params["filesInputName"] && this.params["pasteFileHashInForm"])
-			{
-				BX.addCustomEvent(this, 'onFileIsUploaded', BX.delegate(function(id, item){
-					var node = BX.create("INPUT", {props : { type : "hidden", name : this.params["filesInputName"] + '[]', value : item.hash }});
-					if (BX(params["placeHolder"]) && BX(id + 'Item'))
-						BX(id + 'Item').appendChild(node);
-					else if (this.fileInput !== null)
-						this.fileInput.parentNode.insertBefore(node, this.fileInput);
+				this.params["doWeHaveStorage"] = true;
+				BX.addCustomEvent(this, 'onDone', BX.delegate(function(){
+					this.init(this.fileInput);
 				}, this));
+				if (!!this.params["filesInputName"] && this.params["pasteFileHashInForm"])
+				{
+					BX.addCustomEvent(this, 'onFileIsUploaded', BX.delegate(function(id, item){
+						var node = BX.create("INPUT", {props : { type : "hidden", name : this.params["filesInputName"] + '[]', value : item.hash }});
+						if (BX(params["placeHolder"]) && BX(id + 'Item'))
+							BX(id + 'Item').appendChild(node);
+						else if (this.fileInput !== null)
+							this.fileInput.parentNode.insertBefore(node, this.fileInput);
+					}, this));
+				}
+				if (this.params["deleteFileOnServer"])
+				{
+					BX.addCustomEvent(this, 'onFileIsDeleted', BX.delegate(function(id, file){
+						if (!!file && !!file.hash)
+						{
+							var data = this.preparePost({mode : "delete", hash : file.hash}, false);
+							BX.ajax.get(
+								this.uploadFileUrl,
+								data.data
+							);
+						}
+					}, this));
+				}
+				BX.onCustomEvent(window, "onUploaderIsInited", [this.id, this]);
+				this.uploads = new BX.UploaderUtils.Hash();
+				this.upload = null;
 			}
-			if (this.params["deleteFileOnServer"])
-			{
-				BX.addCustomEvent(this, 'onFileIsDeleted', BX.delegate(function(id, file){
-					if (!!file && !!file.hash)
-					{
-						var data = this.preparePost({mode : "delete", hash : file.hash}, false);
-						BX.ajax.get(
-							this.uploadFileUrl,
-							data.data
-						);
-					}
-				}, this));
-			}
-			BX.onCustomEvent(window, "onUploaderIsInited", [this.id, this]);
-			this.uploads = new BX.UploaderUtils.Hash();
-			this.upload = null;
-			return this;
 		}
 	};
 
 	BX.Uploader.prototype = {
 		init : function(fileInput)
 		{
-			this.log('Initialized');
+			this.log('input is initialized');
+			if(!this.__beforeunload)
+			{
+				this.__beforeunload = BX.delegate(function(){ this.terminate(); }, this);
+				BX.bind(window, 'beforeunload', this.__beforeunload);
+			}
 			if (BX(fileInput))
 			{
 				if (fileInput == this.fileInput && !this.form)
@@ -215,67 +224,55 @@
 				if (!this.params["doWeHaveStorage"])
 					this.queue.clear();
 
-				var added = false, ext;
+				if (!BX.type.isArray(files)) // FileList
+				{
+					var result = [];
+					for (var j=0; j < files.length; j++)
+					{
+						result.push(files[j]);
+					}
+					files = result;
+				}
+
+				BX.onCustomEvent(this, "onAttachFiles", [files, nodes, this]);
+
+				var added = false, ext, type;
+
 				nodes = (typeof nodes == "object" && !!nodes && nodes.length > 0 ? nodes : []);
+
 				for (var i=0, f; i < files.length; i++)
 				{
 					f = files[i];
-					if (f.type === "")
+
+					if (BX(f) && f.value)
 					{
-						BX.DoNothing();
+						ext = (f.name.value || '').split('.').pop();
+						type = '';
 					}
-					else if (this.limits["uploadFileExt"].length > 0)
+					else
 					{
 						ext = (f.name || '').split('.').pop();
-						if (this.limits["uploadFileExt"].indexOf(ext) < 0)
-							continue;
+						type = f.type;
 					}
-					BX.onCustomEvent(this, "onItemIsAdded", [f, nodes[i], this]);
-					added = true;
-				}
-				if (added)
-				{
-					BX.onCustomEvent(this, "onItemsAreAdded", [this]);
-				}
-			}
-			return false;
-		},
-		onChange : function(fileInput)
-		{
-			var files = fileInput, ext;
-			if (fileInput && fileInput.target)
-				files = fileInput.target.files;
-			else if (!fileInput && BX(this.fileInput))
-				files = this.fileInput.files;
+					ext = (BX.type.isNotEmptyString(ext) ? ext : '').toLowerCase();
+					type = (BX.type.isNotEmptyString(type) ? type : '').toLowerCase();
 
-			if (BX(this.fileInput) && this.fileInput.disabled)
-			{
-				BX.PreventDefault(fileInput);
-				return false;
-			}
-
-			if (typeof files !== "undefined" && files.length > 0)
-			{
-				BX.PreventDefault(fileInput);
-				this.init(fileInput);
-				if (!this.params["doWeHaveStorage"])
-					this.queue.clear();
-
-				var added = false;
-				for (var i=0, f; i < files.length; i++)
-				{
-					f = files[i];
-					if (f.type === "")
+					if (
+						(
+							this.limits["uploadFile"] == "image/*" &&
+							(
+								(BX.type.isNotEmptyString(type) && type.indexOf("image/") !== 0) ||
+								(!BX.type.isNotEmptyString(type) && this.params["imageExt"].indexOf(ext) < 0)
+							)
+						) ||
+						(
+							this.limits["uploadFileExt"].length > 0 && this.limits["uploadFileExt"].indexOf(ext) < 0
+						)
+					)
 					{
-						BX.DoNothing();
+						continue;
 					}
-					else if (this.limits["uploadFileExt"].length > 0)
-					{
-						ext = (f.name || '').split('.').pop();
-						if (this.limits["uploadFileExt"].indexOf(ext) < 0)
-							continue;
-					}
-					BX.onCustomEvent(this, "onItemIsAdded", [f, null, this]);
+					BX.onCustomEvent(this, "onItemIsAdded", [f, (nodes[i] || null), this]);
 					added = true;
 				}
 				if (added)
@@ -285,6 +282,28 @@
 						this.submit();
 				}
 			}
+			return false;
+		},
+		onChange : function(fileInput)
+		{
+			BX.PreventDefault(fileInput);
+
+			var files = fileInput;
+			if (fileInput && fileInput.target)
+				files = fileInput.target.files;
+			else if (!fileInput && BX(this.fileInput))
+				files = this.fileInput.files;
+
+			if (BX(this.fileInput) && this.fileInput.disabled)
+			{
+				BX.DoNothing();
+			}
+			else
+			{
+				this.init(fileInput);
+				this.onAttach(files);
+			}
+
 			return false;
 		},
 		mkFileInput : function(oldNode)
@@ -307,59 +326,11 @@
 			oldNode.parentNode.removeChild(oldNode);
 			return node;
 		},
-		checkFile : function(item)
-		{
-			var error = "";
-			if (this.limits["uploadMaxFilesize"] > 0 && item.file && item.file.size > this.limits["uploadMaxFilesize"])
-			{
-				error = BX.message('FILE_BAD_SIZE') + '(' + BX.UploaderUtils.getFormattedSize(this.limits["uploadMaxFilesize"], 2) + ')';
-			}
-			return error;
-		},
-		appendToForm : function(fd, key, val)
-		{
-			if (!!val && typeof val == "object")
-			{
-				for (var ii in val)
-				{
-					if (val.hasOwnProperty(ii))
-					{
-						this.appendToForm(fd, key + '[' + ii + ']', val[ii]);
-					}
-				}
-			}
-			else
-				fd.append(key, (!!val ? val : ''));
-		},
-		prepareData : function(arData)
-		{
-			var data = {};
-			if (null != arData)
-			{
-				if(typeof arData == 'object')
-				{
-					for(var i in arData)
-					{
-						if (arData.hasOwnProperty(i))
-						{
-							var name = BX.util.urlencode(i);
-							if(typeof arData[i] == 'object')
-								data[name] = this.prepareData(arData[i]);
-							else
-								data[name] = BX.util.urlencode(arData[i]);
-						}
-					}
-				}
-				else
-					data = BX.util.urlencode(arData);
-			}
-			return data;
-		},
 		preparePost : function(data, prepareForm)
 		{
 			if (prepareForm === true && this.params["uploadFormData"] == "Y" && !this.post)
 			{
-				var post2 = {"AJAX_POST" : "Y", "sessid" : BX.bitrix_sessid(), "data": {}};
+				var post2 = {"AJAX_POST" : "Y", "data": {}};
 				post2 = (this.form ? BX.UploaderUtils.FormToArray(this.form, post2) : post2);
 				if (!!post2.data[this.params["filesInputName"]])
 				{
@@ -373,18 +344,27 @@
 				}
 				if (!!post2.data[this.params["uploadInputName"]])
 				{
+					post2.filesCount -= post2.data[this.params["uploadInputName"]].length;
 					post2.data[this.params["uploadInputName"]] = null;
 					delete post2.data[this.params["uploadInputName"]];
+				}
+				if (this.limits["phpMaxFileUploads"] <= post2.filesCount)
+				{
+					BX.debug('You can not upload any file from your list.');
+					return false;
 				}
 				post2.size = BX.UploaderUtils.sizeof(post2.data);
 				this.post = post2;
 			}
-			var post = (prepareForm === true && this.params["uploadFormData"] == "Y" ? this.post : {data : {"AJAX_POST" : "Y", "sessid" : BX.bitrix_sessid()}, size : 48}), size = 0;
-			if (!!data)
+			var post = (prepareForm === true && this.params["uploadFormData"] == "Y" ? this.post : {data : {"AJAX_POST" : "Y"}, filesCount : 0, size : 10}), size = 0;
+			post.data["sessid"] = BX.bitrix_sessid();
+			post.size += (6 + BX.bitrix_sessid().length);
+			if (data)
 			{
 				post.data[this.params["uploadInputInfoName"]] = {
 					controlId : this.controlId,
-					CID : this.CID
+					CID : this.CID,
+					inputName : this.params["uploadInputName"]
 				};
 				for (var ii in data)
 				{
@@ -398,81 +378,13 @@
 			post.length = post.size + size;
 			return post;
 		},
-		FormData : window.FormData,
-		preparePackage : function(packageIndex, files, formData)
-		{
-			var fd = new this.FormData(), item, data = formData, res;
-			for (item in data)
-			{
-				if (data.hasOwnProperty(item))
-				{
-					this.appendToForm(fd, item, data[item]);
-				}
-			}
-			for (var id in files)
-			{
-				if (files.hasOwnProperty(id))
-				{
-					data = files[id];
-
-					if (!!data.props)
-					{
-						res = this.prepareData(data.props);
-						for (item in res)
-						{
-							if (res.hasOwnProperty(item))
-							{
-								this.appendToForm(fd, this.params["uploadInputName"] + '[' + id + '][' + item + ']', res[item]);
-							}
-						}
-					}
-					if (!!data.files)
-					{
-						for (var ii = 0; ii < data.files.length; ii++)
-						{
-							item = data.files[ii];
-							files[id].files[ii].postName = item.postName =
-								item.name + (!!item.thumb ? ('\\' + item.thumb + '\\') : (item.packages > 0 ? ('/' + item.packages + '/' + item.package + '/') : ''));
-							fd.append((this.params["uploadInputName"] + '[' + id + '][' + this.prepareData(item.postName) + ']'), item, this.prepareData(item.postName));
-						}
-					}
-				}
-			}
-			return fd;
-		},
-		sendPackage : function(stream, packageIndex, files, formData)
-		{
-			var fd = this.preparePackage(packageIndex, files, formData);
-			this.onStartPackage(stream, packageIndex, files);
-			this.send(stream, packageIndex, fd);
-		},
-		send : function(stream, packageIndex, fd)
-		{
-			this.xhr = BX.ajax({
-				'method': 'POST',
-				'dataType': 'json',
-				'data' : fd,
-				'url': this.uploadFileUrl,
-				'onsuccess': BX.proxy(function(data){this.onDonePackage(stream, packageIndex, data);}, this),
-				'onfailure': BX.proxy(function(){this.onErrorPackage(stream, packageIndex, arguments);}, this),
-				'start': false,
-				'preparePost':false,
-				'processData':true
-			});
-			this.xhr.upload.addEventListener(
-				'progress',
-				BX.proxy(function(e){this.onProcessPackage(stream, packageIndex, e);}, this),
-				false
-			);
-			this.xhr.send(fd);
-		},
 		submit : function()
 		{
-			this.onStart();
+			this.start();
 		},
 		stop : function()
 		{
-			this.onTerminate();
+			this.terminate();
 		},
 		adjustProcess : function(streamId, item, status, params, pIndex)
 		{
@@ -565,318 +477,821 @@
 			}
 			this.log(item.name + ': ' + text);
 		},
-		onTerminate : function(pIndex)
+		terminate : function(pIndex)
 		{
-			var packageFormer;
-			if (!!pIndex && this.uploads.hasItem(pIndex))
+			var packageFormer, packagesFormer;
+			if (!pIndex || pIndex == 'beforeunload')
 			{
-				if (this.upload.pIndex == pIndex)
-					this.upload = null;
-				this.log(pIndex + ' Uploading is canceled');
-				packageFormer = this.uploads.removeItem(pIndex);
-				this.queue.restoreFiles(packageFormer.dataId);
-				BX.onCustomEvent(this, 'onTerminated', [pIndex]);
-				this.checkUploads(null);
-			}
-			else if (!pIndex)
-			{
-				while ((packageFormer = this.uploads.getFirst()) && !!packageFormer)
-				{
-					this.uploads.removeItem(packageFormer.pIndex);
-					packageFormer.stop();
-					this.log(packageFormer.pIndex + ' Uploading is canceled');
-					this.queue.restoreFiles(packageFormer.dataId);
-					BX.onCustomEvent(this, 'onTerminate', [pIndex, packageFormer]);
-				}
+				packagesFormer = this.uploads;
+
+				this.uploads = new BX.UploaderUtils.Hash();
 				this.upload = null;
+
+				while ((packageFormer = packagesFormer.getFirst()) && packageFormer)
+				{
+					packagesFormer.removeItem(packageFormer.id);
+					this.terminate(packageFormer);
+				}
+				return;
+			}
+			else if (BX.type.isNotEmptyString(pIndex))
+			{
+				packageFormer = this.uploads.removeItem(pIndex);
+			}
+			else if (typeof pIndex == "object")
+			{
+				packageFormer = pIndex;
+			}
+			if (packageFormer && packageFormer["stop"])
+			{
+				packageFormer.stop();
+				this.log(packageFormer.id + ' Uploading is canceled');
+				BX.onCustomEvent(this, 'onTerminated', [packageFormer.id, packageFormer]);
 			}
 		},
-		onStart : function()
+		start : function()
 		{
+			if (this.queue.itForUpload.length <= 0)
+			{
+				BX.onCustomEvent(this, 'onStart', [null, {filesCount : 0}, this]);
+				BX.onCustomEvent(this, 'onDone', [null, null, {filesCount : 0}]);
+				BX.onCustomEvent(this, 'onFinish', [null, null, {filesCount : 0}]);
+				return;
+			}
 
 			var pIndex = 'pIndex' + BX.UploaderUtils.getId(), queue = this.queue.itForUpload;
 			this.queue.itForUpload = new BX.UploaderUtils.Hash();
-			this.log(pIndex + ' Uploading is started');
 			this.post = false;
-			var packageFormer = new BX.UploaderPackage(queue);
-			BX.onCustomEvent(this, 'onStart', [pIndex, packageFormer, this]);
-			packageFormer.pIndex = pIndex;
-			if (packageFormer.length > 0)
-				this.uploads.setItem(pIndex, packageFormer);
-			this.checkUploads(null);
-		},
-		addFile : function(id, packageIndex)
-		{
-		},
-		packFiles : function(item, pack)
-		{
-			var stream = this.streams.get(pack, this.preparePost( { packageIndex : pack.pIndex, filesCount : pack.filesCount, mode : "upload" }, true));
-			if (!!stream)
-			{
-				if (item === statuses.inprogress) // if file still has not initialised
-				{
-					setTimeout(BX.proxy(function(){ this.checkUploads(pack.pIndex); }, this), 500);
-					return statuses.inprogress;
-				}
-				else if (typeof item == "object" && item.uploadStatus == statuses.done)
-				{
-					// in case of using several streams to release current stream
-				}
-				else if (item !== statuses.done) // if pack has not been sent
-				{
-					var count = (this.limits["phpMaxFileUploads"] - stream.filesCount),
-						size = (this.limits["phpPostMaxSize"] - stream.postSize),
-						blob, file, data = {files : []}, tmp, error, callback;
+			this.log('create new package ' + pIndex);
+			var packageFormer = new BX.UploaderPackage({
+				id : pIndex,
+				data : queue,
+				post : this.preparePost({}, true),
+				uploadFileUrl : this.uploadFileUrl,
+				limits : this.limits,
+				params : this.params
+			}, this);
+			BX.addCustomEvent(packageFormer, 'adjustProcess', BX.proxy(this.adjustProcess, this));
+			BX.addCustomEvent(packageFormer, 'startStream', BX.proxy(function(stream, pack, files){ BX.onCustomEvent(this, 'startPackage', [stream, pack.id, files]); }, this));
+			BX.addCustomEvent(packageFormer, 'progressStream', BX.proxy(function(stream, pack, proc){ BX.onCustomEvent(this, 'processPackage', [stream, pack.id, proc]); }, this));
+			BX.addCustomEvent(packageFormer, 'doneStream', BX.proxy(function(stream, pack, data){ BX.onCustomEvent(this, 'donePackage', [stream, pack.id, data]); }, this));
+			BX.addCustomEvent(packageFormer, 'stopPackage', BX.proxy(function(pack){
+				this.log('restore files: '+ pack.data.length);
+				this.queue.restoreFiles(pack.data);
+			}, this));
+			BX.addCustomEvent(packageFormer, 'donePackage', BX.proxy(function(stream, pack, data){
+				BX.onCustomEvent(this, 'onDone', [stream, pack.id, pack, data]);
+				var res = this.checkUploads(pack.id);
+				if (!res)
+					BX.onCustomEvent(this, 'onFinish', [stream, pack.id, pack, data]);
+			}, this));
+			BX.addCustomEvent(packageFormer, 'errorPackage', BX.proxy(function(stream, pack, data){
+				BX.onCustomEvent(this, 'error', [stream, pIndex, data]);
+				BX.onCustomEvent(this, 'onError', [stream, pIndex, data]);
+				this.checkUploads(pack.id);
+			}, this));
+			BX.addCustomEvent(packageFormer, 'processPackage', BX.proxy(function(stream, pack, procent){
+				BX.onCustomEvent(this, 'processPackage', [stream, pack, procent]);
+			}, this));
 
-					while (!!item && size > 0 && count > 0)
+			BX.onCustomEvent(this, 'onStart', [pIndex, packageFormer, this]);
+			this.uploads.setItem(pIndex, packageFormer);
+			this.checkUploads();
+		},
+		checkUploads : function(pIndex)
+		{
+			if (pIndex)
+				this.uploads.removeItem(pIndex);
+			this.upload = this.uploads.getFirst();
+			if (this.upload)
+				this.upload.start(this.streams);
+			return this.upload;
+		},
+		// public functions
+		getItem : function(id)
+		{
+			return this.queue.getItem(id);
+		},
+		getItems : function()
+		{
+			return this.queue.items;
+		},
+		clear : function()
+		{
+			var item;
+			while((item = this.queue.items.getFirst()) && item)
+			{
+				item.deleteFile();
+			}
+		}
+	};
+
+	BX.UploaderSimple = function(params)
+	{
+		BX.UploaderSimple.superclass.constructor.apply(this, arguments);
+		this.dialogName = "BX.UploaderSimple";
+		this.previews = new BX.UploaderUtils.Hash();
+		if (this.params["uploadMethod"] != "immediate")
+		{
+			BX.addCustomEvent(this, "onFileNeedsPreview", BX.delegate(function(id, item) {
+				this.previews.setItem(item.id, item);
+				this.log('onFileNeedsPreview: ' + item.id);
+				setTimeout(BX.delegate(this.onFileNeedsPreview, this), 500);
+			}, this));
+			BX.addCustomEvent(this, "onStart", BX.delegate(function(pIndex, packageFormer) {
+				if (packageFormer && packageFormer.filesCount > 0)
+				{
+					var queue = packageFormer.raw.getIds(), ii;
+					for (ii = 0; ii < queue.length; ii++)
 					{
-						file = null; blob = null; error = ''; callback = null;
-						if (item.uploadStatus != statuses.preparing)
+						this.previews.removeItem(queue[ii]);
+					}
+				}
+			}, this));
+		}
+		this.streams = new BX.UploaderStreams(1, this);
+		return this;
+	};
+	BX.extend(BX.UploaderSimple, BX.Uploader);
+
+	BX.UploaderSimple.prototype.preparePost = function()
+	{
+		var post = BX.UploaderSimple.superclass.preparePost.apply(this, arguments);
+		if (post && post.data && post.data[this.params["uploadInputInfoName"]] && !post.data[this.params["uploadInputInfoName"]]["simpleUploader"])
+		{
+			post.data[this.params["uploadInputInfoName"]]["simpleUploader"] = "Y";
+			post.size += 15;
+		}
+		return post;
+	};
+	BX.UploaderSimple.prototype.init = function(fileInput, del)
+	{
+		this.log('input is initialized: ' + (del !== false ? 'drop' : ' does not drop'));
+		if (BX(fileInput))
+		{
+			if (fileInput == this.fileInput && !this.form)
+				this.form = this.fileInput.form;
+
+			if (fileInput == this.fileInput)
+				fileInput = this.fileInput = this.mkFileInput(fileInput, del);
+			else
+				fileInput = this.mkFileInput(fileInput, del);
+
+			BX.onCustomEvent(this, "onFileinputIsReinited", [fileInput, this]);
+
+			if (fileInput)
+			{
+				BX.bind(fileInput, "change", BX.delegate(this.onChange, this));
+				return true;
+			}
+		}
+		else if (fileInput === null && this.fileInput === null)
+		{
+			this.log('Initialized && null');
+			return true;
+		}
+		return false;
+	};
+	BX.UploaderSimple.prototype.log = function(text)
+	{
+		BX.UploaderUtils.log('simpleup', text);
+	};
+	BX.UploaderSimple.prototype.mkFileInput = function(oldNode, del)
+	{
+		if (!BX(oldNode))
+			return false;
+		BX.unbindAll(oldNode);
+		var node = oldNode.cloneNode(true);
+		BX.adjust(node, {
+			attrs: {
+				id : "",
+				name: (this.params["uploadInputName"] + '[file' + BX.UploaderUtils.getId() + '][default]'),
+				multiple : false,
+				accept : this.limits["uploadFile"]
+		}});
+		oldNode.parentNode.insertBefore(node, oldNode);
+		if (del !== false)
+			oldNode.parentNode.removeChild(oldNode);
+
+		return node;
+	};
+	BX.UploaderSimple.prototype.onChange = function(fileInput)
+	{
+		BX.PreventDefault(fileInput);
+
+		fileInput = (fileInput.target || fileInput.srcElement || this.fileInput);
+
+		if (BX(this.fileInput) && this.fileInput.disabled)
+		{
+			BX.DoNothing();
+		}
+		else
+		{
+			this.init(fileInput, false);
+			this.onAttach([fileInput]);
+		}
+		return false;
+	};
+	BX.UploaderSimple.prototype.onFileNeedsPreviewCallback = function(pack, data)
+	{
+		if (!(data && data["files"]))
+		{
+			this.log('onFileNeedsPreviewCallback is failed.');
+			return;
+		}
+		this.log('onFileNeedsPreviewCallback');
+		this.onFileNeedsPreview();
+
+		var item, file;
+		while((item = pack.result.getFirst()) && !!item)
+		{
+			pack.result.removeItem(item.id);
+			file = false;
+			if (data["files"][item.id] &&
+				data["files"][item.id]["status"] == "uploaded" &&
+				data["files"][item.id]["hash"] &&
+				data["files"][item.id]["file"] &&
+				data["files"][item.id]["file"]["files"] &&
+				data["files"][item.id]["file"]["files"]["default"])
+			{
+				file = data["files"][item.id]["file"]["files"]["default"];
+				item.file = {
+					"name" : file["name"],
+					"~name" : file["~name"],
+					size : parseInt(file["size"]),
+					type : file["type"],
+					id : item.id,
+					hash : data["files"][item.id]["hash"],
+					copy : "default",
+					url : file["url"],
+					uploadStatus : statuses.done
+				};
+				item.nonProcessRun = true;
+				BX.onCustomEvent(item, "onFileHasGotPreview", [item.id, item]);
+			}
+			else
+			{
+				BX.onCustomEvent(item, "onFileHasNotGotPreview", [item.id, item]);
+			}
+		}
+	};
+	BX.UploaderSimple.prototype.onFileNeedsPreview = function()
+	{
+		this.log('onFileNeedsPreview');
+		var queue = new BX.UploaderUtils.Hash(), item;
+		while (queue.length < this.limits["phpMaxFileUploads"] &&
+			(item = this.previews.getFirst()) && item && item !== null)
+		{
+			this.previews.removeItem(item.id);
+			queue.setItem(item.id, item);
+		}
+		if (queue.length > 0)
+		{
+			this.post = false;
+			var pIndex = 'pIndex' + BX.UploaderUtils.getId();
+			this.log('create new package for preview ' + pIndex);
+			var packageFormer = new BX.UploaderPackage({
+				id : pIndex,
+				data : queue,
+				post : this.preparePost({type : "brief"}, true),
+				uploadFileUrl : this.uploadFileUrl,
+				limits : this.limits,
+				params : this.params
+			});
+			packageFormer["SimpleUploaderUploadsPreview"] = "Y";
+			BX.addCustomEvent(packageFormer, 'adjustProcess', BX.proxy(function(streamId, item, status, params, pIndex) {
+				if (status == statuses.error)
+				{
+					this.adjustProcess(streamId, item, status, params, pIndex);
+				}
+			}, this));
+			BX.addCustomEvent(packageFormer, 'startStream', BX.proxy(function(stream, pack, files){ BX.onCustomEvent(this, 'startPackagePreview', [stream, pack.id, files]); }, this));
+			BX.addCustomEvent(packageFormer, 'progressStream', BX.proxy(function(stream, pack, proc){ BX.onCustomEvent(this, 'processPackagePreview', [stream, pack.id, proc]); }, this));
+			BX.addCustomEvent(packageFormer, 'doneStream', BX.proxy(function(stream, pack, data){ BX.onCustomEvent(this, 'donePackagePreview', [stream, pack.id, data]); }, this));
+			BX.addCustomEvent(packageFormer, 'stopPackage', BX.proxy(function(pack){
+//				this.log('restore preview files: ', pack.repo.length);
+//				this.queue.restoreFiles(pack.repo);
+			}, this));
+			BX.addCustomEvent(packageFormer, 'donePackage', BX.proxy(function(stream, pack, data){
+				this.checkUploads(pack.id);
+				this.onFileNeedsPreviewCallback(pack, data);
+			}, this));
+			BX.addCustomEvent(packageFormer, 'errorPackage', BX.proxy(function(stream, pack, data){
+				BX.onCustomEvent(this, 'error', [stream, pIndex, data]);
+				BX.onCustomEvent(this, 'onError', [stream, pIndex, data]);
+				this.checkUploads(pack.id);
+			}, this));
+			BX.addCustomEvent(packageFormer, 'processPackage', BX.proxy(function(stream, pack, procent){
+				BX.onCustomEvent(this, 'processPackagePreview', [stream, pack, procent]);
+			}, this));
+
+			BX.onCustomEvent(this, 'onStartPreview', [pIndex, packageFormer, this]);
+			this.uploads.setItem(pIndex, packageFormer);
+			this.checkUploads();
+		}
+	};
+	BX.Uploader.isSupported = function()
+	{
+		return (window.Blob || window["MozBlobBuilder"] || window["WebKitBlobBuilder"] || window["BlobBuilder"]);
+	};
+	var objName = "BX.UploaderSimple";
+	if (BX.Uploader.isSupported())
+		objName = "BX.Uploader";
+	BX.Uploader.getInstanceName = function()
+	{
+		return objName;
+	};
+	BX.Uploader.getInstance = function(params)
+	{
+		BX.onCustomEvent(window, "onUploaderIsAlmostInited", [objName, params]);
+		return eval("new " + objName + "(params);");
+	};
+	BX.UploaderPackage = function(params, manager)
+	{
+		this.filesCount = 0;
+		this.length = 0;
+		params = (params || {});
+		this["pIndex"] = this.id = params["id"];
+		this.limits = params["limits"];
+		this.params = params["params"];
+		this.status = statuses.ready;
+
+		if (params["data"] && params.data.length > 0)
+		{
+			/**
+			 * this.length integer
+			 * this.repo BX.UploaderUtils.Hash()
+			 * this.raw BX.UploaderUtils.Hash()
+			 * this.data BX.UploaderUtils.Hash()
+			 */
+			this.length = params.data.length;
+			this.filesCount = params.data.length;
+			this.uploadFileUrl = params["uploadFileUrl"];
+			this.raw = params.data;
+
+			this.repo = new BX.UploaderUtils.Hash();
+			this.data = new BX.UploaderUtils.Hash();
+			this.result = new BX.UploaderUtils.Hash();
+			this.init();
+			this.post = params["post"];
+			if (!this.post)
+			{
+				var item;
+				while ((item = this.raw.getFirst()) && item)
+				{
+					this.adjustProcess(null, item, statuses.error, {error : BX.message("UPLOADER_UPLOADING_ERROR2")});
+					this.raw.removeItem(item.id);
+				}
+				BX.onCustomEvent(this, 'errorPackage', [null, this, null]);
+			}
+			else
+			{
+				var ii, data = { packageIndex : this.id, filesCount : this.filesCount, mode : "upload" };
+				for (ii in data)
+				{
+					if (data.hasOwnProperty(ii))
+					{
+						this.post.data[this.params["uploadInputInfoName"]][ii] = data[ii];
+						this.post.size += BX.UploaderUtils.sizeof(ii) + BX.UploaderUtils.sizeof(data[ii]);
+					}
+				}
+				this.post.startSize = this.post.size;
+				BX.onCustomEvent(this, "initializePackage", [this, this.raw]);
+				if (manager)
+					BX.onCustomEvent(manager, "onPackageIsInitialized", [this, this.raw]);
+				this.log('initialize');
+			}
+		}
+		this._exec = BX.delegate(this.exec, this);
+	};
+
+	BX.UploaderPackage.prototype = {
+		checkFile : function(item)
+		{
+			var error = "";
+			if (this.limits["uploadMaxFilesize"] > 0 && item.file && item.file.size > this.limits["uploadMaxFilesize"])
+			{
+				error = BX.message('FILE_BAD_SIZE') + ' (' + BX.UploaderUtils.getFormattedSize(this.limits["uploadMaxFilesize"], 2) + ')';
+			}
+			return error;
+		},
+		packStream : function(stream)
+		{
+			if (stream.filesSize <= 0)
+				return null;
+
+			var fd = new BX.UploaderUtils.FormData(), item,
+				data = this.post.data,
+				files = stream.files,
+				res;
+			for (item in data)
+			{
+				if (data.hasOwnProperty(item))
+				{
+					BX.UploaderUtils.appendToForm(fd, item, data[item]);
+				}
+			}
+			for (var id in files)
+			{
+				if (files.hasOwnProperty(id))
+				{
+					data = files[id];
+
+					if (!!data.props)
+					{
+						res = BX.UploaderUtils.prepareData(data.props);
+						for (item in res)
 						{
-							error = this.checkFile(item);
-							if (error === '')
+							if (res.hasOwnProperty(item))
 							{
-								data.props = item.getProps();
-								callback = BX.proxy(function() {
-									item.uploadStatus = statuses.preparing;
-									this.adjustProcess(stream.id, item, statuses["new"], {}, pack.pIndex);
-									pack.checkedFilesCount = (pack.checkedFilesCount > 0 ? pack.checkedFilesCount : 0) + 1;
-								}, this);
+								BX.UploaderUtils.appendToForm(fd,  this.params["uploadInputName"] + '[' + id + '][' + item + ']', res[item]);
+							}
+						}
+					}
+					if (!!data.files)
+					{
+						for (var ii = 0; ii < data.files.length; ii++)
+						{
+							item = data.files[ii];
+							item.copy = item.postName = (item.thumb ? item.thumb : 'default');
+							if (item.packages > 0)
+							{
+								item.postName += ('.ch' + item.package + '.' + (item.start > 0 ? item.start : "0") + '.chs' + item.packages);
+							}
+							fd.append((this.params["uploadInputName"] + '[' + id + '][' + BX.UploaderUtils.prepareData(item.postName) + ']'), item, BX.UploaderUtils.prepareData(item.postName));
+						}
+					}
+				}
+			}
+			fd.action = this.uploadFileUrl;
+			return fd;
+		},
+		packFiles : function(item, stream)
+		{
+			if (!item)
+				return statuses.error;
+			else if (item["uploadStatus"] == statuses.done || item["uploadStatus"] == statuses.error)
+				return item["uploadStatus"];
+
+			var count = (this.limits["phpMaxFileUploads"] - this.post.filesCount),
+				size = (this.limits["phpPostMaxSize"] - stream.filesSize - stream.postSize),
+				filesSize = (this.limits["phpPostSize"] - stream.filesSize),
+				blob, file, data = {files : []}, tmp, error, callback, cf;
+			while (size > 0 && count > 0 && filesSize > 0)
+			{
+				file = null; blob = null; error = ''; callback = [];
+				if (item.uploadStatus != statuses.preparing)
+				{
+					error = this.checkFile(item);
+					if (error === '')
+					{
+						data.props = item.getProps();
+						if (item["restored"] == "Y")
+						{
+							data.props["restored"] = "Y";
+							delete item["restored"];
+						}
+						callback.push(BX.proxy(function() {
+							item.uploadStatus = statuses.preparing;
+							this.adjustProcess(stream.id, item, statuses["new"], {});
+						}, this));
+					}
+					else
+					{
+						data.props = {name : item.name, error : true};
+						this.adjustProcess(stream.id, item, statuses.error, {error : error});
+						item.uploadStatus = statuses.error;
+					}
+				}
+				if (item.uploadStatus == statuses.error)
+				{
+
+				}
+				else if (item.nonProcessRun === true)
+				{
+					item.uploadStatus = statuses.done;
+				}
+				else
+				{
+					if (!item["file"])
+					{
+						file = null;
+					}
+					else if (item.file.uploadStatus != statuses.done)
+					{
+						file = item.file;
+					}
+					else if (item["thumb"] && item.thumb !== null)
+					{
+						file = item.thumb;
+					}
+					else
+					{
+						item.thumb = file = item.getThumbs(null);
+					}
+					var fileConstructor = Object.prototype.toString.call(file);
+					if (file === null)
+					{
+						item.uploadStatus = statuses.done;
+						this.adjustProcess(stream.id, item, statuses.done, {});
+						item.file.uploadStatus = statuses.done;
+						item.thumb = null;
+					}
+					else if (BX.type.isDomNode(file))
+					{
+						data.props = (data.props || {name : item.name });
+						data.files.push(file);
+						callback.push(BX.proxy(function(file) {
+							file.uploadStatus = statuses.done;
+							if (item.file == file)
+							{
+								this.adjustProcess(stream.id, item, statuses.preparing, {canvas : "default", package : 1, packages : 1});
 							}
 							else
 							{
-								data.props = {name : item.name, error : true};
-								this.adjustProcess(stream.id, item, statuses.error, {error : error}, pack.pIndex);
-								item.uploadStatus = statuses.error;
-								pack.notCheckedFiles = (!!pack.notCheckedFiles ? pack.notCheckedFiles : []);
-								pack.notCheckedFiles.push(item.id);
+								this.adjustProcess(stream.id, item, statuses.preparing, {canvas : item.thumb.thumb, package : 1, packages : 1});
+								item.thumb = null;
 							}
+						}, this))
+					}
+					else if (!(fileConstructor == '[object File]' || fileConstructor == '[object Blob]'))
+					{
+						data.props = (data.props || {name : item.name });
+						data.props["files"] = (data.props["files"] || {});
+						data.props["files"][(file["thumb"] || "default")] = file;
+						callback.push(BX.proxy(function(file) {
+							file.uploadStatus = statuses.done;
+							if (item.file == file)
+							{
+								this.adjustProcess(stream.id, item, statuses.preparing, {canvas : "default", package : 1, packages : 1});
+							}
+							else
+							{
+								this.adjustProcess(stream.id, item, statuses.preparing, {canvas : item.thumb.thumb, package : 1, packages : 1});
+								item.thumb = null;
+							}
+						}, this))
+					}
+					else
+					{
+						blob = BX.UploaderUtils.getFilePart(file, (size - BX.UploaderUtils.sizeof({name : item.name})), this.limits["phpUploadMaxFilesize"]);
+						if (!blob)
+						{
+							data.props = "error";
+							this.adjustProcess(stream.id, item, statuses.error, {error : BX.message('FILE_BAD_SIZE')});
+							item.uploadStatus = statuses.error;
 						}
 						else
 						{
-							if (!item["file"])
-							{
-								file = null;
-							}
-							else if (item.file.uploadStatus != statuses.done)
-							{
-								file = item.file;
-							}
-							else if (item.thumb !== null && !!item.thumb)
-							{
-								file = item.thumb;
-							}
-							else
-							{
-								item.thumb = file = item.getThumbs(null);
-							}
-							if (file === null)
-							{
-								item.uploadStatus = statuses.done;
-								this.adjustProcess(stream.id, item, statuses.done, {}, pack.pIndex);
-								item.file.uploadStatus = statuses.done;
-								item.thumb = null;
-							}
-							else
-							{
-								blob = BX.UploaderUtils.getFilePart(file, (size - 1), this.limits["phpUploadMaxFilesize"]);
-								if (!blob)
+							data.files.push(blob);
+							data.props = (data.props || {name : item.name});
+							callback.push(BX.proxy(function(file, blob) {
+								BX.UploaderUtils.applyFilePart(file, blob);
+								if (item.file == file && blob == file)
 								{
-									data.props = "error";
-									this.adjustProcess(stream.id, item, statuses.error, {error : BX.message('FILE_BAD_SIZE')}, pack.pIndex);
-									item.uploadStatus = statuses.error;
+									this.adjustProcess(stream.id, item, statuses.preparing, {canvas : "default", package : 1, packages : 1});
+								}
+								else if (item.file == file)
+								{
+									this.adjustProcess(stream.id, item, statuses.preparing, {canvas : "default", package : (blob.package + 1), packages : blob.packages, blob : blob});
+								}
+								else if (blob == file)
+								{
+									this.adjustProcess(stream.id, item, statuses.preparing, {canvas : item.thumb.thumb, package : 1, packages : 1, blob : blob});
+									item.thumb = null;
 								}
 								else
 								{
-									data.files.push(blob);
-									callback = BX.proxy(function(file, blob) {
-										BX.UploaderUtils.applyFilePart(file, blob);
-										if (item.file == file && blob == file)
-										{
-											this.adjustProcess(stream.id, item, statuses.preparing, {canvas : "default", package : 1, packages : 1}, pack.pIndex);
-										}
-										else if (item.file == file)
-										{
-											this.adjustProcess(stream.id, item, statuses.preparing, {canvas : "default", package : (blob.package + 1), packages : blob.packages, blob : blob}, pack.pIndex);
-										}
-										else if (blob == file)
-										{
-											this.adjustProcess(stream.id, item, statuses.preparing, {canvas : item.thumb.thumb, package : 1, packages : 1, blob : blob}, pack.pIndex);
-											item.thumb = null;
-										}
-										else
-										{
-											this.adjustProcess(stream.id, item, statuses.preparing,
-												{canvas : item.thumb.thumb, package : (blob.package + 1), packages : blob.packages, blob : blob}, pack.pIndex);
-											if (item.thumb.uploadStatus == statuses.done)
-												item.thumb = null;
-										}
-									}, this);
+									this.adjustProcess(stream.id, item, statuses.preparing,
+										{canvas : item.thumb.thumb, package : (blob.package + 1), packages : blob.packages, blob : blob});
+									if (item.thumb.uploadStatus == statuses.done)
+										item.thumb = null;
 								}
-							}
+							}, this));
 						}
-						if (data.files.length > 0 || !!data["props"])
-						{
-							tmp = BX.UploaderUtils.sizeof(data.files) + (!!data["props"] ? BX.UploaderUtils.sizeof(data.props) : 0);
-							size -= tmp;
-							if (size >= 0)
-							{
-								if (callback !== null)
-									callback(file, blob, error);
-								stream.postSize += tmp;
-								stream.files[item.id] = BX.UploaderUtils.makeAnArray(stream.files[item.id], data);
-								if (data.files.length) { count--; stream.filesCount++;}
-							}
-							data = {files : []};
-						}
-						if (item.uploadStatus !== statuses.preparing)
+					}
+				}
+				if (data.files.length > 0 || data["props"])
+				{
+					tmp = BX.UploaderUtils.sizeof(data.files) + (data["props"] ? BX.UploaderUtils.sizeof(data.props) : 0);
+					size -= tmp;
+					filesSize -= tmp;
+					if (size >= 0 && filesSize > 0)
+					{
+						while ((cf=callback.shift()) && cf)
+							cf(file, blob, error);
+
+						stream.filesSize += tmp;
+						stream.files[item.id] = BX.UploaderUtils.makeAnArray(stream.files[item.id], data);
+
+						if (data.files.length) { count--; stream.filesCount++; }
+					}
+					else if (stream.filesCount <= 0)
+					{
+						this.adjustProcess(stream.id, item, statuses.error, {error : BX.message('UPLOADER_UPLOADING_ERROR4')});
+						item.uploadStatus = statuses.error;
+					}
+					data = {files : []};
+				}
+				if (item.uploadStatus !== statuses.preparing)
+				{
+					break;
+				}
+			}
+			return item.uploadStatus;
+		},
+		start : function(streams)
+		{
+			this.streams = streams;
+			if (this.status != statuses.ready)
+				return;
+			this.status = statuses.inprogress;
+			this.__onAllStreamsAreKilled = BX.delegate(function(streams, stream){
+				this.stop();
+				BX.onCustomEvent(this, 'donePackage', [stream, this, this['lastResponse']]);
+			}, this);
+			BX.addCustomEvent(this.streams, 'onrelease', this.__onAllStreamsAreKilled);
+			BX.onCustomEvent(this, 'startPackage', [this, streams]);
+			this.log('start');
+			streams.init(this, this._exec);
+		},
+		stop : function()
+		{
+			this.status = statuses.stopped;
+			this.streams.stop();
+			BX.onCustomEvent(this, 'stopPackage', [this, this.repo]);
+			BX.removeCustomEvent(this.streams, 'onrelease', this.__onAllStreamsAreKilled);
+			this.log('stop');
+		},
+		log : function()
+		{
+			BX.UploaderUtils.log('package', this.id, arguments);
+		},
+		init : function()
+		{
+			var item, callback = BX.proxy(function(id, item) {
+				if (this.raw.removeItem(id))
+				{
+					this.data.setItem(id, item);
+					this.repo.setItem(id, item);
+					BX.onCustomEvent(item, "onFileHasToBePrepared", [item.id, item]);
+
+					this.init();
+				}
+			} , this);
+
+			while ((item = this.raw.getFirst()) && item)
+			{
+				BX.addCustomEvent(item, "onFileIsDeleted", BX.delegate(function(item){
+					this.length--;
+					this.filesCount--;
+					if (this.data.removeItem(item.id))
+						this.post.data[this.params["uploadInputInfoName"]]['filesCount'] = this.filesCount;
+					this.result.removeItem(item.id);
+					this.repo.removeItem(item.id);
+				}, this));
+				if (item.status === statuses["new"])
+				{
+					BX.addCustomEvent(item, "onFileIsInited", callback);
+					break;
+				}
+				else
+				{
+					callback(item.id, item);
+				}
+			}
+		},
+		exec : function(stream, reinit)
+		{
+			if (this.status !== statuses.inprogress)
+				return;
+			this.log('exec');
+			var item, exec = false;
+			if (stream.pack != this)
+			{
+				this.log('stream is bound: ' + stream.id);
+				BX.addCustomEvent(stream, 'onsuccess', BX.delegate(this.doneStream, this));
+				BX.addCustomEvent(stream, 'onfailure', BX.delegate(this.errorStream, this));
+				BX.addCustomEvent(stream, 'onprogress', BX.delegate(this.progressStream, this));
+			}
+			if (reinit !== false)
+			{
+				this.log('stream is reinited: ' + stream.id);
+				stream.init(this);
+			}
+
+			var status, files = stream.filesCount;
+			if (this.filesCount > 0)
+			{
+				while ((item = this.data.getFirst()) && item)
+				{
+					if (item.uploadStatus == statuses.done)
+					{
+						// everything is good so we go to another file
+					}
+					else if (item.preparationStatus != statuses.done) // if file is not initialized
+					{
+						exec = true;
+						break;
+					}
+					status = this.packFiles(item, stream);
+					if (typeof status == "undefined")
+					{
+						break;
+					}
+					else if (status != statuses.error)
+					{
+						files++;
+						if (status == statuses.preparing) // if file is not fitted into package
 						{
 							break;
 						}
 					}
-					if (!!item && size > 0 && count > 0) // if we can do another step we should tell about this for packageFormer
+					this.data.removeItem(item.id);
+					if (this["SimpleUploaderUploadsPreview"] == "Y") // in case if it is a simple Uploader uploads preview
 					{
-						return ((item.uploadStatus !== statuses.preparing) ? statuses.done : statuses.inprogress);
+						delete item.uploadStatus;
 					}
 				}
-
-				var needToCancelUploading = (BX.util._array_keys_ob(stream.files).length <= 0 || (pack.sended !== true && !!pack.notCheckedFiles && pack.notCheckedFiles.length >= pack.filesCount)),
-					result;
-				this.streams.release();
-				if (needToCancelUploading === false) // if stream is filled
+				if (exec === true || (!item && this.raw.length > 0)) // if image is not loaded
 				{
-					pack.sended = true;
-					this.sendPackage(stream, pack.pIndex, stream.files, stream.post);
-					result = (item.uploadStatus === statuses.preparing ? statuses.inprogress : statuses.done);
-					if (item.uploadStatus === statuses.preparing)
-						BX.defer_proxy(function(){ this.checkUploads(pack.pIndex); }, this)();
+					setTimeout(BX.proxy(function(){this.exec(stream, false)}, this), 100);
+					return;
 				}
-				else // if there is nothing to send
-				{
-					this.onDonePackage(stream, pack.pIndex, true);
-					result = statuses.done;
-				}
-
-				return result;
 			}
-			return statuses.inprogress;
-		},
-		checkUploads : function(pIndex)
-		{
-			var upload = null;
-			if (!!pIndex)
-				upload = this.uploads.getItem(pIndex);
-			else if (this.upload === null)
-				upload = this.upload = this.uploads.getFirst();
-			if (!!upload)
+			var fd = (files > 0 ? this.packStream(stream) : null);
+			if (fd !== null)
 			{
-				if (typeof upload.uNumber == 'undefined')
-					upload.uNumber = 0;
-				else
-					upload.uNumber++;
-				this.onContinue(upload.pIndex, upload.uNumber);
-
-				this._packFiles = (!!this._packFiles ? this._packFiles : BX.delegate(this.packFiles, this));
-				upload.checkIfFileIsInitialised(this._packFiles);
-				return true;
+				this.log('stream is packed: ' + stream.id);
+				this.startStreaming(stream);
+				stream.send(fd);
+				this.sended = true;
 			}
-			return false;
+			else
+			{
+				this.log('stream is killed: ' + stream.id);
+				stream.kill();
+			}
 		},
-		onContinue : function(pIndex)
+		adjustProcess : function(streamId, item, status, params)
 		{
-			this.log(pIndex + ' Uploading is continued');
-			BX.onCustomEvent(this, 'onContinue', [pIndex]);
+			if (item && this.repo.hasItem(item.id))
+			{
+				if (status == statuses.error || status == statuses.uploaded)
+				{
+					this.data.removeItem(item.id);
+					this.result.setItem(item.id, item);
+				}
+				BX.onCustomEvent(this, 'adjustProcess', [streamId, item, status, params, this.id, this]);
+			}
 		},
-		onDone : function(stream, pIndex, files)
+		adjustPostSize : function(stream, increase)
 		{
-			var res = (this.uploads.removeItem(pIndex) || { pIndex : pIndex, postSize : 0, filesCount : 0 } );
-			this.log(pIndex + ' Uploading is done');
-			BX.onCustomEvent(this, 'onDone', [stream, pIndex, res, files]);
-			this.upload = null;
-			BX.defer_proxy(function(){ this.checkUploads(null); }, this)();
-		},
-		onError : function(stream, pIndex, data)
-		{
-			this.log(JSON.stringify(data) + ' Uploading is failed');
-			BX.debug('Download Error: ' + JSON.stringify(data));
+			var result = false, sugestedSize = null;
 
-			stream.files = (stream.files || {});
-			var item;
+			if (this.CEF)
+				return result;
+
+			var deltaTime = (stream.xhr.finishTime - stream.xhr.startTime);
+			if (increase !== false)
+			{
+				sugestedSize = Math.ceil(deltaTime > 0 ? ((stream.postSize + stream.filesSize) * 1000/ deltaTime ) * settings.estimatedTimeForUploadFile : 0);
+
+				if (sugestedSize > this.limits["phpPostSize"])
+				{
+					sugestedSize = Math.min(
+						this.limits["phpPostSize"] * 2,
+						sugestedSize,
+						this.limits["phpPostMaxSize"]
+					);
+				}
+			}
+			else if (this.limits["phpPostSize"] > settings.phpPostMinSize)
+			{
+				sugestedSize = Math.max(Math.ceil(this.limits["phpPostSize"] / 2), settings.phpPostMinSize);
+			}
+			if (sugestedSize > 0 && sugestedSize !== this.limits["phpPostSize"])
+			{
+				this.limits["phpPostSize"] = sugestedSize;
+				result = true;
+			}
+			return result;
+		},
+		startStreaming : function(stream)
+		{
+			this.log('start streaming');
 			for (var id in stream.files)
 			{
 				if (stream.files.hasOwnProperty(id))
 				{
-					this.adjustProcess(stream.id, this.queue.items.getItem(id), statuses.error, {error : data}, pIndex);
+					this.adjustProcess(stream.id, this.repo.getItem(id), statuses.inprogress, 0);
 				}
 			}
-
-			this.errorOccured = true;
-			BX.onCustomEvent(this, 'error', [stream, pIndex, data]);
-			BX.onCustomEvent(this, 'onError', [stream, pIndex, data]);
-
-			if (this.uploads.hasItem(pIndex))
-			{
-				if (this.upload.pIndex == pIndex)
-					this.upload = null;
-				this.uploads.removeItem(pIndex);
-				this.checkUploads(null);
-			}
+			BX.onCustomEvent(this, 'startStream', [stream, this.id, stream.files]);
 		},
-		onStartPackage : function(stream, pIndex, data)
+		doneStream : function(stream, data)
 		{
-			this.log(pIndex + ' package is started');
-			var upload = this.uploads.getItem(pIndex);
-			if (!!upload)
-			{
-				var item, id;
-				for (id in stream.files)
-				{
-					if (stream.files.hasOwnProperty(id))
-					{
-						item = upload.data.getItem(id);
-						if (!!item)
-						{
-							this.adjustProcess(stream.id, item, statuses.inprogress, 0, pIndex);
-						}
-					}
-				}
-			}
-			BX.onCustomEvent(this, 'startPackage', [stream, pIndex, data]);
-		},
-		onProcessPackage : function(stream, pIndex, e) {
-			var procent = 15,
-				upload = this.uploads.getItem(pIndex);
-			if(e.lengthComputable) {
-				procent = e.loaded * 100 / (e.total || e.totalSize);
-			}
-			else if (e > procent)
-				procent = e;
-			procent = (procent > 5 ? procent : 5);
-
-			if (!!upload)
-			{
-				var item, id;
-				for (id in stream.files)
-				{
-					if (stream.files.hasOwnProperty(id))
-					{
-						item = upload.data.getItem(id);
-						if (!!item)
-						{
-							this.adjustProcess(stream.id, item, statuses.inprogress, procent, pIndex);
-						}
-					}
-				}
-			}
-			BX.onCustomEvent(this, 'processPackage', [stream, pIndex, procent]);
-			return procent;
-		},
-		onDonePackage : function(stream, pIndex, data)
-		{
-			this.log(pIndex + ' package is done');
-			this.streams.restore(stream);
-			var data1 = (this.streams.packages.getItem(pIndex) || {});
-
+			this.adjustPostSize(stream, true);
 			var merge = function(ar1, ar2)
 				{
 					for (var jj in ar2)
@@ -892,490 +1307,437 @@
 					}
 					return ar1;
 				};
-			data1['response'] = merge((data1['response'] || {}), data);
-			if (data === true)
+			this.response = merge((this.response || {}), (data || {}));
+			var item, id, file, nonProcessRun, files, ij, copies;
+			for (id in stream.files)
 			{
-				this.onDone(stream, pIndex, data);
-			}
-			else if (!!data && typeof data == "object" && data["files"] && data["status"] !== "error")
-			{
-				var item, id, file;
-				stream.files = (stream.files || {});
-				for (id in stream.files)
+				if (stream.files.hasOwnProperty(id))
 				{
-					if (stream.files.hasOwnProperty(id))
+					item = this.repo.getItem(id);
+					if (item && (file = data.files[id]))
 					{
-						item = this.queue.items.getItem(id);
-						if (!!item)
+						if (!file) // has never been loaded
 						{
-							file = data.files[id];
-							item.hash = file.hash;
-							if (file.status == "error")
+							this.queue.restoreFiles(new BX.UploaderUtils.Hash([item]));
+						}
+						else if (!file["status"]) // was downloaded partly before but not this time
+						{
+							if (BX.type.isArray(stream.files[id]["files"]))
 							{
-								this.adjustProcess(stream.id, item, statuses.error, file, pIndex);
+								copies = {};
+								for (ij = 0; ij < stream.files[id]["files"].length; ij++)
+								{
+									file = stream.files[id]["files"][ij];
+									if (copies[file["copy"]])
+										continue;
+									copies[file["copy"]] = "Y";
+									if (file["copy"] == "default" && file["package"] <= 0)
+									{
+										this.queue.restoreFiles(new BX.UploaderUtils.Hash([item]));
+										break;
+									}
+
+									if (file["copy"] == "default")
+									{
+										item.uploadStatus = statuses.preparing;
+										item.file["uploadStatus"] = statuses.preparing;
+										item.file["package"] = file["package"];
+									}
+
+									if (item.file["copies"])
+									{
+										item.file["copies"].reset();
+										var copy;
+										while((copy = item.file["copies"].getNext()) && copy)
+										{
+											delete copy["uploadStatus"];
+											delete copy["firstChunk"];
+											delete copy["package"];
+											delete copy["packages"];
+										}
+										item.file["copies"].reset();
+									}
+								}
 							}
-							else if (file.status == "uploaded")
+						}
+						else if (file.status == "error")
+						{
+							this.adjustProcess(stream.id, item, statuses.error, file);
+						}
+						else if ((item.hash = file.hash) && file.status == "uploaded")
+						{
+							this.adjustProcess(stream.id, item, statuses.uploaded, file);
+						}
+						else // chunks
+						{
+							this.adjustProcess(stream.id, item, statuses.inprogress, file);
+							// in case we need to glue chunks only(!)
+
+							nonProcessRun = false;
+							files = (file["file"] && file["file"]["files"] ? file["file"]["files"] : false);
+							if (typeof files == "object")
 							{
-								this.adjustProcess(stream.id, item, statuses.uploaded, file, pIndex);
-							}
-							else // chunks
-							{
-								this.adjustProcess(stream.id, item, statuses.inprogress, file, pIndex);
+								for (ij in files)
+								{
+									if (files.hasOwnProperty(ij))
+									{
+										if (files[ij]["chunksInfo"] &&
+											files[ij]["chunksInfo"]["count"] == files[ij]["chunksInfo"]["uploaded"] &&
+											files[ij]["chunksInfo"]["count"] > files[ij]["chunksInfo"]["written"])
+										{
+											nonProcessRun = true;
+											break;
+										}
+									}
+								}
+								item.nonProcessRun = nonProcessRun;
+								if (nonProcessRun == true)
+								{
+									if (!item["nonProcessRunLastTimeWritten"] ||
+										item["nonProcessRunLastTimeWritten"] != files[ij]["chunksInfo"]["written"])
+									{
+										item["nonProcessRunLastTimeWritten"] = files[ij]["chunksInfo"]["written"];
+										item["nonProcessRunLastTimeWrittenCount"] = 0;
+									}
+									else
+									{
+										item["nonProcessRunLastTimeWrittenCount"]++
+									}
+
+									if (item["nonProcessRunLastTimeWrittenCount"] <= 10)
+									{
+										delete item.uploadStatus;
+										this.data.setItem(item.id, item);
+									}
+									else
+									{
+										this.adjustProcess(stream.id, item, statuses.error, {error : BX.message("UPLOADER_UPLOADING_ERROR3")});
+									}
+								}
 							}
 						}
 					}
 				}
-				BX.onCustomEvent(this, 'donePackage', [stream, pIndex, data]);
-				if (data["status"] == "done")
-				{
-					this.onDone(stream, pIndex, data);
-				}
+			}
+			this.log('stream is done: ' + stream.id, data["status"], this.response);
+			this['lastResponse'] = data;
+			if (data["status"] == "inprogress")
+			{
+				BX.onCustomEvent(this, 'continuePackage', [stream, this, data]);
+			}
+			else
+			{
+				if (data["status"] == "error")
+					this.errorStream(stream, data);
 				else
 				{
-					BX.defer_proxy(function(){ this.checkUploads(pIndex); }, this)();
+					this.stop();
+					BX.onCustomEvent(this, 'donePackage', [stream, this, data]);
 				}
 			}
-			else
-			{
-				this.onErrorPackage(stream, pIndex, data);
-			}
 		},
-		onErrorPackage : function(stream, packageIndex, data)
+		errorStream : function(stream, data)
 		{
-			stream = !!stream ? stream : {};
-			stream["try"] = (!!stream["try"] && stream["try"] > 0 ? stream["try"] : 0);
-			stream["try"]++;
-			if (stream["try"] > 0)
+			var item, err, id, copy;
+			this.log('error stream: ' + stream.id, 'status: ', stream.xhr.status, data);
+			if (stream && data == "timeout" && this.adjustPostSize(stream, false) && stream["files"])
 			{
-				this.streams.restore(stream);
-				this.onError(stream, packageIndex, data);
-			}
-			else
-			{
-				this.sendPackage(stream, packageIndex, stream.files, stream.post);
-			}
-		},
-
-
-		// public functions
-		getItem : function(id)
-		{
-			return this.queue.getItem(id);
-		}
-	};
-
-	BX.UploaderSimple = function(params)
-	{
-		BX.UploaderSimple.superclass.constructor.apply(this, arguments);
-		this.dialogName = "BX.UploaderSimple";
-		BX.addCustomEvent(this, "onFileNeedsPreview", BX.delegate(function(id, item) {
-			this.previews = (!!this.previews ? this.previews : new BX.UploaderUtils.Hash());
-			this.previews.setItem(item.id, item);
-			this.previewsQueue = (!!this.previewsQueue ? this.previewsQueue : new BX.UploaderUtils.Hash());
-			setTimeout(BX.delegate(this.onFileNeedsPreview, this), 500);
-		}, this));
-		this.streams = new BX.UploaderStreams(1);
-		return this;
-	};
-	BX.extend(BX.UploaderSimple, BX.Uploader);
-
-	BX.UploaderSimple.prototype.onFileNeedsPreviewCallback = function(packageIndex, data)
-	{
-		this.log('onFileNeedsPreviewCallback');
-		var queue = this.previewsQueue.removeItem(packageIndex);
-		this.onFileNeedsPreview();
-		data = (typeof data == "object" && !!data ? data : {});
-		data["files"] = (!!data["files"] ? data["files"] : {});
-		if (!!queue)
-		{
-			var item, file, checked = false;
-			while((item = queue.getFirst()) && !!item)
-			{
-				queue.removeItem(item.id);
-				checked = false;
-				try
+				for (id in stream["files"])
 				{
-					if (!!data["files"][item.id])
+					if (stream["files"].hasOwnProperty(id))
 					{
-						if (data["files"][item.id]["status"] == "uploaded" && !!data["files"][item.id]["hash"])
+						if (this.repo.hasItem(id) &&
+							BX.type.isArray(stream["files"][id]["files"]) &&
+							stream["files"][id]["files"].length > 0)
 						{
-							file = data.files[item.id]["file"]["files"]["default"];
-							item.file = {
-								hash : data["files"][item.id]["hash"],
-								copy : "default",
-								id : item.id,
-								"name" : file["name"],
-								"~name" : file["~name"],
-								size : parseInt(file["size"]),
-								type : file["type"],
-								url : file["url"]
-							};
-							checked = true;
-							BX.onCustomEvent(item, "onFileHasGotPreview", [item.id, item]);
-							continue;
+							item = this.repo.getItem(id);
+							if (stream["files"][id]["files"][0]["package"] <= 0 ||
+								item["uploadStatus"] !== statuses.inprogress)
+							{
+								delete item["uploadStatus"];
+								delete item.file["uploadStatus"];
+								delete item.file["firstChunk"];
+								delete item.file["package"];
+								delete item.file["packages"];
+							}
+							else
+							{
+								item.file["package"] = Math.min(
+									stream["files"][id]["files"][0]["package"],
+									item.file["package"]);
+							}
+							if (item.file["copies"])
+							{
+								item.file["copies"].reset();
+								while((copy = item.file["copies"].getNext()) && copy)
+								{
+									delete copy["uploadStatus"];
+									delete copy["firstChunk"];
+									delete copy["package"];
+									delete copy["packages"];
+								}
+								item.file["copies"].reset();
+							}
+
+							if (!this.data.hasItem(id))
+							{
+								this.result.removeItem(id);
+								this.data.unshiftItem(id, item);
+							}
 						}
 					}
 				}
-				catch(e) {
-					checked = null
-				}
-				BX.onCustomEvent(item, "onFileHasNotGotPreview", [item.id, item]);
-				if (checked === null)
-					this.adjustProcess(null, item, statuses.error, {error : BX.message('UPLOADER_UPLOADING_ERROR')}, packageIndex);
-				else
-					this.adjustProcess(null, item, statuses.error, {error : data["files"][item.id]["error"]}, packageIndex);
+				BX.onCustomEvent(this, 'resendPackage', [stream, this, data]);
 			}
-		}
-	};
-	BX.UploaderSimple.prototype.onFileNeedsPreview = function()
-	{
-		var packageIndex = 'preview' + BX.UploaderUtils.getId(),
-			post = this.preparePost({packageIndex : packageIndex, filesCount : this.limits["phpMaxFileUploads"], mode : "upload", type : "brief"}, true),
-			count = this.limits["phpMaxFileUploads"],
-			item, files = false, items = new BX.UploaderUtils.Hash();
-
-		while (count > 0 && this.previews.length > 0 && (item = this.previews.getFirst()) && !!item && item !== null)
-		{
-			this.previews.removeItem(item.id);
-			files = (files === false ? {} : files);
-			files[item.id] = {files : [item.file], props : {name : item.name}};
-			count--;
-			items.setItem(item.id, item);
-		}
-		if (files !== false)
-		{
-			post = this.preparePost({packageIndex : packageIndex, filesCount : (this.limits["phpMaxFileUploads"]-count), mode : "upload", type : "brief"}, true);
-			this.previewsQueue.setItem(packageIndex, items);
-			var fd = this.preparePackage(packageIndex, files, post.data, (this.limits["phpMaxFileUploads"] - count));
-			this.send(null, packageIndex, fd, BX.proxy(function(data) { this.onFileNeedsPreviewCallback(packageIndex, data); }, this));
-		}
-	};
-	BX.UploaderSimple.prototype.init = function(fileInput, del)
-	{
-		this.log('Initialized: ' + (del !== false ? 'drop' : ' does not drop'));
-		if (fileInput == this.fileInput)
-			this.fileInput = fileInput = this.mkFileInput(fileInput, del);
-		else
-			fileInput = this.mkFileInput(fileInput, del);
-		if (fileInput)
-		{
-			BX.bind(fileInput, "change", BX.delegate(this.onChange, this));
-			return true;
-		}
-		return false;
-	};
-	BX.UploaderSimple.prototype.log = function(text) { BX.UploaderUtils.log('simpleup', text); };
-	BX.UploaderSimple.prototype.mkFileInput = function(oldNode, del)
-	{
-		if (!BX(oldNode))
-			return false;
-		BX.unbindAll(oldNode);
-		var node = oldNode.cloneNode(true);
-		BX.adjust(node, {
-			attrs: {
-				id : "",
-				name: (this.params["uploadInputName"] + '[file' + BX.UploaderUtils.getId() + ']'),
-				multiple : false,
-				accept : this.limits["uploadFile"]
-		}});
-		oldNode.parentNode.insertBefore(node, oldNode);
-		if (del !== false)
-			oldNode.parentNode.removeChild(oldNode);
-
-		return node;
-	};
-	BX.UploaderSimple.prototype.onChange = function(fileInput)
-	{
-		fileInput = (fileInput.target || fileInput.srcElement || this.fileInput);
-
-		BX.PreventDefault(fileInput);
-		if (!!(fileInput.value))
-		{
-			if (this.params["doWeHaveStorage"])
-				this.init(fileInput, false);
 			else
-				this.queue.clear();
-			var ext = (fileInput.value.name || '').split('.').pop(), err = false;
-
-			if (this.limits["uploadFileExt"].length > 0)
 			{
-				err = (this.limits["uploadFileExt"].indexOf(ext) < 0);
-			}
-			else if (this.limits["uploadFile"] == "image/*")
-			{
-				err = (this.params["imageExt"].indexOf(ext) < 0);
-			}
-			if (!err)
-			{
-				if (this.params["imageExt"].indexOf(ext) >= 0)
-					fileInput.fileType = "image/xyz";
-				BX.onCustomEvent(this, "onItemIsAdded", [fileInput, null, this]);
-				BX.onCustomEvent(this, "onItemsAreAdded", [this]);
-
-				if (this.params["uploadMethod"] == "immediate")
-					this.submit();
-			}
-		}
-		return false;
-	};
-	BX.UploaderSimple.prototype.appendToForm = function(fd, key, val)
-	{
-		if (!!val && typeof val == "object")
-		{
-			for (var ii in val)
-			{
-				if (val.hasOwnProperty(ii))
+				this.stop();
+				var defaultTextError = (data == "timeout" ? BX.message("UPLOADER_UPLOADING_ERROR5") : BX.message("UPLOADER_UPLOADING_ERROR1"));
+				data = (data || {});
+				data["files"] = (data["files"] ? data["files"] : {});
+				if ((item = this.repo.getFirst()) && item)
 				{
-					this.appendToForm(fd, key + '[' + ii + ']', val[ii]);
-				}
-			}
-		}
-		else
-			fd.append(key, (!!val ? val : ''));
-	};
-	BX.UploaderSimple.prototype.FormData = function()
-	{
-		var uniqueID;
-		do {
-			uniqueID = Math.floor(Math.random() * 99999);
-		} while(BX("form-" + uniqueID));
-
-		this.form = BX.create("FORM", {
-			props: {
-				id: "form-" + uniqueID,
-				method: "POST",
-				enctype: "multipart/form-data",
-				encoding: "multipart/form-data"
-			},
-			style: {display: "none"}
-		});
-		document.body.appendChild(this.form);
-	};
-	BX.UploaderSimple.prototype.FormData.prototype = {
-		append : function(name, val)
-		{
-			if (BX.type.isDomNode(val))
-			{
-				this.form.appendChild(val);
-			}
-			else
-			{
-				this.form.appendChild(
-					BX.create("INPUT", {
-							props : {
-								type : "hidden",
-								name : name,
-								value : val
-							}
+					do
+					{
+						if (!this.result.hasItem(item.id))
+						{
+							if (data.files && data.files[item.id])
+								err = data.files[item.id];
+							else if (BX.type.isNotEmptyString(data["error"]))
+								err = data;
+							else
+								err = {error : defaultTextError};
+							this.adjustProcess(stream.id, item, statuses.error, err);
 						}
-					)
-				);
-			}
-		}
-	};
-	BX.UploaderSimple.prototype.send = function(stream, packageIndex, fd, callback)
-	{
-		if(!this.onBeforeUnload)
-			this.onBeforeUnload = BX.delegate(this.beforeunload, this);
-		BX.bind(window, 'beforeunload', this.onBeforeUnload);
-
-		BX.adjust(fd.form, { attrs : { action: this.uploadFileUrl } } );
-		BX.ajax.submit(fd.form, BX.proxy(function(innerHTML){this.aftersubmit(stream, packageIndex, innerHTML, callback)}, this));
-		if (!callback)
-			this.onProcessPackage(stream, packageIndex, 90);
-	};
-
-	BX.UploaderSimple.prototype.aftersubmit = function(stream,packageIndex, data, callback)
-	{
-		BX.unbind(window, 'beforeunload',this.onBeforeUnload);
-		data = BX.util.htmlspecialcharsback(data);
-		while (/^<(.*?)>(.*?)<(.*?)>$/gi.test(data))
-			data = data.replace(/^<(.*?)>(.*?)<(.*?)>$/gi, "$2");
-		while (/^<([^<>]+)>(.*?)/gi.test(data))
-			data = data.replace(/^<(.*?)>(.*?)/gi, "$2");
-		while (/(.+?)<([^<>]+)>$/gi.test(data))
-			data = data.replace(/(.+?)<([^<>]+)>$/gi, "$1");
-
-		var res = BX.parseJSON(data, {});
-
-		if (!!callback)
-		{
-			callback(res);
-		}
-		else if (!!res)
-		{
-			this.onDonePackage(stream, packageIndex, res);
-		}
-		else
-		{
-			this.onErrorPackage(stream, packageIndex, data);
-		}
-	};
-	BX.UploaderSimple.prototype.beforeunload = function()
-	{
-		this.stop();
-	};
-	BX.Uploader.isSupported = function()
-	{
-		return (window.Blob || window["MozBlobBuilder"] || window["WebKitBlobBuilder"] || window["BlobBuilder"]);
-	};
-	BX.Uploader.getInstance = function(params)
-	{
-		var objName = "BX.UploaderSimple";
-		if (BX.Uploader.isSupported())
-			objName = "BX.Uploader";
-		BX.onCustomEvent(window, "onUploaderIsAlmostInited", [objName, params]);
-		return eval("new " + objName + "(params);");
-	};
-
-	BX.UploaderPackage = function(raw)
-	{
-		this.filesCount = 0;
-		this.length = 0;
-		if (!!raw && raw.length > 0)
-		{
-			/**
-			 * this.length integer
-			 * this.raw BX.UploaderUtils.Hash()
-			 * this.data BX.UploaderUtils.Hash()
-			 */
-			this.length = raw.length;
-			this.filesCount = raw.length;
-			this.raw = raw;
-			this.dataId = raw.order.join(",").split(",");
-			this.data = new BX.UploaderUtils.Hash();
-			this.init();
-		}
-	};
-
-	BX.UploaderPackage.prototype = {
-		stop: function()
-		{
-			this.status = statuses.terminate;
-		},
-		log : function(text)
-		{
-			BX.UploaderUtils.log('package', text);
-		},
-		init : function()
-		{
-			var item, callback = BX.proxy(function(id, item) {
-				if (this.raw.removeItem(id))
-				{
-					this.data.setItem(id, item);
-					BX.onCustomEvent(item, "onFileHasToBePrepared", [item.id, item]);
-					this.init();
+					} while ((item = this.repo.getNext()) && item);
 				}
-			} , this);
-
-			while ((item = this.raw.getFirst()) && !!item)
-			{
-				BX.addCustomEvent(item, "onFileIsDeleted", BX.delegate(function(item){
-					this.data.removeItem(item.id);
-					this.length--;
-					this.filesCount--;
-				}, this));
-				if (item.status === statuses["new"])
-				{
-					BX.addCustomEvent(item, "onFileIsInited", callback);
-					break;
-				}
-				else
-				{
-					callback(item.id, item);
-				}
+				BX.onCustomEvent(this, 'errorPackage', [stream, this, data]);
 			}
 		},
-		checkIfFileIsInitialised : function(callback)
+		progressStream : function(stream, procent)
 		{
-			if (!this.callback)
-				this.callback = callback;
-			var item, res;
-			while ((item = this.data.getNext()) && !!item)
+			var id;
+			stream.files = (stream.files || {});
+			for (id in stream.files)
 			{
-				if (item.preparationStatus != statuses.done) // if file is not initialized
+				if (stream.files.hasOwnProperty(id))
 				{
-					this.data.pointer--;
-					callback(statuses.inprogress, this);
-					return statuses.inprogress;
-				}
-				else if ((res = callback(item, this)) && res != statuses.done) // if file is not fitted into package
-				{
-					this.data.pointer--;
-					return statuses.inprogress;
+					this.adjustProcess(stream.id, this.repo.getItem(id), statuses.inprogress, procent);
 				}
 			}
-			if (!item && this.data.length < this.filesCount)
-			{
-				callback(statuses.inprogress, this);
-				return statuses.inprogress;
-			}
-			callback(statuses.done, this);
-			return statuses.done;
+			BX.onCustomEvent(this, 'processPackage', [stream, this, procent]);
 		}
 	};
 
-	BX.UploaderStream = function(_id)
+	BX.UploaderStream = function(_id, streamsManager)
 	{
 		this.id = 'stream' + _id;
 		this._id = _id;
+		this.manager = streamsManager;
+		this._onsuccess = BX.delegate(this.onsuccess, this);
+		this._onfailure = BX.delegate(this.onfailure, this);
+		this._onerror = BX.delegate(this.onerror, this);
+		this._onprogress = BX.delegate(this.onprogress, this);
 	};
 	BX.UploaderStream.prototype =
 	{
-		init : function(packageIndex, post)
+		xhr : {},
+		init : function(pack)
 		{
-			this.pIndex = packageIndex;
-			this.post = post.data;
+			this["pIndex"] = pack.id;
+			this.pack = pack;
 			this.files = {};
-			this.postSize = post.length;
 			this.filesCount = 0;
-			return this;
+			this.filesSize = 0;
+			this.postSize = pack.post.size;
+		},
+		send : function(fd)
+		{
+			if (fd && fd.local === true)
+			{
+				BX.adjust(fd.form, { attrs : { action: fd.action} } );
+				BX.ajax.submit(fd.form, BX.proxy(function(data) {
+					data = BX.util.htmlspecialcharsback(data);
+					while (/^<(.*?)>(.*?)<(.*?)>$/gi.test(data))
+						data = data.replace(/^<(.*?)>(.*?)<(.*?)>$/gi, "$2");
+					while (/^<([^<>]+)>(.*?)/gi.test(data))
+						data = data.replace(/^<(.*?)>(.*?)/gi, "$2");
+					while (/(.+?)<([^<>]+)>$/gi.test(data))
+						data = data.replace(/(.+?)<([^<>]+)>$/gi, "$1");
+
+					var res = BX.parseJSON(data, {});
+
+					if (!!res)
+					{
+						this.onsuccess(res);
+					}
+					else
+					{
+						this.onfailure(data);
+					}
+				}, this) );
+				this.onprogress(90);
+			}
+			else if (fd)
+			{
+				this.xhr = BX.ajax({
+					'method': 'POST',
+					'dataType': 'json',
+					'data' : fd,
+					'url': fd.action,
+					'onsuccess': this._onsuccess,
+					'onfailure': this._onfailure,
+					'onerror': this._onerror,
+					'start': false,
+					'preparePost':false,
+					'processData':true,
+					'timeout' : settings.maxTimeForUploadFile
+				});
+				this.xhr.upload.addEventListener('progress', this._onprogress, false);
+				var d = new Date();
+				this.xhr.startTime = d.getTime();
+				this.xhr.send(fd);
+			}
+			else
+			{
+				this.onfailure(null);
+			}
+		},
+		onsuccess : function(data)
+		{
+			var d = new Date();
+			this.xhr.finishTime = d.getTime();
+			try
+			{
+				if (typeof data == "object" && data && data["files"] && data["status"] !== "error")
+					BX.onCustomEvent(this, 'onsuccess', [this, data]);
+				else
+					BX.onCustomEvent(this, 'onfailure', [this, data]);
+			}
+			catch (e)
+			{
+				BX.debug(e);
+			}
+			BX.onCustomEvent(this, 'onrelease', [this]);
+		},
+		onfailure : function(data)
+		{
+			var d = new Date();
+			this.xhr.finishTime = d.getTime();
+			BX.onCustomEvent(this, 'onfailure', [this, data]);
+			BX.onCustomEvent(this, 'onrelease', [this]);
+		},
+		onerror : function()
+		{
+			this.xhr.finishTime = d.getTime();
+			this.onfailure.apply(arguments);
+		},
+		onprogress : function(e)
+		{
+			var procent = 15;
+			if(typeof e == "object" && e.lengthComputable) {
+				procent = e.loaded * 100 / (e["total"] || e["totalSize"]);
+			}
+			else if (e > procent)
+				procent = e;
+			procent = (procent > 5 ? procent : 5);
+
+			BX.onCustomEvent(this, 'onprogress', [this, procent]);
+			return procent;
+		},
+		kill : function()
+		{
+			BX.DoNothing();
+			BX.onCustomEvent(this, 'onkill', [this]);
+		},
+		restore : function()
+		{
+			this.manager.restore(this);
 		}
 	};
 
-	BX.UploaderStreams = function(count)
+	BX.UploaderStreams = function(count, uploader)
 	{
 		this.streams = new BX.UploaderUtils.Hash();
-		count = (5 < count ? 5 : ( count > 1 ? count : 1));
-		var stream;
-		while (count-- > 0)
-		{
-			stream = new BX.UploaderStream(count);
-			this.streams.setItem(stream.id, stream);
-		}
+		this.killedStreams = new BX.UploaderUtils.Hash();
 		this.packages = new BX.UploaderUtils.Hash();
-		this.stream = null;
+		this.uploaded = uploader;
+		this.timeout = 3000; // time between streams
+		this._exec = BX.delegate(this.exec, this);
+		this._restore = BX.delegate(this.restore, this);
+		this._kill = BX.delegate(this.kill, this);
+		this.count = Math.min(5, (count > 1 ? count : 1));
+		this.status = statuses.ready;
+
 	};
 	BX.UploaderStreams.prototype = {
-		get : function(pack, post)
+		init : function(pack, handler)
 		{
-			if (!this.stream && (this.stream = this.streams.getFirst()) && !!this.stream)
+			if (this.package !== pack)
 			{
-				this.streams.removeItem(this.stream.id);
-				this.packages.setItem(pack.pIndex, post);
-				this.stream.init(pack.pIndex, this.packages.getItem(pack.pIndex));
+				this.package = pack;
+				this.package.log('streams are occupied', handler);
+				this.packages.setItem(pack.id, pack.post); // For compatibility
+				this.handler = handler;
+				var count = this.count, stream;
+				while ((stream = this.streams.getFirst()) && stream)
+				{
+					this.streams.removeItem(stream.id);
+					stream = null;
+				}
+				this.streams = new BX.UploaderUtils.Hash();
+				while (count-- > 0)
+				{
+					stream = new BX.UploaderStream(count, this);
+					BX.addCustomEvent(stream, 'onrelease', this._restore);
+					BX.addCustomEvent(stream, 'onkill', this._kill);
+					this.streams.setItem(stream.id, stream);
+				}
 			}
-			return this.stream;
+			this.start();
 		},
-		release : function()
+		exec : function()
 		{
-			this.stream = null;
+			if (this.status == statuses.ready)
+			{
+				this.package.log('streams are in executing');
+				var stream = this.streams.getFirst();
+				if (stream)
+				{
+					this.streams.removeItem(stream.id);
+					if (this.streams.length > 0)
+					{
+						setTimeout(this._exec, this.timeout);
+					}
+					this.handler(stream); // return to package class
+				}
+			}
+			else
+			{
+				this.package.log('streams are locked');
+			}
 		},
 		restore : function(stream)
 		{
-			if (!!stream)
-			{
-				stream = new BX.UploaderStream(stream._id);
-				this.streams.setItem(stream.id, stream);
-			}
-		}
-	};
-	BX.Uploader.info = function()
-	{
-		//if (key)
+			this.streams.setItem(stream.id, stream);
+			BX.defer_proxy(this.exec, this)();
+		},
+		kill : function(stream)
 		{
-			return repo;
+			this.killedStreams.setItem(stream.id, stream);
+			if (this.killedStreams.length == this.count)
+			{
+				BX.onCustomEvent(this, 'onrelease', [this, stream]);
+			}
+		},
+		start : function()
+		{
+			this.status = statuses.ready;
+			this.exec();
+		},
+		stop : function()
+		{
+			this.status = statuses.stopped;
 		}
 	};
-	return true;
 }(window));

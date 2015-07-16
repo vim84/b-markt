@@ -45,14 +45,21 @@ CBXYandexPoint.prototype.Delete = function (e)
 CBXYandexPoint.prototype.Edit = function(e)
 {
 	e = e || window.event;
-
-	if (this.PLACEMARK._balloonVisible)
-		this.PLACEMARK.balloon.close();
-	else
-	{
-		this.PLACEMARK.balloon.open();
-		this.EDIT_CONTROL.focus();
-	}
+    var this_ = this;
+    jsYandexCE.map.panTo(
+        this.PLACEMARK.geometry.getCoordinates(), {
+            delay: 0,
+            flying: false,
+            callback: function () {
+                if (this_.PLACEMARK._balloonVisible)
+                    this_.PLACEMARK.balloon.close();
+                else
+                {
+                    this_.PLACEMARK.balloon.open();
+                    this_.EDIT_CONTROL.focus();
+                }
+            }
+        });
 
 	if (null != e)
 		return BX.PreventDefault(e);
@@ -76,14 +83,11 @@ CBXYandexPoint.prototype.__updateView = function(e)
 
 	this.__updateViewText(value_view ? value_view : window.jsYandexMess.noname);
 
-	if (e.type == 'blur')
-		this.PLACEMARK.balloon.close();
-
 	return BX.PreventDefault(e);
 };
 
 CBXYandexPoint.prototype.__point_link_hover = function() {this.style.backgroundColor = "#E3E8F7"; this.firstChild.style.display = 'block';};
-CBXYandexPoint.prototype.__point_link_hout = function() {this.style.backgroundColor = "#FFFFFF"; this.firstChild.style.display = 'none';};
+CBXYandexPoint.prototype.__point_link_hout = function() {this.style.backgroundColor = "transparent"; this.firstChild.style.display = 'none';};
 CBXYandexPoint.prototype.__updateViewText = function(str) {this.VIEW.firstChild.nextSibling.innerHTML = str;};
 CBXYandexPoint.prototype.getData = function() {return this.DATA;};
 
@@ -129,6 +133,8 @@ CBXYandexPoint.prototype.__createEditForm = function()
 {
 	this.EDIT_CONTROL = document.createElement('TEXTAREA');
 	this.EDIT_CONTROL.value = this.DATA.TEXT;
+	this.EDIT_CONTROL.style.resize = 'none';
+	this.EDIT_CONTROL.rows = '4';
 
 	this.EDIT_CONTROL.onkeyup = this.EDIT_CONTROL.onblur = BX.proxy(this.__updateView, this);
 
@@ -1027,13 +1033,10 @@ var jsYandexCESearch = {
 
 	__generateOutput: function()
 	{
-		var obPos = BX.pos(jsYandexCESearch.obInput);
 
 		jsYandexCESearch.obOut = document.body.appendChild(document.createElement('UL'));
 		jsYandexCESearch.obOut.className = 'bx-yandex-address-search-results';
-		jsYandexCESearch.obOut.style.top = (obPos.bottom + 2) + 'px';
-		jsYandexCESearch.obOut.style.left = obPos.left + 'px';
-		jsYandexCESearch.obOut.style.zIndex = parseInt(BX.WindowManager.Get().zIndex) + 200;
+		jsYandexCESearch.obOut.style.display = 'none';
 	},
 
 	__searchResultsLoad: function(res)
@@ -1091,8 +1094,16 @@ var jsYandexCESearch = {
 
 	showResults: function()
 	{
-		if (null != jsYandexCESearch.obOut)
-			jsYandexCESearch.obOut.style.display = 'block';
+        var obPos = BX.pos(jsYandexCESearch.obInput);
+        jsYandexCESearch.obOut.style.top = (obPos.bottom + 2) + 'px';
+        jsYandexCESearch.obOut.style.left = obPos.left + 'px';
+        jsYandexCESearch.obOut.style.zIndex = parseInt(BX.WindowManager.Get().zIndex) + 200;
+
+        if (BX.findParent(jsYandexCESearch.obInput, {"tag" : "div", "className" : "bx-core-window bx-core-adm-dialog"}).style.display == 'block')
+        {
+            if (null != jsYandexCESearch.obOut)
+                jsYandexCESearch.obOut.style.display = 'block';
+        }
 	},
 
 	hideResults: function()

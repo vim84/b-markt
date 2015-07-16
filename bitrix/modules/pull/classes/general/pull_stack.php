@@ -56,7 +56,8 @@ class CAllPullStack
 				if (!defined('BX_UTF') || !BX_UTF)
 					$message = $GLOBALS['APPLICATION']->ConvertCharset($message, SITE_CHARSET,'utf-8');
 
-				$res = CPullChannel::Send($channelId, str_replace("\n", " ", $message));
+				$options = isset($arParams['expiry']) ? array('expiry' => intval($arParams['expiry'])) : array();
+				$res = CPullChannel::Send($channelId, str_replace("\n", " ", $message), $options);
 				$result = $res? true: false;
 			}
 			else

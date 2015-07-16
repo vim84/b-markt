@@ -147,12 +147,12 @@ $tabControl->BeginNextTab();
 			$type = $Option[2];
 	?>
 	<tr>
-		<td valign="top"><?	if($type[0]=="checkbox")
+		<td valign="top" width="50%"><?	if($type[0]=="checkbox")
 							echo "<label for=\"".htmlspecialcharsbx($Option[0])."\">".$Option[1]."</label>";
 						else
 							echo $Option[1];?>
 		</td>
-		<td valign="top" nowrap><?
+		<td valign="top" nowrap width="50%"><?
 			if($type[0]=="checkbox"):
 				?><input type="checkbox" name="<?echo htmlspecialcharsbx($Option[0])?>" id="<?echo htmlspecialcharsbx($Option[0])?>" value="Y"<?if($val=="Y")echo" checked";?>><?
 			elseif($type[0]=="text"):

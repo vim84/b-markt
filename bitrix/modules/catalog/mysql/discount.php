@@ -1,5 +1,6 @@
 <?
-require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/general/discount.php");
+use Bitrix\Main;
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/catalog/general/discount.php');
 
 class CCatalogDiscount extends CAllCatalogDiscount
 {
@@ -794,19 +795,13 @@ class CCatalogDiscount extends CAllCatalogDiscount
 		if (array_key_exists('ACTIVE', $arFilter))
 		{
 			if ($arFilter['ACTIVE'] === null)
-			{
 				$active = '';
-			}
 			elseif ($arFilter['ACTIVE'] == 'Y' || $arFilter['ACTIVE'] == 'N')
-			{
 				$active = $arFilter['ACTIVE'];
-			}
 			unset($arFilter['ACTIVE']);
 		}
 		if ($active != '')
-		{
 			$arFilter['ACTIVE'] = $active;
-		}
 
 		if (array_key_exists('DISCOUNT_ID', $arFilter))
 			unset($arFilter['DISCOUNT_ID']);
@@ -819,7 +814,7 @@ class CCatalogDiscount extends CAllCatalogDiscount
 			unset($arFilter['RESTRICTIONS']);
 		}
 
-		$arSqls = CCatalog::PrepareSql($arFields, array(), $arFilter, false, $arSelectFields);
+		$arSqls = CCatalog::PrepareSql($arFields, array('DISCOUNT_ID' => 'ASC'), $arFilter, false, $arSelectFields);
 
 		$arSqls["SELECT"] = str_replace("%%_DISTINCT_%%", "", $arSqls["SELECT"]);
 		if (empty($arSqls["WHERE"]))
@@ -834,17 +829,17 @@ class CCatalogDiscount extends CAllCatalogDiscount
 			$arRestrictions = array();
 			while ($arDiscount = $rsDiscounts->Fetch())
 			{
-				$arDiscount['DISCOUNT_ID'] = intval($arDiscount['DISCOUNT_ID']);
+				$arDiscount['DISCOUNT_ID'] = (int)$arDiscount['DISCOUNT_ID'];
 				$arDiscountID[$arDiscount['DISCOUNT_ID']] = true;
-				if (!array_key_exists($arDiscount['DISCOUNT_ID'], $arRestrictions))
+				if (!isset($arRestrictions[$arDiscount['DISCOUNT_ID']]))
 				{
 					$arRestrictions[$arDiscount['DISCOUNT_ID']] = array(
 						'USER_GROUP' => array(),
 						'PRICE_TYPE' => array(),
 					);
 				}
-				$arDiscount['USER_GROUP_ID'] = intval($arDiscount['USER_GROUP_ID']);
-				$arDiscount['PRICE_TYPE_ID'] = intval($arDiscount['PRICE_TYPE_ID']);
+				$arDiscount['USER_GROUP_ID'] = (int)$arDiscount['USER_GROUP_ID'];
+				$arDiscount['PRICE_TYPE_ID'] = (int)$arDiscount['PRICE_TYPE_ID'];
 				$arRestrictions[$arDiscount['DISCOUNT_ID']]['USER_GROUP'][$arDiscount['USER_GROUP_ID']] = true;
 				$arRestrictions[$arDiscount['DISCOUNT_ID']]['PRICE_TYPE'][$arDiscount['PRICE_TYPE_ID']] = true;
 			}
@@ -869,7 +864,7 @@ class CCatalogDiscount extends CAllCatalogDiscount
 		{
 			while ($arDiscount = $rsDiscounts->Fetch())
 			{
-				$arDiscount['DISCOUNT_ID'] = intval($arDiscount['DISCOUNT_ID']);
+				$arDiscount['DISCOUNT_ID'] = (int)$arDiscount['DISCOUNT_ID'];
 				$arDiscountID[$arDiscount['DISCOUNT_ID']] = true;
 			}
 			if (!empty($arDiscountID))
@@ -986,21 +981,27 @@ class CCatalogDiscount extends CAllCatalogDiscount
 			'EXT_FILES' => array()
 		);
 		$result = array();
-		CatalogClearArray($discountList, true);
+		Main\Type\Collection::normalizeArrayValuesByInt($discountList, true);
 		if (!empty($discountList))
 		{
 			$result = array_fill_keys($discountList, $defaultRes);
-			$discountIn = implode(', ', $discountList);
-			$sqlQuery = 'select * from b_catalog_discount_module where DISCOUNT_ID IN ('.$discountIn.')';
-			$resQuery = $DB->Query($sqlQuery, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
-			while ($row = $resQuery->Fetch())
+			$discountRows = array_chunk($discountList, 500);
+			foreach ($discountRows as &$oneRow)
 			{
-				$row['DISCOUNT_ID'] = (int)$row['DISCOUNT_ID'];
-				$result[$row['DISCOUNT_ID']]['MODULES'][] = $row['MODULE_ID'];
+				$sqlQuery = 'select * from b_catalog_discount_module where DISCOUNT_ID IN ('.implode(', ', $oneRow).')';
+				$resQuery = $DB->Query($sqlQuery, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
+				while ($row = $resQuery->Fetch())
+				{
+					$row['DISCOUNT_ID'] = (int)$row['DISCOUNT_ID'];
+					$result[$row['DISCOUNT_ID']]['MODULES'][] = $row['MODULE_ID'];
+				}
+				if (isset($row))
+					unset($row);
+				unset($resQuery, $sqlQuery);
 			}
+			unset($oneRow, $discountRows);
 		}
 
 		return $result;
 	}
 }
-?>

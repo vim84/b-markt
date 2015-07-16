@@ -3,18 +3,30 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)
 	die();
 
 $arToolbar = array();
+
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+{
+	$processes = true;
+	$typeTranslation = '_PROCESS';
+}
+else
+{
+	$processes = false;
+	$typeTranslation = '';
+}
+
 if($arResult["IBLOCK_ID"])
 {
 	$arToolbar[] = array(
-		"TEXT"=>GetMessage("CT_BLLE_TOOLBAR_FIELDS"),
-		"TITLE"=>GetMessage("CT_BLLE_TOOLBAR_FIELDS_TITLE"),
+		"TEXT"=>GetMessage("CT_BLLE_TOOLBAR_FIELDS".$typeTranslation),
+		"TITLE"=>GetMessage("CT_BLLE_TOOLBAR_FIELDS".$typeTranslation),
 		"LINK"=>$arResult["LIST_FIELDS_URL"],
 		"ICON"=>"btn-view-fields",
 	);
 	$arToolbar[] = array(
-		"TEXT"=>GetMessage("CT_BLLE_TOOLBAR_DELETE"),
-		"TITLE"=>GetMessage("CT_BLLE_TOOLBAR_DELETE_TITLE"),
-		"LINK"=>"javascript:jsDelete('".CUtil::JSEscape("form_".$arResult["FORM_ID"])."', '".GetMessage("CT_BLLE_TOOLBAR_DELETE_WARNING")."')",
+		"TEXT"=>GetMessage("CT_BLLE_TOOLBAR_DELETE".$typeTranslation),
+		"TITLE"=>GetMessage("CT_BLLE_TOOLBAR_DELETE_TITLE".$typeTranslation),
+		"LINK"=>"javascript:jsDelete('".CUtil::JSEscape("form_".$arResult["FORM_ID"])."', '".GetMessage("CT_BLLE_TOOLBAR_DELETE_WARNING".$typeTranslation)."')",
 		"ICON"=>"btn-delete-list",
 	);
 	$arToolbar[] = array(
@@ -26,6 +38,13 @@ if($arResult["IBLOCK_ID"])
 		"LINK"=>$arResult["LIST_URL"],
 		"ICON"=>"btn-view-elements",
 	);
+	if(!$processes && IsModuleInstalled('intranet') && !$arParams["SOCNET_GROUP_ID"])
+		$arToolbar[] = array(
+			"TEXT"=>GetMessage("CT_BLLE_TOOLBAR_MIGRATE_PROCESSES"),
+			"TITLE"=>GetMessage("CT_BLLE_TOOLBAR_MIGRATE_PROCESSES"),
+			"LINK"=>"javascript:jsMigrate('".CUtil::JSEscape("form_".$arResult["FORM_ID"])."', '".GetMessage("CT_BLLE_TOOLBAR_MIGRATE_WARNING_PROCESS")."')",
+			"ICON"=>"btn-delete-list",
+		);
 }
 
 if(count($arToolbar))
@@ -72,20 +91,35 @@ $custom_html = '<input type="hidden" name="action" id="action" value="">';
 $arTab1 = array(
 	"id" => "tab1",
 	"name" => GetMessage("CT_BLLE_TAB_EDIT"),
-	"title" => GetMessage("CT_BLLE_TAB_EDIT_TITLE"),
+	"title" => GetMessage("CT_BLLE_TAB_EDIT_TITLE".$typeTranslation),
 	"icon" => "",
 	"fields" => array(
-		array("id"=>"NAME", "name"=>GetMessage("CT_BLLE_FIELD_NAME"), "required"=>true),
+		array("id"=>"NAME", "name"=>GetMessage("CT_BLLE_FIELD_NAME".$typeTranslation), "required"=>true),
+		array("id"=>"DESCRIPTION", "name"=>GetMessage("CT_BLLE_FIELD_DESCRIPTION".$typeTranslation), "type"=>"textarea"),
 		array("id"=>"SORT", "name"=>GetMessage("CT_BLLE_FIELD_SORT"), "params"=>array("size"=>5)),
 		array("id"=>"PICTURE", "name"=>GetMessage("CT_BLLE_FIELD_PICTURE"), "type"=>"file"),
 	),
 );
-if(isset($arResult["FORM_DATA"]["BIZPROC"]))
-	$arTab1["fields"][] = array(
-		"id" => "BIZPROC",
-		"name" => GetMessage("CT_BLLE_FIELD_BIZPROC"),
-		"type"=>"checkbox",
-	);
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+{
+	if(isset($arResult["FORM_DATA"]["BIZPROC"]))
+	{
+		$arTab1["fields"][] = array(
+			"id"=>"BIZPROC",
+			"type"=>"custom",
+			"value"=>'<input type="hidden" name="BIZPROC" value="Y">',
+		);
+	}
+}
+else
+{
+	if(isset($arResult["FORM_DATA"]["BIZPROC"]))
+		$arTab1["fields"][] = array(
+			"id" => "BIZPROC",
+			"name" => GetMessage("CT_BLLE_FIELD_BIZPROC"),
+			"type"=>"checkbox",
+		);
+}
 
 $APPLICATION->IncludeComponent(
 	"bitrix:main.interface.form",
@@ -94,7 +128,7 @@ $APPLICATION->IncludeComponent(
 		"FORM_ID"=>$arResult["FORM_ID"],
 		"TABS"=>array(
 			$arTab1,
-			array("id"=>"tab2", "name"=>GetMessage("CT_BLLE_TAB_MESSAGES"), "title"=>GetMessage("CT_BLLE_TAB_MESSAGES_TITLE"), "icon"=>"", "fields"=>array(
+			array("id"=>"tab2", "name"=>GetMessage("CT_BLLE_TAB_MESSAGES"), "title"=>GetMessage("CT_BLLE_TAB_MESSAGES_TITLE".$typeTranslation), "icon"=>"", "fields"=>array(
 				array("id"=>"ELEMENTS_NAME", "name"=>GetMessage("CT_BLLE_FIELD_ELEMENTS_NAME")),
 				array("id"=>"ELEMENT_NAME", "name"=>GetMessage("CT_BLLE_FIELD_ELEMENT_NAME")),
 				array("id"=>"ELEMENT_ADD", "name"=>GetMessage("CT_BLLE_FIELD_ELEMENT_ADD")),
@@ -109,7 +143,7 @@ $APPLICATION->IncludeComponent(
 			array(
 				"id"=>"tab3",
 				"name"=>GetMessage("CT_BLLE_TAB_ACCESS"),
-				"title"=>GetMessage("CT_BLLE_TAB_ACCESS_TITLE"),
+				"title"=>GetMessage("CT_BLLE_TAB_ACCESS_TITLE".$typeTranslation),
 				"icon"=>"",
 				"fields"=>$rights_fields,
 			),

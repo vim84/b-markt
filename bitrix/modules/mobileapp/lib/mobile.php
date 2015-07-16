@@ -16,6 +16,9 @@ class Mobile
 	private $iniScale = false;
 	private $maxScale = false;
 	private $scale = 1.2;
+	private $width = false;
+	private $userScalable = "no";
+
 	private $deviceWidth = 320;
 	private $deviceHeight = 480;
 	private $screenCategory = "NORMAL";
@@ -134,6 +137,38 @@ class Mobile
 		return $this->isBXScriptSupported;
 	}
 
+	/**
+	 * @return integer
+	 */
+	public function getWidth()
+	{
+		return $this->width;
+	}
+
+	/**
+	 * @param integer $width
+	 */
+	public function setWidth($width)
+	{
+		$this->width = $width;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getUserScalable()
+	{
+		return $this->userScalable;
+	}
+
+	/**
+	 * @param boolean $userScalable
+	 */
+	public function setUserScalable($userScalable)
+	{
+		$this->userScalable = ($userScalable === false?"no":"yes");
+	}
+
 	private function __clone()
 	{
 		//you can't clone it
@@ -203,6 +238,7 @@ class Mobile
 		{
 			$APPLICATION->AddHeadString("<script type=\"text/javascript\">app.bindloadPageBlank();</script>", false, false);
 		}
+
 		$APPLICATION->AddHeadString(Mobile::getInstance()->getViewPort());
 	}
 
@@ -245,10 +281,23 @@ class Mobile
 		$GLOBALS["BITRIX_API_VERSION"] = self::$apiVersion;
 
 		AddEventHandler("main", "OnBeforeEndBufferContent", Array(__CLASS__, "initScripts"));
+		AddEventHandler("main", "OnEpilog", Array($this, "onMobileInit"));
 		self::$isAlreadyInit = true;
+
 		$db_events = getModuleEvents("mobileapp", "OnMobileInit");
 		while ($arEvent = $db_events->Fetch())
 			ExecuteModuleEventEx($arEvent);
+	}
+
+
+	public function onMobileInit()
+	{
+		if(!defined("MOBILE_INIT_EVENT_SKIP"))
+		{
+			$db_events = getModuleEvents("mobileapp", "OnMobileInit");
+			while ($arEvent = $db_events->Fetch())
+				ExecuteModuleEventEx($arEvent);
+		}
 	}
 
 	/**
@@ -331,17 +380,26 @@ class Mobile
 		}
 
 
-		if (toUpper($this->getPlatform()) == "ANDROID")
+
+		if($this->getWidth())
 		{
-			$contentAttributes[] = "width=device-width";
-			$contentAttributes[] = "target-densitydpi=" . $this->getTargetDpi();
+			$contentAttributes[] = "width=" . $this->getWidth();
 		}
 		elseif ($this->getIniscale())
 		{
 			$contentAttributes[] = "width=" . ($width / $this->getIniscale());
 		}
 
-		$contentAttributes[] = "user-scalable=0";
+
+		if (toUpper($this->getPlatform()) == "ANDROID")
+		{
+			if (!$this->getWidth())
+				$contentAttributes[] = "width=device-width";
+			$contentAttributes[] = "target-densitydpi=" . $this->getTargetDpi();
+		}
+
+
+		$contentAttributes[] = "user-scalable=".$this->getUserScalable();
 
 		return str_replace("#content_value#", implode(", ", $contentAttributes), $viewPortMeta);
 	}
@@ -351,7 +409,7 @@ class Mobile
 	 */
 	public function getLargeScreenViewPort()
 	{
-		return "<meta id=\"bx_mobile_viewport\" name=\"viewport\" content=\"user-scalable=0 width=device-width target-densitydpi=" . $this->getTargetDpi() . "\">";
+		return "<meta id=\"bx_mobile_viewport\" name=\"viewport\" content=\"user-scalable=no width=device-width target-densitydpi=" . $this->getTargetDpi() . "\">";
 	}
 
 	/**
@@ -373,7 +431,7 @@ class Mobile
 			"maximum-scale=" . $this->scale,
 			"minimum-scale=" . $this->scale,
 			"width=" . ($width / $this->scale),
-			"user-scalable=0"
+			"user-scalable=no"
 		);
 		$content = implode(", ", $contentAttributes);
 
@@ -405,7 +463,7 @@ class Mobile
 	 *
 	 * @param mixed $pixelRatio the pixelRatio
 	 */
-	public function setPixelratio($pixelRatio)
+	public function setPixelRatio($pixelRatio)
 	{
 		$this->pixelRatio = $pixelRatio;
 	}
@@ -415,7 +473,7 @@ class Mobile
 	 *
 	 * @param mixed $minScale the minScale
 	 */
-	public function setMinscale($minScale)
+	public function setMinScale($minScale)
 	{
 		$this->minScale = $minScale;
 	}
@@ -436,7 +494,7 @@ class Mobile
 	 *
 	 * @param mixed $iniScale the iniScale
 	 */
-	public function setIniscale($iniScale)
+	public function setIniScale($iniScale)
 	{
 		$this->iniScale = $iniScale;
 	}
@@ -446,7 +504,7 @@ class Mobile
 	 *
 	 * @param mixed $maxScale the maxScale
 	 */
-	public function setMaxscale($maxScale)
+	public function setMaxScale($maxScale)
 	{
 		$this->maxScale = $maxScale;
 	}
@@ -486,7 +544,7 @@ class Mobile
 	 *
 	 * @return mixed
 	 */
-	public function getMinscale()
+	public function getMinScale()
 	{
 		return $this->minScale;
 	}
@@ -496,7 +554,7 @@ class Mobile
 	 *
 	 * @return mixed
 	 */
-	public function getIniscale()
+	public function getIniScale()
 	{
 		return $this->iniScale;
 	}
@@ -506,7 +564,7 @@ class Mobile
 	 *
 	 * @return mixed
 	 */
-	public function getMaxscale()
+	public function getMaxScale()
 	{
 		return $this->maxScale;
 	}
@@ -516,7 +574,7 @@ class Mobile
 	 *
 	 * @return mixed
 	 */
-	public function getDevicewidth()
+	public function getDeviceWidth()
 	{
 		return $this->deviceWidth;
 	}
@@ -526,7 +584,7 @@ class Mobile
 	 *
 	 * @return mixed
 	 */
-	public function getDeviceheight()
+	public function getDeviceHeight()
 	{
 		return $this->deviceHeight;
 	}

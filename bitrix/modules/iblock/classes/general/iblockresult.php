@@ -52,19 +52,12 @@ class CIBlockResult extends CDBResult
 		if(is_array($iblock_id))
 		{
 			foreach($iblock_id as $id)
-			{
-				if(!is_array($id))
-				{
-					$id = intval($id);
-					if($id > 0)
-						$this->_FILTER_IBLOCK_ID[$id] = true;
-				}
-			}
+				$this->SetIBlockTag($id);
 		}
 		else
 		{
 			$id = intval($iblock_id);
-			if($id > 0)
+			if ($id > 0)
 				$this->_FILTER_IBLOCK_ID[$id] = true;
 		}
 	}
@@ -372,6 +365,26 @@ class CIBlockResult extends CDBResult
 					{
 						$res["SECTION_PAGE_URL"] = CIBlock::ReplaceSectionUrl($TEMPLATE, $res, true, $type);
 					}
+				}
+			}
+
+			if(array_key_exists("~CANONICAL_PAGE_URL", $res))
+				$TEMPLATE = $res["~CANONICAL_PAGE_URL"];
+			elseif(!$use_tilda && array_key_exists("CANONICAL_PAGE_URL", $res))
+				$TEMPLATE = $res["CANONICAL_PAGE_URL"];
+			else
+				$TEMPLATE = "";
+
+			if($TEMPLATE)
+			{
+				if($use_tilda)
+				{
+					$res["~CANONICAL_PAGE_URL"] = CIBlock::ReplaceSectionUrl($TEMPLATE, $res, true, "E");
+					$res["CANONICAL_PAGE_URL"] = htmlspecialcharsbx($res["~CANONICAL_PAGE_URL"]);
+				}
+				else
+				{
+					$res["CANONICAL_PAGE_URL"] = CIBlock::ReplaceSectionUrl($TEMPLATE, $res, true, "E");
 				}
 			}
 		}

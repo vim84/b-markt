@@ -12,7 +12,7 @@ $iIndex = rand();
 $arResult["FOLDERS"] = array();
 for ($ii = 1; $ii <= $arResult["SystemFolder"]; $ii++)
 {
-	if (($arResult["version"] == 2 && $ii == 2) || $ii == $arParams["FID"])
+	if (($arParams["version"] == 2 && $ii == 2) || $ii == $arParams["FID"])
 		continue;
 	$arResult["FOLDERS"][] = array("ID" => $ii, "TITLE" => GetMessage("PM_FOLDER_ID_".$ii));
 }

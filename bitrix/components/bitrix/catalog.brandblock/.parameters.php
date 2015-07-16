@@ -1,38 +1,51 @@
 <?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
-
+/** @var array $arCurrentValues */
 use Bitrix\Main\Loader;
+use Bitrix\Iblock;
 
-if(!Loader::includeModule("iblock"))
+if (!Loader::includeModule('iblock'))
+	return;
+if (!Loader::includeModule('highloadblock'))
 	return;
 
-if(!Loader::includeModule("highloadblock"))
-	return;
+$iblockExists = (!empty($arCurrentValues['IBLOCK_ID']) && (int)$arCurrentValues['IBLOCK_ID'] > 0);
 
 $arIBlockType = CIBlockParameters::GetIBlockTypes();
 
 $arIBlock = array();
-$rsIBlock = CIBlock::GetList(array("sort" => "asc"), array("TYPE" => $arCurrentValues["IBLOCK_TYPE"], "ACTIVE"=>"Y"));
-
-while($arr = $rsIBlock->Fetch())
-	$arIBlock[$arr["ID"]] = "[".$arr["ID"]."] ".$arr["NAME"];
+$iblockFilter = (
+	!empty($arCurrentValues['IBLOCK_TYPE'])
+	? array('TYPE' => $arCurrentValues['IBLOCK_TYPE'], 'ACTIVE' => 'Y')
+	: array('ACTIVE' => 'Y')
+);
+$rsIBlock = CIBlock::GetList(array('SORT' => 'ASC'), $iblockFilter);
+while ($arr = $rsIBlock->Fetch())
+	$arIBlock[$arr['ID']] = '['.$arr['ID'].'] '.$arr['NAME'];
+unset($arr, $rsIBlock, $iblockFilter);
 
 $arProps = array();
-
-$rsProps = CIBlockProperty::GetList(
-	array("SORT" => "ASC", "ID" => "ASC"),
-	array(
-		"IBLOCK_ID" => $arCurrentValues["IBLOCK_ID"],
-		"ACTIVE" => "Y",
-		"PROPERTY_TYPE" => "S:directory"
-	)
-);
-
-while ($arProp = $rsProps->Fetch())
+if ($iblockExists)
 {
-	if (isset($arProp['USER_TYPE_SETTINGS']) && isset($arProp['USER_TYPE_SETTINGS']['TABLE_NAME']))
+	$propertyIterator = Iblock\PropertyTable::getList(array(
+		'select' => array('ID', 'IBLOCK_ID', 'NAME', 'CODE', 'PROPERTY_TYPE', 'USER_TYPE'),
+		'filter' => array(
+			'=IBLOCK_ID' => $arCurrentValues['IBLOCK_ID'],
+			'=ACTIVE' => 'Y',
+			'=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_STRING,
+			'=USER_TYPE' => 'string'
+		),
+		'order' => array('SORT' => 'ASC', 'NAME' => 'ASC')
+	));
+	while ($property = $propertyIterator->fetch())
 	{
-		$arProps[$arProp["CODE"]] = "[".$arProp["CODE"]."] ".$arProp["NAME"];
+		$propertyCode = (string)$property['CODE'];
+		if ($propertyCode == '')
+			$propertyCode = $property['ID'];
+		$propertyName = '['.$propertyCode.'] '.$property['NAME'];
+
+		$arProps[$propertyCode] = $propertyName;
 	}
+	unset($propertyCode, $propertyName, $property, $propertyIterator);
 }
 
 $arComponentParameters = array(
@@ -70,6 +83,12 @@ $arComponentParameters = array(
 			"VALUES" => $arProps,
 			"MULTIPLE" => "Y",
 			"ADDITIONAL_VALUES" => "Y"
+		),
+		"SHOW_DEACTIVATED" => array(
+			"PARENT" => "BASE",
+			"NAME" => GetMessage("IBLOCK_CB_SHOW_DEACTIVATED"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N"
 		),
 		"WIDTH" => array(
 			"PARENT" => "VISUAL",
@@ -118,4 +137,3 @@ $arComponentParameters = array(
 		)
 	)
 );
-?>

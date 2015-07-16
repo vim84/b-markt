@@ -6,6 +6,7 @@ define('NO_AGENT_CHECK', true);
 define('DisableEventsCheck', true);
 
 define('NOT_CHECK_PERMISSIONS', true);
+define('BX_SECURITY_SESSION_READONLY', true);
 
 require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/prolog_before.php');
 
@@ -39,7 +40,7 @@ if (!empty($acc))
 	{
 		case 'imap':
 			$unseen = CMailUtil::CheckImapMailbox(
-				$acc['SERVER'], $acc['PORT'], $acc['USE_TLS'] == 'Y',
+				$acc['SERVER'], $acc['PORT'], $acc['USE_TLS'],
 				$acc['LOGIN'], $acc['PASSWORD'],
 				$error, 30
 			);

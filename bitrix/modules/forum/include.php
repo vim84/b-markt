@@ -851,12 +851,12 @@ function ForumModerateMessage($message, $TYPE, &$strErrorMessage, &$strOKMessage
 					$ID = CForumMessage::Update($arMessage["ID"], $arFields);
 					if ($ID > 0)
 					{
-						/***************** Events onMessageModerate ************************/
-						foreach (GetModuleEvents("forum", "onMessageModerate", true) as $arEvent)
-							ExecuteModuleEventEx($arEvent, array($ID, $TYPE, $arMessage));
-						/***************** /Events *****************************************/
 						$TID = $arMessage["TOPIC_ID"];
 						$arTopic = CForumTopic::GetByID($TID);
+						/***************** Events onMessageModerate ************************/
+						foreach (GetModuleEvents("forum", "onMessageModerate", true) as $arEvent)
+							ExecuteModuleEventEx($arEvent, array($ID, $TYPE, $arMessage, $arTopic));
+						/***************** /Events *****************************************/
 						$res =  array(
 								"ID" => $arMessage["ID"],
 								"AUTHOR_NAME" => $arMessage["AUTHOR_NAME"],

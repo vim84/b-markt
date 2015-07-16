@@ -336,7 +336,7 @@ if(typeof(BX.CrmInterfaceGridManager) == 'undefined')
 			{
 				return;
 			}
-			
+
 			var value = selected.value;
 			if (value === 'subscribe')
 			{
@@ -1165,7 +1165,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			{
 				clear.value = "Y";
 			}
-			
+
 			this.setFieldParams({});
 			BX.submit(f);
 		},
@@ -1479,7 +1479,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 				this.applyActive();
 				return;
 			}
-			
+
 			var self = this;
 			this.saveActiveItem(function() { self.applyActive(); });
 		},
@@ -2062,6 +2062,7 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 					case 'select-one':
 					case 'text':
 					case 'textarea':
+					case 'hidden':
 						el.value = v !== null ? v : '';
 						changed = true;
 						break;
@@ -2768,3 +2769,4 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 		return self;
 	}
 }
+

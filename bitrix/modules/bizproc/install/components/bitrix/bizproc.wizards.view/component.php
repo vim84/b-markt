@@ -225,15 +225,17 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 		{
 			if ($arDocumentFields[$key]["BaseType"] == "file")
 			{
-				$ar = $arRecord[$key];
-				if (!is_array($ar))
-					$ar = array($ar);
-				$arRecord[$key] = "";
-				foreach ($ar as $v)
+				$ar = array_filter((array)$arRecord[$key]);
+				$arRecord[$key] = '';
+				if (sizeof($ar) > 0)
 				{
-					if (strlen($arRecord[$key]) > 0)
-						$arRecord[$key] .= " ";
-					$arRecord[$key] .= CFile::ShowFile($v, 100000, 300, 300, true);
+					$fileIterator = CFile::getList(array('ID' => 'ASC'), array('@ID' => $ar));
+					while ($file = $fileIterator->fetch())
+					{
+						if ($arRecord[$key] != '')
+							$arRecord[$key] .= ' ';
+						$arRecord[$key] .= '<a href="/bitrix/tools/bizproc_show_file.php?bp_id=' . $arParams['BP_ID'] . '&iblock_id=' . $arParams['BLOCK_ID'] . '&f=' . htmlspecialcharsbx($key) . '&i=' . $file['ID'] . '">' . htmlspecialcharsbx($file['ORIGINAL_NAME']) . '</a>';
+					}
 				}
 			}
 			if (is_array($arRecord[$key]))
@@ -297,12 +299,6 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 			$arResult["BP"]["CancelUrl"] = $APPLICATION->GetCurPageParam("stop_bizproc_id=".$arDocumentState["ID"]."&".bitrix_sessid_get(), array("sessid", "stop_bizproc_id"));
 	}
 }
-
-/*
-$f = fopen($_SERVER["DOCUMENT_ROOT"]."/++++++++.+++", "a");
-fwrite($f, print_r($arResult, true)."\n\n");
-fclose($f);
-*/
 
 $this->IncludeComponentTemplate();
 

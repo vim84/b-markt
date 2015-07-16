@@ -20,9 +20,8 @@ $errors = array();
 
 // if we have an exception here, we got ajax parse error on client side.
 // we must take care of it until we have better solution
-$result = CBitrixCrmConfigLocationImport2Component::doAjaxStuff(array(
-	'INITIAL_TIME' => $initialTime,
-	'ONLY_DELETE_ALL' => isset($_REQUEST['ONLY_DELETE_ALL'])
+$result = CBitrixSaleLocationImportComponent::doAjaxStuff(array(
+	'INITIAL_TIME' => $initialTime
 ));
 
 header('Content-Type: application/x-javascript; charset='.LANG_CHARSET);

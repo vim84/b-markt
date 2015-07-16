@@ -1,12 +1,14 @@
 <?
-use Bitrix\Sale\Location\Admin\TypeHelper as Helper;
-
 use Bitrix\Main;
 use Bitrix\Main\Config;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location\Admin\TypeHelper as Helper;
+use Bitrix\Sale\Location\Admin\SearchHelper;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/include.php");
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/prolog.php');
 
 Loc::loadMessages(__FILE__);
 
@@ -60,7 +62,7 @@ try
 				{
 					if($actionSave)
 						$redirectUrl = $returnUrl ? $returnUrl : Helper::getListUrl(); // go to the page of just created item
-			
+
 					// $actionApply : do nothing
 				}
 			}
@@ -98,7 +100,7 @@ try
 			$message = $e->getMessage().(!empty($code) ? ' ('.$code.')' : '');
 
 			$actionFailureMessage = Loc::getMessage('SALE_LOCATION_E_CANNOT_'.($saveAsId ? 'UPDATE' : 'SAVE').'_ITEM').(strlen($message) ? ': <br /><br />'.$message : '');
-		
+
 			$DB->Rollback();
 		}
 	}
@@ -161,8 +163,8 @@ if(!$fatalFailure) // no fatals like "module not installed, etc."
 
 	$tabControl = new CAdminForm("tabcntrl_type_edit", array(
 		array(
-			"DIV" => "main", 
-			"TAB" => Loc::getMessage('SALE_LOCATION_E_MAIN_TAB'), 
+			"DIV" => "main",
+			"TAB" => Loc::getMessage('SALE_LOCATION_E_MAIN_TAB'),
 			"TITLE" => Loc::getMessage('SALE_LOCATION_E_MAIN_TAB_TITLE')
 		)
 	));
@@ -179,7 +181,7 @@ if(!$fatalFailure) // no fatals like "module not installed, etc."
 	$tabControl->EndEpilogContent();
 }
 
-$APPLICATION->SetTitle(strlen($nameToDisplay) ? Loc::getMessage('SALE_LOCATION_E_ITEM_EDIT', array('#ITEM_NAME#' => htmlspecialcharsbx($nameToDisplay))) : Loc::getMessage('SALE_LOCATION_E_ITEM_NEW'));
+$APPLICATION->SetTitle(strlen($nameToDisplay) ? Loc::getMessage('SALE_LOCATION_E_ITEM_EDIT', array('#ITEM_NAME#' => $nameToDisplay)) : Loc::getMessage('SALE_LOCATION_E_ITEM_NEW'));
 ?>
 
 <?require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");?>
@@ -192,6 +194,8 @@ $APPLICATION->SetTitle(strlen($nameToDisplay) ? Loc::getMessage('SALE_LOCATION_E
 
 <?//temporal code?>
 <?if(!CSaleLocation::locationProCheckEnabled())require($DOCUMENT_ROOT."/bitrix/modules/main/include/epilog_admin.php");?>
+
+<?SearchHelper::checkIndexesValid();?>
 
 <?if($fatalFailure):?>
 
@@ -215,7 +219,7 @@ $APPLICATION->SetTitle(strlen($nameToDisplay) ? Loc::getMessage('SALE_LOCATION_E
 	));
 	$tabControl->BeginNextFormTab();
 	?>
-	
+
 	<?$requiredFld = ' class="adm-detail-required-field"';?>
 
 	<?$columns = Helper::getColumns('detail');?>
@@ -271,7 +275,7 @@ $APPLICATION->SetTitle(strlen($nameToDisplay) ? Loc::getMessage('SALE_LOCATION_E
 				</td>
 			</tr>
 		<?endforeach?>
-		
+
 	<?endforeach?>
 	<?$tabControl->EndCustomField('NAME', '');?>
 

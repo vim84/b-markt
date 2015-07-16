@@ -23,4 +23,7 @@ $MESS["CP_BL_PAGE_BIZPROC_TASK"] = "URL задачи бизнес-процесс
 $MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_ADMIN"] = "URL списка бизнес-процессов";
 $MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_EDIT"] = "URL настройки бизнес-процесса";
 $MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_VARS"] = "URL переменных бизнес-процесса";
+$MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_CONSTANTS"] = "URL констант бизнес-процесса";
+$MESS["CP_BL_PAGE_EXPORT_EXCEL"] = "Экспорт Excel";
+$MESS["CP_BL_PAGE_CATALOG_PROCESSES"] = "Каталог Бизнес процессов";
 ?>

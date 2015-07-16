@@ -399,6 +399,7 @@
 				currentValues: comp.params,
 				container: pParamsContainer,
 				siteTemplate: this.editor.GetTemplateId(),
+				relPath: this.editor.config.relPath,
 				callback: function(params, container){
 					_this.PropertiesDialogCallback(params, container);
 				}
@@ -438,7 +439,8 @@
 			this.editor.Request({
 				getData: this.editor.GetReqData('load_components_list',
 					{
-						site_template: this.editor.GetTemplateId()
+						site_template: this.editor.GetTemplateId(),
+						componentFilter: this.editor.GetComponentFilter()
 					}
 				),
 				handler: function(res)

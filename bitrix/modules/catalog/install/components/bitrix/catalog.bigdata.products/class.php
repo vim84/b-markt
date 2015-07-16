@@ -11,6 +11,7 @@ CBitrixComponent::includeComponentClass("bitrix:sale.bestsellers");
 
 class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 {
+	protected $rcmParams;
 	protected $ajaxItemsIds;
 
 	/**
@@ -21,8 +22,12 @@ class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 		global $APPLICATION;
 
 		// remember src params for further ajax query
+		if (!isset($params['RCM_CUR_BASE_PAGE']))
+		{
+			$params['RCM_CUR_BASE_PAGE'] = $APPLICATION->GetCurPage();
+		}
+
 		$this->arResult['_ORIGINAL_PARAMS'] = $params;
-		$this->arResult['_ORIGINAL_PARAMS']['RCM_CUR_BASE_PAGE'] = $APPLICATION->GetCurPage();
 
 		// bestselling
 		$params['FILTER'] = array('PAYED');
@@ -134,7 +139,7 @@ class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 			if (empty($ids))
 			{
 				$recommendationId = 'mostviewed';
-
+				$dublicate = array();
 				// top viewed
 				$result = CatalogViewedProductTable::getList(array(
 					'select' => array(
@@ -148,9 +153,32 @@ class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 
 				while ($row = $result->fetch())
 				{
-					$ids[] = $row['ELEMENT_ID'];
+					if (!isset($dublicate[$row['ELEMENT_ID']]))
+						$ids[] = $row['ELEMENT_ID'];
+					$dublicate[$row['ELEMENT_ID']] = true;
 				}
+				unset($row, $result, $dublicate);
 			}
+		}
+
+		if (!empty($ids) && $this->arParams['HIDE_NOT_AVAILABLE'] == 'Y')
+		{
+			$filter = (count($ids) > 1000 ? array('ID' => $ids) : array('@ID' => $ids));
+			$ids = array_fill_keys($ids, true);
+			$productIterator = CCatalogProduct::GetList(
+				array(),
+				$filter,
+				false,
+				false,
+				array('ID', 'QUANTITY', 'QUANTITY_TRACE', 'CAN_BUY_ZERO')
+			);
+			while ($product = $productIterator->Fetch())
+			{
+				if (isset($ids[$product['ID']]) && !CCatalogProduct::isAvailable($product))
+					unset($ids[$product['ID']]);
+			}
+			unset($product, $productIterator, $filter);
+			$ids = array_keys($ids);
 		}
 
 		$ids = array_slice($ids, 0, $this->arParams['PAGE_ELEMENT_COUNT']);
@@ -167,15 +195,24 @@ class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 	 */
 	protected function extractDataFromCache()
 	{
-		return false;
-	}
+		if($this->arParams['CACHE_TYPE'] == 'N')
+			return false;
 
-	protected function putDataToCache()
-	{
-	}
+		$rcmParams = $this->rcmParams;
 
-	protected function abortDataCache()
-	{
+		// cut productid from non-product recommendations
+		if ($rcmParams['op'] == 'sim_domain_items' || $rcmParams['op'] == 'recommend')
+		{
+			unset($this->arParams['ID'], $this->arParams['~ID']);
+		}
+
+		// cut userid from non-personal recommendations
+		if ($rcmParams['op'] == 'sim_domain_items' || $rcmParams['op'] == 'simitems')
+		{
+			unset($rcmParams['uid']);
+		}
+
+		return !($this->StartResultCache(false, $rcmParams, '/'.SITE_ID.'/bitrix/catalog.bigdata.products/common'));
 	}
 
 	protected function getServiceRequestParamsByType($type)
@@ -236,6 +273,42 @@ class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 			// unkonwn type
 		}
 
+		// get iblocks
+		$iblocks = array();
+
+		if (!empty($this->arParams['IBLOCK_ID']))
+		{
+			$iblocks = array($this->arParams['IBLOCK_ID']);
+		}
+		else
+		{
+			$iblockList = array();
+			/* catalog */
+			$iblockIterator = \Bitrix\Catalog\CatalogIblockTable::getList(array(
+				'select' => array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID')
+			));
+			while ($iblock = $iblockIterator->fetch())
+			{
+				$iblock['IBLOCK_ID'] = (int)$iblock['IBLOCK_ID'];
+				$iblock['PRODUCT_IBLOCK_ID'] = (int)$iblock['PRODUCT_IBLOCK_ID'];
+				$iblockList[$iblock['IBLOCK_ID']] = $iblock['IBLOCK_ID'];
+				if ($iblock['PRODUCT_IBLOCK_ID'] > 0)
+					$iblockList[$iblock['PRODUCT_IBLOCK_ID']] = $iblock['PRODUCT_IBLOCK_ID'];
+			}
+
+			/* iblock */
+			$iblockIterator = \Bitrix\Iblock\IblockSiteTable::getList(array(
+				'select' => array('IBLOCK_ID'),
+				'filter' => array('@IBLOCK_ID' => $iblockList, '=SITE_ID' => SITE_ID)
+			));
+			while ($iblock = $iblockIterator->fetch())
+			{
+				$iblocks[] = $iblock['IBLOCK_ID'];
+			}
+		}
+
+		$a['ib'] = join('.', $iblocks);
+
 		return $a;
 	}
 
@@ -257,38 +330,36 @@ class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 			Main\Config\Option::set('main', 'rcm_component_usage', time());
 		}
 
-		if ($context->getServer()->getRequestMethod() == 'POST' && $context->getRequest()->getPost('rcm') == 'yes')
+		// execute
+		$this->checkModules();
+		$this->processRequest();
+
+		// define what to do and check cache
+		$this->rcmParams = $this->getServiceRequestParamsByType($this->arParams['RCM_TYPE']);
+		$showByIds = ($context->getServer()->getRequestMethod() == 'POST' && $context->getRequest()->getPost('rcm') == 'yes');
+
+		if (!$showByIds)
 		{
-			// we have an ajax query to get items html
-			$ajaxItemIds = $context->getRequest()->get('AJAX_ITEMS');
-
-			if (!empty($ajaxItemIds) && is_array($ajaxItemIds))
-			{
-				// it's ok
-			}
-			else
-			{
-				// show something
-				$ajaxItemIds = null;
-				// last viewed will be shown
-			}
-
-			$this->ajaxItemsIds = $ajaxItemIds;
-
-			// draw products with collected ids
+			// check if ids are already in cache
 			try
 			{
-				$this->checkModules();
-				$this->processRequest();
-
 				if (!$this->extractDataFromCache())
 				{
-					$this->prepareData();
-					$this->formatResult();
-					$this->setResultCacheKeys(array());
+					// echo js for requesting items from recommendation service
+					$this->arResult['REQUEST_ITEMS'] = true;
+					$this->arResult['RCM_PARAMS'] = $this->rcmParams;
+					$this->arResult['RCM_TEMPLATE'] = $this->getTemplateName();
+
+					// abort cache, we will write it on next request with the same parameters
+					$this->abortDataCache();
+
 					$this->includeComponentTemplate();
-					$this->putDataToCache();
+
+					$this->setResultCacheKeys(array());
 				}
+
+				// show cache and die
+				return;
 			}
 			catch (SystemException $e)
 			{
@@ -304,13 +375,32 @@ class CatalogBigdataProductsComponent extends CSaleBestsellersComponent
 				ShowError($e->getMessage());
 			}
 		}
-		else
-		{
-			// echo js for requesting items from recommendation service
-			$this->arResult['REQUEST_ITEMS'] = true;
-			$this->arResult['RCM_PARAMS'] = $this->getServiceRequestParamsByType($this->arParams['RCM_TYPE']);
-			$this->arResult['RCM_TEMPLATE'] = $this->getTemplateName();
 
+		if ($showByIds)
+		{
+			// we have an ajax query to get items html
+			// and there was no cache
+			$ajaxItemIds = $context->getRequest()->get('AJAX_ITEMS');
+
+			if (!empty($ajaxItemIds) && is_array($ajaxItemIds))
+			{
+				$this->ajaxItemsIds = $ajaxItemIds;
+			}
+			else
+			{
+				// show something
+				$this->ajaxItemsIds = null;
+				// last viewed will be shown
+			}
+
+			// draw products with collected ids
+			$this->prepareData();
+			$this->formatResult();
+		}
+
+		if (!$this->extractDataFromCache())
+		{
+			$this->setResultCacheKeys(array());
 			$this->includeComponentTemplate();
 		}
 	}

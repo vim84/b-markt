@@ -124,4 +124,8 @@ $MESS["FILEMAN_ARCHIVE_STEP_TIME"] = "Время одного шага при а
 $MESS["FILEMAN_OPTION_USE_CODE_EDITOR"] = "Использовать редактор кода с подсветкой синтаксиса";
 $MESS["FILEMAN_USE_TRANSLITE_EXTERNAL"] = "Использовать внешний сервис для автоматического генерирования имен файлов и папок";
 $MESS["FILEMAN_OPTION_USE_EDITOR_3"] = "Использовать новый визуальный редактор";
+$MESS["FILEMAN_OPTION_ADD_ERROR_PROPS"] = "Превышен максимальный объем параметра \"Типы свойств\"";
+$MESS["FILEMAN_OPTION_ADD_ERROR_MENU"] = "Превышен максимальный объем параметра \"Типы меню\"";
+$MESS["FILEMAN_REPLACE_NEW_LINES_WITH_BR"] = "Автоматически заменять переводы строки на &lt;BR&gt; при переключении режимов
+\"Текст/HTML/Визуальный редактор\"";
 ?>

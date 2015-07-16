@@ -80,4 +80,5 @@ $MESS["IBLOCK_SORT_FIELD_ACTIVE_FROM"] = "active from";
 $MESS["IBLOCK_SORT_FIELD_ACTIVE_TO"] = "active until";
 $MESS["IBLOCK_SORT_FIELD_DEPTH_LEVEL"] = "section nesting level";
 $MESS["IBLOCK_PROP_SAUTOCOMPLETE_DESC"] = "Bind to sections with autocomplete";
+$MESS["IBLOCK_PROP_DATE_DESC"] = "Date";
 ?>

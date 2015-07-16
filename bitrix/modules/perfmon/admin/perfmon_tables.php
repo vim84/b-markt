@@ -589,7 +589,12 @@ if (strlen($strLastTables) > 0)
 	{
 		if (haystack.indexOf(needle) >= 0)
 			return true;
-		var pattern = '^.+_' + needle.split('').join('.+_') + '.+$';
+		var needleParts = needle.split('');
+		for (var i = 0; i < needleParts.length; i++)
+		{
+			needleParts[i] = needleParts[i].replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&");
+		}
+		var pattern = '^.+_' + needleParts.join('.+_') + '.+$';
 		var expr = new RegExp(pattern, 'i');
 		if (haystack.match(expr))
 			return true;

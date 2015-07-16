@@ -313,11 +313,60 @@ Loc::loadMessages(__FILE__);
 
 		$arTabs['tab_params']['fields'][] = array(
 			'id' => 'import_depth',
-			'name' => Loc::getMessage('SALE_SLI_LOAD_LOCATIONS_TILL'),
+			'name' => Loc::getMessage('SALE_SLI_LOAD_LOCATIONS_TILL_INCLUSIVELY'),
 			'type' => 'custom',
 			'value' => $customHtml,
 			'class' => $remoteClassName
 		);
+
+		//////////////////////////////////////
+		// additional data: pack type
+
+		ob_start();
+		?>
+			<label>
+				<input type="radio" name="PACK" value="standard" class="bx-ui-loc-i-option" checked />
+				<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_STANDARD')?>
+			</label>
+			<br />
+			<label>
+				<input type="radio" name="PACK" value="extended" class="bx-ui-loc-i-option" />
+				<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_EXTENDED')?>
+			</label>
+		<?
+		$customHtml = ob_get_contents();
+		ob_end_clean();
+
+		$arTabs['tab_params']['fields'][] = array(
+			'id' => 'import_pack',
+			'name' => Loc::getMessage('SALE_SLI_LOCATION_PACK'),
+			'type' => 'custom',
+			'value' => $customHtml,
+			'class' => $remoteClassName
+		);
+
+		if(in_array(LANGUAGE_ID, array('ru', 'ua', 'de')))
+		{
+			//////////////////////////////////////
+			// additional data: exclude country district
+
+			ob_start();
+			?>
+				<label>
+					<input type="checkbox" value="1" name="EXCLUDE_COUNTRY_DISTRICT" class="bx-ui-loc-i-option" />
+					<?=Loc::getMessage('SALE_SLI_EXCLUDE_AREAS')?>
+				</label>
+			<?
+			$customHtml = ob_get_contents();
+			ob_end_clean();
+
+			$arTabs['tab_params']['fields'][] = array(
+				'id' => 'import_exclude_areas',
+				'type' => 'custom',
+				'value' => $customHtml,
+				'class' => $remoteClassName
+			);
+		}
 
 		//////////////////////////////////////
 		// additional data: cleanup before
@@ -371,31 +420,6 @@ Loc::loadMessages(__FILE__);
 
 		$arTabs['tab_params']['fields'][] = array(
 			'id' => 'import_integrity',
-			'type' => 'custom',
-			'value' => $customHtml
-		);
-
-		//////////////////////////////////////
-		// additional data: pack type
-
-		ob_start();
-		?>
-			<label>
-				<input type="radio" name="PACK" value="standard" class="bx-ui-loc-i-option" checked />
-				<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_STANDARD')?>
-			</label>
-			<br />
-			<label>
-				<input type="radio" name="PACK" value="extended" class="bx-ui-loc-i-option" />
-				<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_EXTENDED')?>
-			</label>
-		<?
-		$customHtml = ob_get_contents();
-		ob_end_clean();
-
-		$arTabs['tab_params']['fields'][] = array(
-			'id' => 'import_pack',
-			'name' => Loc::getMessage('SALE_SLI_LOCATION_PACK'),
 			'type' => 'custom',
 			'value' => $customHtml
 		);

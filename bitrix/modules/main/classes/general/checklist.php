@@ -77,7 +77,7 @@ class CCheckList
 			$this->started = true;
 	}
 
-	function GetSections($arFilter = array())
+	function GetSections()
 	{
 		$arSections = $this->checklist["CATEGORIES"];
 		$arResult = array();
@@ -519,67 +519,80 @@ class CAutoCheck
 	function CheckCustomComponents($arParams)
 	{
 		$arResult["STATUS"] = false;
-		$arComponentFolder = $_SERVER['DOCUMENT_ROOT']."/bitrix/components";
+		$arComponentFolders = array(
+			$_SERVER['DOCUMENT_ROOT']."/bitrix/components",
+			$_SERVER['DOCUMENT_ROOT']."/local/components"
+		);
 		$arComponentCount = 0;
-		if ($handle = opendir($arComponentFolder))
+		foreach($arComponentFolders as $componentFolder)
 		{
-			while (($file = readdir($handle))!==false)
+			if (file_exists($componentFolder) && ($handle = opendir($componentFolder)))
 			{
-				if ($file == "bitrix" || $file ==".." || $file == ".")
-					continue;
-				$arCustomNameSpace = $arComponentFolder."/".$file;
-				if (is_dir($arCustomNameSpace))
+				while (($file = readdir($handle))!==false)
 				{
-					$comp_handle = opendir($arCustomNameSpace);
-					while (($arComponent = readdir($comp_handle))!==false)
+					if ($file == "bitrix" || $file ==".." || $file == ".")
+						continue;
+					$arCustomNameSpace = $componentFolder."/".$file;
+					if (is_dir($arCustomNameSpace))
 					{
-						if ($arComponent ==".." || $arComponent == "." || $arComponent == ".svn")
-							continue;
-						if ($arParams["ACTION"] == "FIND")
+						if($comp_handle = opendir($arCustomNameSpace))
 						{
-							$arComponentCount++;
-							$arResult["MESSAGE"]["DETAIL"].= $file.":".$arComponent." \n";
-							continue;
-						}
-						if (is_dir($arCustomNameSpace."/".$arComponent))
-						{
-							if (!file_exists($arCustomNameSpace."/".$arComponent."/.description.php") || filesize($arCustomNameSpace."/".$arComponent."/.description.php") === 0)
-								$arResult["MESSAGE"]["DETAIL"].= GetMessage("CL_EMPTY_DESCRIPTION")." ".$file.":".$arComponent." \n";
+							while (($arComponent = readdir($comp_handle))!==false)
+							{
+								if ($arComponent ==".." || $arComponent == "." || $arComponent == ".svn")
+									continue;
+								if ($arParams["ACTION"] == "FIND")
+								{
+									$arComponentCount++;
+									$arResult["MESSAGE"]["DETAIL"].= $file.":".$arComponent." \n";
+									continue;
+								}
+								if (is_dir($arCustomNameSpace."/".$arComponent))
+								{
+									if (!file_exists($arCustomNameSpace."/".$arComponent."/.description.php") || filesize($arCustomNameSpace."/".$arComponent."/.description.php") === 0)
+										$arResult["MESSAGE"]["DETAIL"].= GetMessage("CL_EMPTY_DESCRIPTION")." ".$file.":".$arComponent." \n";
+								}
+							}
+							closedir($comp_handle);
 						}
 					}
-
 				}
+				closedir($handle);
 			}
-			if ($arParams["ACTION"] == "FIND")
+		}
+		if ($arParams["ACTION"] == "FIND")
+		{
+			if (strlen($arResult["MESSAGE"]["DETAIL"]) == 0)
 			{
-				if (strlen($arResult["MESSAGE"]["DETAIL"]) == 0)
-					$arResult["MESSAGE"]["PREVIEW"] = GetMessage("CL_HAVE_NO_CUSTOM_COMPONENTS");
-				else
-				{
-					$arResult = array(
-						"STATUS" => true,
-						"MESSAGE" => array(
-							"PREVIEW" => GetMessage("CL_HAVE_CUSTOM_COMPONENTS")." (".$arComponentCount.")",
-							"DETAIL" => $arResult["MESSAGE"]["DETAIL"]
-						)
-					);
-				}
+				$arResult["MESSAGE"]["PREVIEW"] = GetMessage("CL_HAVE_NO_CUSTOM_COMPONENTS");
 			}
 			else
 			{
-				if (strlen($arResult["MESSAGE"]["DETAIL"]) == 0)
-				{
-					$arResult["STATUS"] = true;
-					$arResult["MESSAGE"]["PREVIEW"] = GetMessage("CL_HAVE_CUSTOM_COMPONENTS_DESC");
-				}
-				else
-					$arResult = array(
-						"STATUS" => false,
-						"MESSAGE" => array(
-							"PREVIEW" => GetMessage("CL_ERROR_FOUND_SHORT"),
-							"DETAIL" => $arResult["MESSAGE"]["DETAIL"]
-						)
-					);
+				$arResult = array(
+					"STATUS" => true,
+					"MESSAGE" => array(
+						"PREVIEW" => GetMessage("CL_HAVE_CUSTOM_COMPONENTS")." (".$arComponentCount.")",
+						"DETAIL" => $arResult["MESSAGE"]["DETAIL"]
+					)
+				);
+			}
+		}
+		else
+		{
+			if (strlen($arResult["MESSAGE"]["DETAIL"]) == 0)
+			{
+				$arResult["STATUS"] = true;
+				$arResult["MESSAGE"]["PREVIEW"] = GetMessage("CL_HAVE_CUSTOM_COMPONENTS_DESC");
+			}
+			else
+			{
+				$arResult = array(
+					"STATUS" => false,
+					"MESSAGE" => array(
+						"PREVIEW" => GetMessage("CL_ERROR_FOUND_SHORT"),
+						"DETAIL" => $arResult["MESSAGE"]["DETAIL"]
+					)
+				);
 			}
 		}
 		return $arResult;
@@ -632,68 +645,77 @@ class CAutoCheck
 		return $arResult;
 	}
 
-	function CheckTemplates($arParams)
+	function CheckTemplates()
 	{
-		$arFolder = $_SERVER['DOCUMENT_ROOT']."/bitrix/templates";
+		$arFolders = array(
+			$_SERVER['DOCUMENT_ROOT']."/bitrix/templates",
+			$_SERVER['DOCUMENT_ROOT']."/local/templates",
+		);
 		$arResult["STATUS"] = false;
 		$arCount = 0;
 		$arRequireFiles = array("header.php", "footer.php");
 		$arFilter = array(".svn", ".", "..");
 		$arMessage = '';
-		if ($arTemplates = scandir($arFolder))
+		foreach($arFolders as $folder)
 		{
-			foreach ($arTemplates as $dir)
+			if (file_exists($folder) && ($arTemplates = scandir($folder)))
 			{
-				$arTemplateFolder = $arFolder."/".$dir;
-				if (in_array($dir, $arFilter) || !is_dir($arTemplateFolder))
-					continue;
-				$arRequireFilesTmp = $arRequireFiles;
-
-				foreach($arRequireFilesTmp as $k => $file)
+				foreach ($arTemplates as $dir)
 				{
-					if (!file_exists($arTemplateFolder."/".$file))
-					{
-						$arMessage .= GetMessage("NOT_FOUND_FILE", array("#template#" => $dir, "#file_name#" => $file))."\n";
-						unset($arRequireFilesTmp[$k]);
-					}
-				}
+					$arTemplateFolder = $folder."/".$dir;
+					if (in_array($dir, $arFilter) || !is_dir($arTemplateFolder))
+						continue;
+					$arRequireFilesTmp = $arRequireFiles;
 
-				if (in_array("header.php", $arRequireFilesTmp))
-				{
-					if($f = fopen($arTemplateFolder."/header.php", "r"))
+					foreach($arRequireFilesTmp as $k => $file)
 					{
-						$arHeader = fread($f, filesize($arTemplateFolder."/header.php"));
-
-						preg_match('/\$APPLICATION->ShowHead\(/im', $arHeader, $arShowHead);
-						preg_match('/\$APPLICATION->ShowTitle\(/im', $arHeader, $arShowTitle);
-						preg_match('/\$APPLICATION->ShowPanel\(/im', $arHeader, $arShowPanel);
-						if (count($arShowHead) == 0)
+						if (!file_exists($arTemplateFolder."/".$file))
 						{
-							preg_match_all('/\$APPLICATION->(ShowCSS|ShowHeadScripts|ShowHeadStrings)\(/im', $arHeader, $arShowHead);
-							if (!$arShowHead[0] || count($arShowHead[0]) != 3)
-								$arMessage .= GetMessage("NO_SHOWHEAD", array("#template#" => $dir))."\n";
+							$arMessage .= GetMessage("NOT_FOUND_FILE", array("#template#" => $dir, "#file_name#" => $file))."\n";
+							unset($arRequireFilesTmp[$k]);
 						}
-						if (!in_array($dir, array('empty')) && count($arShowTitle) == 0)
-							$arMessage .= GetMessage("NO_SHOWTITLE", array("#template#" => $dir))."\n";
-						if (!in_array($dir, array('mobile_app', 'desktop_app', 'empty', 'learning_10_0_0')) && count($arShowPanel) == 0)
-							$arMessage .= GetMessage("NO_SHOWPANEL", array("#template#" => $dir))."\n";
 					}
+
+					if (in_array("header.php", $arRequireFilesTmp))
+					{
+						if($f = fopen($arTemplateFolder."/header.php", "r"))
+						{
+							$arHeader = fread($f, filesize($arTemplateFolder."/header.php"));
+
+							preg_match('/\$APPLICATION->ShowHead\(/im', $arHeader, $arShowHead);
+							preg_match('/\$APPLICATION->ShowTitle\(/im', $arHeader, $arShowTitle);
+							preg_match('/\$APPLICATION->ShowPanel\(/im', $arHeader, $arShowPanel);
+							if (count($arShowHead) == 0)
+							{
+								preg_match_all('/\$APPLICATION->(ShowCSS|ShowHeadScripts|ShowHeadStrings)\(/im', $arHeader, $arShowHead);
+								if (!$arShowHead[0] || count($arShowHead[0]) != 3)
+									$arMessage .= GetMessage("NO_SHOWHEAD", array("#template#" => $dir))."\n";
+							}
+							if (!in_array($dir, array('empty')) && count($arShowTitle) == 0)
+								$arMessage .= GetMessage("NO_SHOWTITLE", array("#template#" => $dir))."\n";
+							if (!in_array($dir, array('mobile_app', 'desktop_app', 'empty', 'learning_10_0_0')) && count($arShowPanel) == 0)
+								$arMessage .= GetMessage("NO_SHOWPANEL", array("#template#" => $dir))."\n";
+						}
+					}
+
+					$arCount++;
 				}
-
-				$arCount++;
 			}
-
-			if ($arCount == 0)
-			{
-				$arResult["MESSAGE"]["PREVIEW"] = GetMessage("NOT_FOUND_TEMPLATE");
-			}elseif (strlen($arMessage) == 0)
-				$arResult["STATUS"] = true;
-
-			$arResult["MESSAGE"] = array (
-					"PREVIEW" => GetMessage("TEMPLATE_CHECK_COUNT", array("#count#" => $arCount)),
-					"DETAIL" => $arMessage
-				);
 		}
+
+		if ($arCount == 0)
+		{
+			$arResult["MESSAGE"]["PREVIEW"] = GetMessage("NOT_FOUND_TEMPLATE");
+		}
+		elseif (strlen($arMessage) == 0)
+		{
+			$arResult["STATUS"] = true;
+		}
+
+		$arResult["MESSAGE"] = array (
+			"PREVIEW" => GetMessage("TEMPLATE_CHECK_COUNT", array("#count#" => $arCount)),
+			"DETAIL" => $arMessage
+		);
 
 		return $arResult;
 	}
@@ -1099,20 +1121,19 @@ class CAutoCheck
 	{
 		$time = time();
 		$arPath = array(
-			"root" => $_SERVER["DOCUMENT_ROOT"],
-			"templates" => $_SERVER["DOCUMENT_ROOT"]."/bitrix/templates/",
-			"php_interface" => $_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/",
-			"components" => $_SERVER["DOCUMENT_ROOT"]."/bitrix/components/"
+			$_SERVER["DOCUMENT_ROOT"],
+			$_SERVER["DOCUMENT_ROOT"]."/bitrix/templates/",
+			$_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/",
+			$_SERVER["DOCUMENT_ROOT"]."/bitrix/components/"
 		);
 		$arExept = array(
-				"FOLDERS" => array("images", "bitrix", "upload", ".svn"),
-				"EXT" => array("php"),
-				"FILES" => array(
-					$arPath["php_interface"]."dbconn.php",
-				//	$arPath["php_interface"]."after_connect.php",
-					"after_connect.php"
-					)
-				);
+			"FOLDERS" => array("images", "bitrix", "upload", ".svn"),
+			"EXT" => array("php"),
+			"FILES" => array(
+				$_SERVER["DOCUMENT_ROOT"]."/bitrix/php_interface/dbconn.php",
+				"after_connect.php"
+			)
+		);
 
 		$arParams["STEP"] = (intval($arParams["STEP"])>=0)?intval($arParams["STEP"]):0;
 		if (!$_SESSION["BX_CHECKLIST"] || $arParams["STEP"] == 0)
@@ -1125,7 +1146,9 @@ class CAutoCheck
 			$files = array();
 			$arPathTmp = $arPath;
 			foreach($arPathTmp as $path)
-			CCheckListTools::__scandir($path, $files, $arExept);
+			{
+				CCheckListTools::__scandir($path, $files, $arExept);
+			}
 			$_SESSION["BX_CHECKLIST"]["COUNT"] = count($files);
 		}
 
@@ -1206,22 +1229,25 @@ class CCheckListTools
 {
 	function __scandir($pwd, &$arFiles, $arExept = false)
 	{
-		$dir = scandir($pwd);
-		foreach ($dir as $file)
+		if(file_exists($pwd))
 		{
-			if ($file == ".." || $file == ".")
-				continue;
-			if (is_dir($pwd."$file"))
+			$dir = scandir($pwd);
+			foreach ($dir as $file)
 			{
-				if (!in_array($file, $arExept["FOLDERS"]))
-					CCheckListTools::__scandir($pwd."$file/", $arFiles, $arExept);
-			}
-			elseif(in_array(substr(strrchr($file, '.'), 1), $arExept["EXT"])
-				&& !in_array($pwd.$file, $arExept["FILES"])
-				&& !in_array($file, $arExept["FILES"])
-				)
-			{
-				$arFiles[] = $pwd."/$file";
+				if ($file == ".." || $file == ".")
+					continue;
+				if (is_dir($pwd."$file"))
+				{
+					if (!in_array($file, $arExept["FOLDERS"]))
+						CCheckListTools::__scandir($pwd."$file/", $arFiles, $arExept);
+				}
+				elseif(in_array(substr(strrchr($file, '.'), 1), $arExept["EXT"])
+					&& !in_array($pwd.$file, $arExept["FILES"])
+					&& !in_array($file, $arExept["FILES"])
+					)
+				{
+					$arFiles[] = $pwd."/$file";
+				}
 			}
 		}
 	}

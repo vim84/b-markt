@@ -225,7 +225,7 @@ if (!empty($arResult["MESSAGE_VIEW"]))
 if ($arParams['SHOW_MINIMIZED'] == "Y")
 { ?>
 	<div class="comments-collapse comments-minimized" style='position:relative; float:none;'>
-		<a class="comments-collapse-link" onclick="fToggleCommentsForm(this, true)" href="javascript:void(0);"><?=$arParams['MINIMIZED_EXPAND_TEXT']?></a>
+		<a class="comments-collapse-link" onclick="return fToggleCommentsForm(this);" href="javascript:void(0);"><?=$arParams['MINIMIZED_EXPAND_TEXT']?></a>
 	</div>
 <? } ?>
 

@@ -28,7 +28,6 @@ $MESS["SALE_SLI_FILE_UPLOAD_ERROR"] = "Ошибка загрузки файла"
 $MESS["SALE_SLI_RETRY_FILE_UPLOAD"] = "попробовать снова";
 $MESS["SALE_SLI_FILE_IS_BEING_UPLOADED"] = "Файл загружается";
 $MESS["SALE_SLI_SOURCE_FILE_NOTES"] = "При данном способе загрузки вам необходимо вручную создать #ANCHOR_LOCTYPES#типы местоположений#ANCHOR_END#, а также #ANCHOR_EXT_SERVS#внешние сервисы#ANCHOR_END#.";
-$MESS["SALE_SLI_LOAD_LOCATIONS_TILL"] = "Загружать местоположения до";
 $MESS["SALE_SLI_DONT_LIMIT_LOCATION_DEPTH"] = "Не ограничивать";
 $MESS["SALE_SLI_EXTRA_DATA"] = "Выбор дополнительных данных";
 $MESS["SALE_SLI_EXTRA_EXTERNAL_ZIP"] = "Почтовые индексы (ZIP-коды)";
@@ -56,4 +55,7 @@ $MESS["SALE_SLI_HEAVY_DUTY_NOTICE"] = "Загрузка местоположен
 $MESS["SALE_SLI_LOCATION_PACK"] = "Набор местоположений";
 $MESS["SALE_SLI_LOCATION_PACK_STANDARD"] = "Стандартный";
 $MESS["SALE_SLI_LOCATION_PACK_EXTENDED"] = "Расширенный";
+$MESS["SALE_SLI_EXCLUDE_AREAS"] = "Не загружать округа";
+$MESS["SALE_SLI_LOAD_LOCATIONS_TILL_INCLUSIVELY"] = "Загружать местоположения до (включительно)";
+$MESS["SALE_SLI_HEAVY_DUTY_HOST_NOTICE"] = "Процесс импорта может кратковременно повысить нагрузку на базу данных и веб-сервер, поэтому при работе с большими объёмами данных рекомендуется проконсультироваться с технической службой вашего хостинг-провайдера.";
 ?>

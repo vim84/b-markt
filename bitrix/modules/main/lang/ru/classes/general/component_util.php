@@ -62,4 +62,5 @@ $MESS["COMP_PARAM_CACHE_MAN"] = "+ Управляемое";
 $MESS["COMP_PARAM_DATE_FORMAT_SITE"] = "Формат сайта";
 $MESS["COMP_PARAM_DATETIME_FORMAT_SITE"] = "Формат сайта (включая время)";
 $MESS["COMP_PARAM_NAME_FORMAT_SITE"] = "Формат сайта";
+$MESS["COMP_PARAM_SEF_RULE"] = "Правило для обработки";
 ?>

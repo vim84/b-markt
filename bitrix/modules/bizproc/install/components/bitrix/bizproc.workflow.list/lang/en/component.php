@@ -22,4 +22,6 @@ $MESS["BPATT_DO_LOAD_CREATE"] = "Execute during creation";
 $MESS["BPATT_DO_LOAD_EDIT"] = "Execute during modification";
 $MESS["BPATT_DO_EDIT_VARS"] = "Change initial variable values";
 $MESS["BPATT_DO_EDIT_VARS1"] = "Variables";
+$MESS["BPATT_DO_EDIT_CONSTANTS"] = "Set constant values";
+$MESS["BPATT_DO_EDIT_CONSTANTS1"] = "Constants";
 ?>

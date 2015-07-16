@@ -227,7 +227,7 @@ $APPLICATION->IncludeComponent
 $componentParams = array(
 	'INPUT_NAME' => 'FILE_NEW',
 	'INPUT_NAME_UNSAVED' => 'FILE_NEW_TMP',
-	'MAX_FILE_SIZE' => 500000,
+	'MAX_FILE_SIZE' => 0,
 	'MODULE_ID' => 'mobileapp',
 	'ALLOW_UPLOAD' => "F",
 	'CONTROL_ID' => "designer",
@@ -250,7 +250,6 @@ $initDataJS = CUtil::PhpToJSObject($initData);
 
 		window.designer = new BX.Mobile.Designer({
 			containerId: "designer-wrapper",
-			data:<?=$initDataJS;?>,
 			platforms:<?=CUtil::PhpToJSObject(\Bitrix\MobileApp\Designer\ConfigTable::getSupportedPlatforms())?>
 		});
 		window.designer.init();

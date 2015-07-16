@@ -112,6 +112,7 @@ $arDefPropInfo = array(
 	'SMART_FILTER' => 'N',
 	'DISPLAY_TYPE' => '',
 	'DISPLAY_EXPANDED' => 'N',
+	'FILTER_HINT' => '',
 );
 
 $arHiddenPropFields = array(
@@ -134,6 +135,7 @@ $arHiddenPropFields = array(
 	'SMART_FILTER',
 	'DISPLAY_TYPE',
 	'DISPLAY_EXPANDED',
+	'FILTER_HINT',
 );
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && !check_bitrix_sessid())
@@ -202,10 +204,10 @@ $arListValues = array();
 
 if(CModule::IncludeModule('highloadblock') && isset($_POST['PROPERTY_DIRECTORY_VALUES']) && is_array($_POST['PROPERTY_DIRECTORY_VALUES']))
 {
-	if(isset($_POST["HLB_NEW_TITLE"]) && $_POST["PROPERTY_USER_TYPE_SETTINGS"]["TABLE_NAME"] == '-1')
+	if (isset($_POST["HLB_NEW_TITLE"]) && $_POST["PROPERTY_USER_TYPE_SETTINGS"]["TABLE_NAME"] == '-1')
 	{
 		$highBlockName = trim($_POST["HLB_NEW_TITLE"]);
-		if($highBlockName == '')
+		if ($highBlockName == '')
 		{
 			require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 			CAdminMessage::ShowOldStyleError(GetMessage("BT_ADM_IEP_HBLOCK_NAME_IS_ABSENT"));
@@ -213,7 +215,7 @@ if(CModule::IncludeModule('highloadblock') && isset($_POST['PROPERTY_DIRECTORY_V
 			die();
 		}
 		$highBlockName = strtoupper(substr($highBlockName, 0, 1)).substr($highBlockName, 1);
-		if(!preg_match('/^[A-Z][A-Za-z0-9]*$/', $highBlockName))
+		if (!preg_match('/^[A-Z][A-Za-z0-9]*$/', $highBlockName))
 		{
 			require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 			CAdminMessage::ShowOldStyleError(GetMessage("BT_ADM_IEP_HBLOCK_NAME_IS_INVALID"));
@@ -222,10 +224,24 @@ if(CModule::IncludeModule('highloadblock') && isset($_POST['PROPERTY_DIRECTORY_V
 		}
 		$data = array(
 			'NAME' => $highBlockName,
-			'TABLE_NAME' => 'b_'.strtolower($_POST["HLB_NEW_TITLE"])
+			'TABLE_NAME' => CIBlockPropertyDirectory::createHighloadTableName($_POST['HLB_NEW_TITLE'])
 		);
+		if ($data['TABLE_NAME'] === false)
+		{
+			require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
+			CAdminMessage::ShowOldStyleError(GetMessage("BT_ADM_IEP_HBLOCK_NAME_IS_ABSENT"));
+			require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
+			die();
+		}
 
 		$result = Bitrix\Highloadblock\HighloadBlockTable::add($data);
+		if (!$result->isSuccess())
+		{
+			require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
+			CAdminMessage::ShowOldStyleError(implode('; ',$result->getErrorMessages()));
+			require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
+			die();
+		}
 
 		$highBlockID = $result->getId();
 		$_POST["PROPERTY_USER_TYPE_SETTINGS"]["TABLE_NAME"] = $data['TABLE_NAME'];
@@ -295,8 +311,9 @@ if(CModule::IncludeModule('highloadblock') && isset($_POST['PROPERTY_DIRECTORY_V
 	}
 	else
 	{
-		$hlblock = Bitrix\Highloadblock\HighloadBlockTable::getList(array("filter" => array("TABLE_NAME" => $_POST["PROPERTY_USER_TYPE_SETTINGS"]["TABLE_NAME"])))->fetch();
+		$hlblock = Bitrix\Highloadblock\HighloadBlockTable::getList(array('filter' => array('=TABLE_NAME' => $_POST['PROPERTY_USER_TYPE_SETTINGS']['TABLE_NAME'])))->fetch();
 	}
+
 	$entity = Bitrix\Highloadblock\HighloadBlockTable::compileEntity($hlblock);
 	$entityDataClass = $entity->getDataClass();
 	$fieldsList = $entityDataClass::getMap();
@@ -512,6 +529,8 @@ elseif(!$bReload && $_SERVER["REQUEST_METHOD"] == "POST" && (isset($_POST["save"
 			$arFields["DISPLAY_TYPE"] = $_POST["PROPERTY_DISPLAY_TYPE"];
 		if(isset($_POST["PROPERTY_DISPLAY_EXPANDED"]))
 			$arFields["DISPLAY_EXPANDED"] = $_POST["PROPERTY_DISPLAY_EXPANDED"];
+		if(isset($_POST["PROPERTY_FILTER_HINT"]))
+			$arFields["FILTER_HINT"] = $_POST["PROPERTY_FILTER_HINT"];
 	}
 	elseif($bSectionPopup)
 	{
@@ -665,6 +684,11 @@ if (isset($_REQUEST['saveresult']))
 	else
 		$arProperty['DISPLAY_EXPANDED'] = $arDefPropInfo['DISPLAY_EXPANDED'];
 
+	if (isset($_POST['PROPERTY_FILTER_HINT']))
+		$arProperty['FILTER_HINT'] = $_POST['PROPERTY_FILTER_HINT'];
+	else
+		$arProperty['FILTER_HINT'] = $arDefPropInfo['FILTER_HINT'];
+
 	$arProperty['MULTIPLE'] = ('Y' == $arProperty['MULTIPLE'] ? 'Y' : 'N');
 	$arProperty['IS_REQUIRED'] = ('Y' == $arProperty['IS_REQUIRED'] ? 'Y' : 'N');
 	$arProperty['FILTRABLE'] = ('Y' == $arProperty['FILTRABLE'] ? 'Y' : 'N');
@@ -674,6 +698,14 @@ if (isset($_REQUEST['saveresult']))
 	$arProperty['SMART_FILTER'] = ('Y' == $arProperty['SMART_FILTER'] ? 'Y' : 'N');
 	$arProperty['DISPLAY_TYPE'] = substr($arProperty['DISPLAY_TYPE'], 0, 1);
 	$arProperty['DISPLAY_EXPANDED'] = ('Y' == $arProperty['DISPLAY_EXPANDED'] ? 'Y' : 'N');
+	$arProperty['FILTER_HINT'] = trim($arProperty['FILTER_HINT']);
+	if ($arProperty['FILTER_HINT'])
+	{
+		$TextParser = new CBXSanitizer();
+		$TextParser->SetLevel(CBXSanitizer::SECURE_LEVEL_LOW);
+		$TextParser->ApplyHtmlSpecChars(false);
+		$arProperty['FILTER_HINT'] = $TextParser->SanitizeHtml($arProperty['FILTER_HINT']);
+	}
 	$arProperty['MULTIPLE_CNT'] = intval($arProperty['MULTIPLE_CNT']);
 	if (0 >= $arProperty['MULTIPLE_CNT'])
 		$arProperty['MULTIPLE_CNT'] = DEF_LIST_VALUE_COUNT;
@@ -770,6 +802,7 @@ if(!$bFullForm)
 			$arProperty["SMART_FILTER"] = ($arPropLink[$arProperty["ID"]]["SMART_FILTER"] == 'Y' ? 'Y' : 'N');
 			$arProperty["DISPLAY_TYPE"] = $arPropLink[$arProperty["ID"]]["DISPLAY_TYPE"];
 			$arProperty["DISPLAY_EXPANDED"] = ($arPropLink[$arProperty["ID"]]["DISPLAY_EXPANDED"] == 'Y' ? 'Y' : 'N');
+			$arProperty["FILTER_HINT"] = $arPropLink[$arProperty["ID"]]["FILTER_HINT"];
 		}
 		else
 		{
@@ -777,6 +810,7 @@ if(!$bFullForm)
 			$arProperty["SMART_FILTER"] = "N";
 			$arProperty["DISPLAY_TYPE"] = "";
 			$arProperty["DISPLAY_EXPANDED"] = "N";
+			$arProperty["FILTER_HINT"] = "";
 		}
 	}
 }
@@ -802,6 +836,7 @@ else
 			"SMART_FILTER" => $_POST["PROPERTY_SMART_FILTER"],
 			"DISPLAY_TYPE" => $_POST["PROPERTY_DISPLAY_TYPE"],
 			"DISPLAY_EXPANDED" => $_POST["PROPERTY_DISPLAY_EXPANDED"],
+			"FILTER_HINT" => $_POST["PROPERTY_FILTER_HINT"],
 			"ROW_COUNT" => $_POST["PROPERTY_ROW_COUNT"],
 			"COL_COUNT" => $_POST["PROPERTY_COL_COUNT"],
 			"DEFAULT_VALUE" => $_POST["PROPERTY_DEFAULT_VALUE"],
@@ -848,6 +883,7 @@ else
 			$arProperty["SMART_FILTER"] = ($arPropLink[$arProperty["ID"]]["SMART_FILTER"] == 'Y' ? 'Y' : 'N');
 			$arProperty["DISPLAY_TYPE"] = $arPropLink[$arProperty["ID"]]["DISPLAY_TYPE"];
 			$arProperty["DISPLAY_EXPANDED"] = ($arPropLink[$arProperty["ID"]]["DISPLAY_EXPANDED"] == 'Y' ? 'Y' : 'N');
+			$arProperty["FILTER_HINT"] = $arPropLink[$arProperty["ID"]]["FILTER_HINT"];
 		}
 		else
 		{
@@ -855,6 +891,7 @@ else
 			$arProperty["SMART_FILTER"] = "N";
 			$arProperty["DISPLAY_TYPE"] = "";
 			$arProperty["DISPLAY_EXPANDED"] = "N";
+			$arProperty["FILTER_HINT"] = "";
 		}
 	}
 	else
@@ -1307,6 +1344,32 @@ else
 				<input type="checkbox" id="PROPERTY_DISPLAY_EXPANDED_Y" name="PROPERTY_DISPLAY_EXPANDED" value="Y" <?if('N' != $arProperty['DISPLAY_EXPANDED'])echo ' checked="checked"';?>>
 			</td>
 		</tr>
+		<tr id="tr_FILTER_HINT" class="adm-detail-valign-top" style="display: <? echo ($arProperty['SECTION_PROPERTY'] != 'N' ? 'table-row' : 'none'); ?>">
+			<td width="40%"><?echo GetMessage("BT_ADM_IEP_PROP_FILTER_HINT")?></td>
+			<td>
+			<?
+				CModule::IncludeModule("fileman");
+				$LHE = new CLightHTMLEditor;
+				$LHE->Show(array(
+					'inputName' => 'PROPERTY_FILTER_HINT',
+					'content' => $arProperty['FILTER_HINT'],
+					'height' => 200,
+					'width' => '100%',
+					'bResizable' => false,
+					'bUseFileDialogs' => false,
+					'bFloatingToolbar' => false,
+					'bArisingToolbar' => true,
+					'bAutoResize' => true,
+					'bSaveOnBlur' => true,
+					'toolbarConfig' => array(
+						'Bold', 'Italic', 'Underline', 'Strike',
+						'CreateLink', 'DeleteLink',
+						'Source', 'BackColor', 'ForeColor',
+					),
+				));
+			?>
+			</td>
+		</tr>
 		<?
 		}
 		elseif(
@@ -1690,11 +1753,12 @@ BX.ready(function(){
 	if (!!obSectionCheckbox)
 	{
 		BX.bind(obSectionCheckbox, 'click', function(){
-			var sect = BX('PROPERTY_SECTION_PROPERTY_Y'),
-				smart = BX('tr_SMART_FILTER'),
-				displayTypes = BX('tr_DISPLAY_TYPE'),
-				propExpand = BX('tr_DISPLAY_EXPANDED'),
-				trStyle;
+			var sect = BX('PROPERTY_SECTION_PROPERTY_Y');
+			var smart = BX('tr_SMART_FILTER');
+			var displayTypes = BX('tr_DISPLAY_TYPE');
+			var propExpand = BX('tr_DISPLAY_EXPANDED');
+			var filterHint = BX('tr_FILTER_HINT');
+			var trStyle;
 
 			if (!!sect)
 			{
@@ -1705,6 +1769,8 @@ BX.ready(function(){
 					BX.style(displayTypes, 'display', trStyle);
 				if (!!propExpand)
 					BX.style(propExpand, 'display', trStyle);
+				if (!!filterHint)
+					BX.style(filterHint, 'display', trStyle);
 				BX.adminFormTools.modifyFormElements('frm_prop');
 			}
 		});

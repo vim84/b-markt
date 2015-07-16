@@ -83,7 +83,14 @@ class CAllCurrencyLang
 			'DATE_CREATE',
 			'~DATE_CREATE',
 			'~MODIFIED_BY',
-			'~CREATED_BY'
+			'~CREATED_BY',
+			'~FORMAT_STRING',
+			'~FULL_NAME',
+			'~DEC_POINT',
+			'~THOUSANDS_SEP',
+			'~DECIMALS',
+			'~THOUSANDS_VARIANT',
+			'~HIDE_ZERO'
 		);
 		if ($action == 'UPDATE')
 		{
@@ -137,25 +144,19 @@ class CAllCurrencyLang
 			if (isset($fields['THOUSANDS_VARIANT']))
 			{
 				if (empty($fields['THOUSANDS_VARIANT']) || !isset(self::$arSeparators[$fields['THOUSANDS_VARIANT']]))
-				{
 					$fields['THOUSANDS_VARIANT'] = false;
-				}
 				else
-				{
 					$fields['THOUSANDS_SEP'] = false;
-				}
 			}
 			if (isset($fields['HIDE_ZERO']))
-			{
 				$fields['HIDE_ZERO'] = ($fields['HIDE_ZERO'] == 'Y' ? 'Y' : 'N');
-			}
 		}
 		$intUserID = 0;
 		$boolUserExist = CCurrency::isUserExists();
 		if ($boolUserExist)
 			$intUserID = (int)$USER->GetID();
 		$strDateFunction = $DB->GetNowFunction();
-		$fields['~DATE_UPDATE'] = $strDateFunction;
+		$fields['~TIMESTAMP_X'] = $strDateFunction;
 		if ($boolUserExist)
 		{
 			if (!isset($fields['MODIFIED_BY']))
@@ -180,9 +181,7 @@ class CAllCurrencyLang
 		if (!empty($errorMessages))
 		{
 			if ($getErrors)
-			{
 				return $errorMessages;
-			}
 
 			$obError = new CAdminException($errorMessages);
 			$APPLICATION->ResetException();
@@ -194,7 +193,7 @@ class CAllCurrencyLang
 
 	public function Add($arFields)
 	{
-		global $DB, $stackCacheManager, $CACHE_MANAGER;
+		global $DB;
 
 		if (!self::checkFields('ADD', $arFields))
 			return false;
@@ -204,16 +203,14 @@ class CAllCurrencyLang
 		$strSql = "insert into b_catalog_currency_lang(".$arInsert[0].") values(".$arInsert[1].")";
 		$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
-		$stackCacheManager->Clear("currency_currency_lang");
-		$CACHE_MANAGER->Clean("currency_currency_list", 'b_catalog_currency');
-		$CACHE_MANAGER->Clean("currency_currency_list_".$arFields['LID'], 'b_catalog_currency');
+		Currency\CurrencyManager::clearCurrencyCache($arFields['LID']);
 
 		return true;
 	}
 
 	public function Update($currency, $lang, $arFields)
 	{
-		global $DB, $stackCacheManager, $CACHE_MANAGER;
+		global $DB;
 
 		$currency = Currency\CurrencyManager::checkCurrencyID($currency);
 		$lang = Currency\CurrencyManager::checkLanguage($lang);
@@ -229,9 +226,7 @@ class CAllCurrencyLang
 			$strSql = "update b_catalog_currency_lang set ".$strUpdate." where CURRENCY = '".$DB->ForSql($currency)."' and LID='".$DB->ForSql($lang)."'";
 			$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
-			$stackCacheManager->Clear("currency_currency_lang");
-			$CACHE_MANAGER->Clean("currency_currency_list", 'b_catalog_currency');
-			$CACHE_MANAGER->Clean("currency_currency_list_".$lang, 'b_catalog_currency');
+			Currency\CurrencyManager::clearCurrencyCache($lang);
 		}
 
 		return true;
@@ -239,16 +234,14 @@ class CAllCurrencyLang
 
 	public function Delete($currency, $lang)
 	{
-		global $DB, $stackCacheManager, $CACHE_MANAGER;
+		global $DB;
 
 		$currency = Currency\CurrencyManager::checkCurrencyID($currency);
 		$lang = Currency\CurrencyManager::checkLanguage($lang);
 		if ($currency === false || $lang === false)
 			return false;
 
-		$stackCacheManager->Clear("currency_currency_lang");
-		$CACHE_MANAGER->Clean("currency_currency_list", 'b_catalog_currency');
-		$CACHE_MANAGER->Clean("currency_currency_list_".$lang, 'b_catalog_currency');
+		Currency\CurrencyManager::clearCurrencyCache($lang);
 
 		$strSql = "delete from b_catalog_currency_lang where CURRENCY = '".$DB->ForSql($currency)."' and LID = '".$DB->ForSql($lang)."'";
 		$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
@@ -501,19 +494,27 @@ class CAllCurrencyLang
 		return $arCurFormat;
 	}
 
-	public static function CurrencyFormat($price, $currency, $useTemplate)
+	public static function CurrencyFormat($price, $currency, $useTemplate = true)
 	{
+		static $eventExists = null;
+
 		$result = '';
 		$useTemplate = !!$useTemplate;
 		if ($useTemplate)
 		{
-			foreach(GetModuleEvents('currency', 'CurrencyFormat', true) as $arEvent)
+			if ($eventExists === true || $eventExists === null)
 			{
-				$result = ExecuteModuleEventEx($arEvent, array($price, $currency));
+				foreach (GetModuleEvents('currency', 'CurrencyFormat', true) as $arEvent)
+				{
+					$eventExists = true;
+					$result = ExecuteModuleEventEx($arEvent, array($price, $currency));
+					if ($result != '')
+						return $result;
+				}
+				if ($eventExists === null)
+					$eventExists = false;
 			}
 		}
-		if ($result != '')
-			return $result;
 
 		if (!isset($price) || $price === '')
 			return '';

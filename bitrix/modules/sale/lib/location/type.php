@@ -9,8 +9,10 @@ namespace Bitrix\Sale\Location;
 
 use Bitrix\Main;
 use Bitrix\Main\Entity;
-use Bitrix\Sale\Location\Name;
 use Bitrix\Main\Localization\Loc;
+
+use Bitrix\Sale\Location\Name;
+use Bitrix\Sale\Location\Util\Assert;
 
 Loc::loadMessages(__FILE__);
 
@@ -51,7 +53,7 @@ class TypeTable extends Entity\DataManager
 	
 	public static function update($primary, $data = array())
 	{
-		$primary = Assert::expectIntegerPositive($primary, Loc::getMessage('SALE_LOCATION_TYPE_ENTITY_PRIMARY_FIELD'));
+		$primary = Assert::expectIntegerPositive($primary, '$primary');
 
 		// first update parent, and if it succeed, do updates of the connected data
 
@@ -76,7 +78,7 @@ class TypeTable extends Entity\DataManager
 
 	public static function delete($primary)
 	{
-		$primary = Assert::expectIntegerPositive($primary, Loc::getMessage('SALE_LOCATION_TYPE_ENTITY_PRIMARY_FIELD'));
+		$primary = Assert::expectIntegerPositive($primary, '$primary');
 
 		$delResult = parent::delete($primary);
 

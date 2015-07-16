@@ -408,7 +408,7 @@ if ($arResult["FORUM_TOPIC_ID"] > 0)
 	$res["POST_DATE"] = CForumFormat::DateFormat($arParams["DATE_TIME_FORMAT"], MakeTimeStamp($res["POST_DATE"], CSite::GetDateFormat()));
 	$res["EDIT_DATE"] = CForumFormat::DateFormat($arParams["DATE_TIME_FORMAT"], MakeTimeStamp($res["EDIT_DATE"], CSite::GetDateFormat()));
 	// text
-	$res["ALLOW"] = array_merge($arAllow + array("SMILES" => ($res["USE_SMILES"] == "Y" ? $arResult["FORUM"]["ALLOW_SMILES"] : "N")));
+	$res["ALLOW"] = array_merge($arAllow, array("SMILES" => ($res["USE_SMILES"] == "Y" ? $arResult["FORUM"]["ALLOW_SMILES"] : "N")));
 	$res["~POST_MESSAGE_TEXT"] = (COption::GetOptionString("forum", "FILTER", "Y")=="Y" ? $res["~POST_MESSAGE_FILTER"] : $res["~POST_MESSAGE"]);
 	// attach
 	$res["ATTACH_IMG"] = ""; $res["FILES"] = array();
@@ -477,7 +477,7 @@ if ($arResult["FORUM_TOPIC_ID"] > 0)
 			if ($arResult["USER"]["RIGHTS"]["MODERATE"] != "Y")
 				$arFilter["APPROVED"] = "Y";
 			$arFilterProps = $arFilter;
-			if ($res[0] > 1)
+			if (min($res) > 1)
 				$arFilterProps[">ID"] = $arFilter[">MESSAGE_ID"] = intval(min($res) - 1);
 			$arFilterProps["<ID"] = $arFilter["<MESSAGE_ID"] = intval(max($res) + 1);
 			$db_files = CForumFiles::GetList(array("MESSAGE_ID" => "ASC"), $arFilter);

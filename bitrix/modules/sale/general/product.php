@@ -304,7 +304,7 @@ class CALLSaleProduct
 				$arSkuTmp["DISCOUNT_PRICE"] = '';
 				$arSkuTmp["DISCOUNT_PRICE_FORMATED"] = '';
 				$arSkuTmp["PRICE"] = $arPrice["PRICE"]["PRICE"];
-				$arSkuTmp["PRICE_FORMATED"] = CurrencyFormatNumber($arPrice["PRICE"]["PRICE"], $arPrice["PRICE"]["CURRENCY"]);
+				$arSkuTmp["PRICE_FORMATED"] = CCurrencyLang::CurrencyFormat($arPrice["PRICE"]["PRICE"], $arPrice["PRICE"]["CURRENCY"], false);
 
 				$arPriceType = GetCatalogGroup($arPrice["PRICE"]["CATALOG_GROUP_ID"]);
 				$arSkuTmp["PRICE_TYPE"] = $arPriceType["NAME_LANG"];
@@ -315,7 +315,7 @@ class CALLSaleProduct
 					$discountPercent = IntVal($arPrice["DISCOUNT"]["VALUE"]);
 
 					$arSkuTmp["DISCOUNT_PRICE"] = $arPrice["DISCOUNT_PRICE"];
-					$arSkuTmp["DISCOUNT_PRICE_FORMATED"] = CurrencyFormatNumber($arPrice["DISCOUNT_PRICE"], $arPrice["PRICE"]["CURRENCY"]);
+					$arSkuTmp["DISCOUNT_PRICE_FORMATED"] = CCurrencyLang::CurrencyFormat($arPrice["DISCOUNT_PRICE"], $arPrice["PRICE"]["CURRENCY"], false);
 				}
 
 				$arCurFormat = CCurrencyLang::GetCurrencyFormat($arPrice["PRICE"]["CURRENCY"]);
@@ -437,7 +437,7 @@ class CALLSaleProduct
 			$iblockRecommended = array();
 			$productIterator = Iblock\ElementTable::getList(array(
 				'select' => array('ID', 'IBLOCK_ID'),
-				'filter' => array('@ID' => $arFilterRecomendet, 'ACTIVE' => 'Y')
+				'filter' => array('@ID' => $arFilterRecomendet, '=ACTIVE' => 'Y')
 			));
 			while ($product = $productIterator->fetch())
 			{
@@ -454,7 +454,7 @@ class CALLSaleProduct
 			$propertyList = array();
 			$propertyIterator = Iblock\PropertyTable::getList(array(
 				'select' => array('ID', 'IBLOCK_ID'),
-				'filter' => array('@IBLOCK_ID' => array_keys($iblockRecommended), '=CODE' => 'RECOMMEND', 'PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_ELEMENT)
+				'filter' => array('@IBLOCK_ID' => array_keys($iblockRecommended), '=CODE' => 'RECOMMEND', '=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_ELEMENT)
 			));
 			while ($property = $propertyIterator->fetch())
 			{
@@ -469,7 +469,7 @@ class CALLSaleProduct
 			foreach ($propertyList as $iblockID => $propertyID)
 			{
 				$propertyValue = 'PROPERTY_'.$propertyID;
-				$filter = array('@ID' => $iblockRecommended[$iblockID], 'IBLOCK_ID' => $iblockID);
+				$filter = array('ID' => $iblockRecommended[$iblockID], 'IBLOCK_ID' => $iblockID);
 				$select = array('ID', 'IBLOCK_ID', $propertyValue);
 				$propertyValue .= '_VALUE';
 				$elementIterator = CIBlockElement::GetList(array(), $filter, false, false, $select);
@@ -511,6 +511,11 @@ class CALLSaleProduct
 					array("NAME", "ID", "LID", 'IBLOCK_ID', 'IBLOCK_SECTION_ID', "DETAIL_PICTURE", "PREVIEW_PICTURE", "DETAIL_PAGE_URL")
 				);
 
+				$currentVatMode = CCatalogProduct::getPriceVatIncludeMode();
+				$currentUseDiscount = CCatalogProduct::getUseDiscount();
+				CCatalogProduct::setUseDiscount(true);
+				CCatalogProduct::setPriceVatIncludeMode(true);
+				CCatalogProduct::setUsedCurrency(CSaleLang::GetLangCurrency($LID));
 				$i = 0;
 				while ($arElement = $rsElement->GetNext())
 				{
@@ -522,12 +527,12 @@ class CALLSaleProduct
 						$arElement["PRODUCT_PROVIDER_CLASS"] = "CCatalogProductProvider";
 						$arElement["PRODUCT_ID"] = $arElement["ID"];
 
-						$arPrice = CCatalogProduct::GetOptimalPrice($arElement["ID"], 1, $arBuyerGroups, "N", array(), $LID);
+						$arPrice = CCatalogProduct::GetOptimalPrice($arElement["ID"], 1, $arBuyerGroups, "N", array(), $LID, array());
 
-						$currentPrice = $arPrice["DISCOUNT_PRICE"];
+						$currentPrice = $arPrice['RESULT_PRICE']['DISCOUNT_PRICE'];
 						$arElement["PRICE"] = $currentPrice;
-						$arElement["CURRENCY"] = $arPrice["PRICE"]["CURRENCY"];
-						$arElement["DISCOUNT_PRICE"] = $arPrice["PRICE"]["PRICE"] - $arPrice["DISCOUNT_PRICE"];
+						$arElement["CURRENCY"] = $arPrice["RESULT_PRICE"]["CURRENCY"];
+						$arElement["DISCOUNT_PRICE"] = $arPrice['RESULT_PRICE']['DISCOUNT'];
 
 						if ($arElement["IBLOCK_ID"] > 0 && $arElement["IBLOCK_SECTION_ID"] > 0)
 						{
@@ -541,6 +546,10 @@ class CALLSaleProduct
 						$i++;
 					}
 				}
+				CCatalogProduct::clearUsedCurrency();
+				CCatalogProduct::setPriceVatIncludeMode($currentVatMode);
+				CCatalogProduct::setUseDiscount($currentUseDiscount);
+				unset($currentUseDiscount, $currentVatMode);
 			}
 		}
 		return $arRecomendetResult;

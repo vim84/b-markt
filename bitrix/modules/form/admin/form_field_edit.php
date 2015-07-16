@@ -375,12 +375,6 @@ else
 		"TITLE"			=> GetMessage("FORM_QUESTIONS_ALT")
 		);
 }
-$aMenu[] = array(
-	"TEXT"			=> GetMessage("FORM_RESULTS")." [".CFormResult::GetCount($WEB_FORM_ID)."]",
-	"LINK"			=> "/bitrix/admin/form_result_list.php?lang=".LANGUAGE_ID."&WEB_FORM_ID=".$WEB_FORM_ID,
-	"TEXT_PARAM"	=> ($old_module_version=="Y" || $F_RIGHT<10) ? "" : " [<a title='".GetMessage("FORM_ADD_RESULT")."' href='/bitrix/admin/form_view.php?lang=".LANGUAGE_ID."&WEB_FORM_ID=".$WEB_FORM_ID."'>+</a>]",
-	"TITLE"	=> htmlspecialcharsbx(str_replace("#NAME#", $arForm["NAME"], GetMessage("FORM_RESULTS_ALT")))
-	);
 */
 
 if($strError)

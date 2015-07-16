@@ -91,6 +91,7 @@ $arParams["PAGER_TEMPLATE"] = trim($arParams["PAGER_TEMPLATE"]);
 $arParams["PAGER_DESC_NUMBERING"] = $arParams["PAGER_DESC_NUMBERING"]=="Y";
 $arParams["PAGER_DESC_NUMBERING_CACHE_TIME"] = intval($arParams["PAGER_DESC_NUMBERING_CACHE_TIME"]);
 $arParams["PAGER_SHOW_ALL"] = $arParams["PAGER_SHOW_ALL"]=="Y";
+$arParams["CHECK_PERMISSIONS"] = $arParams["CHECK_PERMISSIONS"]!="N";
 
 if($arParams["DISPLAY_TOP_PAGER"] || $arParams["DISPLAY_BOTTOM_PAGER"])
 {
@@ -178,7 +179,7 @@ if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false:
 			"IBLOCK_ID" => $arResult["ID"],
 			"IBLOCK_LID" => SITE_ID,
 			"ACTIVE" => "Y",
-			"CHECK_PERMISSIONS" => "Y",
+			"CHECK_PERMISSIONS" => $arParams['CHECK_PERMISSIONS'] ? "Y" : "N",
 		);
 
 		if($arParams["CHECK_DATES"])
@@ -303,8 +304,8 @@ if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false:
 			$arResult["ITEMS"][] = $arItem;
 			$arResult["ELEMENTS"][] = $arItem["ID"];
 		}
-		$arResult["NAV_STRING"] = $rsElement->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"]);
-		$arResult["NAV_CACHED_DATA"] = $navComponentObject->GetTemplateCachedData();
+		$arResult["NAV_STRING"] = $rsElement->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"], $this);
+		$arResult["NAV_CACHED_DATA"] = null;
 		$arResult["NAV_RESULT"] = $rsElement;
 		$this->SetResultCacheKeys(array(
 			"ID",
@@ -420,5 +421,3 @@ if(isset($arResult["ID"]))
 
 	return $arResult["ELEMENTS"];
 }
-
-?>

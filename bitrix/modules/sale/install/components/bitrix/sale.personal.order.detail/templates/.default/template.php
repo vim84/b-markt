@@ -309,7 +309,21 @@
 						<td colspan="2">
 							<?
 								$ORDER_ID = $ID;
-								include($arResult["PAY_SYSTEM"]["PSA_ACTION_FILE"]);
+
+								try
+								{
+									include($arResult["PAY_SYSTEM"]["PSA_ACTION_FILE"]);
+								}
+								catch(\Bitrix\Main\SystemException $e)
+								{
+									if($e->getCode() == CSalePaySystemAction::GET_PARAM_VALUE)
+										$message = GetMessage("SOA_TEMPL_ORDER_PS_ERROR");
+									else
+										$message = $e->getMessage();
+
+									ShowError($message);
+								}
+
 							?>
 						</td>
 					</tr>

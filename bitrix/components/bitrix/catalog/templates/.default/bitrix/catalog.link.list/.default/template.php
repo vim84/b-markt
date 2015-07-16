@@ -42,7 +42,7 @@ $APPLICATION->IncludeComponent(
 		"PRICE_CODE" => $arParams["PRICE_CODE"],
 		"USE_PRICE_COUNT" => $arParams["USE_PRICE_COUNT"],
 		"SHOW_PRICE_COUNT" => $arParams["SHOW_PRICE_COUNT"],
-		"BY_LINK" > "Y",
+		"BY_LINK" => "Y",
 		"DISPLAY_TOP_PAGER" => $arParams["DISPLAY_TOP_PAGER"],
 		"DISPLAY_BOTTOM_PAGER" => $arParams["DISPLAY_BOTTOM_PAGER"],
 		"PAGER_TITLE" => $arParams["PAGER_TITLE"],

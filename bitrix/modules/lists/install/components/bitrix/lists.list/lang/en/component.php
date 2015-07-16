@@ -17,4 +17,7 @@ $MESS["CC_BLL_UPPER_LEVEL"] = "Upper level";
 $MESS["CC_BLL_COLUMN_SECTION"] = "Sections";
 $MESS["CC_BLL_COLUMN_BIZPROC"] = "Business Processes";
 $MESS["CC_BLL_ELEMENT_ACTION_MENU_COPY"] = "Copy";
+$MESS["CC_BLL_DELETE_ERROR"] = "Error when deleting.";
+$MESS["CC_BLL_TITLE_PROCESS"] = "Workflow: #NAME#";
+$MESS["CC_BLL_COMMENTS"] = "Comments";
 ?>

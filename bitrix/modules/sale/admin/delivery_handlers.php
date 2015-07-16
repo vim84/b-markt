@@ -214,7 +214,7 @@ if ($location_diff == "Y")
 	{
 		$arRes["ID"];
 
-		$location = COption::GetOptionInt('sale', 'location', '', $arRes["ID"]);
+		$location = COption::GetOptionString('sale', 'location', '', $arRes["ID"]);
 		$location_zip = COption::GetOptionString('sale', 'location_zip', '', $arRes["ID"]);
 
 		echo GetMessage('SALE_DH_HINT_SHOP_ADDRESS').' ('.$arRes["ID"].'): ';
@@ -250,7 +250,7 @@ if ($location_diff == "Y")
 }
 else
 {
-	$location = COption::GetOptionInt('sale', 'location');
+	$location = COption::GetOptionString('sale', 'location');
 	$location_zip = COption::GetOptionString('sale', 'location_zip');
 
 	echo GetMessage('SALE_DH_HINT_SHOP_ADDRESS').': ';

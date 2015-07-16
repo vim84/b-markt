@@ -392,7 +392,8 @@ class CAllIBlockElement
 			if($HISTORY_COPIES===false)
 				$HISTORY_COPIES = intval(COption::GetOptionString("workflow","HISTORY_COPIES","10"));
 
-			$ELEMENT_ID = intval($ELEMENT_ID);
+			$strSqlSearch = '';
+			$ELEMENT_ID = (int)$ELEMENT_ID;
 			if($ELEMENT_ID>0)
 				$strSqlSearch = " AND ID = $ELEMENT_ID ";
 			$strSql = "SELECT ID FROM b_iblock_element ".
@@ -491,6 +492,10 @@ class CAllIBlockElement
 	public static function WF_GetStatusTitle($STATUS_ID)
 	{
 		global $DB;
+
+		$zr = array(
+			'TITLE' => null
+		);
 		if(CModule::IncludeModule("workflow"))
 		{
 			$STATUS_ID = intval($STATUS_ID);
@@ -633,6 +638,7 @@ class CAllIBlockElement
 			if ($f->isValid())
 			{
 				$arJoinProps["FC"] = $f->getFilterSql($arFilter, $arSqlSearch);
+				$arJoinProps["FC_DISTINCT"] = $f->getDistinct();
 			}
 		}
 		foreach($arFilter as $orig_key => $val)
@@ -2516,8 +2522,14 @@ class CAllIBlockElement
 		&$arIBlockLongProps
 		)
 	{
-		if(is_array($arSelectFields) && in_array("DETAIL_PAGE_URL", $arSelectFields) && !in_array("LANG_DIR", $arSelectFields))
+		if(
+			is_array($arSelectFields)
+			&& (in_array("DETAIL_PAGE_URL", $arSelectFields) || in_array("CANONICAL_PAGE_URL", $arSelectFields))
+			&& !in_array("LANG_DIR", $arSelectFields)
+		)
+		{
 			$arSelectFields[] = "LANG_DIR";
+		}
 
 		global $DB, $USER;
 
@@ -2953,6 +2965,8 @@ class CAllIBlockElement
 				//Try to add missing fields for correct URL translation (only then no grouping)
 				if(array_key_exists("DETAIL_PAGE_URL", $arDisplayedColumns))
 					$arAddFields = array("LANG_DIR", "ID", "CODE", "EXTERNAL_ID", "IBLOCK_SECTION_ID", "IBLOCK_TYPE_ID", "IBLOCK_ID", "IBLOCK_CODE", "IBLOCK_EXTERNAL_ID", "LID");
+				elseif(array_key_exists("CANONICAL_PAGE_URL", $arDisplayedColumns))
+					$arAddFields = array("LANG_DIR", "ID", "CODE", "EXTERNAL_ID", "IBLOCK_SECTION_ID", "IBLOCK_TYPE_ID", "IBLOCK_ID", "IBLOCK_CODE", "IBLOCK_EXTERNAL_ID", "LID");
 				elseif(array_key_exists("SECTION_PAGE_URL", $arDisplayedColumns))
 					$arAddFields = array("LANG_DIR", "ID", "CODE", "EXTERNAL_ID", "IBLOCK_SECTION_ID", "IBLOCK_TYPE_ID", "IBLOCK_ID", "IBLOCK_CODE", "IBLOCK_EXTERNAL_ID", "LID");
 				elseif(array_key_exists("LIST_PAGE_URL", $arDisplayedColumns))
@@ -3056,7 +3070,15 @@ class CAllIBlockElement
 			{
 				$arNewPreview = $arFields["DETAIL_PICTURE"];
 				$arNewPreview["COPY_FILE"] = "Y";
-				$arNewPreview["description"] = $arFields["PREVIEW_PICTURE"]["description"];
+				if (
+					isset($arFields["PREVIEW_PICTURE"])
+					&& is_array($arFields["PREVIEW_PICTURE"])
+					&& isset($arFields["PREVIEW_PICTURE"]["description"])
+				)
+				{
+					$arNewPreview["description"] = $arFields["PREVIEW_PICTURE"]["description"];
+				}
+
 				$arFields["PREVIEW_PICTURE"] = $arNewPreview;
 			}
 
@@ -3515,8 +3537,7 @@ class CAllIBlockElement
 		foreach (GetModuleEvents("iblock", "OnAfterIBlockElementAdd", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arFields));
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$GLOBALS["CACHE_MANAGER"]->ClearByTag("iblock_id_".$arIBlock["ID"]);
+		CIBlock::clearIblockTagCache($arIBlock['ID']);
 
 		return $Result;
 	}
@@ -3910,8 +3931,7 @@ class CAllIBlockElement
 				foreach (GetModuleEvents("iblock", "OnAfterIBlockElementDelete", true) as $arEvent)
 					ExecuteModuleEventEx($arEvent, array($zr));
 
-				if(defined("BX_COMP_MANAGED_CACHE"))
-					$CACHE_MANAGER->ClearByTag("iblock_id_".$zr["IBLOCK_ID"]);
+				CIBlock::clearIblockTagCache($zr['IBLOCK_ID']);
 			}
 		}
 		/************* QUOTA *************/
@@ -5164,7 +5184,7 @@ class CAllIBlockElement
 		);
 		if (!empty($propertyID))
 			$propertyListFilter['ID'] = $propertyID;
-		$propertyListFilter['ACTIVE'] = (
+		$propertyListFilter['=ACTIVE'] = (
 			isset($propertyFilter['ACTIVE']) && ($propertyFilter['ACTIVE'] == 'Y' || $propertyFilter['ACTIVE'] == 'N')
 			? $propertyFilter['ACTIVE']
 			: 'Y'

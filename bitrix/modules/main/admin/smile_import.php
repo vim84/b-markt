@@ -38,7 +38,7 @@ if ($REQUEST_METHOD == "POST" && (strlen($save) > 0 || strlen($apply) > 0))
 		$sUploadDir = CTempFile::GetDirectoryName(1);
 		CheckDirPath($sUploadDir);
 
-		$res = CFile::CheckFile($_FILES["IMPORT"], 500000, false, 'zip');
+		$res = CFile::CheckFile($_FILES["IMPORT"], 0, false, 'zip');
 		if (strLen($res) > 0)
 		{
 			$arError[] = array(

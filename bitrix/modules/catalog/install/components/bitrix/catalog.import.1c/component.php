@@ -204,7 +204,7 @@ if (
 		$FILE_NAME = rel2abs($DIR_NAME, "/".$filename);
 		if ((strlen($FILE_NAME) > 1) && ($FILE_NAME === "/".$filename))
 		{
-			$ABS_FILE_NAME = $DIR_NAME.$FILE_NAME;
+			$ABS_FILE_NAME = $DIR_NAME.$filename;
 			$WORK_DIR_NAME = substr($ABS_FILE_NAME, 0, strrpos($ABS_FILE_NAME, "/")+1);
 		}
 	}

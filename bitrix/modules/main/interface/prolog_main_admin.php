@@ -93,8 +93,8 @@ if (!defined('ADMIN_SECTION_LOAD_AUTH') || !ADMIN_SECTION_LOAD_AUTH):
 </div><![endif]-->
 <?
 endif;
-if(file_exists($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/admin_header.php"))
-	include($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/admin_header.php");
+if(($adminHeader = getLocalPath("php_interface/admin_header.php", BX_PERSONAL_ROOT)) !== false)
+	include($_SERVER["DOCUMENT_ROOT"].$adminHeader);
 
 ?>
 	<table class="adm-main-wrap">
@@ -343,6 +343,7 @@ if($USER->IsAuthorized()):
 
 	elseif($USER->CanDoOperation('install_updates')):
 		//show support ending warning
+
 		$supportFinishDate = COption::GetOptionString('main', '~support_finish_date', '');
 		if($supportFinishDate <> '' && is_array(($aSupportFinishDate=ParseDate($supportFinishDate, 'ymd'))))
 		{
@@ -353,35 +354,102 @@ if($USER->IsAuthorized()):
 				$supportDateDiff = ceil(($supportFinishStamp - time())/86400);
 
 				$sSupportMess = '';
+				$sSupWIT = " (<span onclick=\"BX.toggle(BX('supdescr'))\" style='border-bottom: 1px dashed #1c91e7; color: #1c91e7; cursor: pointer;'>".GetMessage("prolog_main_support_wit")."</span>)";
+
 				if($supportDateDiff >= 0 && $supportDateDiff <= 30)
 				{
-					$sSupportMess = GetMessage("prolog_main_support1", array(
-						'#FINISH_DATE#'=>GetTime($supportFinishStamp),
-						'#DAYS_AGO#'=>($supportDateDiff == 0? GetMessage("prolog_main_today") : GetMessage('prolog_main_support_days', array('#N_DAYS_AGO#'=>$supportDateDiff))),
-						'#LICENSE_KEY#'=>md5(LICENSE_KEY),
+					$sSupportMess = GetMessage("prolog_main_support11", array(
+						'#FINISH_DATE#' => GetTime($supportFinishStamp),
+						'#DAYS_AGO#' => ($supportDateDiff == 0? GetMessage("prolog_main_today") : GetMessage('prolog_main_support_days', array('#N_DAYS_AGO#'=>$supportDateDiff))),
+						'#LICENSE_KEY#' => md5(LICENSE_KEY),
+						'#WHAT_IS_IT#' => $sSupWIT,
+						'#SUP_FINISH_DATE#' => GetTime(mktime(0,0,0, $aSupportFinishDate[1]+1, $aSupportFinishDate[0], $aSupportFinishDate[2])),
 					));
 				}
 				elseif($supportDateDiff < 0 && $supportDateDiff >= -30)
 				{
-					$sSupportMess = GetMessage("prolog_main_support2", array(
-						'#FINISH_DATE#'=>GetTime($supportFinishStamp),
-						'#DAYS_AGO#'=>(-$supportDateDiff),
-						'#LICENSE_KEY#'=>md5(LICENSE_KEY),
+					$sSupportMess = GetMessage("prolog_main_support21", array(
+						'#FINISH_DATE#' => GetTime($supportFinishStamp),
+						'#DAYS_AGO#' => (-$supportDateDiff),
+						'#LICENSE_KEY#' => md5(LICENSE_KEY),
+						'#WHAT_IS_IT#' => $sSupWIT,
+						'#SUP_FINISH_DATE#' => GetTime(mktime(0,0,0, $aSupportFinishDate[1]+1, $aSupportFinishDate[0], $aSupportFinishDate[2])),
 					));
 				}
 				elseif($supportDateDiff < -30)
 				{
-					$sSupportMess = GetMessage("prolog_main_support3", array(
-						'#FINISH_DATE#'=>GetTime($supportFinishStamp),
-						'#LICENSE_KEY#'=>md5(LICENSE_KEY),
+					$sSupportMess = GetMessage("prolog_main_support31", array(
+						'#FINISH_DATE#' => GetTime($supportFinishStamp),
+						'#LICENSE_KEY#' => md5(LICENSE_KEY),
+						'#WHAT_IS_IT#' => $sSupWIT,
 					));
 				}
 
 				if($sSupportMess <> '')
 				{
-					echo BeginNote('style="position: relative; top: -15px;"');
-					echo $sSupportMess;
-					echo EndNote();
+					$userOption = CUserOptions::GetOption("main", "admSupInf");
+					if(mktime() > $userOption["showInformerDate"])
+					{
+						$prolongUrl = "/bitrix/admin/buy_support.php?lang=".LANGUAGE_ID;
+						if(!in_array(LANGUAGE_ID, array("ru", "ua")) || IntVal(COption::GetOptionString("main", "~PARAM_PARTNER_ID")) <= 0)
+						{
+							require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/general/update_client.php");
+							$prolongUrl = "http://www.1c-bitrix.ru/buy_tmp/key_update.php?license_key=".md5(CUpdateClient::GetLicenseKey())."&tobasket=y&lang=".LANGUAGE_ID;
+						}
+
+						echo BeginNote('style="position: relative; top: -15px;"');
+						?>
+						<style>
+							#menu-popup-prolong-popup .popup-window-hr { display:none;}
+							#menu-popup-prolong-popup .menu-popup .menu-popup-item {min-width: 100px; margin-top: 7px;}
+							#menu-popup-prolong-popup .menu-popup-item:hover {background-color: #fff !important;}
+						</style>
+						<script>
+						function showProlongMenu(bindElement)
+						{
+							BX.PopupMenu.show("prolong-popup", bindElement, [
+								{
+									text : '<b><?=GetMessageJS("prolog_main_support_menu1")?></b>'
+								},
+								{
+									text : '<?=GetMessageJS("prolog_main_support_menu2")?>',
+									onclick : function() {prolongRemind('<?=AddToTimeStamp(array("DD" => 7));?>', this)}
+								},
+								{
+									text : '<?=GetMessageJS("prolog_main_support_menu3")?>',
+									onclick : function() {prolongRemind('<?=AddToTimeStamp(array("DD" => 14));?>', this)}
+								},
+								{
+									text : '<?=GetMessageJS("prolog_main_support_menu4")?>',
+									onclick : function() {prolongRemind('<?=AddToTimeStamp(array("MM" => 1));?>', this)}
+								}
+							],
+							{
+								offsetTop : 5,
+								offsetLeft : 13,
+								angle : true
+							});
+
+							return false;
+						}
+
+						function prolongRemind(tt, el)
+						{
+							BX.userOptions.save('main', 'admSupInf', 'showInformerDate', tt);
+							el.popupWindow.close();
+							BX.hide(BX('prolongmenu').parentNode);
+						}
+						</script>
+						<div style="float: right; padding-left: 50px; margin-top: -5px; text-align: center;">
+							<a href="<?=$prolongUrl?>" target="_blank" class="adm-btn adm-btn-save" style="margin-bottom: 4px;"><?=GetMessage("prolog_main_support_button_prolong")?></a><br />
+
+							<a href="javascript:void(0)" id="prolongmenu" onclick="showProlongMenu(this)" style="color: #716536;"><?=GetMessage("prolog_main_support_button_no_prolong2")?></a>
+						</div>
+						<?=$sSupportMess;?>
+						<div id="supdescr" style="display: none;"><br /><br /><b><?=GetMessage("prolog_main_support_wit_descr1")?></b><hr><?=GetMessage("prolog_main_support_wit_descr2".(IsModuleInstalled("intranet") ? "_cp" : ""))?></div>
+						<?
+						echo EndNote();
+					}
 				}
 			}
 		}

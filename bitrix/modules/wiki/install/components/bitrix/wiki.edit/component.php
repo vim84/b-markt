@@ -106,6 +106,12 @@ if (empty($arParams['IBLOCK_ID']))
 	return;
 }
 
+if (array_key_exists('SOCNET_GROUP_ID', $arParams) && empty($arParams['SOCNET_GROUP_ID']))
+{
+	ShowError(GetMessage('WIKI_ACCESS_DENIED'));
+	return;
+}
+
 if (CWikiSocnet::isEnabledSocnet() && !empty($arParams['SOCNET_GROUP_ID']))
 {
 	if(!CModule::IncludeModule('socialnetwork'))
@@ -443,7 +449,13 @@ else
 
 							if ($arResult['WIKI_oper'] == 'edit')
 							{
-								$dbLog = CSocNetLog::GetList(array('ID' => 'DESC'), array('SOURCE_ID' => $arParams['ELEMENT_ID'])); //'SITE_ID' => $arGroupSite['SITE_ID']
+								$dbLog = CSocNetLog::GetList(
+									array('ID' => 'DESC'),
+									array(
+										'SOURCE_ID' => $arParams['ELEMENT_ID'],
+									    'ENTITY_ID'=> 'wiki'
+								)); 	//'SITE_ID' => $arGroupSite['SITE_ID']
+
 								if ($arLog = $dbLog->Fetch())
 								{
 									$bNew = false;

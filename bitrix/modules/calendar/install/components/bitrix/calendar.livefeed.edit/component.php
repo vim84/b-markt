@@ -43,14 +43,16 @@ $arParams['EVENT'] = CCalendarEvent::GetById($arParams['EVENT_ID']);
 $arParams["DESTINATION"] = (is_array($arParams["DESTINATION"]) && IsModuleInstalled("socialnetwork") ? $arParams["DESTINATION"] : array());
 $arParams["DESTINATION"] = (array_key_exists("VALUE", $arParams["DESTINATION"]) ? $arParams["DESTINATION"]["VALUE"] : $arParams["DESTINATION"]);
 
-
-$users = array();
-foreach ($arParams["DESTINATION"]['USERS'] as $key => $entry)
+if (is_array($arParams["DESTINATION"]['USERS']))
 {
-	if ($entry['isExtranet'] == 'N')
-		$users[$key] = $entry;
+	$users = array();
+	foreach ($arParams["DESTINATION"]['USERS'] as $key => $entry)
+	{
+		if ($entry['isExtranet'] == 'N')
+			$users[$key] = $entry;
+	}
+	$arParams["DESTINATION"]['USERS'] = $users;
 }
-$arParams["DESTINATION"]['USERS'] = $users;
 
 // Empty destination for new events
 if (!$arParams['EVENT_ID'])

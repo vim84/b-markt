@@ -156,21 +156,15 @@ class Indexer
 	 */
 	public function indexElement($elementId)
 	{
-		$indexEntries = array();
 		$element = new Element($this->iblockId, $elementId);
 		$element->loadFromDatabase();
 
 		$elementSections = $element->getSections();
+		$elementIndexValues = $this->getSectionIndexEntries($element);
+		
 		foreach ($element->getParentSections() as $sectionId)
 		{
-			$indexEntries[$sectionId] = $this->getSectionIndexEntries($element, $sectionId);
-		}
-
-		$c = 0;
-		$indexEntries = array_filter($indexEntries, "count");
-		foreach ($indexEntries as $sectionId => $sectionEntry)
-		{
-			foreach ($sectionEntry as $facetId => $values)
+			foreach ($elementIndexValues as $facetId => $values)
 			{
 				foreach ($values as $value)
 				{
@@ -182,21 +176,23 @@ class Indexer
 						$value["VALUE_NUM"],
 						in_array($sectionId, $elementSections)
 					);
-					$c++;
 				}
 			}
 		}
 
-		if ($c == 0)
+		foreach ($elementIndexValues as $facetId => $values)
 		{
-			$this->storage->addIndexEntry(
-				0,
-				$elementId,
-				0,
-				0,
-				0.0,
-				true
-			);
+			foreach ($values as $value)
+			{
+				$this->storage->addIndexEntry(
+					0,
+					$elementId,
+					$facetId,
+					$value["VALUE"],
+					$value["VALUE_NUM"],
+					empty($elementSections)
+				);
+			}
 		}
 	}
 
@@ -240,11 +236,10 @@ class Indexer
 	 * Returns all relevant information for the element in section context.
 	 *
 	 * @param Element $element Loaded from the database element information.
-	 * @param integer $sectionId Section identifier.
 	 *
 	 * @return array
 	 */
-	protected function getSectionIndexEntries(Element $element, $sectionId)
+	protected function getSectionIndexEntries(Element $element)
 	{
 		$result = array(
 			1 => array( //Section binding
@@ -297,7 +292,26 @@ class Indexer
 			}
 		}
 
-		foreach ($this->getFilterPrices($sectionId) as $priceId)
+		foreach ($this->getFilterProperty(Storage::DATETIME) as $propertyId)
+		{
+			$facetId = $this->storage->propertyIdToFacetId($propertyId);
+			$result[$facetId] = array();
+			$propertyValues = $element->getPropertyValues($propertyId);
+			foreach ($propertyValues as $value)
+			{
+				//Save date only based on server time.
+				$timestamp = MakeTimeStamp($value, "YYYY-MM-DD HH:MI:SS");
+				$value = date('Y-m-d', $timestamp);
+				$timestamp = MakeTimeStamp($value, "YYYY-MM-DD");
+				$valueId = $this->dictionary->getStringId($value);
+				$result[$facetId][$valueId] = array(
+					"VALUE" => $valueId,
+					"VALUE_NUM" => $timestamp,
+				);
+			}
+		}
+
+		foreach ($this->getFilterPrices() as $priceId)
 		{
 			$facetId = $this->storage->priceIdToFacetId($priceId);
 			$result[$facetId] = array();
@@ -339,9 +353,10 @@ class Indexer
 				Storage::DICTIONARY => array(),
 				Storage::STRING => array(),
 				Storage::NUMERIC => array(),
+				Storage::DATETIME => array(),
 			);
 			$propertyList = \Bitrix\Iblock\SectionPropertyTable::getList(array(
-				"select" => array("PROPERTY_ID", "PROPERTY.PROPERTY_TYPE"),
+				"select" => array("PROPERTY_ID", "PROPERTY.PROPERTY_TYPE", "PROPERTY.USER_TYPE"),
 				"filter" => array(
 					"=IBLOCK_ID" => array($this->iblockId, $this->skuIblockId),
 					"=SMART_FILTER" => "Y",
@@ -351,6 +366,8 @@ class Indexer
 			{
 				if ($link["IBLOCK_SECTION_PROPERTY_PROPERTY_PROPERTY_TYPE"] === "N")
 					$this->propertyFilter[Storage::NUMERIC][] = $link["PROPERTY_ID"];
+				elseif ($link["IBLOCK_SECTION_PROPERTY_PROPERTY_USER_TYPE"] === "DateTime")
+					$this->propertyFilter[Storage::DATETIME][] = $link["PROPERTY_ID"];
 				elseif ($link["IBLOCK_SECTION_PROPERTY_PROPERTY_PROPERTY_TYPE"] === "S")
 					$this->propertyFilter[Storage::STRING][] = $link["PROPERTY_ID"];
 				else

@@ -500,6 +500,7 @@ if ('' === $strImportErrorMessage)
 					"DESCRIPTION"=>$IBLOCK_DESC
 				)
 			);
+			\Bitrix\Iblock\PropertyIndex\Manager::markAsInvalid($IBLOCK_ID);
 		}
 		elseif ($USER->IsAdmin())
 		{
@@ -860,7 +861,7 @@ if ('' === $strImportErrorMessage)
 			if ($outFileAction!="F")
 			{
 				$bs = new CIBlockSection;
-				$res = CIBlockSection::GetList(array(), Array("IBLOCK_ID"=>$IBLOCK_ID, "!TMP_ID"=>$tmpid));
+				$res = CIBlockSection::GetList(array(), Array("IBLOCK_ID"=>$IBLOCK_ID, "!TMP_ID"=>$tmpid, 'CHECK_PERMISSIONS' => 'N'));
 				while($arr = $res->Fetch())
 				{
 					if ($outFileAction!="H")
@@ -920,7 +921,7 @@ if ('' === $strImportErrorMessage)
 			continue;
 
 		$PRICE_TYPE = $props[0]->GetAttribute($nameUTF['Value']);
-		$res = CCatalogGroup::GetList(array(), array("NAME"=>$PRICE_TYPE));
+		$res = CCatalogGroup::GetListEx(array(), array("NAME"=>$PRICE_TYPE), false, false, array('ID', 'NAME'));
 		if ($arr = $res->Fetch())
 			$PRICE_ID = $arr["ID"];
 		else

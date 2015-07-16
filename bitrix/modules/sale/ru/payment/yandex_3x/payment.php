@@ -11,7 +11,7 @@ $paymentType = CSalePaySystemAction::GetParamValue("PAYMENT_VALUE");
 $Sum = number_format($Sum, 2, ',', '');
 ?>
 <font class="tablebodytext">
-Услугу предоставляет сервис онлайн-платежей <b>&laquo;Яндекс.Деньги&raquo;</b>.<br /><br />
+Услугу предоставляет сервис онлайн-платежей <b>&laquo;Яндекс.Касса&raquo;</b>.<br /><br />
 Сумма к оплате по счету: <b><?=$Sum?> р.</b><br />
 <br />
 </font>

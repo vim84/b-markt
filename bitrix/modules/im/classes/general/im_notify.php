@@ -240,7 +240,7 @@ class CIMNotify
 		return $arNotify;
 	}
 
-	public static function GetUnsendNotify($order = "ASC")
+	public static function GetUnsendNotify()
 	{
 		global $DB;
 
@@ -255,7 +255,10 @@ class CIMNotify
 				U1.SECOND_NAME TO_USER_SECOND_NAME,
 				U1.EMAIL TO_USER_EMAIL,
 				U1.ACTIVE TO_USER_ACTIVE,
-				U1.LID TO_USER_LID
+				U1.LID TO_USER_LID,
+				U1.AUTO_TIME_ZONE AUTO_TIME_ZONE,
+				U1.TIME_ZONE TIME_ZONE,
+				U1.TIME_ZONE_OFFSET TIME_ZONE_OFFSET
 			FROM b_im_relation R
 			LEFT JOIN b_user U1 ON U1.ID = R.USER_ID
 			WHERE R.MESSAGE_TYPE = '".IM_MESSAGE_SYSTEM."' AND R.STATUS < ".IM_STATUS_NOTIFY."
@@ -263,6 +266,8 @@ class CIMNotify
 		$dbResRelation = $DB->Query($strSqlRelation, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 		$arNotify = Array();
+
+		CTimeZone::Disable();
 		while ($arResRelation = $dbResRelation->Fetch())
 		{
 			$strSql ="
@@ -271,7 +276,7 @@ class CIMNotify
 					M.CHAT_ID,
 					M.MESSAGE,
 					M.MESSAGE_OUT,
-					".$DB->DatetimeToTimestampFunction('M.DATE_CREATE')." DATE_CREATE,
+					".$DB->DatetimeToTimestampFunction('M.DATE_CREATE')."+".CIMMail::GetUserOffset($arResRelation)." DATE_CREATE,
 					M.NOTIFY_TYPE,
 					M.NOTIFY_MODULE,
 					M.NOTIFY_EVENT,
@@ -288,8 +293,9 @@ class CIMNotify
 				FROM b_im_message M
 				LEFT JOIN b_user U2 ON U2.ID = M.AUTHOR_ID
 				WHERE M.ID > ".intval($arResRelation['LAST_SEND_ID'])." AND M.CHAT_ID = ".intval($arResRelation['CHAT_ID'])."
-				".($order == "DESC"? "ORDER BY DATE_CREATE DESC, ID DESC": "")."
+				ORDER BY ID DESC
 			";
+			$strSql = $DB->TopSql($strSql, 200);
 			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 			while ($arRes = $dbRes->Fetch())
@@ -297,7 +303,12 @@ class CIMNotify
 				$arRes = array_merge($arRes, $arResRelation);
 				$arNotify[$arRes['ID']] = $arRes;
 			}
+			if (count($arNotify) > 5000)
+			{
+				break;
+			}
 		}
+		CTimeZone::Enable();
 
 		return $arNotify;
 	}
@@ -348,6 +359,7 @@ class CIMNotify
 	public static function GetFormatNotify($arFields)
 	{
 		$CCTP = new CTextParser();
+		$CCTP->allow["SMILES"] = "N";
 
 		if (isset($arFields['HIDE_LINK']) && $arFields['HIDE_LINK'] == 'Y')
 			$CCTP->allow["ANCHOR"] = "N";

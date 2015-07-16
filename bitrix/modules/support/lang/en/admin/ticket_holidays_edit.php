@@ -25,4 +25,7 @@ $MESS["SUP_OPEN_TIME_WORKDAY_4"] = "Working day instead of Friday";
 $MESS["SUP_OPEN_TIME_WORKDAY_5"] = "Working day instead of Saturday";
 $MESS["SUP_OPEN_TIME_WORKDAY_6"] = "Working day instead of Sunday";
 $MESS["SUP_ADMIN_USER_FIELDS"] = "Additional properties";
+$MESS["MAIN_ADMIN_MENU_LIST"] = "List";
+$MESS["SUP_DATE_FROM"] = "Active from";
+$MESS["SUP_DATE_TILL"] = "Through";
 ?>

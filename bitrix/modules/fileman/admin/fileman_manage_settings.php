@@ -96,8 +96,10 @@ if ($target == 'get_all')
 
 	//Get taskbar settings
 	$taskbars = CUserOptions::GetOption("fileman", "taskbar_settings_".$edname, false);
-	if ($taskbars !== false)
+	if ($taskbars !== false && CheckSerializedData($taskbars))
 		$taskbars = unserialize($taskbars);
+	else
+		$taskbars = false;
 
 	?><script><?
 	if (is_array($taskbars))
@@ -114,8 +116,10 @@ if ($target == 'get_all')
 	//Get taskbarset settings
 	?><script><?
 	$taskbarset = CUserOptions::GetOption("fileman", "taskbarset_settings_".$edname, false);
-	if ($taskbarset !== false)
+	if ($taskbarset !== false && CheckSerializedData($taskbarset))
 		$taskbarset = unserialize($taskbarset);
+	else
+		$taskbarset = false;
 
 	if (is_array($taskbarset))
 	{

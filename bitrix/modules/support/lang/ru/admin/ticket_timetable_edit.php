@@ -19,4 +19,14 @@ $MESS["SUP_CUSTOM"] = "часы работы:<br>(HH24:MI)";
 $MESS["SUP_ADMIN_USER_FIELDS"] = "Дополнительные свойства";
 $MESS["SUP_ADMIN_ROW_COPY"] = "Копировать";
 $MESS["SUP_ADMIN_ROW_DELETE"] = "Удалить строку";
+$MESS["MAIN_ADMIN_MENU_LIST"] = "Список";
+$MESS["MAIN_ADMIN_MENU_DELETE"] = "Удалить";
+$MESS["MAIN_ADMIN_MENU_COPY"] = "Копировать";
+$MESS["SUP_WEEKDAY_0"] = "Понедельник";
+$MESS["SUP_WEEKDAY_1"] = "Вторник";
+$MESS["SUP_WEEKDAY_2"] = "Среда";
+$MESS["SUP_WEEKDAY_3"] = "Четверг";
+$MESS["SUP_WEEKDAY_4"] = "Пятница";
+$MESS["SUP_WEEKDAY_5"] = "Суббота";
+$MESS["SUP_WEEKDAY_6"] = "Воскресенье";
 ?>

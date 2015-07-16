@@ -4,6 +4,7 @@ $MESS["PULL_TAB_TITLE_SETTINGS"] = "Настройка параметров мо
 $MESS["PULL_OPTIONS_PATH_TO_LISTENER"] = "Путь для чтения команд (HTTP)";
 $MESS["PULL_OPTIONS_PATH_TO_LISTENER_SECURE"] = "Путь для чтения команд (HTTPS)";
 $MESS["PULL_OPTIONS_PATH_TO_LISTENER_DESC"] = "Рекомендуется использовать стандартный порт для HTTP или HTTPS.<br> Используйте 8893 (HTTP) и 8894 (HTTPS) только для версии модуля nginx-push-stream-module 0.3.4";
+$MESS["PULL_OPTIONS_PATH_TO_LISTENER_MODERN_DESC"] = "Обратите внимание, что современные браузеры могут подключаться к серверу очередей расположенном на другом сервере и с другим доменом (работа с CORS запросами).";
 $MESS["PULL_OPTIONS_PATH_TO_MOBILE_LISTENER"] = "Путь для чтения команд на мобильном приложении (HTTP)";
 $MESS["PULL_OPTIONS_PATH_TO_MOBILE_LISTENER_SECURE"] = "Путь для чтения команд на мобильном приложении (HTTPS)";
 $MESS["PULL_OPTIONS_PATH_TO_MOBILE_LISTENER_DESC"] = "Всегда используйте нестандартные порты (например 8893 для HTTP и 8894 для HTTPS) для мобильных приложений, т.к. не все мобильные телефоны поддерживают Long pooling на стандартном порту.";
@@ -30,4 +31,12 @@ $MESS["PULL_OPTIONS_STATUS_Y"] = "Активен";
 $MESS["PULL_OPTIONS_STATUS_N"] = "Не активен";
 $MESS["PULL_OPTIONS_USE"] = "Используют модули";
 $MESS["PULL_OPTIONS_SITES"] = "Не использовать модуль на сайтах";
+
+
+$MESS["PULL_OPTIONS_HEAD_PUB"] = "Настройка адреса для публикации команд";
+$MESS["PULL_OPTIONS_HEAD_SUB_MODERN"] = "Настройка адреса чтения команд для современных версий браузеров";
+$MESS["PULL_OPTIONS_HEAD_SUB"] = "Настройка адреса чтения команд для старых версий браузеров";
+$MESS["PULL_OPTIONS_HEAD_SUB_MOB"] = "Настройка адреса чтения команд для мобильных браузеров";
+$MESS["PULL_OPTIONS_HEAD_SUB_WS"] = "Настройка адреса чтения команд для браузеров с поддержкой Web Socket";
+$MESS["PULL_OPTIONS_HEAD_BLOCK"] = "Блокировка работы с модулем на определенных сайтах";
 ?>

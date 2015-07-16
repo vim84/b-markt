@@ -52,12 +52,11 @@ $themeClass = 'bx_'.$theme;
 <div class="bx_modal_container bx_kit <? echo $themeClass; ?>">
 	<strong class="bx_modal_small_title"><?=$arMessage["CATALOG_SET_POPUP_TITLE"]?></strong>
 	<span class="bx_modal_description"><?=$arMessage["CATALOG_SET_POPUP_DESC"]?></span>
-
 	<div class="bx_modal_body" id="bx_catalog_set_construct_popup_<?=$curElementId?>">
 		<div class="bx_kit_one_section">
 			<div class="bx_kit_item">
 				<div class="bx_kit_item_children">
-					<?if ($arCurElementInfo["DETAIL_PICTURE"]["src"]):?>
+					<?if (!empty($arCurElementInfo["DETAIL_PICTURE"]["src"])):?>
 						<div class="bx_kit_img_container <?=($arCurElementInfo["DETAIL_PICTURE"]["width"] >= $arCurElementInfo["DETAIL_PICTURE"]["height"]) ? "bx_kit_img_landscape" : "bx_kit_img_portrait"?>" style="background-image:url('<?=$arCurElementInfo["DETAIL_PICTURE"]["src"]?>');"></div>
 					<?else:?>
 						<div class="bx_kit_img_container" style="background-image: url('<?=$curTemplatePath?>/images/no_foto.png')"></div>
@@ -68,14 +67,12 @@ $themeClass = 'bx_'.$theme;
 				<?if ($arCurElementInfo["PRICE_DISCOUNT_DIFFERENCE_VALUE"]):?><div class="bx_kit_item_discount" style="padding-top: 3px;"><?=$arCurElementInfo["PRICE_DISCOUNT_DIFFERENCE"]?></div><?endif?>
 			</div>
 			<div class="bx_kit_item_plus"></div>
-
 			<?
 			$curCountDefaultSetItems = 0;
-			?>
-			<?foreach($arSetElementsDefault as $arItem):?>
+			foreach($arSetElementsDefault as $arItem):?>
 				<div class="bx_kit_item bx_drag_dest<?if ($arItem["PRICE_DISCOUNT_DIFFERENCE_VALUE"]):?> discount<?endif?>">
 					<div class="bx_kit_item_children bx_kit_item_border">
-						<?if ($arItem["DETAIL_PICTURE"]["src"]):?>
+						<?if (!empty($arItem["DETAIL_PICTURE"]["src"])):?>
 							<div class="bx_kit_img_container <?=($arItem["DETAIL_PICTURE"]["width"] >= $arItem["DETAIL_PICTURE"]["height"]) ? "bx_kit_img_landscape" : "bx_kit_img_portrait"?>" style="background-image:url('<?=$arItem["DETAIL_PICTURE"]["src"]?>');"></div>
 						<?else:?>
 							<div class="bx_kit_img_container" style="background-image: url('<?=$curTemplatePath?>/images/no_foto.png')"></div>
@@ -93,10 +90,10 @@ $themeClass = 'bx_'.$theme;
 				$curCountDefaultSetItems++;
 				if ($curCountDefaultSetItems<3):?>
 				<div class="bx_kit_item_plus"></div>
-				<?endif?>
-			<?endforeach?>
+				<?endif;
+			endforeach;
 
-			<?if ($curCountDefaultSetItems<3):
+			if ($curCountDefaultSetItems<3):
 				for($j=1; $j<=(3-$curCountDefaultSetItems); $j++)
 				{
 			?>
@@ -104,11 +101,8 @@ $themeClass = 'bx_'.$theme;
 					<?if ($j<3-$curCountDefaultSetItems):?><div class="bx_kit_item_plus"></div><?endif?>
 			<?
 				}
-			?>
-			<?endif?>
-
+			endif;?>
 			<div class="bx_kit_item_equally"></div>
-
 			<div class="bx_kit_item" style="padding-top:0;">
 				<div class="bx_kit_result <?if (!$setOldPrice && !$setPriceDiscountDifference):?>not_sale<?endif?>" id="bx_catalog_set_construct_price_block_<?=$curElementId?>">
 					<div class="bx_kit_result_one" <?if (!$setOldPrice):?>style="display: none;"<?endif?>>
@@ -136,7 +130,7 @@ $themeClass = 'bx_'.$theme;
 					<?foreach($arSetElementsOther as $arItem):?>
 					<div class="bx_kit_item_slider bx_drag_obj" style="width:<?=(count($arSetElementsOther) <=5) ? "20" : (100/count($arSetElementsOther))?>%" data-main-element-id="<?=$curElementId?>">
 						<div class="bx_kit_item bx_kit_item_border<?if ($arItem["PRICE_DISCOUNT_DIFFERENCE_VALUE"]):?> discount<?endif?>">
-							<?if ($arItem["DETAIL_PICTURE"]["src"]):?>
+							<?if (!empty($arItem["DETAIL_PICTURE"]["src"])):?>
 								<div class="bx_kit_img_container <?=($arItem["DETAIL_PICTURE"]["width"] >= $arItem["DETAIL_PICTURE"]["height"]) ? "bx_kit_img_landscape" : "bx_kit_img_portrait"?>" style="background-image:url('<?=$arItem["DETAIL_PICTURE"]["src"]?>');"></div>
 							<?else:?>
 								<div class="bx_kit_img_container" style="background-image: url('<?=$curTemplatePath?>/images/no_foto.png')"></div>

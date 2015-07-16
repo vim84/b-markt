@@ -221,3 +221,4 @@ function ImgShw(ID, width, height, alt)
 	);
 	wnd.document.close();
 }
+

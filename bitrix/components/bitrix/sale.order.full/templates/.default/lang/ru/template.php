@@ -82,4 +82,5 @@ $MESS ['STOF_PAYED_FROM_ACCOUNT'] = "Оплачен с внутреннего с
 $MESS ['SALE_CONTENT_VAT'] = "НДС";
 $MESS ['SALE_CONTENT_WEIGHT'] = "Вес";
 $MESS ['SALE_CONTENT_WEIGHT_TOTAL'] = "Общий вес";
+$MESS ['SOA_TEMPL_ORDER_PS_ERROR'] = "Ошибка выбранного способа оплаты. Обратитесь к Администрации сайта, либо выберите другой способ оплаты.";
 ?>

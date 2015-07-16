@@ -1,6 +1,7 @@
 <?
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Iblock;
 
 Loc::loadMessages(__FILE__);
 
@@ -74,7 +75,7 @@ $arTreeDescr = array(
 	'js' => '/bitrix/js/catalog/core_tree.js',
 	'css' => '/bitrix/panel/catalog/catalog_cond.css',
 	'lang' => '/bitrix/modules/catalog/lang/'.LANGUAGE_ID.'/js_core_tree.php',
-	'rel' => array('core', 'date')
+	'rel' => array('core', 'date', 'window')
 );
 CJSCore::RegisterExt('core_condtree', $arTreeDescr);
 
@@ -88,6 +89,7 @@ define('CATALOG_CACHE_DEFAULT_TIME', 10800);
 Loader::registerAutoLoadClasses(
 	'catalog',
 	array(
+		'catalog' => 'install/index.php',
 		'CCatalog' => $strDBType.'/catalog.php',
 		'CCatalogGroup' => $strDBType.'/cataloggroup.php',
 		'CExtra' => $strDBType.'/extra.php',
@@ -149,8 +151,11 @@ Loader::registerAutoLoadClasses(
 		'CCatalogProductSetAvailable' => 'general/step_operations.php',
 		'CCatalogTools' => 'general/tools.php',
 		'\Bitrix\Catalog\CatalogIblockTable' => 'lib/catalogiblock.php',
+		'\Bitrix\Catalog\DiscountTable' => 'lib/discount.php',
+		'\Bitrix\Catalog\DiscountCouponTable' => 'lib/discountcoupon.php',
 		'\Bitrix\Catalog\GroupTable' => 'lib/group.php',
 		'\Bitrix\Catalog\GroupLangTable' => 'lib/grouplang.php',
+		'\Bitrix\Catalog\ProductTable' => 'lib/product.php',
 		'\Bitrix\Catalog\StoreTable' => 'lib/store.php',
 		'\Bitrix\Catalog\CatalogViewedProductTable' => 'lib/catalogviewedproduct.php',
 		'\Bitrix\Catalog\VatTable' => 'lib/vat.php',
@@ -1055,12 +1060,19 @@ function CatalogBasketCancelCallback($PRODUCT_ID, $QUANTITY, $bCancel)
 	}
 }
 
+/**
+ * @param int $PRICE_ID
+ * @param float|int $QUANTITY
+ * @param array $arRewriteFields
+ * @param array $arProductParams
+ * @return bool|int
+ */
 function Add2Basket($PRICE_ID, $QUANTITY = 1, $arRewriteFields = array(), $arProductParams = array())
 {
 	global $APPLICATION;
 
-	$PRICE_ID = intval($PRICE_ID);
-	if (0 >= $PRICE_ID)
+	$PRICE_ID = (int)$PRICE_ID;
+	if ($PRICE_ID <= 0)
 	{
 		$APPLICATION->ThrowException(Loc::getMessage('CATALOG_PRODUCT_PRICE_NOT_FOUND'), "NO_PRODUCT_PRICE");
 		return false;
@@ -1214,17 +1226,15 @@ function Add2Basket($PRICE_ID, $QUANTITY = 1, $arRewriteFields = array(), $arPro
 	{
 		if (strpos($arProduct["~XML_ID"], '#') === false)
 		{
-			$rsParentItems = CIBlockElement::GetList(
-				array(),
-				array('ID' => $arParentSku['ID']),
-				false,
-				false,
-				array('ID', 'XML_ID')
-			);
-			if ($arParentItem = $rsParentItems->Fetch())
+			$parentIterator = Iblock\ElementTable::getList(array(
+				'select' => array('ID', 'XML_ID'),
+				'filter' => array('ID' => $arParentSku['ID'])
+			));
+			if ($parent = $parentIterator->fetch())
 			{
-				$arProduct["~XML_ID"] = $arParentItem['XML_ID'].'#'.$arProduct["~XML_ID"];
+				$arProduct["~XML_ID"] = $parent['XML_ID'].'#'.$arProduct["~XML_ID"];
 			}
+			unset($parent, $parentIterator);
 		}
 	}
 
@@ -1291,6 +1301,13 @@ function Add2Basket($PRICE_ID, $QUANTITY = 1, $arRewriteFields = array(), $arPro
 	return $result;
 }
 
+/**
+ * @param int $PRODUCT_ID
+ * @param float|int $QUANTITY
+ * @param array $arRewriteFields
+ * @param bool|array $arProductParams
+ * @return bool|int
+ */
 function Add2BasketByProductID($PRODUCT_ID, $QUANTITY = 1, $arRewriteFields = array(), $arProductParams = false)
 {
 	global $APPLICATION;
@@ -1476,17 +1493,15 @@ function Add2BasketByProductID($PRODUCT_ID, $QUANTITY = 1, $arRewriteFields = ar
 	{
 		if (strpos($arProduct["~XML_ID"], '#') === false)
 		{
-			$rsParentItems = CIBlockElement::GetList(
-				array(),
-				array('ID' => $arParentSku['ID']),
-				false,
-				false,
-				array('ID', 'XML_ID')
-			);
-			if ($arParentItem = $rsParentItems->Fetch())
+			$parentIterator = Iblock\ElementTable::getList(array(
+				'select' => array('ID', 'XML_ID'),
+				'filter' => array('ID' => $arParentSku['ID'])
+			));
+			if ($parent = $parentIterator->fetch())
 			{
-				$arProduct["~XML_ID"] = $arParentItem['XML_ID'].'#'.$arProduct["~XML_ID"];
+				$arProduct["~XML_ID"] = $parent['XML_ID'].'#'.$arProduct["~XML_ID"];
 			}
+			unset($parent, $parentIterator);
 		}
 	}
 
@@ -1555,10 +1570,15 @@ function Add2BasketByProductID($PRODUCT_ID, $QUANTITY = 1, $arRewriteFields = ar
 	return $result;
 }
 
+/**
+ * @param int $intProductID
+ * @param array $arRewriteFields
+ * @param array $arProductParams
+ * @return bool|int
+ */
 function SubscribeProduct($intProductID, $arRewriteFields = array(), $arProductParams = array())
 {
-	global $USER;
-	global $APPLICATION;
+	global $USER, $APPLICATION;
 
 	if (!CCatalog::IsUserExists())
 		return false;
@@ -1663,17 +1683,15 @@ function SubscribeProduct($intProductID, $arRewriteFields = array(), $arProductP
 	{
 		if (strpos($arProduct["~XML_ID"], '#') === false)
 		{
-			$rsParentItems = CIBlockElement::GetList(
-				array(),
-				array('ID' => $arParentSku['ID']),
-				false,
-				false,
-				array('ID', 'XML_ID')
-			);
-			if ($arParentItem = $rsParentItems->Fetch())
+			$parentIterator = Iblock\ElementTable::getList(array(
+				'select' => array('ID', 'XML_ID'),
+				'filter' => array('ID' => $arParentSku['ID'])
+			));
+			if ($parent = $parentIterator->fetch())
 			{
-				$arProduct["~XML_ID"] = $arParentItem['XML_ID'].'#'.$arProduct["~XML_ID"];
+				$arProduct["~XML_ID"] = $parent['XML_ID'].'#'.$arProduct["~XML_ID"];
 			}
+			unset($parent, $parentIterator);
 		}
 	}
 
@@ -1935,7 +1953,7 @@ function CatalogGetPriceTableEx($ID, $filterQauntity = 0, $arFilterType = array(
 		$arPrice['VAT_RATE'] = $fVatRate;
 
 		CCatalogDiscountSave::Disable();
-		$arDiscounts = CCatalogDiscount::GetDiscount($ID, $arProduct["IBLOCK_ID"], $arPrice["CATALOG_GROUP_ID"], $arUserGroups, "N", SITE_ID);
+		$arDiscounts = CCatalogDiscount::GetDiscount($ID, $arProduct["IBLOCK_ID"], $arPrice["CATALOG_GROUP_ID"], $arUserGroups, "N", SITE_ID, array());
 		CCatalogDiscountSave::Enable();
 
 		$discountPrice = CCatalogProduct::CountPriceWithDiscount($arPrice["PRICE"], $arPrice["CURRENCY"], $arDiscounts);
@@ -2052,7 +2070,7 @@ function CatalogGetPriceTable($ID)
 	while ($arPrice = $dbPrice->Fetch())
 	{
 		CCatalogDiscountSave::Disable();
-		$arDiscounts = CCatalogDiscount::GetDiscount($ID, $arPrice["ELEMENT_IBLOCK_ID"], $arPrice["CATALOG_GROUP_ID"], $USER->GetUserGroupArray(), "N", SITE_ID);
+		$arDiscounts = CCatalogDiscount::GetDiscount($ID, $arPrice["ELEMENT_IBLOCK_ID"], $arPrice["CATALOG_GROUP_ID"], $USER->GetUserGroupArray(), "N", SITE_ID, array());
 		CCatalogDiscountSave::Enable();
 
 		$discountPrice = CCatalogProduct::CountPriceWithDiscount($arPrice["PRICE"], $arPrice["CURRENCY"], $arDiscounts);

@@ -24,7 +24,7 @@ $arParams["LOCATION_TO"] = intval($arParams["LOCATION_TO"]);
 $arParams["LOCATION_FROM"] = intval($arParams["LOCATION_FROM"]);
 if ($arParams["LOCATION_FROM"] <= 0)
 {
-	$arParams["LOCATION_FROM"] = COption::GetOptionInt('sale', 'location');
+	$arParams["LOCATION_FROM"] = COption::GetOptionString('sale', 'location');
 }
 
 $arParams["STEP"] = intval($arParams["STEP"]);

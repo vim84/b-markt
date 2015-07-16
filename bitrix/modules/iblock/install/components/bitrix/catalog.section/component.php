@@ -791,8 +791,8 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 		$intKey++;
 	}
 	$arResult['MODULES'] = $arResultModules;
-	$arResult["NAV_STRING"] = $rsElements->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"]);
-	$arResult["NAV_CACHED_DATA"] = $navComponentObject->GetTemplateCachedData();
+	$arResult["NAV_STRING"] = $rsElements->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"], $this);
+	$arResult["NAV_CACHED_DATA"] = null;
 	$arResult["NAV_RESULT"] = $rsElements;
 	if (isset($arItem))
 		unset($arItem);
@@ -1292,4 +1292,3 @@ if ($arParams["ADD_SECTIONS_CHAIN"] && isset($arResult["PATH"]) && is_array($arR
 }
 
 return $arResult["ID"];
-?>

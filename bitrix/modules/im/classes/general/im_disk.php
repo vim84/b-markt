@@ -79,6 +79,10 @@ class CIMDisk
 			{
 				$fileData['mimeType'] = "binary";
 			}
+			if (!$fileData['name'])
+			{
+				continue;
+			}
 			$newFile = $folderModel->addBlankFile(Array(
 				'NAME' => $fileData['name'],
 				'SIZE' => $fileData['size'],
@@ -151,6 +155,12 @@ class CIMDisk
 
 		$fileId = $post['PARAMS'][$file["id"]];
 		if (!$fileId)
+		{
+			$error = GetMessage('IM_DISK_ERR_UPLOAD');
+			return false;
+		}
+
+		if (!$file["files"]["default"])
 		{
 			$error = GetMessage('IM_DISK_ERR_UPLOAD');
 			return false;
@@ -434,10 +444,8 @@ class CIMDisk
 			}
 			Im\ChatTable::update($chatId, Array('AVATAR' => $fileId));
 
-			$file = Array(
-				'chatId' => $chatId,
-				'chatAvatar' => CIMChat::GetAvatarImage($fileId)
-			);
+			$file['chatId'] = $chatId;
+			$file['chatAvatar'] = CIMChat::GetAvatarImage($fileId);
 
 			if ($chat["ENTITY_TYPE"] != 'CALL')
 			{

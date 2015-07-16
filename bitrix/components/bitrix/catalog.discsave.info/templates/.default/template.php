@@ -17,7 +17,7 @@ else
 		}
 		else
 		{
-			echo FormatCurrency($arDiscountSave['VALUE'], $arDiscountSave['CURRENCY']);
+			echo CCurrencyLang::CurrencyFormat($arDiscountSave['VALUE'], $arDiscountSave['CURRENCY'], true);
 		}
 		if (isset($arDiscountSave['NEXT_LEVEL']) && is_array($arDiscountSave['NEXT_LEVEL']))
 		{
@@ -28,10 +28,10 @@ else
 			}
 			else
 			{
-				$strNextLevel = FormatCurrency($arDiscountSave['NEXT_LEVEL']['VALUE'], $arDiscountSave['CURRENCY']);
+				$strNextLevel = CCurrencyLang::CurrencyFormat($arDiscountSave['NEXT_LEVEL']['VALUE'], $arDiscountSave['CURRENCY'], true);
 			}
 
-			?><br /><? echo str_replace(array('#SIZE#', '#SUMM#'), array($strNextLevel, FormatCurrency(($arDiscountSave['NEXT_LEVEL']['RANGE_FROM'] - $arDiscountSave['RANGE_SUMM']),$arDiscountSave['CURRENCY'])), GetMessage('BX_CMP_CDI_TPL_MESS_NEXT_LEVEL')); ?><?
+			?><br /><? echo str_replace(array('#SIZE#', '#SUMM#'), array($strNextLevel, CCurrencyLang::CurrencyFormat(($arDiscountSave['NEXT_LEVEL']['RANGE_FROM'] - $arDiscountSave['RANGE_SUMM']),$arDiscountSave['CURRENCY'], true)), GetMessage('BX_CMP_CDI_TPL_MESS_NEXT_LEVEL')); ?><?
 		}
 		?></p><br /><?
 	}

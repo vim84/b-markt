@@ -167,15 +167,25 @@ if(
 
 	if(isset($_POST["SECTION_PROPERTY"]) && is_array($_POST["SECTION_PROPERTY"]))
 	{
+		$TextParser = new CBXSanitizer();
+		$TextParser->SetLevel(CBXSanitizer::SECURE_LEVEL_LOW);
+		$TextParser->ApplyHtmlSpecChars(false);
 		$arFields["SECTION_PROPERTY"] = array();
 		foreach($_POST["SECTION_PROPERTY"] as $PID => $arLink)
 		{
 			if($arLink["SHOW"] === "Y")
 			{
+				$filterHint = trim($arLink["FILTER_HINT"]);
+				if ($filterHint)
+				{
+					$filterHint = $TextParser->SanitizeHtml($filterHint);
+				}
+
 				$arFields["SECTION_PROPERTY"][$PID] = array(
 					"SMART_FILTER" => $arLink["SMART_FILTER"],
 					"DISPLAY_TYPE" => $arLink["DISPLAY_TYPE"],
 					"DISPLAY_EXPANDED" => $arLink["DISPLAY_EXPANDED"],
+					"FILTER_HINT" => $filterHint,
 				);
 			}
 		}
@@ -1305,6 +1315,7 @@ if($bEditRights)
 
 if($arIBlock["SECTION_PROPERTY"] === "Y")
 {
+	$editor = new CEditorPopupControl();
 	$tabControl->BeginNextFormTab();
 	$tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("IBSEC_E_SECTION_PROPERTY_FIELD"));
 	?>
@@ -1327,6 +1338,7 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_SMART_FILTER");?></td>
 				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_DISPLAY_TYPE");?></td>
 				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_DISPLAY_EXPANDED");?></td>
+				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_FILTER_HINT");?></td>
 				<td class="internal-right"><?echo GetMessage("IBSEC_E_PROP_TABLE_ACTION");?></td>
 			</tr>
 			<?
@@ -1390,6 +1402,7 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 					<td><?echo GetMessage("IBSEC_E_PROP_TABLE_SMART_FILTER");?></td>
 					<td><?echo GetMessage("IBSEC_E_PROP_TABLE_DISPLAY_TYPE");?></td>
 					<td><?echo GetMessage("IBSEC_E_PROP_TABLE_DISPLAY_EXPANDED");?></td>
+					<td><?echo GetMessage("IBSEC_E_PROP_TABLE_FILTER_HINT");?></td>
 					<td class="internal-right"><?echo GetMessage("IBSEC_E_PROP_TABLE_ACTION");?></td>
 				</tr>
 			<?
@@ -1419,7 +1432,7 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 				mode="<?echo (is_array($arLink)? "both": "none");?>"
 				prop_sort="<?echo $arProp["SORT"]?>"
 				prop_id="<?echo $arProp["ID"]?>"
-				left_margin="<?echo is_array($arLink)? $arLink["LEFT_MARGIN"]: 0;?>"
+				left_margin="<?echo is_array($arLink)? $arLink["LEFT_MARGIN"]: $maxMargin;?>"
 				<?if(!is_array($arLink)) echo 'style="display:none"';?>
 				>
 				<td align="left" class="internal-left">
@@ -1467,6 +1480,21 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 				</td>
 				<td style="text-align:center"><?
 					echo '<input type="checkbox" value="Y" '.((is_array($arLink) && $arLink["INHERITED"] == "Y")? 'disabled="disabled"': '').' name="SECTION_PROPERTY['.$arProp['ID'].'][DISPLAY_EXPANDED]" '.($arLink["DISPLAY_EXPANDED"] == "Y"? 'checked="checked"': '').'>';
+				?></td>
+				<td>
+				<?
+					if (!is_array($arLink) || $arLink["INHERITED"] == "N")
+					{
+						echo $editor->getControlHtml('SECTION_PROPERTY['.$arProp['ID'].'][FILTER_HINT]', $arLink['FILTER_HINT'], 255);
+					}
+					elseif ($arLink['FILTER_HINT'] <> '')
+					{
+						echo CTextParser::closeTags($arLink['FILTER_HINT']);
+					}
+					else
+					{
+						echo '&nbsp;';
+					}
 				?></td>
 				<td align="left" class="internal-right"><?
 					if(!is_array($arLink) || $arLink["INHERITED"] == "N")
@@ -1588,6 +1616,7 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 					row.insertCell(-1);
 					row.insertCell(-1);
 					row.insertCell(-1);
+					row.insertCell(-1);
 					row.cells[0].align = 'left';
 					row.cells[0].innerHTML = '<input type="hidden" name="SECTION_PROPERTY['+id+'][SHOW]" id="hidden_SECTION_PROPERTY_'+id+'" value="Y">'+name;
 					row.cells[0].className = 'internal-left';
@@ -1620,9 +1649,10 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 					row.cells[4].align = 'center';
 					row.cells[4].style.textAlign = 'center';
 					row.cells[4].innerHTML = '<input type="checkbox" value="Y" name="SECTION_PROPERTY['+id+'][DISPLAY_EXPANDED]">';
-					row.cells[5].align = 'left';
-					row.cells[5].className = 'internal-right';
-					row.cells[5].innerHTML = '<a class="bx-action-href" href="javascript:deleteSectionProperty('+id+', \''+target_select_id+'\', \''+target_shadow_id+'\', \''+target_id+'\')"><?echo GetMessageJS("IBSEC_E_PROP_TABLE_ACTION_HIDE")?></a>';
+					row.cells[5].innerHTML = '<?echo CUtil::JSEscape($editor->getControlHtml('SECTION_PROPERTY[#ID#][FILTER_HINT]', '', 255))?>'.replace('#ID#', id);
+					row.cells[6].align = 'left';
+					row.cells[6].className = 'internal-right';
+					row.cells[6].innerHTML = '<a class="bx-action-href" href="javascript:deleteSectionProperty('+id+', \''+target_select_id+'\', \''+target_shadow_id+'\', \''+target_id+'\')"><?echo GetMessageJS("IBSEC_E_PROP_TABLE_ACTION_HIDE")?></a>';
 					setMode(tbl, last_mode);
 					animateTR(row);
 					var shadow = BX(target_shadow_id);
@@ -1754,6 +1784,7 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_SMART_FILTER");?></td>
 				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_DISPLAY_TYPE");?></td>
 				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_DISPLAY_EXPANDED");?></td>
+				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_FILTER_HINT");?></td>
 				<td><?echo GetMessage("IBSEC_E_PROP_TABLE_ACTION");?></td></tr>
 			<?
 			if(CIBlockRights::UserHasRightTo($arCatalog["IBLOCK_ID"], $arCatalog["IBLOCK_ID"], "iblock_edit"))
@@ -1842,9 +1873,23 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 				<td align="center"><?
 					echo '<input type="checkbox" value="Y" '.((is_array($arLink) && $arLink["INHERITED"] == "Y")? 'disabled="disabled"': '').' name="SECTION_PROPERTY['.$arProp['ID'].'][DISPLAY_EXPANDED]" '.($arLink["DISPLAY_EXPANDED"] == "Y"? 'checked="checked"': '').'>';
 				?></td>
+				<td><?
+					if (!is_array($arLink) || $arLink["INHERITED"] == "N")
+					{
+						echo $editor->getControlHtml('SECTION_PROPERTY['.$arProp['ID'].'][FILTER_HINT]', $arLink['FILTER_HINT'], 255);
+					}
+					elseif ($arLink['FILTER_HINT'] <> '')
+					{
+						echo CTextParser::closeTags($arLink['FILTER_HINT']);
+					}
+					else
+					{
+						echo '&nbsp;';
+					}
+				?></td>
 				<td align="left"><?
 					if(!is_array($arLink) || $arLink["INHERITED"] == "N")
-						echo '<a href="javascript:deleteSectionProperty('.$arProp['ID'].', \'select_SKU_SECTION_PROPERTY\', \'shadow_SKU_SECTION_PROPERTY\', \'table_SKU_SECTION_PROPERTY\')">'.GetMessage("IBSEC_E_PROP_TABLE_ACTION_HIDE").'</a>';
+						echo '<a class="bx-action-href" href="javascript:deleteSectionProperty('.$arProp['ID'].', \'select_SKU_SECTION_PROPERTY\', \'shadow_SKU_SECTION_PROPERTY\', \'table_SKU_SECTION_PROPERTY\')">'.GetMessage("IBSEC_E_PROP_TABLE_ACTION_HIDE").'</a>';
 					else
 						echo '&nbsp;';
 				?></td>

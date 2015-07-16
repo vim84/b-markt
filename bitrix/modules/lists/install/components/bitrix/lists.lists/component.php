@@ -116,7 +116,7 @@ if($this->StartResultCache(0/*disable cache because it's individual for each use
 	$this->IncludeComponentTemplate();
 }
 
-if(isset($arParams["TITLE_TEXT"]))
-	$APPLICATION->SetTitle($arParams["TITLE_TEXT"]);
-
-?>
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+	$APPLICATION->SetTitle(GetMessage("CC_BLL_TITLE_TEXT_CLAIM"));
+else
+	$APPLICATION->SetTitle(GetMessage("CC_BLL_TITLE_TEXT_LISTS"));

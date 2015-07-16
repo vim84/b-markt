@@ -21,4 +21,5 @@ $MESS["IBLOCK_WATERMARK_POSITION_BR"] = "Bottom right";
 $MESS["IBLOCK_AT_FILE_NAME_TRANSLIT"] = "Transliterate";
 $MESS["IBLOCK_AT_FILE_NAME_LOWER"] = "Make lowercase";
 $MESS["IBLOCK_AT_FILE_NAME_SPACE"] = "Replace spaces";
+$MESS["IBLOCK_AT_POPUP_EDIT"] = "Edit";
 ?>

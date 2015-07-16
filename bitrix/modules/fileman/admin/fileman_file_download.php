@@ -9,6 +9,7 @@ IncludeModuleLangFile(__FILE__);
 
 $strWarning = "";
 $site = CFileMan::__CheckSite($site);
+$DOC_ROOT = CSite::GetSiteDocRoot($site);
 $io = CBXVirtualIo::GetInstance();
 $path = $GLOBALS["APPLICATION"]->ConvertCharset($path, "UTF-8", LANG_CHARSET);
 $arFile = CFile::MakeFileArray($io->GetPhysicalName($path));

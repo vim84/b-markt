@@ -97,7 +97,9 @@ if ($arParams['USE_FILTER'] == 'Y')
 			"SECTION_TITLE" => "NAME",
 			"SECTION_DESCRIPTION" => "DESCRIPTION",
 			'HIDE_NOT_AVAILABLE' => $arParams["HIDE_NOT_AVAILABLE"],
-			"TEMPLATE_THEME" => $arParams["TEMPLATE_THEME"]
+			"TEMPLATE_THEME" => $arParams["TEMPLATE_THEME"],
+			'CONVERT_CURRENCY' => $arParams['CONVERT_CURRENCY'],
+			'CURRENCY_ID' => $arParams['CURRENCY_ID'],
 		),
 		$component,
 		array('HIDE_ICONS' => 'Y')
@@ -376,8 +378,6 @@ if (ModuleManager::isModuleInstalled("sale"))
 				"CACHE_TIME" => $arParams["CACHE_TIME"],
 				"CACHE_GROUPS" => $arParams["CACHE_GROUPS"],
 				"SHOW_PRODUCTS_".$arParams["IBLOCK_ID"] => "Y",
-				"ADDITIONAL_PICT_PROP_".$arParams["IBLOCK_ID"] => $arParams['ADD_PICT_PROP'],
-				"LABEL_PROP_".$arParams["IBLOCK_ID"] => "-",
 				"HIDE_NOT_AVAILABLE" => $arParams["HIDE_NOT_AVAILABLE"],
 				"CONVERT_CURRENCY" => $arParams["CONVERT_CURRENCY"],
 				"CURRENCY_ID" => $arParams["CURRENCY_ID"],
@@ -385,11 +385,15 @@ if (ModuleManager::isModuleInstalled("sale"))
 				"SECTION_CODE" => "",
 				"SECTION_ELEMENT_ID" => "",
 				"SECTION_ELEMENT_CODE" => "",
+				"LABEL_PROP_".$arParams["IBLOCK_ID"] => $arParams['LABEL_PROP'],
 				"PROPERTY_CODE_".$arParams["IBLOCK_ID"] => $arParams["LIST_PROPERTY_CODE"],
+				"PROPERTY_CODE_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams["LIST_OFFERS_PROPERTY_CODE"],
 				"CART_PROPERTIES_".$arParams["IBLOCK_ID"] => $arParams["PRODUCT_PROPERTIES"],
-				"RCM_TYPE" => (isset($arParams['BIG_DATA_RCM_TYPE']) ? $arParams['BIG_DATA_RCM_TYPE'] : ''),
+				"CART_PROPERTIES_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams["OFFERS_CART_PROPERTIES"],
+				"ADDITIONAL_PICT_PROP_".$arParams["IBLOCK_ID"] => $arParams['ADD_PICT_PROP'],
+				"ADDITIONAL_PICT_PROP_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams['OFFER_ADD_PICT_PROP'],
 				"OFFER_TREE_PROPS_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams["OFFER_TREE_PROPS"],
-				"ADDITIONAL_PICT_PROP_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams['OFFER_ADD_PICT_PROP']
+				"RCM_TYPE" => (isset($arParams['BIG_DATA_RCM_TYPE']) ? $arParams['BIG_DATA_RCM_TYPE'] : '')
 			),
 			$component,
 			array("HIDE_ICONS" => "Y")

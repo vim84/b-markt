@@ -34,10 +34,7 @@ if(is_array($files))
 	}
 }
 
-//проверим права на доступ в этот файл
-if(!$USER->CanDoFileOperation('fm_rename_file', $arPath))
-	$strWarning .= GetMessage("ACCESS_DENIED");
-else if(!$io->FileExists($abs_path) && !$io->DirectoryExists($abs_path))
+if(!$io->FileExists($abs_path) && !$io->DirectoryExists($abs_path))
 	$strWarning .= GetMessage("FILEMAN_FILEORFOLDER_NOT_FOUND");
 else
 {
@@ -58,9 +55,7 @@ else
 			else
 			{
 				$pathto = Rel2Abs($path, $newfilename);
-				if(!$USER->CanDoFileOperation('fm_create_new_file',Array($site, $pathto)))
-					$strWarning .= GetMessage("FILEMAN_RENAME_ACCESS_ERROR")."\n";
-				elseif(!$USER->CanDoOperation('edit_php') && (substr(CFileman::GetFileName($file), 0, 1) == "." || substr(CFileman::GetFileName($pathto), 0, 1)=="." || (!HasScriptExtension($file) && HasScriptExtension($pathto)))) // if not admin and renaming from non PHP to PHP
+				if(!$USER->CanDoOperation('edit_php') && (substr(CFileman::GetFileName($file), 0, 1) == "." || substr(CFileman::GetFileName($pathto), 0, 1)=="." || (!HasScriptExtension($file) && HasScriptExtension($pathto)))) // if not admin and renaming from non PHP to PHP
 					$strWarning .= GetMessage("FILEMAN_RENAME_TOPHPFILE_ERROR")."\n";
 				elseif(!$USER->CanDoOperation('edit_php') 	&& HasScriptExtension($file) && !HasScriptExtension($pathto)) // if not admin and renaming from PHP to non PHP
 					$strWarning .= GetMessage("FILEMAN_RENAME_FROMPHPFILE_ERROR")."\n";
@@ -73,8 +68,10 @@ else
 						$strWarning .= $strWarningTmp;
 					else
 					{
-						if(!$io->FileExists($DOC_ROOT.$path."/".$file))
+						if(!$io->FileExists($DOC_ROOT.$path."/".$file) && !$io->DirectoryExists($DOC_ROOT.$path."/".$file))
 							$strWarning .= GetMessage("FILEMAN_RENAME_FILE")." \"".$path."/".$file."\" ".GetMessage("FILEMAN_RENAME_NOT_FOUND")."!\n";
+						elseif($io->FileExists($DOC_ROOT.$pathto) && $DOC_ROOT.rtrim($path,"/")."/".$file !== $DOC_ROOT.$pathto)
+							$strWarning .= GetMessage("FILEMAN_RENAME_FILE_EXISTS");
 						elseif(!$io->Rename($DOC_ROOT.$path."/".$file, $DOC_ROOT.$pathto))
 							$strWarning .= GetMessage("FILEMAN_RENAME_ERROR")." \"".$path."/".$file."\" ".GetMessage("FILEMAN_RENAME_IN")." \"".$pathto."\"!\n";
 						else
@@ -112,10 +109,19 @@ else
 	}
 }
 
-$APPLICATION->SetTitle(GetMessage("FILEMAN_RENAME_TITLE"));
+isset($file) ? $APPLICATION->SetTitle(GetMessage("FILEMAN_RENAME_TITLE2")." \"".$file."\"") : $APPLICATION->SetTitle(GetMessage("FILEMAN_RENAME_TITLE2"));
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
-?>
-<?ShowError($strWarning);?>
+
+CAdminMessage::ShowMessage($strWarning);
+
+$aTabs = array(
+array("DIV" => "edit1", "TAB" => GetMessage('FILEMAN_RENAME_TITLE2'), "ICON" => "fileman", "TITLE" => GetMessage('FILEMAN_RENAME_TITLE2')),
+);
+
+$tabControl = new CAdminTabControl("tabControl", $aTabs, true, true);
+$tabControl->Begin();
+$tabControl->BeginNextTab();?>
+
 <?if(count($arFiles)>0):?>
 <form action="fileman_rename.php?lang=<?=LANG?>&path=<?=UrlEncode($path)?>&site=<?=Urlencode($site)?>" method="POST">
 	<input type="hidden" name="logical" value="<?=htmlspecialcharsbx($logical)?>">
@@ -123,14 +129,16 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 	<input type="hidden" name="save" value="Y">
 	<?foreach($arFiles as $ind => $file):?>
 	<input type="hidden" name="files[<?echo htmlspecialcharsbx($ind)?>]" value="<?echo htmlspecialcharsbx($file)?>">
-	<input type="text" class="typeinput" name="filename[<?echo htmlspecialcharsbx($ind)?>]" value="<?echo htmlspecialcharsbx($file)?>" size="30" maxlength="255"><br>
+	<input type="text" class="typeinput" name="filename[<?echo htmlspecialcharsbx($ind)?>]" value="<?echo htmlspecialcharsbx($file)?>" size="30" maxlength="255">
 	<?endforeach?>
-	<p><input type="submit" class="button" name="saveb" value="<?echo GetMessage("FILEMAN_RENAME_SAVE")?>">&nbsp;<input class="button" type="reset" value="<?=GetMessage("FILEMAN_RENAME_RESET")?>" onclick="javascript:window.location='/bitrix/admin/fileman_admin.php?<?=$addUrl?>&site=<?=$site?>&path=<?=UrlEncode($path)?>'"></p>
-</form>
 <?else://if(count($arFiles)>0):?>
 	<font class="text"><?echo GetMessage("FILEMAN_RENAME_LIST_EMPTY")?></font>
 <?endif;//if(count($arFiles)>0):?>
-<br>
 <?
+$tabControl->EndTab();
+$tabControl->Buttons();?>
+<input type="submit" class="adm-btn-save" name="saveb" value="<?=GetMessage("admin_lib_edit_save")?>">&nbsp;<input class="button" type="reset" value="<?=GetMessage("admin_lib_edit_cancel")?>" onclick="javascript:window.location='/bitrix/admin/fileman_admin.php?<?=$addUrl?>&site=<?=UrlEncode($site)?>&path=<?=UrlEncode($path)?>'">
+</form>
+<?$tabControl->End();
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
 ?>

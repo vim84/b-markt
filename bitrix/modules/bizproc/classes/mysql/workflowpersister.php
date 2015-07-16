@@ -10,7 +10,13 @@ class CBPWorkflowPersister
 	{
 		$this->serviceInstanceId = uniqid("", true);
 		$this->ownershipDelta = 300;
-		$this->useGZipCompression = function_exists("gzcompress");
+		$useGZipCompressionOption = \Bitrix\Main\Config\Option::get("bizproc", "use_gzip_compression", "");
+		if ($useGZipCompressionOption === "Y")
+			$this->useGZipCompression = true;
+		elseif ($useGZipCompressionOption === "N")
+			$this->useGZipCompression = false;
+		else
+			$this->useGZipCompression = function_exists("gzcompress");
 	}
 
 	public static function GetPersister() 

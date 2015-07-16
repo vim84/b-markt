@@ -1,12 +1,16 @@
 <?
-/** @global CDatabase $DB */
-/** @global CUser $USER */
-/** @global CMain $APPLICATION */
+/** @global CDatabase $DB
+ * @global CUser $USER
+ * @global CMain $APPLICATION
+ */
+use Bitrix\Main;
+use Bitrix\Catalog;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/prolog.php");
 if (!($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_discount')))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
-CModule::IncludeModule("catalog");
+Main\Loader::includeModule('catalog');
 $bReadOnly = !$USER->CanDoOperation('catalog_discount');
 
 if ($ex = $APPLICATION->GetException())
@@ -18,15 +22,22 @@ if ($ex = $APPLICATION->GetException())
 }
 
 IncludeModuleLangFile(__FILE__);
-
-if (!empty($return_url) && strtolower(substr($return_url, strlen($APPLICATION->GetCurPage())))==strtolower($APPLICATION->GetCurPage()))
-	$return_url = "";
+$returnUrl = '';
+if (!empty($_REQUEST['return_url']))
+{
+	$currentUrl = $APPLICATION->GetCurPage();
+	if (strtolower(substr($_REQUEST['return_url'], strlen($currentUrl))) != strtolower($currentUrl))
+	{
+		$returnUrl = $_REQUEST['return_url'];
+	}
+	unset($currentUrl);
+}
 
 $aTabs = array(
 	array("DIV" => "edit1", "TAB" => GetMessage("CDEN_TAB_DISCOUNT"), "ICON" => "catalog", "TITLE" => GetMessage("CDEN_TAB_DISCOUNT_DESCR")),
 );
 
-$tabControl = new CAdminForm("tabControl", $aTabs);
+$tabControl = new CAdminForm('catalogCouponEdit', $aTabs);
 $tabControl->SetShowSettings(false);
 
 $errorMessage = '';
@@ -93,7 +104,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 $arDefaultValues = array(
 	'DISCOUNT_ID' => '',
 	'ACTIVE' => 'Y',
-	'ONE_TIME' => CCatalogDiscountCoupon::TYPE_ONE_TIME,
+	'ONE_TIME' => Catalog\DiscountCouponTable::TYPE_ONE_ROW,
 	'COUPON' => '',
 	'DATE_APPLY' => '',
 	'DESCRIPTION' => '',
@@ -172,7 +183,7 @@ while ($arDiscount = $rsDiscounts->Fetch())
 {
 	$arDiscountList[$arDiscount['ID']] = "[".$arDiscount["ID"]."] ".$arDiscount["NAME"]." (".$arDiscount["SITE_ID"].")";
 }
-$arTypeList = CCatalogDiscountCoupon::GetCoupontTypes(true);
+$arTypeList = Catalog\DiscountCouponTable::getCouponTypes(true);
 
 $tabControl->BeginPrologContent();
 
@@ -184,9 +195,9 @@ echo GetFilterHiddens("filter_");?>
 <input type="hidden" name="lang" value="<? echo LANGUAGE_ID; ?>">
 <input type="hidden" name="ID" value="<? echo $ID; ?>">
 <? echo bitrix_sessid_post();
-if (!empty($return_url))
+if (!empty($returnUrl))
 {
-	?><input type="hidden" name="return_url" value="<? echo htmlspecialcharsbx($return_url); ?>"><?
+	?><input type="hidden" name="return_url" value="<? echo htmlspecialcharsbx($returnUrl); ?>"><?
 }
 $tabControl->EndEpilogContent();
 $tabControl->Begin(array(

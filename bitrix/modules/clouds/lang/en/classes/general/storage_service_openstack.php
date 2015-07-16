@@ -6,4 +6,5 @@ $MESS["CLO_STORAGE_OPENSTACK_ERROR_GET_TOKEN"] = "Authorization error. Please ch
 $MESS["CLO_STORAGE_OPENSTACK_EDIT_USER"] = "User name (API user)";
 $MESS["CLO_STORAGE_OPENSTACK_EDIT_KEY"] = "Access key (API key)";
 $MESS["CLO_STORAGE_OPENSTACK_EDIT_HOST"] = "Server name (API host)";
+$MESS["CLO_STORAGE_OPENSTACK_FORCE_HTTP"] = "Always use HTTP";
 ?>

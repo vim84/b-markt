@@ -5,6 +5,8 @@ class CAllIBlock
 {
 	public $LAST_ERROR = "";
 	protected static $disabledCacheTag = array();
+	protected static $enableClearTagCache = 0;
+
 	public static function ShowPanel($IBLOCK_ID=0, $ELEMENT_ID=0, $SECTION_ID="", $type="news", $bGetIcons=false, $componentName="", $arLabels=array())
 	{
 		/** @global CMain $APPLICATION */
@@ -1177,6 +1179,9 @@ class CAllIBlock
 		$DB->DDL("DROP SEQUENCE sq_b_iblock_element_prop_m".$ID, true, $err_mess.__LINE__);
 
 		CIBlock::CleanCache($ID);
+
+		foreach(GetModuleEvents("iblock", "OnAfterIBlockDelete", true) as $arEvent)
+			ExecuteModuleEventEx($arEvent, array($ID));
 
 		if(defined("BX_COMP_MANAGED_CACHE"))
 			$CACHE_MANAGER->ClearByTag("iblock_id_".$ID);
@@ -2576,8 +2581,6 @@ REQ
 	{
 		/** @global CDatabase $DB */
 		global $DB;
-		static $arSectionCache = array();
-		static $arSectionPathCache = array();
 
 		if($server_name)
 		{
@@ -2639,42 +2642,25 @@ REQ
 			$arReplace[] = urlencode(isset($arr["~CODE"])? $arr["~CODE"]: $arr["CODE"]);
 			#Deal with symbol codes
 			$SECTION_ID = intval($arr["IBLOCK_SECTION_ID"]);
+
 			$SECTION_CODE = "";
 			if(
 				$SECTION_ID > 0
 				&& strpos($url, "#SECTION_CODE#") !== false
 			)
 			{
-				if (!array_key_exists($SECTION_ID, $arSectionCache))
-				{
-					$arSectionCache[$SECTION_ID] = "";
-					$res = $DB->Query("SELECT IBLOCK_ID, CODE FROM b_iblock_section WHERE ID = ".$SECTION_ID);
-					while ($a = $res->Fetch())
-					{
-						$arSectionCache[$SECTION_ID] = urlencode($a["CODE"]);
-					}
-				}
-				$SECTION_CODE = $arSectionCache[$SECTION_ID];
+				$SECTION_CODE = CIBlockSection::getSectionCode($SECTION_ID);
 			}
+
 			$SECTION_CODE_PATH = "";
 			if(
 				$SECTION_ID > 0
 				&& strpos($url, "#SECTION_CODE_PATH#") !== false
 			)
 			{
-				if (!array_key_exists($SECTION_ID, $arSectionPathCache))
-				{
-					$arSectionPathCache[$SECTION_ID] = "";
-					$res = CIBlockSection::GetNavChain(0, $SECTION_ID, array("ID", "CODE"));
-					while ($a = $res->Fetch())
-					{
-						$arSectionPathCache[$SECTION_ID] .= urlencode($a["CODE"])."/";
-					}
-					$arSectionPathCache[$SECTION_ID] = rtrim($arSectionPathCache[$SECTION_ID], "/");
-
-				}
-				$SECTION_CODE_PATH = $arSectionPathCache[$SECTION_ID];
+				$SECTION_CODE_PATH = CIBlockSection::getSectionCodePath($SECTION_ID);
 			}
+
 			$arReplace[] = $SECTION_ID > 0? $SECTION_ID: "";
 			$arReplace[] = $SECTION_CODE;
 			$arReplace[] = $SECTION_CODE_PATH;
@@ -2688,18 +2674,7 @@ REQ
 				&& strpos($url, "#SECTION_CODE_PATH#") !== false
 			)
 			{
-				if (!array_key_exists($SECTION_ID, $arSectionPathCache))
-				{
-					$arSectionPathCache[$SECTION_ID] = "";
-					$res = CIBlockSection::GetNavChain(0, $SECTION_ID, array("ID", "IBLOCK_SECTION_ID", "CODE"));
-					while ($a = $res->Fetch())
-					{
-						$arSectionPathCache[$SECTION_ID] .= urlencode($a["CODE"])."/";
-					}
-					$arSectionPathCache[$SECTION_ID] = rtrim($arSectionPathCache[$SECTION_ID], "/");
-
-				}
-				$SECTION_CODE_PATH = $arSectionPathCache[$SECTION_ID];
+				$SECTION_CODE_PATH = CIBlockSection::getSectionCodePath($SECTION_ID);
 			}
 			$arReplace[] = "";
 			$arReplace[] = "";
@@ -3736,17 +3711,46 @@ REQ
 
 	public static function disableTagCache($iblock_id)
 	{
-		$iblock_id = intval($iblock_id);
-		self::$disabledCacheTag[$iblock_id] = $iblock_id;
+		$iblock_id = (int)$iblock_id;
+		if ($iblock_id > 0)
+			self::$disabledCacheTag[$iblock_id] = $iblock_id;
+	}
+
+	public static function enableTagCache($iblock_id)
+	{
+		$iblock_id = (int)$iblock_id;
+		if (isset(self::$disabledCacheTag[$iblock_id]))
+			unset(self::$disabledCacheTag[$iblock_id]);
+	}
+
+	public static function clearIblockTagCache($iblock_id)
+	{
+		global $CACHE_MANAGER;
+		$iblock_id = (int)$iblock_id;
+		if (defined("BX_COMP_MANAGED_CACHE") && $iblock_id > 0 && self::isEnabledClearTagCache())
+			$CACHE_MANAGER->ClearByTag('iblock_id_'.$iblock_id);
 	}
 
 	public  static function registerWithTagCache($iblock_id)
 	{
 		global $CACHE_MANAGER;
-		$iblock_id = intval($iblock_id);
-		if (!isset(self::$disabledCacheTag[$iblock_id]))
-		{
+		$iblock_id = (int)$iblock_id;
+		if ($iblock_id > 0 && !isset(self::$disabledCacheTag[$iblock_id]))
 			$CACHE_MANAGER->RegisterTag("iblock_id_".$iblock_id);
-		}
+	}
+
+	public static function enableClearTagCache()
+	{
+		self::$enableClearTagCache++;
+	}
+
+	public static function disableClearTagCache()
+	{
+		self::$enableClearTagCache--;
+	}
+
+	public static function isEnabledClearTagCache()
+	{
+		return (self::$enableClearTagCache >= 0);
 	}
 }

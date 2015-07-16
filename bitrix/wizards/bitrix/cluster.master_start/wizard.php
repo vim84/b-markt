@@ -178,6 +178,8 @@ class Step3 extends CBaseWizardStep
 //Datamove
 class Step4 extends CBaseWizardStep
 {
+	protected $location = '';
+
 	function InitStep()
 	{
 		parent::InitStep();
@@ -193,25 +195,32 @@ class Step4 extends CBaseWizardStep
 		$wizard =& $this->GetWizard();
 		$path = $wizard->package->path;
 
-		CJSCore::Init(array("ajax"));
-		$APPLICATION->AddHeadScript($path.'/js/import.js');
+		if ($this->location)
+		{
+			$this->content = '<script>top.window.location = \''.CUtil::JSEscape($this->location).'\';</script>';
+		}
+		else
+		{
+			CJSCore::Init(array("ajax"));
+			$APPLICATION->AddHeadScript($path.'/js/import.js');
 
-		$this->content = '';
-		$this->content .= '<div style="padding: 20px;">';
-		$this->content .= '<div id="output">'.GetMessage("CLUWIZ_INIT").'<br /></div>';
-		$this->content .= '</div>';
-		$this->content .= '
-			<script type="text/javascript">
-				var nextButtonID = "'.$wizard->GetNextButtonID().'";
-				var formID = "'.$wizard->GetFormName().'";
-				var LANG = \''.LANG.'\';
-				var node_id = "'.CUtil::JSEscape($this->arNode["ID"]).'";
-				var path = "'.CUtil::JSEscape($path).'";
-				var sessid = "'.bitrix_sessid().'";
-				BX.ready(DisableButton);
-				BX.ready(MoveTables);
-			</script>
-		';
+			$this->content = '';
+			$this->content .= '<div style="padding: 20px;">';
+			$this->content .= '<div id="output">'.GetMessage("CLUWIZ_INIT").'<br /></div>';
+			$this->content .= '</div>';
+			$this->content .= '
+				<script type="text/javascript">
+					var nextButtonID = "'.$wizard->GetNextButtonID().'";
+					var formID = "'.$wizard->GetFormName().'";
+					var LANG = \''.LANG.'\';
+					var node_id = "'.CUtil::JSEscape($this->arNode["ID"]).'";
+					var path = "'.CUtil::JSEscape($path).'";
+					var sessid = "'.bitrix_sessid().'";
+					BX.ready(DisableButton);
+					BX.ready(MoveTables);
+				</script>
+			';
+		}
 	}
 
 	function OnPostForm()
@@ -221,11 +230,7 @@ class Step4 extends CBaseWizardStep
 
 		CClusterSlave::SetOnLine($this->arNode["ID"], 1);
 		$this->OpenSite();
-		echo '
-		<script>
-			top.window.location = \'/bitrix/admin/cluster_slave_list.php?lang='.LANGUAGE_ID.'&group_id='.$group_id.'\';
-		</script>
-		';
+		$this->location = '/bitrix/admin/cluster_slave_list.php?lang='.LANGUAGE_ID.'&group_id='.$group_id;
 	}
 }
 

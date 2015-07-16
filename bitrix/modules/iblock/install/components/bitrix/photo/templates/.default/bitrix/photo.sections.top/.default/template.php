@@ -33,11 +33,25 @@ $this->setFrameMode(true);
 						&nbsp;
 						<?if($arResult["USER_HAVE_ACCESS"]):?>
 							<?if(is_array($arItem["PICTURE"])):?>
-								<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><img border="0" src="<?=$arItem["PICTURE"]["SRC"]?>" width="<?=$arItem["PICTURE"]["WIDTH"]?>" height="<?=$arItem["PICTURE"]["HEIGHT"]?>" alt="<?=$arItem["NAME"]?>" title="<?=$arItem["NAME"]?>" /></a><br />
+								<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><img
+										border="0"
+										src="<?=$arItem["PICTURE"]["SRC"]?>"
+										width="<?=$arItem["PICTURE"]["WIDTH"]?>"
+										height="<?=$arItem["PICTURE"]["HEIGHT"]?>"
+										alt="<?=$arItem["PICTURE"]["ALT"]?>"
+										title="<?=$arItem["PICTURE"]["TITLE"]?>"
+										/></a><br />
 							<?endif?>
 						<?else:?>
 							<?if(is_array($arItem["PICTURE"])):?>
-								<img border="0" src="<?=$arItem["PICTURE"]["SRC"]?>" width="<?=$arItem["PICTURE"]["WIDTH"]?>" height="<?=$arItem["PICTURE"]["HEIGHT"]?>" alt="<?=$arItem["NAME"]?>" title="<?=$arItem["NAME"]?>" /><br />
+								<img
+									border="0"
+									src="<?=$arItem["PICTURE"]["SRC"]?>"
+									width="<?=$arItem["PICTURE"]["WIDTH"]?>"
+									height="<?=$arItem["PICTURE"]["HEIGHT"]?>"
+									alt="<?=$arItem["PICTURE"]["ALT"]?>"
+									title="<?=$arItem["PICTURE"]["TITLE"]?>"
+									/><br />
 							<?endif?>
 						<?endif?>
 					</td>

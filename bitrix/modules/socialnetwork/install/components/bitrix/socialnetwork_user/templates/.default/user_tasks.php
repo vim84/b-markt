@@ -49,7 +49,8 @@ if (CSocNetFeatures::IsActiveFeature(SONET_ENTITY_USER, $arResult["VARIABLES"]["
 				"CACHE_TIME" => $arParams["CACHE_TIME"],
 				"USE_THUMBNAIL_LIST" => "N",
 				"INLINE" => "Y",
-				'HIDE_OWNER_IN_TITLE' => $arParams['HIDE_OWNER_IN_TITLE']
+				'HIDE_OWNER_IN_TITLE' => $arParams['HIDE_OWNER_IN_TITLE'],
+				"PREORDER" => array('STATUS_COMPLETE' => 'asc')
 			),
 			$component,
 			array("HIDE_ICONS" => "Y")

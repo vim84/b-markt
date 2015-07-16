@@ -57,6 +57,7 @@ class CCalendarEvent
 		$getUF = $Params['getUserfields'] !== false;
 		$checkPermissions = $Params['checkPermissions'] !== false;
 		$bCache = CCalendar::CacheTime() > 0;
+		$bCache = false;
 		$Params['setDefaultLimit'] = $Params['setDefaultLimit'] === true;
 		$userId = isset($Params['userId']) ? intVal($Params['userId']) : CCalendar::GetCurUserId();
 
@@ -546,7 +547,7 @@ class CCalendarEvent
 				CCalendar::SetUserDepartment($attendee["USER_ID"], (empty($attendee['UF_DEPARTMENT']) ? array() : unserialize($attendee['UF_DEPARTMENT'])));
 				$attendee['DISPLAY_NAME'] = CCalendar::GetUserName($attendee);
 				$attendee['URL'] = CCalendar::GetUserUrl($attendee["USER_ID"]);
-				$attendee['AVATAR'] = CCalendar::GetUserAvatar($attendee);
+				$attendee['AVATAR'] = CCalendar::GetUserAvatarSrc($attendee);
 				$arAttendees[$attendee['EVENT_ID']][] = $attendee;
 			}
 		}
@@ -640,11 +641,15 @@ class CCalendarEvent
 			$y = date("Y", $fromTS);
 			$toTS = mktime($hour, $min, $sec + $length, $m, $d, $y);
 
-			if (($rrule['COUNT'] > 0 && $count >= $rrule['COUNT']) || (!$rrule['COUNT'] && $fromTS >= $limitToTS))
+			if (
+				(!$fromTS || $fromTS < $evFromTS - CCalendar::GetDayLen()) || // Emergensy exit (mantis: 56981)
+				($rrule['COUNT'] > 0 && $count >= $rrule['COUNT']) ||
+				(!$rrule['COUNT'] && $fromTS >= $limitToTS) ||
+				($instanceCount && $dispCount >= $instanceCount)
+			)
+			{
 				break;
-
-			if($instanceCount && $dispCount >= $instanceCount)
-				break;
+			}
 
 			if ($rrule['FREQ'] == 'WEEKLY')
 			{
@@ -2271,8 +2276,19 @@ class CCalendarEvent
 		if (CModule::IncludeModule('intranet') && $event['CAL_TYPE'] == 'user' && $settings['dep_manager_sub'])
 			$bManager = in_array($userId, CCalendar::GetUserManagers($event['OWNER_ID'], true));
 
-		if ($event['CAL_TYPE'] == 'user' && $event['IS_MEETING'] && $event['OWNER_ID'] != $userId && $bAttendee)
-			$sectId = CCalendar::GetMeetingSection($userId);
+		if ($event['CAL_TYPE'] == 'user' && $event['IS_MEETING'] && $event['OWNER_ID'] != $userId)
+		{
+			if ($bAttendee)
+			{
+				$sectId = CCalendar::GetMeetingSection($userId);
+			}
+			elseif (isset($event['USER_MEETING']['ATTENDEE_ID']) && $event['USER_MEETING']['ATTENDEE_ID'] !== $userId)
+			{
+				$sectId = CCalendar::GetMeetingSection($event['USER_MEETING']['ATTENDEE_ID']);
+				$event['SECT_ID'] = $sectId;
+				$event['OWNER_ID'] = $event['USER_MEETING']['ATTENDEE_ID'];
+			}
+		}
 
 		if ($private || (!CCalendarSect::CanDo('calendar_view_full', $sectId, $userId) && !$bManager && !$bAttendee))
 		{
@@ -2299,8 +2315,9 @@ class CCalendarEvent
 			$event['~IS_MEETING'] = $event['IS_MEETING'];
 
 			// Clear information about
-			unset($event['DESCRIPTION'], $event['IS_MEETING'],$event['MEETING_HOST'],$event['MEETING'],$event['LOCATION'],$event['REMIND'],$event['USER_MEETING'],$event['~ATTENDEES']);
+			unset($event['DESCRIPTION'], $event['IS_MEETING'],$event['MEETING_HOST'],$event['MEETING'],$event['LOCATION'],$event['REMIND'],$event['USER_MEETING'],$event['~ATTENDEES'],$event['ATTENDEES_CODES']);
 		}
+
 		return $event;
 	}
 
@@ -2551,12 +2568,10 @@ class CCalendarEvent
 		);
 		if ($Event && is_array($Event[0]))
 		{
-			// Event partly accessible
-			if (!isset($Event[0]['DESCRIPTION'], $Event[0]['IS_MEETING'], $Event[0]['LOCATION']))
-				return false;
-			return true;
+			// Event is not partly accessible - so it was not cleaned before by ApplyAccessRestrictions
+			if (isset($Event[0]['DESCRIPTION']) || isset($Event[0]['IS_MEETING']) || isset($Event[0]['LOCATION']))
+				return true;
 		}
-
 		return false;
 	}
 }

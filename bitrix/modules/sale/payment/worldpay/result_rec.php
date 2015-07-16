@@ -4,25 +4,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_GET["server_responce"]) && $
 	$bCorrect = True;
 
 	if ($bCorrect && !($arOrder = CSaleOrder::GetByID(IntVal($_POST["cartId"]))))
-	{
 		$bCorrect = False;
-	}
 
 	if ($bCorrect)
 	{
 		CSalePaySystemAction::InitParamArrays($arOrder, $arOrder["ID"]);
 		$strCallbackPassword = CSalePaySystemAction::GetParamValue("CALLBACK_PASSWORD");
 
-		if (strlen($strCallbackPassword) > 0 && $_POST["callbackPW"] != $strCallbackPassword)
-		{
+		if (strlen($strCallbackPassword) <= 0 || $_POST["callbackPW"] != $strCallbackPassword)
 			$bCorrect = False;
-		}
 	}
 
 	if ($bCorrect && isset($_POST["testMode"]) && IntVal($_POST["testMode"]) > 0)
-	{
 		$bCorrect = False;
-	}
 
 	if ($bCorrect)
 	{

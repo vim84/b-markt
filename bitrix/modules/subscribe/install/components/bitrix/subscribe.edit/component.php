@@ -77,7 +77,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && !empty($_REQUEST["PostAction"]) && ch
 		else
 			$bDoSubscribe = false;
 	}
-	elseif(!empty($_REQUEST["NEW_LOGIN"]))
+	elseif($bAllowRegister && !empty($_REQUEST["NEW_LOGIN"]))
 	{
 		//new user
 		$res = $USER->Register($_REQUEST["NEW_LOGIN"], "", "", $_REQUEST["NEW_PASSWORD"], $_REQUEST["CONFIRM_PASSWORD"], $_REQUEST["EMAIL"], false, $_REQUEST["captcha_word"], $_REQUEST["captcha_sid"]);

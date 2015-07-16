@@ -95,15 +95,16 @@ function stemming_ru($word, $flags = 0)
 	$word=str_replace("Ё", "Е", $word);
 	//Exceptions
 	static $STEMMING_RU_EX = array(
-		"БЕЗЕ"=>true,
-		"БЫЛЬ"=>true,
-		"МЕНЮ"=>true,
-		"ГРАНАТ"=>true,
-		"ГРАНИТ"=>true,
-		"ТЕРМИНАЛ"=>true,
-		"ИЛИ"=>true,
-		"РУКАВ"=>true,
-		"ПРИЕМ"=>true,
+		"БЕЗЕ"=>"БЕЗЕ",
+		"БЫЛЬ"=>"БЫЛЬ",
+		"МЕНЮ"=>"МЕНЮ",
+		"ГРАНАТ"=>"ГРАНАТ",
+		"ГРАНИТ"=>"ГРАНИТ",
+		"ТЕРМИНАЛ"=>"ТЕРМИНАЛ",
+		"ИЛИ"=>"ИЛИ",
+		"РУКАВ"=>"РУКАВ",
+		"ПРИЕМ"=>"ПРИЕМ",
+		"ОХРАНА"=>"ОХРАН",
 	);
 	if(isset($STEMMING_RU_EX[$word]))
 		return $word;
@@ -119,6 +120,7 @@ function stemming_ru($word, $flags = 0)
 				stemming_ru($word),
 			);
 		}
+		$found = array();
 		if(preg_match("/(ОВ|ЕВ)(А|У|ЫМ|Е)$/", $word, $found))
 		{
 			return array(
@@ -148,7 +150,8 @@ function stemming_ru($word, $flags = 0)
 
 	if(preg_match($STEMMING_RU_PERFECTIVE_GERUND, $rv, $found))
 	{
-		switch($found[0]) {
+		switch($found[0])
+		{
 			case "АВ":
 			case "АВШИ":
 			case "АВШИСЬ":

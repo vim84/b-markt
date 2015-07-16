@@ -86,6 +86,13 @@ class LocationTable extends NameEntity
 					'=this.LOCATION_ID' => 'ref.ID'
 				)
 			),
+
+			'CNT' => array(
+				'data_type' => 'integer',
+				'expression' => array(
+					'count(*)'
+				)
+			),
 		);
 	}
 }

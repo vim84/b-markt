@@ -3,6 +3,7 @@
 if ($arParams['AJAX_POST'] == 'Y' && $arParams['ACTION'] == 'REPLY')
 {
 	$response = ob_get_clean();
+	$response = str_replace(array("\r\n", "\n", "\t"), "", $response);
 	$JSResult = array();
 	$FHParser = new CForumSimpleHTMLParser($response);
 

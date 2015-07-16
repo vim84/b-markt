@@ -36,6 +36,7 @@ $MESS["IBSEC_E_PROP_TABLE_TYPE"] = "Тип";
 $MESS["IBSEC_E_PROP_TABLE_SMART_FILTER"] = "Показать в умном фильтре";
 $MESS["IBSEC_E_PROP_TABLE_DISPLAY_TYPE"] = "Вид в умном фильтре";
 $MESS["IBSEC_E_PROP_TABLE_DISPLAY_EXPANDED"] = "Показать развёрнутым";
+$MESS["IBSEC_E_PROP_TABLE_FILTER_HINT"] = "Подсказка для посетителей";
 $MESS["IBSEC_E_PROP_TABLE_ACTION"] = "Действия";
 $MESS["IBSEC_E_PROP_SELECT_CHOOSE"] = "<Выбрать>";
 $MESS["IBSEC_E_PROP_SELECT_CREATE"] = "[Создать]";

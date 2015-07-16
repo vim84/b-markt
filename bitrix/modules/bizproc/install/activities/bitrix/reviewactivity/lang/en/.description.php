@@ -5,4 +5,5 @@ $MESS["BPAR_DESCR_RC"] = "Persons Read";
 $MESS["BPAR_DESCR_TC"] = "Persons To Read";
 $MESS["BPAR_DESCR_TA1"] = "Auto Examination";
 $MESS["BPAA_DESCR_CM"] = "Comment";
+$MESS["BPAR_DESCR_LR"] = "Last read by";
 ?>

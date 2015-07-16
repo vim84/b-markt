@@ -14,10 +14,10 @@ function JCEditorOpener(arParams)
 	this.jsOptions = arParams.data.split('||');
 	this.arParams = arParams;
 
-	var obButton = document.createElement('BUTTON');
+	var obButton = document.createElement('INPUT');
+    obButton.type = "button";
+    obButton.value = this.jsOptions[1];
 	this.arParams.oCont.appendChild(obButton);
-	
-	obButton.innerHTML = this.jsOptions[1];
 	
 	obButton.onclick = BX.delegate(this.btnClick, this);
 	this.saveData = BX.delegate(this.__saveData, this);

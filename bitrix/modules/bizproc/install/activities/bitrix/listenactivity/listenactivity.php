@@ -34,7 +34,7 @@ class CBPListenActivity
 
 	public function Execute()
 	{
-		for ($i = 0; $i < count($this->arActivities); $i++)
+		for ($i = 0, $s = sizeof($this->arActivities); $i < $s; $i++)
 		{
 			$eventDriven = $this->arActivities[$i];
 
@@ -63,7 +63,7 @@ class CBPListenActivity
 		{
 			if ($this->isListenTrigerred)
 			{
-				for ($i = 0; $i < count($this->arActivities); $i++)
+				for ($i = 0, $s = sizeof($this->arActivities); $i < $s; $i++)
 				{
 					$activity = $this->arActivities[$i];
 					if ($activity->executionStatus == CBPActivityExecutionStatus::Executing)
@@ -79,13 +79,14 @@ class CBPListenActivity
 			}
 			else
 			{
-				for ($i = 0; $i < count($this->arActivities); $i++)
+				for ($i = 0, $s = sizeof($this->arActivities); $i < $s; $i++)
 				{
 					$activity = $this->arActivities[$i];
 					$eventHandler = $this->arActivityState[$i];
 
 					$activity2 = $activity->GetEventActivity();
-					$activity2->Unsubscribe($eventHandler);
+					if ($activity2)
+						$activity2->Unsubscribe($eventHandler);
 				}
 			}
 			$this->arActivityState = array();
@@ -153,7 +154,7 @@ final class CBPListenEventActivitySubscriber
 			$listenActivity->isListenTrigerred = true;
 
 			$arActivities = $listenActivity->CollectNestedActivities();
-			for ($i = 0; $i < count($arActivities); $i++)
+			for ($i = 0, $s = sizeof($arActivities); $i < $s; $i++)
 			{
 				$activity2 = $arActivities[$i];
 				$parentEventHandler = $listenActivity->arActivityState[$i];

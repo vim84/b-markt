@@ -35,6 +35,8 @@ if (check_bitrix_sessid())
 {
 	if ($_POST['PULL_GET_CHANNEL'] == 'Y')
 	{
+		session_write_close();
+
 		$arConfig = CPullChannel::GetConfig($userId, ($_POST['CACHE'] == 'Y'), $_POST['CACHE'] == 'Y'? false: true, ($_POST['MOBILE'] == 'Y'));
 		if (is_array($arConfig))
 		{

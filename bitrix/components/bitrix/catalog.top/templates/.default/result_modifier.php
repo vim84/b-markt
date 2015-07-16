@@ -414,6 +414,7 @@ if (!empty($arResult['ITEMS']))
 		)
 		{
 			CIBlockPriceTools::setRatioMinPrice($arItem, false);
+			$arItem['MIN_BASIS_PRICE'] = $arItem['MIN_PRICE'];
 		}
 
 		if (!empty($arItem['DISPLAY_PROPERTIES']))

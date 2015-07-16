@@ -4,7 +4,7 @@
 //**    MODIFICATION OF THIS FILE WILL ENTAIL SITE FAILURE            **/
 //**********************************************************************/
 if (!defined("UPDATE_SYSTEM_VERSION"))
-	define("UPDATE_SYSTEM_VERSION", "15.0.0");
+	define("UPDATE_SYSTEM_VERSION", "15.5.1");
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 define("HELP_FILE", "marketplace/sysupdate.php");
@@ -75,10 +75,19 @@ if (!$bLockUpdateSystemKernel)
 	{
 		if ($arUpdateList = CUpdateClient::GetUpdatesList($errorMessage, LANG, $stableVersionsOnly))
 		{
+			$refreshStep = intval($_REQUEST["refresh_step"]) + 1;
 			if (isset($arUpdateList["REPAIR"]))
 			{
-				CUpdateClient::Repair($arUpdateList["REPAIR"][0]["@"]["TYPE"], $stableVersionsOnly, LANG);
-				LocalRedirect("/bitrix/admin/update_system.php?refresh=Y&lang=".LANGUAGE_ID);
+				if ($refreshStep < 5)
+				{
+					CUpdateClient::Repair($arUpdateList["REPAIR"][0]["@"]["TYPE"], $stableVersionsOnly, LANG);
+					CUpdateClient::UnLock();
+					LocalRedirect("/bitrix/admin/update_system.php?refresh=Y&refresh_step=".$refreshStep."&lang=".LANGUAGE_ID);
+				}
+				else
+				{
+					$errorMessage .= "<br>".GetMessage("SUP_CANT_REPARE").". ";
+				}
 			}
 		}
 		else
@@ -95,6 +104,11 @@ if (!$bLockUpdateSystemKernel)
 else
 {
 	$errorMessage .= "<br>".GetMessage("SUP_CANT_CONTRUPDATE").". ";
+}
+
+if (extension_loaded('eaccelerator'))
+{
+	$errorMessage .= "<br>".GetMessage("SUP_CANT_EACCELERATOR").". ";
 }
 
 // MySQL 5.0.0, PHP 5.3.0
@@ -727,12 +741,12 @@ $tabControl->BeginNextTab();
 								document.getElementById('USER_PASSWORD_CONFIRM_error').innerHTML = '';
 								document.getElementById('USER_EMAIL_error').innerHTML = '';
 
-								if(document.getElementById('USER_NAME').value.length <= 3)
+								if(document.getElementById('USER_NAME').value.length <= 0)
 								{
 									document.getElementById('USER_NAME_error').innerHTML = erImg;
 									bEr = true;
 								}
-								if(document.getElementById('USER_LAST_NAME').value.length <= 3)
+								if(document.getElementById('USER_LAST_NAME').value.length <= 0)
 								{
 									document.getElementById('USER_LAST_NAME_error').innerHTML = erImg;
 									bEr = true;

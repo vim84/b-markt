@@ -345,7 +345,8 @@ else
 			<?
 		}
 
-		if ($arResult["bReload"]):
+		if ($arResult["bReload"])
+		{
 			?>
 			if (typeof __logOnReload === 'function')
 			{
@@ -355,10 +356,12 @@ else
 				});
 			}
 			<?
+		}
 		elseif (
 			$arParams["IS_CRM"] == "Y"
 			&& !$arResult["AJAX_CALL"]
-		):
+		)
+		{
 			?>
 			if (typeof __logOnReload === 'function')
 			{
@@ -367,7 +370,7 @@ else
 				});
 			}
 			<?
-		endif;
+		}
 
 		if (
 			!$arResult["AJAX_CALL"]
@@ -443,7 +446,19 @@ else
 				}
 			}
 		}
-	?>
+
+		if (
+			!$arResult["AJAX_CALL"]
+			&& !$arResult["bReload"]
+		)
+		{
+			?>
+			BX.ready(function() {
+				window.addEventListener("scroll", BX.LazyLoad.onScroll);
+			});
+			<?
+		}
+		?>
 
 		if (typeof arMoreButtonID == 'undefined')
 		{
@@ -467,6 +482,14 @@ else
 			{
 				BX('sonet_log_comment_text').onkeydown = BX.eventCancelBubble;
 			}
+
+			setTimeout(function() {
+				BX.LazyLoad.showImages(true);
+			}, 0);
+		});
+
+		BX.addCustomEvent("onFrameDataProcessed", function() {
+			BX.LazyLoad.showImages(true);
 		});
 
 	</script>
@@ -572,6 +595,7 @@ else
 						"AVATAR_SIZE_COMMON" => $arParams["AVATAR_SIZE_COMMON"],
 						"AVATAR_SIZE" => $arParams["AVATAR_SIZE"],
 						"AVATAR_SIZE_COMMENT" => $arParams["AVATAR_SIZE_COMMENT"],
+						"LAZYLOAD" => "Y"
 					);
 
 					if ($arParams["USE_FOLLOW"] == "Y")
@@ -617,7 +641,8 @@ else
 							"CURRENT_PAGE_DATE" => $arResult["CURRENT_PAGE_DATE"],
 							"EVENT" => array(
 								"IS_UNREAD" => $is_unread
-							)
+							),
+							"LAZYLOAD" => "Y"
 						)
 					);
 
@@ -890,7 +915,6 @@ else
 			"id" => "id".$arParams["FORM_ID"],
 			"documentCSS" => "body {color:#434343;}",
 			"ctrlEnterHandler" => "__logSubmitCommentForm".$arParams["UID"],
-			"jsObjName" => "oPostFormLHE_".$arParams["FORM_ID"],
 			"fontFamily" => "'Helvetica Neue', Helvetica, Arial, sans-serif",
 			"fontSize" => "12px",
 			"bInitByJS" => true,
@@ -931,7 +955,6 @@ else
 			window["UC"]["f<?=$arParams["FORM_ID"]?>"] = new FCForm({
 				entitiesId : <?=CUtil::PhpToJSObject($component->arResult["ENTITIES_XML_ID"])?>,
 				formId : '<?=$arParams["FORM_ID"]?>',
-				editorName : 'oPostFormLHE_<?=$arParams["FORM_ID"]?>',
 				editorId : 'id<?=$arParams["FORM_ID"]?>'});
 
 			window["UC"]["f<?=$arParams["FORM_ID"]?>"]["entitiesCorrespondence"] = <?=CUtil::PhpToJSObject($component->arResult["ENTITIES_CORRESPONDENCE"])?>;
@@ -973,6 +996,19 @@ else
 				{
 					window["UC"]["f<?=$arParams["FORM_ID"]?>"]["entitiesCorrespondence"][id + '-' + data.messageId[1]] = [responce_data.arComment.LOG_ID, responce_data.arComment.ID];
 				}
+			});
+
+			BX.addCustomEvent(window, 'OnUCBeforeCommentWillBePulled', function(arId, data)
+			{
+				if (typeof data.SONET_FULL_ID != 'undefined')
+				{
+					window["UC"]["f<?=$arParams["FORM_ID"]?>"]["entitiesCorrespondence"][arId.join('-')] = [data.SONET_FULL_ID[0], data.SONET_FULL_ID[1]];
+				}
+			});
+			
+			BX.addCustomEvent(window, 'OnUCFeedChanged', function(data)
+			{
+				BX.LazyLoad.showImages(true);			
 			});
 
 			window["SLEC"] = {

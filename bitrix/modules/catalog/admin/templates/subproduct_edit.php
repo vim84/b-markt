@@ -1,7 +1,21 @@
 <?
+/** @global CUser $USER */
+use Bitrix\Currency;
+
 if ($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_price'))
 {
 	IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/catalog/templates/product_edit.php');
+
+	$currencyList = array();
+	foreach (Currency\CurrencyManager::getCurrencyList() as $currency => $currencyName)
+	{
+		$currencyList[$currency] = array(
+			'CURRENCY' => $currency,
+			'FULL_NAME' => htmlspecialcharsex($currencyName),
+			'FULL_NAME_JS' => CUtil::JSEscape(htmlspecialcharsbx($currencyName))
+		);
+	}
+	unset($currency, $currencyName);
 
 	$IBLOCK_ID = intval($IBLOCK_ID);
 	if ($IBLOCK_ID <= 0)
@@ -670,14 +684,14 @@ $str_CAT_VAT_INCLUDED = $bVarsFromForm ? $SUBCAT_VAT_INCLUDED : $arBaseProduct['
 			if ($bVarsFromForm)
 				$str_CAT_BASE_CURRENCY = $SUBCAT_BASE_CURRENCY;
 
-			$db_curr = CCurrency::GetList(($by1="sort"), ($order1="asc"));
 			?>
 			<select id="SUBCAT_BASE_CURRENCY" name="SUBCAT_BASE_CURRENCY" <?if ($bReadOnly) echo "disabled readonly" ?> OnChange="ChangeSubBaseCurrency()">
 				<?
-				while ($curr = $db_curr->Fetch())
+				foreach ($currencyList as &$currency)
 				{
-					?><option value="<?echo $curr["CURRENCY"] ?>"<?if ($curr["CURRENCY"]==$str_CAT_BASE_CURRENCY) echo " selected"?>><?echo $curr["CURRENCY"]?> (<?echo htmlspecialcharsbx($curr["FULL_NAME"])?>)</option><?
+					?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["FULL_NAME"]; ?></option><?
 				}
+				unset($currency);
 				?>
 			</select>
 		</td>
@@ -777,7 +791,7 @@ SetSubFieldsStyle('subcatalog_vat_table');
 				</td>
 				<td valign="top" align="center">
 					<?
-					echo CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"], $str_CAT_CURRENCY, GetMessage("VAL_BASE"), false, "ChangeSubCurrency(".$arCatalogGroup["ID"].")", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"].'" ')
+					echo CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"], $str_CAT_CURRENCY, GetMessage("VAL_BASE"), true, "ChangeSubCurrency(".$arCatalogGroup["ID"].")", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"].'" ')
 					?>
 					<script type="text/javascript">
 						ChangeSubExtra(<?echo $arCatalogGroup["ID"] ?>);
@@ -922,14 +936,13 @@ function CloneSubBasePriceGroup()
 	var oCell = oRow.insertCell(-1);
 	oCell.valign = "top";
 	oCell.align = "center";
-	var str = '';
-	<?$dbCurrencyList = CCurrency::GetList(($by1="sort"), ($order1="asc"));?>
-	str = '<select id="SUBCAT_BASE_CURRENCY_'+cnt+'" name="SUBCAT_BASE_CURRENCY_'+cnt+'" <?if ($bReadOnly) echo "disabled readonly" ?> OnChange="ChangeSubBaseCurrencyEx(this)">';
+	var str = '<select id="SUBCAT_BASE_CURRENCY_'+cnt+'" name="SUBCAT_BASE_CURRENCY_'+cnt+'" <?if ($bReadOnly) echo "disabled readonly" ?> OnChange="ChangeSubBaseCurrencyEx(this)">';
 	<?
-	while ($arCurrencyList = $dbCurrencyList->Fetch())
+	foreach ($currencyList as &$currency)
 	{
-		?>str += '<option value="<?echo $arCurrencyList["CURRENCY"] ?>"><?echo $arCurrencyList["CURRENCY"]?> (<?echo CUtil::JSEscape(htmlspecialcharsbx($arCurrencyList["FULL_NAME"]))?>)</option>';<?
+		?>str += '<option value="<?echo $currency["CURRENCY"] ?>"><?echo $currency["FULL_NAME_JS"]; ?></option>';<?
 	}
+	unset($currency);
 	?>
 	str += '</select>';
 	oCell.innerHTML = str;
@@ -1000,15 +1013,14 @@ function CloneSubOtherPriceGroup(ind)
 	var oCell = oRow.insertCell(-1);
 	oCell.valign = "top";
 	oCell.align = "center";
-	var str = '';
-	<?$dbCurrencyList = CCurrency::GetList(($by1="sort"), ($order1="asc"));?>
-	str += '<select id="SUBCAT_CURRENCY_'+ind+'_'+cnt+'" name="SUBCAT_CURRENCY_'+ind+'_'+cnt+'" OnChange="ChangeSubCurrencyEx(this)" <?if ($bReadOnly) echo "disabled readonly" ?>>';
+	var str = '<select id="SUBCAT_CURRENCY_'+ind+'_'+cnt+'" name="SUBCAT_CURRENCY_'+ind+'_'+cnt+'" OnChange="ChangeSubCurrencyEx(this)" <?if ($bReadOnly) echo "disabled readonly" ?>>';
 	str += '<option value=""><?= GetMessage("VAL_BASE") ?></option>';
 	<?
-	while ($arCurrencyList = $dbCurrencyList->Fetch())
+	foreach ($currencyList as &$currency)
 	{
-		?>str += '<option value="<?echo $arCurrencyList["CURRENCY"] ?>"><?echo $arCurrencyList["CURRENCY"]?></option>';<?
+		?>str += '<option value="<?echo $currency["CURRENCY"] ?>"><?echo $currency["FULL_NAME_JS"]; ?></option>';<?
 	}
+	unset($currency);
 	?>
 	str += '</select>';
 	oCell.innerHTML = str;
@@ -1367,13 +1379,13 @@ function HideNotice()
 										<input type="text" <?if ($bReadOnly) echo "disabled readonly" ?> id="SUBCAT_BASE_PRICE_<?= $ind ?>" name="SUBCAT_BASE_PRICE_<?= $ind ?>" value="<?echo htmlspecialcharsbx($str_CAT_BASE_PRICE) ?>" size="15" OnBlur="ChangeSubBasePriceEx(this)">
 									</td>
 									<td valign="top" align="center">
-										<?$db_curr = CCurrency::GetList(($by1="sort"), ($order1="asc"));?>
 										<select id="SUBCAT_BASE_CURRENCY_<?= $ind ?>" name="SUBCAT_BASE_CURRENCY_<?= $ind ?>" <?if ($bReadOnly) echo "disabled readonly" ?> OnChange="ChangeSubBaseCurrencyEx(this)">
 											<?
-											while ($curr = $db_curr->Fetch())
+											foreach ($currencyList as &$currency)
 											{
-												?><option value="<?echo $curr["CURRENCY"] ?>"<?if ($curr["CURRENCY"]==$str_CAT_BASE_CURRENCY) echo " selected"?>><?echo $curr["CURRENCY"]?> (<?echo htmlspecialcharsbx($curr["FULL_NAME"])?>)</option><?
+												?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["FULL_NAME"];?></option><?
 											}
+											unset($currency);
 											?>
 										</select>
 									</td>
@@ -1407,13 +1419,13 @@ function HideNotice()
 											<input type="text" <?if ($bReadOnly) echo "disabled readonly" ?> id="SUBCAT_BASE_PRICE_<?= $ind ?>" name="SUBCAT_BASE_PRICE_<?= $ind ?>" value="<?echo htmlspecialcharsbx($str_CAT_BASE_PRICE) ?>" size="15" OnBlur="ChangeSubBasePriceEx(this)">
 										</td>
 										<td valign="top" align="center">
-											<?$db_curr = CCurrency::GetList(($by1="sort"), ($order1="asc"));?>
 											<select id="SUBCAT_BASE_CURRENCY_<?= $ind ?>" name="SUBCAT_BASE_CURRENCY_<?= $ind ?>" <?if ($bReadOnly) echo "disabled readonly" ?> OnChange="ChangeSubBaseCurrencyEx(this)">
 												<?
-												while ($curr = $db_curr->Fetch())
+												foreach ($currencyList as &$currency)
 												{
-													?><option value="<?echo $curr["CURRENCY"] ?>"<?if ($curr["CURRENCY"]==$str_CAT_BASE_CURRENCY) echo " selected"?>><?echo $curr["CURRENCY"]?> (<?echo htmlspecialcharsbx($curr["FULL_NAME"])?>)</option><?
+													?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["FULL_NAME"];?></option><?
 												}
+												unset($currency);
 												?>
 											</select>
 										</td>
@@ -1436,13 +1448,13 @@ function HideNotice()
 										<input type="text" <?if ($bReadOnly) echo "disabled readonly" ?> id="SUBCAT_BASE_PRICE_<?= $ind ?>" name="SUBCAT_BASE_PRICE_<?= $ind ?>" value="" size="15" OnBlur="ChangeSubBasePriceEx(this)">
 									</td>
 									<td valign="top" align="center">
-										<?$db_curr = CCurrency::GetList(($by1="sort"), ($order1="asc"));?>
 										<select id="SUBCAT_BASE_CURRENCY_<?= $ind ?>" name="SUBCAT_BASE_CURRENCY_<?= $ind ?>" <?if ($bReadOnly) echo "disabled readonly" ?> OnChange="ChangeSubBaseCurrencyEx(this)">
 											<?
-											while ($curr = $db_curr->Fetch())
+											foreach ($currencyList as &$currency)
 											{
-												?><option value="<?echo $curr["CURRENCY"] ?>"><?echo $curr["CURRENCY"]?> (<?echo htmlspecialcharsbx($curr["FULL_NAME"])?>)</option><?
+												?><option value="<? echo $currency["CURRENCY"]; ?>"><? echo $currency["FULL_NAME"];?></option><?
 											}
+											unset($currency);
 											?>
 										</select>
 									</td>
@@ -1558,7 +1570,7 @@ function HideNotice()
 									</td>
 									<td valign="top" align="center">
 
-											<?= CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind, $str_CAT_CURRENCY, GetMessage("VAL_BASE"), false, "ChangeSubCurrencyEx(this)", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind.'" ') ?>
+											<?= CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind, $str_CAT_CURRENCY, GetMessage("VAL_BASE"), true, "ChangeSubCurrencyEx(this)", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind.'" ') ?>
 											<script type="text/javascript">
 												jsUtils.addEvent(window, 'load', function() {ChangeSubExtraEx(BX('SUBCAT_EXTRA_<?= $arCatalogGroup["ID"] ?>_<?= $ind ?>'));});
 											</script>
@@ -1604,7 +1616,7 @@ function HideNotice()
 										</td>
 										<td valign="top" align="center">
 
-												<?= CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind, $str_CAT_CURRENCY, GetMessage("VAL_BASE"), false, "ChangeSubCurrencyEx(this)", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind.'" ') ?>
+												<?= CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind, $str_CAT_CURRENCY, GetMessage("VAL_BASE"), true, "ChangeSubCurrencyEx(this)", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind.'" ') ?>
 												<script type="text/javascript">
 													jsUtils.addEvent(window, 'load', function () {ChangeSubExtraEx(BX('SUBCAT_EXTRA_<?= $arCatalogGroup["ID"] ?>_<?= $ind ?>'));});
 												</script>
@@ -1638,7 +1650,7 @@ function HideNotice()
 									</td>
 									<td valign="top" align="center">
 
-											<?= CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind, "", GetMessage("VAL_BASE"), false, "ChangeSubCurrencyEx(this)", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind.'" ') ?>
+											<?= CCurrency::SelectBox("SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind, "", GetMessage("VAL_BASE"), true, "ChangeSubCurrencyEx(this)", (($bReadOnly) ? "disabled readonly" : "").' id="'."SUBCAT_CURRENCY_".$arCatalogGroup["ID"]."_".$ind.'" ') ?>
 
 									</td>
 								</tr>

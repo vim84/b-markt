@@ -127,7 +127,7 @@ $APPLICATION->IncludeComponent('bitrix:map.yandex.system', '', array(
 ), false, array('HIDE_ICONS' => 'Y'));
 ?>
 </div><div class="bx-yandex-map-address-search" id="bx_yandex_map_address_search" style="visibility: hidden; ">
-	<?echo GetMessage('MYMV_SET_ADDRESS_SEARCH')?>: <input type="text" name="address" value="" style="width: 380px;" onkeypress="jsYandexCESearch.setTypingStarted(this)" autocomplete="off" />
+	<?echo GetMessage('MYMV_SET_ADDRESS_SEARCH')?>: <input type="text" name="address" value="" style="width: 380px;" onkeyup="jsYandexCESearch.setTypingStarted(this)" autocomplete="off" />
 </div><div class="bx-yandex-map-controls" id="bx_yandex_map_controls" style="margin-left: 510px; visibility: hidden;">
 	<div class="bx-yandex-map-controls-group">
 		<b><?echo GetMessage('MYMV_SET_START_POS')?></b><br />
@@ -156,7 +156,7 @@ $APPLICATION->IncludeComponent('bitrix:map.yandex.system', '', array(
 <?
 $obJSPopup->StartButtons();
 ?>
-<input type="submit" value="<?echo GetMessage('MYMV_SET_SUBMIT')?>" onclick="return jsYandexCE.__saveChanges();"/>
+<input type="submit" value="<?echo GetMessage('MYMV_SET_SUBMIT')?>" onclick="return jsYandexCE.__saveChanges();" class="adm-btn-save"/>
 <?
 $obJSPopup->ShowStandardButtons(array('cancel'));
 $obJSPopup->EndButtons();

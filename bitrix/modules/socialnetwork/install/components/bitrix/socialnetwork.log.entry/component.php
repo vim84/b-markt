@@ -28,7 +28,7 @@ if (
 if (empty($arParams["LOG_PROPERTY"]))
 {
 	$arParams["LOG_PROPERTY"] = array("UF_SONET_LOG_FILE");
-	if (IsModuleInstalled("webdav"))
+	if (IsModuleInstalled("webdav")  || IsModuleInstalled("disk"))
 	{
 		$arParams["LOG_PROPERTY"][] = "UF_SONET_LOG_DOC";
 	}
@@ -37,7 +37,7 @@ if (empty($arParams["LOG_PROPERTY"]))
 if (empty($arParams["COMMENT_PROPERTY"]))
 {
 	$arParams["COMMENT_PROPERTY"] = array("UF_SONET_COM_FILE");
-	if (IsModuleInstalled("webdav"))
+	if (IsModuleInstalled("webdav") || IsModuleInstalled("disk"))
 		$arParams["COMMENT_PROPERTY"][] = "UF_SONET_COM_DOC";
 }
 

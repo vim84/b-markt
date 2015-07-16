@@ -320,6 +320,7 @@ if (!$bVarsFromForm && ($mode == "edit" || $mode=="reply"))
 	if ($mode == "reply")
 	{
 		$arResult["POST_VALUES"]["POST_SUBJ"] = GetMessage("PM_REPLY").$arResult["POST_VALUES"]["POST_SUBJ"];
+		$arResult["POST_VALUES"]["~POST_MESSAGE"] = "[QUOTE]".$arResult["POST_VALUES"]["~POST_MESSAGE"]."[/QUOTE]";
 		$arResult["POST_VALUES"]["POST_MESSAGE"] = "[QUOTE]".$arResult["POST_VALUES"]["POST_MESSAGE"]."[/QUOTE]";
 		$arResult["POST_VALUES"]["USER_ID"] = $arResult["POST_VALUES"]["AUTHOR_ID"];
 		$arResult["POST_VALUES"]["USER_LOGIN"] = htmlspecialcharsEx(GetUserName($arResult["POST_VALUES"]["USER_ID"], $arParams["NAME_TEMPLATE"]));
@@ -328,6 +329,7 @@ if (!$bVarsFromForm && ($mode == "edit" || $mode=="reply"))
 elseif ($bVarsFromForm)
 {
 	$arResult["POST_VALUES"]["POST_SUBJ"] = htmlspecialcharsEx($_REQUEST["POST_SUBJ"]);
+	$arResult["POST_VALUES"]["~POST_MESSAGE"] = $_REQUEST["POST_MESSAGE"];
 	$arResult["POST_VALUES"]["POST_MESSAGE"] = htmlspecialcharsEx($_REQUEST["POST_MESSAGE"]);
 	$arResult["POST_VALUES"]["USER_ID"] = htmlspecialcharsEx($_REQUEST["USER_ID"]);
 	$arResult["POST_VALUES"]["USE_SMILES"] = ($_POST["USE_SMILES"] != "Y" ? "Y" : "N");

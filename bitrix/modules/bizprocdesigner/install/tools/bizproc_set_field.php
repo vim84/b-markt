@@ -29,4 +29,5 @@ if (is_array($vp))
 	$vp = implode(", ", $vp);
 
 echo CUtil::PhpToJSObject(array($v, $vp));
-?>
+
+require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");

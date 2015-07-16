@@ -14,6 +14,7 @@ use Bitrix\Main\Loader;
 
 $arParams["ELEMENT_ID"] = intval($arParams["ELEMENT_ID"]);
 $arParams['ELEMENT_CODE'] = ($arParams["ELEMENT_ID"] > 0 ? '' : trim($arParams['ELEMENT_CODE']));
+$arParams['SHOW_DEACTIVATED'] = (isset($arParams['SHOW_DEACTIVATED']) && $arParams['SHOW_DEACTIVATED'] == 'Y' ? 'Y' : 'N');
 
 $arParams['CACHE_GROUPS'] = (isset($arParams['CACHE_GROUPS']) && $arParams['CACHE_GROUPS'] == 'N' ? 'N' : 'Y');
 if (!isset($arParams["CACHE_TIME"]))
@@ -76,19 +77,23 @@ if ($this->StartResultCache(false, $additionalCache))
 	//Handle case when ELEMENT_CODE used
 	if($arParams["ELEMENT_ID"] <= 0)
 	{
+		$findFilter = array(
+			"IBLOCK_ID" => $arParams["IBLOCK_ID"],
+			"IBLOCK_LID" => SITE_ID,
+			"IBLOCK_ACTIVE" => "Y",
+			"ACTIVE_DATE" => "Y",
+			"CHECK_PERMISSIONS" => "Y",
+			"MIN_PERMISSION" => 'R'
+		);
+		if ($arParams["SHOW_DEACTIVATED"] !== "Y")
+			$findFilter["ACTIVE"] = "Y";
+
 		$arParams["ELEMENT_ID"] = CIBlockFindTools::GetElementID(
 			$arParams["ELEMENT_ID"],
 			$arParams["ELEMENT_CODE"],
 			false,
 			false,
-			array(
-				"IBLOCK_ID" => $arParams["IBLOCK_ID"],
-				"IBLOCK_LID" => SITE_ID,
-				"IBLOCK_ACTIVE" => "Y",
-				"ACTIVE_DATE" => "Y",
-				"ACTIVE" => "Y",
-				"CHECK_PERMISSIONS" => "Y",
-			)
+			$findFilter
 		);
 		$arParams["ELEMENT_ID"] = (int)$arParams["ELEMENT_ID"];
 	}
@@ -183,11 +188,7 @@ if ($this->StartResultCache(false, $additionalCache))
 		if (!isset($hlblocks[$prop['USER_TYPE_SETTINGS']['TABLE_NAME']]))
 		{
 			$hlblock = \Bitrix\Highloadblock\HighloadBlockTable::getList(
-				array(
-					"filter" => array(
-						'TABLE_NAME' => $prop['USER_TYPE_SETTINGS']['TABLE_NAME']
-					)
-				)
+				array('filter' => array('=TABLE_NAME' => $prop['USER_TYPE_SETTINGS']['TABLE_NAME']))
 			)->fetch();
 
 			$hlblocks[$prop['USER_TYPE_SETTINGS']['TABLE_NAME']] = $hlblock;
@@ -253,7 +254,7 @@ if ($this->StartResultCache(false, $additionalCache))
 		if($arResult['ID'] > 0 && $params['VALUES'] !== false)
 		{
 			$arFilter['filter'] = array(
-				'UF_XML_ID' => $params['VALUES']
+				'=UF_XML_ID' => $params['VALUES']
 			);
 		}
 

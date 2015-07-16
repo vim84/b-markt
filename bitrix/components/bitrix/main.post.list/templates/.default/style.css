@@ -86,6 +86,37 @@
 .feed-com-block .feed-post-text-more-but:before {
 	background-color: #f5f7f8;
 }
+.feed-com-block.feed-com-block-pointer {
+	-webkit-animation: feed-com-block-point-message 2s linear 1;
+	animation: feed-com-block-point-message 2s linear 1;
+}
+@-webkit-keyframes feed-com-block-point-message {
+	20%  { background-color: #fbf2c8; }
+	100% { background-color: inherit; }
+}
+
+@keyframes feed-com-block-point-message {
+	20%  { background-color: #fbf2c8; }
+	100% { background-color: inherit; }
+}
+.feed-com-block.feed-com-block-pointer-to-new {
+	-webkit-animation: feed-com-block-point-new-message 1s linear 1;
+	animation: feed-com-block-point-new-message 1s linear 1;
+}
+@-webkit-keyframes feed-com-block-point-new-message {
+	20%  { background-color: #fbf2c8; }
+	100% { background-color: #fffcee; }
+}
+
+@keyframes feed-com-block-point-new-message {
+	20%  { background-color: #fbf2c8; }
+	100% { background-color: #fffcee; }
+}
+.feed-com-block.feed-com-block-read {
+	background-color: transparent;
+	-webkit-transition: background-color 1s linear 1s;
+	transition: background-color 1s linear 1s;
+}
 
 .feed-com-block-new .feed-post-text-more-but:before {
 	background-color: #fffcee;
@@ -186,10 +217,6 @@
 
 .feed-com-text-inner-inner {
 	word-wrap: break-word;
-}
-
-.feed-com-text-inner-inner img {
-	max-width: 100%;
 }
 
 .feed-com-informers {
@@ -424,9 +451,6 @@ div.feed-com-avatar-Y { background : none; }
 {
 	.feed-com-writers-wrap {max-width: 134px;}
 }
-
-
-
 .feed-com-writers-pen {
 	background: url(images/feed-comm-pen.gif) no-repeat 0 0;
 	display: inline-block;

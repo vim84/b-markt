@@ -1891,10 +1891,6 @@ class CUpdateClientPartner
 			}
 			if (isset($arRes["DATA"]["#"]["CLIENT"]) && isset($arRes["DATA"]["#"]["CLIENT"][0]["@"]["DATE_TO_SOURCE"]))
 				COption::SetOptionString(US_BASE_MODULE, "~support_finish_date", $arRes["DATA"]["#"]["CLIENT"][0]["@"]["DATE_TO_SOURCE"]);
-			if (isset($arRes["DATA"]["#"]["CLIENT"]) && isset($arRes["DATA"]["#"]["CLIENT"][0]["@"]["MAX_SITES"]))
-				COption::SetOptionString("main", "PARAM_MAX_SITES", IntVal($arRes["DATA"]["#"]["CLIENT"][0]["@"]["MAX_SITES"]));
-			if (isset($arRes["DATA"]["#"]["CLIENT"]) && isset($arRes["DATA"]["#"]["CLIENT"][0]["@"]["MAX_USERS"]))
-				COption::SetOptionString("main", "PARAM_MAX_USERS", IntVal($arRes["DATA"]["#"]["CLIENT"][0]["@"]["MAX_USERS"]));
 		}
 
 		if (strlen($strError_tmp) > 0)

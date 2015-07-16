@@ -115,22 +115,11 @@ Menu = {
 					data:      postData,
 					onsuccess: function(result)
 					{
-						if(result && !result.ERROR)
-						{
-							//all ok
-						}
-						else if(result.ERROR)
-						{
-							app.alert({ text: 'ERROR: '+result.ERROR });
-						}
-						else
-						{
-							app.alert({ text: 'getToken: !result.'}); // develop
-						}
+						//TODO
 					},
 					onfailure: function()
 					{
-						app.alert({ text: 'getToken: onfailure.'}); // develop
+						//TODO
 					}
 				});
 			}

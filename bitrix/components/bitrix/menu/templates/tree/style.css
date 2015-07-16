@@ -6,7 +6,7 @@ div.menu-sitemap-tree
 div.menu-sitemap-tree ul
 {
 	list-style-type: none;
-	margin: 0; 
+	margin: 0;
 	padding: 0 1em 0 0;
 }
 
@@ -25,7 +25,7 @@ div.menu-sitemap-tree li
 
 div.menu-sitemap-tree li li
 {
-	margin: 0 0 -0.85em 0.5em; 
+	margin: 0 0 -0.85em 0.5em;
 	padding:0;
 }
 

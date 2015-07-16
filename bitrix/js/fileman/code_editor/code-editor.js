@@ -7,17 +7,12 @@
 		this.arConfig = arConfig;
 		this.MESS = MESS;
 		this.arSyntaxes = {};
-
 		this.pTA = BX(this.arConfig.textareaId);
 		if (!this.pTA || !BX.isNodeInDom(this.pTA))
 			return false;
-
 		this.saveSettings = !!arConfig.saveSettings;
-
 		this.highlightMode = !!arConfig.highlightMode && this.IsValidBrowser();
-
 		this.theme = arConfig.theme;
-
 		this.tabSize = 4;
 		this.undoDepth = 30;
 		this.timeout = 100;
@@ -3547,6 +3542,12 @@
 			}
 
 			taW = this.pTA.scrollWidth;
+			// Mantis: 48575
+			if (BX.browser.IsChrome())
+			{
+				taW += 18;
+			}
+
 			if (parseInt(this.pTA.style.width) < taW)
 			{
 				this.pTA.style.width = taW + "px";
@@ -3838,6 +3839,7 @@
 		},
 		match: function (pattern, consume, caseInsensitive)
 		{
+			var match;
 			if (typeof pattern == "string")
 			{
 				var cased = function (str)
@@ -3851,13 +3853,13 @@
 					return true;
 				}
 			}
-			else
+			else if (pattern !== null)
 			{
-				var match = this.string.slice(this.pos).match(pattern);
+				match = this.string.slice(this.pos).match(pattern);
 				if (match && consume !== false)
 					this.pos += match[0].length;
-				return match;
 			}
+			return match;
 		},
 		current: function ()
 		{
@@ -4871,7 +4873,6 @@
 				}
 				else if (ch == "&")
 				{
-					var bAtom;
 					if (stream.eat("#"))
 						bAtom = stream.eat("x") ? (stream.eatWhile(/[a-fA-F\d]/) && stream.eat(";")) : (stream.eatWhile(/[\d]/) && stream.eat(";"));
 					else
@@ -5088,7 +5089,9 @@
 				}
 
 				if (type == "endTag" || type == "selfcloseTag")
+				{
 					return pass();
+				}
 
 				setStyle = "error";
 				return cont(attributes);
@@ -5106,7 +5109,9 @@
 			function attvalue(type)
 			{
 				if (type == "string")
+				{
 					return cont(attvaluemaybe);
+				}
 				if (type == "word" && arTags.allowUnquoted)
 				{
 					setStyle = "string";

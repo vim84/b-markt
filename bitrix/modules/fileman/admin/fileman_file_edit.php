@@ -82,7 +82,7 @@ $arPath = Array($site, $path);
 if((strlen($new) > 0 &&
 !($USER->CanDoOperation('fileman_admin_files') &&
 $USER->CanDoFileOperation('fm_create_new_file',$arPath))) ||
-(strlen($new) < 0 &&
+(strlen($new) <= 0 &&
 (!$USER->CanDoOperation('fileman_edit_existent_files') ||
 !$USER->CanDoFileOperation('fm_edit_existent_file',$arPath) ||
 !$USER->CanDoFileOperation('fm_view_file',$arPath))))
@@ -100,6 +100,7 @@ else
 	{
 		$strWarning = GetMessage("FILEMAN_FILEEDIT_FILE_EXISTS")." ";
 		$bEdit = false;
+		?><script id="ajax-script-file-exists">top.strWarning = '<?= CUtil::JSEscape($strWarning)?>';</script><?
 		$bVarsFromForm = true;
 		$path = $io->CombinePath("/", $arParsedPath["PREV"]);
 		$arParsedPath = CFileMan::ParsePath($path, true, false, "", $logical == "Y");
@@ -159,7 +160,7 @@ if(strlen($strWarning)<=0)
 		$arTemplates = CFileman::GetFileTemplates(LANGUAGE_ID, array($site_template));
 		if(strlen($template)>0)
 		{
-			for ($i=0; $i<count($arTemplates); $i++)
+			for ($i = 0, $l = count($arTemplates); $i < $l; $i++)
 			{
 				if($arTemplates[$i]["file"] == $template)
 				{
@@ -291,7 +292,7 @@ if(strlen($strWarning)<=0)
 			if(isset($_POST['AJAX_APPLY']))
 			{
 				$APPLICATION->RestartBuffer();
-				?><script>top.strWarning = '<?= CUtil::JSEscape($strWarning)?>';</script><?
+				?><script id="ajax-script-apply">top.strWarning = '<?= CUtil::JSEscape($strWarning)?>';</script><?
 				die();
 			}
 
@@ -487,11 +488,11 @@ $context = new CAdminContextMenu($aMenu);
 $context->Show();
 ?>
 
-<form method="POST" action="<?= $APPLICATION->GetCurPage()?>?" name="ffilemanedit">
+<form method="POST" action="<?= $APPLICATION->GetCurPage().'?'.$addUrl."&amp;path=".UrlEncode($path).(strlen($new)>0? "&amp;new=Y":"")?>" name="ffilemanedit">
 <input type="hidden" name="logical" value="<?=htmlspecialcharsbx($logical)?>">
 <?= GetFilterHiddens("filter_");?>
 <input type="hidden" name="site" value="<?= htmlspecialcharsbx($site) ?>">
-<input type="hidden" name="path" value="<?= htmlspecialcharsbx($originalPath)?>">
+<input type="hidden" name="path" value="<?= htmlspecialcharsbx($path)?>">
 <input type="hidden" name="save" value="Y">
 <input type="hidden" name="lang" value="<?= LANG?>">
 <?=bitrix_sessid_post()?>
@@ -520,7 +521,7 @@ $tabControl->BeginNextTab();?>
 			<td width="30%"><?= GetMessage("FILEMAN_FILEEDIT_TEMPLATE")?></td>
 			<td width="70%">
 				<select name="template" onchange="window.location='/bitrix/admin/fileman_file_edit.php?lang=<?= LANG?>&site=<?=Urlencode($site)?>&path=<?= UrlEncode($path)?><? echo ($full_src=="Y" ? "&full_src=Y" : "")?>&new=y&template='+escape(this[this.selectedIndex].value)">
-					<?for($i=0; $i<count($arTemplates); $i++):?>
+					<?for($i = 0, $l = count($arTemplates); $i < $l; $i++):?>
 					<option value="<?= htmlspecialcharsbx($arTemplates[$i]["file"])?>"<?if($template==$arTemplates[$i]["file"])echo " selected"?>><?= htmlspecialcharsbx($arTemplates[$i]["name"])?></option>
 					<?endfor;?>
 				</select>
@@ -536,29 +537,52 @@ $tabControl->BeginNextTab();?>
 			<td><label for="bxfm_filename"><?= GetMessage("FILEMAN_FILEEDIT_NAME")?></label></td>
 			<td>
 				<?if (isset($filename2))
-					$filename = $filename2;?>
+					$filename = $filename2;
+				if(strpos($filename,'.') === false)
+					$filename .= ($USER->CanDoOperation('edit_php') || $limit_php_access) ? '.php' : '.html';
+				?>
 				<input type="text" name="filename" id="bxfm_filename" style="float: left;" size="50" maxlength="255" value="<?= htmlspecialcharsbx($filename)?>"></td>
 		</tr>
 		<tr><td></td><td style="padding: 0!important;">
 			<table id='jserror_name' style="visibility:hidden"><tr><td valign="top">
-			<IMG src="/bitrix/themes/.default/images/icon_warn.gif" title="<?=GetMessage("FILEMAN_NAME_ERROR");?>">
-			</td><td class="jserror">
-			<?=GetMessage("FILEMAN_NAME_ERROR");?>
-			</td></tr></table>
+			<IMG src="/bitrix/themes/.default/images/icon_warn.gif" title="<?=GetMessage("FILEMAN_NAME_ERR");?>">
+			</td><td id="jserror" class="jserror"></td></tr></table>
 			<script>
-			var oInput = BX('bxfm_filename');
-			var erTable = BX('jserror_name');
-			oInput.onkeypress = function()
+			var oInput = BX('bxfm_filename'),
+				erTable = BX('jserror_name'),
+				mess = BX('jserror'),
+				form = document.forms.ffilemanedit,
+				fNameError = '<?=GetMessage("FILEMAN_NAME_ERR");?>',
+				fNameEmpty = '<?=GetMessage("FILEMAN_NAME_EMPTY");?>';
+			oInput.oninput = function()
 			{
-				var _this = this;
+				var _this = this,
+					saveBut = BX.findChild(form, {tag: 'INPUT', attr: {'name': 'save', 'type':'submit'}}, true);
 				setTimeout(function()
 					{
 						var val = _this.value;
 						var new_val = val.replace(/[\\\/:*?\"\'<>|]/i, '');
 						if (val !== new_val)
+						{
 							erTable.style.visibility = 'visible';
+							mess.innerHTML = fNameError;
+							form.apply.disabled = true;
+							saveBut.disabled = true;
+						}
+						else if (val.trim().length <= 0)
+						{
+							erTable.style.visibility = 'visible';
+							mess.innerHTML = fNameEmpty;
+							form.apply.disabled = true;
+							saveBut.disabled = true;
+						}
 						else
+						{
 							erTable.style.visibility = 'hidden';
+							mess.innerHTML = '';
+							form.apply.disabled = false;
+							saveBut.disabled = false;
+						}
 					}, 1
 				);
 			}
@@ -701,8 +725,9 @@ $tabControl->BeginNextTab();?>
 						unset($arPropTypes_tmp);
 						unset($arAllPropFields_tmp);
 						unset($arDefProps);
-
-						for($i=0; $i<count($arAllPropFields); $i++)
+						$tagFindPath = $_SERVER["DOCUMENT_ROOT"].$path.'/_';
+						$documentSite = CSite::GetSiteByFullPath($tagFindPath);
+						for($i = 0, $l = count($arAllPropFields); $i < $l; $i++)
 						{
 							$arProp = $arAllPropFields[$i];
 							?>
@@ -721,7 +746,7 @@ $tabControl->BeginNextTab();?>
 									<?
 									$value_ = (isset($_POST["VALUE_$i"])) ? $_POST["VALUE_$i"] : $arProp["VALUE"];
 									if($arProp["CODE"] == $tag_prop_name && $search_exist):
-										echo InputTags("VALUE_".$i, $value_, array(), 'size="55"', "VALUE_".$i);
+										echo InputTags("VALUE_".$i, $value_, array($documentSite), 'size="55"', "VALUE_".$i);
 									else:?>
 										<input type="text" name="VALUE_<?=$i?>" id="VALUE_<?=$i?>" value="<?=htmlspecialcharsbx($value_);?>" size="60">
 									<?endif;
@@ -767,7 +792,7 @@ BX.ready(function() {
 		<?endif?>
 	<?endif?>
 		<tr><td colspan="2">
-			<textarea id="bx-filesrc" name="filesrc" rows="37" style="width:100%; overflow:auto;" wrap="OFF"><?= htmlspecialcharsbx($filesrc)?></textarea></td></tr>
+			<textarea id="bx-filesrc" name="filesrc" rows="37" style="width:100%; overflow:auto;" wrap="OFF"><?= htmlspecialcharsEx($filesrc)?></textarea></td></tr>
 
 <?
 $tabControl->EndTab();
@@ -813,12 +838,23 @@ function AjaxApply(e)
 		if (saveBut)
 			saveBut.disabled = false;
 
-		if (top.strWarning && top.strWarning != '')
-			alert(top.strWarning);
-
 		form.target = target;
 		if (applyInp)
 			BX.cleanNode(applyInp, true);
+
+		if (top.strWarning && top.strWarning.length > 0)
+		{
+			alert(top.strWarning);
+		}
+		else
+		{
+			var filename = BX('bxfm_filename');
+			if (filename)
+			{
+				document.location.href = '<?$APPLICATION->getCurPage()?>?<?=CUtil::JSEscape($addUrl."&site=".Urlencode($site)
+				."&path=".UrlEncode($path."/"))?>'+encodeURIComponent(filename.value)+'<?if($full_src=="Y") echo "&full_src=Y";?>';
+			}
+		}
 
 		BX.focus(BX('bx-filesrc'));
 	});

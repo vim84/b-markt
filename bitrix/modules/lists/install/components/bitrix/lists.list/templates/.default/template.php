@@ -2,6 +2,9 @@
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
 	die();
 
+if($arResult["PROCESSES"] && $arResult["USE_COMMENTS"])
+	\Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/bizproc/tools.js');
+
 $arToolbar = array();
 
 if($arResult["CAN_ADD_ELEMENT"])
@@ -39,11 +42,31 @@ if($arParams["CAN_EDIT"])
 		);
 	}
 
+	if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+	{
+		$text = GetMessage("CT_BLL_TOOLBAR_PROCESS");
+		$title = GetMessage("CT_BLL_TOOLBAR_PROCESS_TITLE");
+	}
+	else
+	{
+		$text = GetMessage("CT_BLL_TOOLBAR_LIST");
+		$title = GetMessage("CT_BLL_TOOLBAR_LIST_TITLE");
+	}
+
 	$arToolbar[] = array(
-		"TEXT"=>GetMessage("CT_BLL_TOOLBAR_LIST"),
-		"TITLE"=>GetMessage("CT_BLL_TOOLBAR_LIST_TITLE"),
+		"TEXT"=>$text,
+		"TITLE"=>$title,
 		"LINK"=>$arResult["LIST_EDIT_URL"],
 		"ICON"=>"btn-edit-list",
+	);
+
+	$arToolbar[] = array(
+		"TEXT" => GetMessage("CT_BLL_EXPORT_EXCEL"),
+		"TITLE" => GetMessage("CT_BLL_EXPORT_EXCEL_TITLE"),
+		"LINK" => CHTTP::urlAddParams((strpos($APPLICATION->GetCurPageParam(), "?") == false) ?
+			$arResult["EXPORT_EXCEL_URL"] : $arResult["EXPORT_EXCEL_URL"].substr($APPLICATION->GetCurPageParam(),
+			strpos($APPLICATION->GetCurPageParam(), "?")), array("ncc" => "y")),
+		"ICON" => "btn-list-excel",
 	);
 }
 
@@ -163,5 +186,5 @@ $APPLICATION->IncludeComponent(
 		"AJAX_OPTION_JUMP"=>"N",
 	),
 	$component, array("HIDE_ICONS" => "Y")
-);?>
-
+);
+?>

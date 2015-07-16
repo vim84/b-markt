@@ -1,6 +1,6 @@
 <?
-$MESS['IM_M_QUOTE_BLOCK'] = 'Цитата';
-$MESS['IM_M_LOAD_USER'] = 'Загрузка информации';
+$MESS["IM_M_QUOTE_BLOCK"] = "Цитата";
+$MESS["IM_M_LOAD_USER"] = "Загрузка информации";
 $MESS["IM_STATUS_ONLINE"] = "Онлайн";
 $MESS["IM_STATUS_OFFLINE"] = "Не в сети";
 $MESS["IM_STATUS_AWAY"] = "Отсутствую";

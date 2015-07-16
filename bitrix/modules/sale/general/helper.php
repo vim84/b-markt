@@ -172,6 +172,10 @@ class CSaleHelper
 
 			break;
 
+			case "CUSTOM":
+				$resultHtml .=  $arField["VALUE"];
+			break;
+
 			default:
 				$resultHtml .= '<input type="text"'.
 									'name="'.$name.'" '.
@@ -281,12 +285,12 @@ class CSaleHelper
 			if($siteId === false)
 				$siteId = SITE_ID;
 
-			$locId = COption::GetOptionInt('sale', 'location', '', $siteId);
+			$locId = COption::GetOptionString('sale', 'location', '', $siteId);
 			$locZip = COption::GetOptionString('sale', 'location_zip', '', $siteId);
 		}
 		else
 		{
-			$locId = COption::GetOptionInt('sale', 'location', '');
+			$locId = COption::GetOptionString('sale', 'location', '');
 			$locZip = COption::GetOptionString('sale', 'location_zip', '');
 
 			if(strlen($locId) <= 0)
@@ -297,10 +301,17 @@ class CSaleHelper
 
 				if($defSite)
 				{
-					$locId = COption::GetOptionInt('sale', 'location', '', $defSite);
+					$locId = COption::GetOptionString('sale', 'location', '', $defSite);
 					$locZip = COption::GetOptionString('sale', 'location_zip', '', $defSite);
 				}
 			}
+		}
+
+		if((string) $locId != '')
+		{
+			$location = CSaleLocation::GetByID($locId);
+			if(intval($location['ID']))
+				$locId = $location['ID'];
 		}
 
 		return array(
@@ -317,8 +328,8 @@ class CSaleHelper
 		{
 			$locParams = self::getShopLocationParams($siteId);
 
-			if(isset($locParams['ID']) && intval($locParams['ID']) > 0)
-				$shopLocationId[$siteId] = intval($locParams['ID']);
+			if(isset($locParams['ID']) && strlen($locParams['ID']) > 0)
+				$shopLocationId[$siteId] = $locParams['ID'];
 		}
 
 		return $shopLocationId[$siteId];
@@ -371,7 +382,7 @@ class CSaleHelper
 	*
 	* @param int $fileId - file id
 	* @param array $arSize - width and height for image thumbnail
-	* @param string $resultHTML - file info html
+	* @return string
 	*/
 	function getFileInfo($fileId, $arSize = array("WIDTH" => 90, "HEIGHT" => 90))
 	{

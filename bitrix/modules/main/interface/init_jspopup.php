@@ -3,6 +3,9 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 
 function JSPopupRedirectHandler(&$url, $skip_security_check)
 {
+	$a = new CAutoSave();
+	$a->Reset();
+
 	if(preg_match("#^/bitrix/admin/#", $url))
 	{
 		ob_end_clean();

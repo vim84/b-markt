@@ -2,8 +2,8 @@
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 
 $arComponentDescription = array(
-	"NAME" => GetMessage("IBLOCK_MAIN_PAGE_TEMPLATE_NAME"),
-	"DESCRIPTION" => GetMessage("IBLOCK_MAIN_PAGE_TEMPLATE_DESCRIPTION"),
+	"NAME" => GetMessage("T_IBLOCK_DESC_CR_LIST"),
+	"DESCRIPTION" => GetMessage("T_IBLOCK_DESC_CR_DESC"),
 	"ICON" => "/images/cat_all.gif",
 	"CACHE_PATH" => "Y",
 	"SORT" => 90,

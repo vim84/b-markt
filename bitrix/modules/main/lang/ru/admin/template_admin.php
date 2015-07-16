@@ -1,4 +1,5 @@
 <?
+$MESS["MAIN_T_ADMIN_TITLE_THEME"] = "Темы оформления";
 $MESS["MAIN_T_ADMIN_TITLE"] = "Шаблоны сайта";
 $MESS["MAIN_T_ADMIN_NAME"] = "Название";
 $MESS["MAIN_T_ADMIN_DESCRIPTION"] = "Описание";
@@ -15,8 +16,10 @@ $MESS["MAIN_T_EXPORT"] = "Экспортировать шаблон";
 $MESS["MAIN_T_DOWNLOAD"] = "Скачать";
 $MESS["PAGES"] = "Шаблоны";
 $MESS["MAIN_ADD_TEMPL"] = "Добавить шаблон";
+$MESS["MAIN_ADD_TEMPL_THEME"] = "Добавить тему";
 $MESS["MAIN_ADD_TEMPL_TITLE"] = "Добавить новый шаблон";
 $MESS["MAIN_LOAD"] = "Загрузить шаблон";
+$MESS["MAIN_LOAD_THEME"] = "Загрузить тему";
 $MESS["MAIN_ADMIN_LIST_EXPORT"] = "Скачать";
 $MESS["EXPORT_ERROR"] = "Ошибка экспорта";
 $MESS["MAIN_EDIT_TITLE"] = "Перейти к редактированию шаблона";

@@ -519,13 +519,13 @@
             {
                 BX.addClass(this.obBuyBtn, 'bx_bt_button');
                 BX.removeClass(this.obBuyBtn, 'bx_bt_button_type_2');
-                this.obBuyBtn.innerHTML = BX.message('MESS_BTN_BUY');
+                this.obBuyBtn.innerHTML = BX.message('CBD_MESS_BTN_BUY');
             }
             else
             {
                 BX.addClass(this.obBuyBtn, 'bx_bt_button_type_2');
                 BX.removeClass(this.obBuyBtn, 'bx_bt_button');
-                this.obBuyBtn.innerHTML = BX.message('MESS_NOT_AVAILABLE');
+                this.obBuyBtn.innerHTML = BX.message('CBD_MESS_NOT_AVAILABLE');
             }
             if (this.showQuantity)
             {
@@ -1196,6 +1196,13 @@
         }
         this.InitBasketUrl();
         this.FillBasketProps();
+
+        // check recommendation
+        if (this.product && this.product.id)
+        {
+            this.RememberRecommendation(this.obProduct, this.product.id);
+        }
+
 		BX.ajax({
 			method: 'POST',
 			dataType: 'json',
@@ -1204,67 +1211,64 @@
 			onsuccess: BX.delegate(this.BasketResult, this)
 		});
     };
-	
-	window.JCCatalogBigdataProducts.prototype.RememberRecommendation = function(obj, productId)
-	{
-		var rcmContainer = BX.findParent(obj, {'className':'bigdata_recommended_products_container'});
-		var rcmId = BX.findChild(rcmContainer, {'attr':{'name':'bigdata_recommendation_id'}}, true).value;
 
-		// save to RCM_PRODUCT_LOG
-		var plCookieName = BX.cookie_prefix+'_RCM_PRODUCT_LOG';
-		var plCookie = getCookie(plCookieName);
-		var itemFound = false;
+    window.JCCatalogBigdataProducts.prototype.RememberRecommendation = function(obj, productId)
+    {
+        var rcmContainer = BX.findParent(obj, {'className':'bigdata_recommended_products_items'});
+        var rcmId = BX.findChild(rcmContainer, {'attr':{'name':'bigdata_recommendation_id'}}, true).value;
 
-		var cItems = [];
+        // save to RCM_PRODUCT_LOG
+        var plCookieName = BX.cookie_prefix+'_RCM_PRODUCT_LOG';
+        var plCookie = getCookie(plCookieName);
+        var itemFound = false;
 
-		if (!plCookie)
-		{
-			plCookie = '';
-		}
-		else
-		{
-			cItems = plCookie.split('.');
-		}
+        var cItems = [],
+            cItem;
 
-		var i = cItems.length;
+        if (plCookie)
+        {
+            cItems = plCookie.split('.');
+        }
 
-		while (i--)
-		{
-			var cItem = cItems[i].split('-');
+        var i = cItems.length;
 
-			if (cItem[0] == productId)
-			{
-				// it's already in recommendations, update the date
-				cItem = cItems[i].split('-');
+        while (i--)
+        {
+            cItem = cItems[i].split('-');
 
-				// update rcmId and date
-				cItem[1] = rcmId;
-				cItem[2] = BX.current_server_time;
+            if (cItem[0] == productId)
+            {
+                // it's already in recommendations, update the date
+                cItem = cItems[i].split('-');
 
-				cItems[i] = cItem.join('-');
-				itemFound = true;
-			}
-			else
-			{
-				if ((BX.current_server_time - cItem[2]) > 3600*24)
-				{
-					cItems.splice(i, 1);
-				}
-			}
-		}
+                // update rcmId and date
+                cItem[1] = rcmId;
+                cItem[2] = BX.current_server_time;
 
-		if (!itemFound)
-		{
-			// add recommendation
-			cItems.push([productId, rcmId, BX.current_server_time].join('-'));
-		}
+                cItems[i] = cItem.join('-');
+                itemFound = true;
+            }
+            else
+            {
+                if ((BX.current_server_time - cItem[2]) > 3600*24*30)
+                {
+                    cItems.splice(i, 1);
+                }
+            }
+        }
 
-		// serialize
-		var plNewCookie = cItems.join('.');
+        if (!itemFound)
+        {
+            // add recommendation
+            cItems.push([productId, rcmId, BX.current_server_time].join('-'));
+        }
 
-		var cookieDate = new Date(new Date().getTime() + 1000*3600*24*365*10);
-		document.cookie=plCookieName+"="+plNewCookie+"; path=/; expires="+cookieDate.toUTCString()+"; domain="+BX.cookie_domain;
-	}
+        // serialize
+        var plNewCookie = cItems.join('.');
+
+        var cookieDate = new Date(new Date().getTime() + 1000*3600*24*365*10);
+        document.cookie=plCookieName+"="+plNewCookie+"; path=/; expires="+cookieDate.toUTCString()+"; domain="+BX.cookie_domain;
+    }
 
     window.JCCatalogBigdataProducts.prototype.Basket = function()
     {
@@ -1283,7 +1287,7 @@
                     this.obPopupWin.setTitleBar({
                         content: BX.create('div', {
                             style: { marginRight: '30px', whiteSpace: 'nowrap' },
-                            text: BX.message('TITLE_BASKET_PROPS')
+                            text: BX.message('CBD_TITLE_BASKET_PROPS')
                         })
                     });
                     if (BX(this.visual.BASKET_PROP_DIV))
@@ -1294,7 +1298,7 @@
                     this.obPopupWin.setButtons([
                         new BasketButton({
                             ownerClass: this.obProduct.parentNode.parentNode.parentNode.className,
-                            text: BX.message('BTN_MESSAGE_SEND_PROPS'),
+                            text: BX.message('CBD_BTN_MESSAGE_SEND_PROPS'),
                             events: {
                                 click: BX.delegate(this.SendToBasket, this)
                             }
@@ -1351,7 +1355,7 @@
             buttons = [
                 new BasketButton({
                     ownerClass: this.obProduct.parentNode.parentNode.parentNode.className,
-                    text: BX.message("BTN_MESSAGE_BASKET_REDIRECT"),
+                    text: BX.message("CBD_BTN_MESSAGE_BASKET_REDIRECT"),
                     events: {
                         click: BX.delegate(function(){
                             location.href = (!!this.basketData.basketUrl ? this.basketData.basketUrl : BX.message('BASKET_URL'));
@@ -1362,11 +1366,11 @@
         }
         else
         {
-            strContent = (!!arResult.MESSAGE ? arResult.MESSAGE : BX.message('BASKET_UNKNOWN_ERROR'));
+            strContent = (!!arResult.MESSAGE ? arResult.MESSAGE : BX.message('CBD_BASKET_UNKNOWN_ERROR'));
             buttons = [
                 new BasketButton({
                     ownerClass: this.obProduct.parentNode.parentNode.parentNode.className,
-                    text: BX.message('BTN_MESSAGE_CLOSE'),
+                    text: BX.message('CBD_BTN_MESSAGE_CLOSE'),
                     events: {
                         click: BX.delegate(this.obPopupWin.close, this.obPopupWin)
                     }
@@ -1377,7 +1381,7 @@
         this.obPopupWin.setTitleBar({
             content: BX.create('div', {
                 style: { marginRight: '30px', whiteSpace: 'nowrap' },
-                text: (successful ? BX.message('TITLE_SUCCESSFUL') : BX.message('TITLE_ERROR'))
+                text: (successful ? BX.message('CBD_TITLE_SUCCESSFUL') : BX.message('CBD_TITLE_ERROR'))
             })
         });
         this.obPopupWin.setContent(strContent);
@@ -1404,8 +1408,71 @@
 })(window);
 
 function getCookie(name) {
-	var matches = document.cookie.match(new RegExp(
-		"(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
-	));
-	return matches ? decodeURIComponent(matches[1]) : undefined;
+    var matches = document.cookie.match(new RegExp(
+        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+    return matches ? decodeURIComponent(matches[1]) : undefined;
+}
+
+function bx_rcm_recommendation_event_attaching(rcm_items_cont)
+{
+
+	var detailLinks = BX.findChildren(rcm_items_cont, {'className':'bx_rcm_view_link'}, true);
+
+	if (detailLinks)
+	{
+		for (i in detailLinks)
+		{
+			BX.bind(detailLinks[i], 'click', function(e){
+				window.JCCatalogBigdataProducts.prototype.RememberRecommendation(
+					BX(this),
+					BX(this).getAttribute('data-product-id')
+				);
+			});
+		}
+	}
+}
+
+function bx_rcm_get_from_cloud(injectId, rcmParameters, localAjaxData)
+{
+	var url = 'https://analytics.bitrix.info/crecoms/v1_0/recoms.php';
+	var data = BX.ajax.prepareData(rcmParameters);
+
+	if (data)
+	{
+		url += (url.indexOf('?') !== -1 ? "&" : "?") + data;
+		data = '';
+	}
+
+	var onready = function(response) {
+
+		if (!response.items)
+		{
+			response.items = [];
+		}
+		BX.ajax({
+			url: '/bitrix/components/bitrix/catalog.bigdata.products/ajax.php?'+BX.ajax.prepareData({'AJAX_ITEMS': response.items, 'RID': response.id}),
+			method: 'POST',
+			data: localAjaxData,
+			dataType: 'html',
+			processData: false,
+			start: true,
+			onsuccess: function (html) {
+				var ob = BX.processHTML(html);
+
+				// inject
+				BX(injectId).innerHTML = ob.HTML;
+				BX.ajax.processScripts(ob.SCRIPT);
+			}
+		});
+	};
+
+	BX.ajax({
+		'method': 'GET',
+		'dataType': 'json',
+		'url': url,
+		'timeout': 3,
+		'onsuccess': onready,
+		'onfailure': onready
+	});
 }

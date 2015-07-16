@@ -35,7 +35,7 @@ $MESS ['BPT_SM_APPROVE_DESC'] = "You have to approve or reject the document \"{=
 Author: {=Document:CREATED_BY_PRINTABLE}";
 $MESS ['BPT_SM_TASK1_TEXT'] = "You have to approve or reject the document \"{=Document:NAME}\".
 
-Proceed by opening the link: http://#HTTP_HOST##TASK_URL#
+Proceed by opening the link: #BASE_HREF##TASK_URL#
 
 Author: {=Document:CREATED_BY_PRINTABLE}";
 ?>

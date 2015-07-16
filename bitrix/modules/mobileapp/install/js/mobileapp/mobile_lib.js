@@ -60,28 +60,9 @@
 							app.enableSliderMenu(enabled);
 							break;
 						case this.state.RIGHT:
-							app.enableRight(enabled);
+							app.exec("enableRight", enabled);
 							break;
 						default ://to do nothing
-					}
-				}
-			},
-			Tables: {
-				items: {},
-				create: function (id, params)
-				{
-					if (id)
-					{
-						if (!this.items[id])
-						{
-							this.items[id] = new BXMobileApp.UI.Table(params);
-						}
-						else
-						{
-							this.items[id].params = BXMobileApp.TOOLS.merge(this.items[id].params, params)
-						}
-
-						return this.items[id];
 					}
 				}
 			},
@@ -103,8 +84,8 @@
 			},
 			DatePicker: {
 				params: {
-					format: "",
-					type: "datetime",//date|time|datetime
+					format: "DD.MM.YYYY",
+					type: "date",//date|time|datetime
 					callback: function ()
 					{
 					}
@@ -116,9 +97,20 @@
 				},
 				show: function ()
 				{
+					app.showDatePicker(this.params);
+
 				},
 				hide: function ()
 				{
+					app.hideDatePicker();
+				}
+			},
+			SelectPicker:{
+				show: function(params){
+					app.showSelectPicker(params);
+				},
+				hide: function(){
+					app.hideSelectPicker();
 				}
 			},
 			BarCodeScanner: {
@@ -246,7 +238,7 @@
 		}
 	};
 
-	BXMobileApp.UI.Element.prototype.getIdentifires = function ()
+	BXMobileApp.UI.Element.prototype.getIdentifiers = function ()
 	{
 		return {
 			id: this.id,
@@ -268,14 +260,14 @@
 	{
 		this.isShown = false;
 		app.exec("hide", {type: this.type, id: this.id});
-		//hide
 	};
 
 	BXMobileApp.UI.Element.prototype.destroy = function ()
 	{
-
+		//TODO destroy object
 	};
-//<----
+
+
 
 	/**
 	 * Button class
@@ -297,7 +289,7 @@
 
 	BXMobileApp.UI.Button.prototype.setBadge = function (number)
 	{
-		var params = this.getIdentifires();
+		var params = this.getIdentifiers();
 		params["badgeText"] = number;
 
 		app.updateButtonBadge(params);
@@ -305,11 +297,10 @@
 
 	BXMobileApp.UI.Button.prototype.remove = function ()
 	{
-		var params = this.getIdentifires();
+		var params = this.getIdentifiers();
 
 		app.removeButtons(params);
 	};
-
 
 	/**
 	 * Menu class
@@ -317,7 +308,7 @@
 	 * @param params
 	 * @constructor
 	 */
-	BXMobileApp.UI.Menu = function (id, params)
+	BXMobileApp.UI.Menu = function (params, id)
 	{
 		this.items = params.items;
 		this.type = BXMobileApp.UI.types.MENU;
@@ -381,13 +372,19 @@
 		}
 	};
 
-	BXMobileApp.UI.Table = function (table_id, params)
+	/**
+	 * ActionSheet class
+	 * @param id
+	 * @param params
+	 * @constructor
+	 */
+	BXMobileApp.UI.Table = function (params, id)
 	{
 		this.params = {
-			table_id: table_id,
-			url: "",
+			table_id: id,
+			url: params.url||"",
 			isroot: false,
-			table_settings: {
+			TABLE_SETTINGS: {
 				callback: function ()
 				{
 				},
@@ -403,9 +400,10 @@
 			}
 		};
 
+
 		this.params = BXMobileApp.TOOLS.merge(this.params, params);
 		this.params.type = BXMobileApp.UI.types.TABLE;
-		BXMobileApp.UI.Table.superclass.constructor.apply(this, [table_id, params]);
+		BXMobileApp.UI.Table.superclass.constructor.apply(this, [id, params]);
 	};
 
 	BXMobileApp.TOOLS.extend(BXMobileApp.UI.Table, BXMobileApp.UI.Element);
@@ -414,6 +412,22 @@
 	{
 		app.openBXTable(this.params);
 	};
+
+	BXMobileApp.UI.Table.prototype.useCache = function (cacheEnable)
+	{
+		this.params.TABLE_SETTINGS.cache = cacheEnable || false;
+	};
+
+	BXMobileApp.UI.Table.prototype.useAlphabet = function (useAlphabet)
+	{
+		this.params.TABLE_SETTINGS.alphabet_index = useAlphabet || false;
+	};
+
+	BXMobileApp.UI.Table.prototype.setModal = function (modal)
+	{
+		this.params.TABLE_SETTINGS.modal = modal || false;
+	};
+
 	BXMobileApp.UI.Table.prototype.clearCache = function ()
 	{
 		return this.exec("removeTableCache", {"table_id": this.id});
@@ -431,7 +445,7 @@
 		{
 			app.exec("checkOpenStatus", params);
 		},
-		reload: function (params)
+		reload: function ()
 		{
 			app.reload();
 		},
@@ -455,6 +469,9 @@
 		{
 			app.setPageID(id);
 		},
+		getTitle:function(){
+			return this.TopBar.title;
+		},
 		params: {
 			set: function (params)
 			{
@@ -465,7 +482,7 @@
 				var data = BX.localStorage.get('mobileReloadPageData');
 				if (data && data.url == location.pathname+location.search && params.callback)
 				{
-					BX.localStorage.remove('mobileReloadPageData')
+					BX.localStorage.remove('mobileReloadPageData');
 					params.callback(data.data);
 				}
 				else
@@ -492,14 +509,15 @@
 				buttons[id] =
 				{
 					name: buttonObject.name,
-					callback: buttonObject.callback
+					callback: buttonObject.callback,
+					type: buttonObject.type
 				};
 
 				app.addButtons(buttons);
 			},
 			addLeftButton: function (buttonObject)
 			{
-
+				//TODO
 			},
 			title: {
 				params: {
@@ -508,9 +526,14 @@
 					detailText: "",
 					callback: ""
 				},
+				timeout:0,
+				isAboutToShow:false,
 				show: function ()
 				{
-					app.titleAction("show")
+					this.isAboutToShow = (this.timeout > 0);
+
+					if(!this.isAboutToShow)
+						app.titleAction("show");
 				},
 				hide: function ()
 				{
@@ -519,22 +542,37 @@
 				setImage: function (imageUrl)
 				{
 					this.params.imageUrl = imageUrl;
-					app.titleAction("setParams", {imageUrl: imageUrl});
+					this.redraw();
 				},
 				setText: function (text)
 				{
 					this.params.text = text;
-					app.titleAction("setParams", {text: text});
+					this.redraw();
 				},
 				setDetailText: function (text)
 				{
 					this.params.detailText = text;
-					app.titleAction("setParams", {detailText: text});
+					this.redraw();
 				},
 				setCallback: function (callback)
 				{
 					this.params.callback = callback;
-					app.titleAction("setParams", {callback: callback});
+					this.redraw();
+				},
+				redraw:function()
+				{
+					if(this.timeout > 0)
+						clearTimeout(this.timeout);
+
+					this.timeout = setTimeout(BX.proxy(this._applyParams, this), 10);
+				},
+				_applyParams:function()
+				{
+					app.titleAction("setParams", this.params);
+					this.timeout = 0;
+
+					if(this.isAboutToShow)
+						this.show()
 				}
 			}
 		},
@@ -544,15 +582,17 @@
 			{
 				app.hideButtonPanel();
 			},
-			show: function ()
+			show: function (params)
 			{
-				app.showSlidingPanel();
+				app.showSlidingPanel(params);
 			},
 			addButton: function (buttonObject)
 			{
+				//TODO
 			},
 			removeButton: function (buttonId)
 			{
+				//TODO
 			}
 		},
 		Refresh: {
@@ -565,7 +605,8 @@
 				callback: false,
 				pulltext: "Pull to refresh",
 				downtext: "Release to refresh",
-				loadtext: "Loading..."
+				loadtext: "Loading...",
+				timeout: "60"
 			},
 			setParams: function (params)
 			{
@@ -574,6 +615,7 @@
 				this.params.loadtext = (params.loadText ? params.loadText : this.params.loadtext);
 				this.params.callback = (params.callback ? params.callback : this.params.callback);
 				this.params.enable = (typeof params.enabled == "boolean" ? params.enabled : this.params.enable);
+				this.params.timeout = (params.timeout ? params.timeout : this.params.timeout);
 				app.pullDown(this.params);
 			},
 			setEnabled: function (enabled)
@@ -592,44 +634,18 @@
 
 		},
 		BottomBar: {
+			buttons: {},
 			show: function ()
 			{
+				//TODO
 			},
 			hide: function ()
 			{
+				//TODO
 			},
-			buttons: {},
 			addButton: function (buttonObject)
 			{
-			}
-		},
-		Menus: {
-			items: {},
-			create: function (params)
-			{
-				if (params.id)
-				{
-					if (!this.items[params.id])
-					{
-						this.items[params.id] = new BXMobileApp.UI.Menu(params);
-					}
-					else
-					{
-						this.update(params.id, params);
-
-					}
-					return this.items[params.id];
-				}
-			},
-			get: function (menuId)
-			{
-				if (this.items[menuId])
-					return this.items[menuId];
-				return false;
-			},
-			update: function (menuId, params)
-			{
-				//TODO updateMenu
+				//TODO
 			}
 		},
 		LoadingScreen: {
@@ -720,6 +736,11 @@
 				this.params.useImageButton = !((typeof use == "boolean" && use === false));
 				app.textPanelAction("setParams", {useImageButton: this.params.useImageButton});
 			},
+			setAction: function (callback)
+			{
+				this.params.action = callback;
+				app.textPanelAction("setParams", {action: callback});
+			},
 			setText: function (text)
 			{
 				if (!this.isShown)
@@ -757,5 +778,7 @@
 
 	};
 })();
+
+
 
 

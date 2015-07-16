@@ -1,13 +1,24 @@
 if (!BXRL)
 {
 	var BXRL = {};
-	var BXRLW = null;
+}
+
+if (typeof bRatingLikeCommentsInited == 'undefined')
+{
+	var bRatingLikeCommentsInited = true;
+
+	BX.addCustomEvent("onPull-main", function(data)
+	{
+		if (data.command == 'rating_vote')
+		{
+			RatingLikeComments.LiveUpdate(data.params);
+		}
+	});
 }
 
 RatingLikeComments = function(likeId, entityTypeId, entityId, available)
 {	
 	this.enabled = true;
-	this.likeId = likeId;
 	this.entityTypeId = entityTypeId;
 	this.entityId = entityId;
 	this.available = (available == 'Y');
@@ -96,6 +107,7 @@ RatingLikeComments.Init = function(likeId)
 
 RatingLikeComments.Vote = function(likeId, voteAction)
 {
+	var BMAjaxWrapper = new MobileAjaxWrapper;
 	BMAjaxWrapper.Wrap({
 		'type': 'json',
 		'method': 'POST',
@@ -182,4 +194,27 @@ RatingLikeComments.List = function(likeId)
 	}
 
 	return false;
+}
+
+RatingLikeComments.LiveUpdate = function(params)
+{
+	if (params.USER_ID == BX.message('USER_ID'))
+	{
+		return false;
+	}
+
+	for(var i in BXRL)
+	{
+		if (
+			BXRL[i].entityTypeId == params.ENTITY_TYPE_ID
+			&& BXRL[i].entityId == params.ENTITY_ID
+		)
+		{
+			oMSL.onLogCommentRatingLike({
+				ratingId: i,
+				voteAction: (params.TYPE == 'ADD' ? 'plus' : 'cancel'),
+				userId: params.USER_ID
+			});
+		}
+	}
 }

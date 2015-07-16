@@ -1,21 +1,31 @@
 <?
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 
-$arResult['INITIAL_BUNDLES']['a'] = array(); // force PhpToJSObject to map this to {}, not to []
-foreach($arResult['PATH'] as $node)
+$arResult['PRECACHED_POOL_JSON'] = array('a' => array()); // force PhpToJSObject to map this to {}, not to []
+
+if(is_array($arResult['PRECACHED_POOL']))
 {
-	$fNode = array(
-		'DISPLAY' => $node['NAME'],
-		'VALUE' => intval($node['ID']),
-		'CODE' => $node['CODE'],
-		'IS_PARENT' => $node['CHILD_CNT'] > 0,
-		'TYPE_ID' => intval($node['TYPE_ID'])
-	);
+	foreach($arResult['PRECACHED_POOL'] as $levelId => $levelNodes)
+	{
+		if(is_array($levelNodes))
+		{
+			foreach($levelNodes as $nodeId => $node)
+			{
+				$fNode = array(
+					'DISPLAY' => $node['NAME'],
+					'VALUE' => intval($node['ID']),
+					'CODE' => $node['CODE'],
+					'IS_PARENT' => $node['CHILD_CNT'] > 0,
+					'TYPE_ID' => intval($node['TYPE_ID'])
+				);
 
-	if($node['IS_UNCHOOSABLE'])
-		$fNode['IS_UNCHOOSABLE'] = true;
+				if($node['IS_UNCHOOSABLE'])
+					$fNode['IS_UNCHOOSABLE'] = true;
 
-	$arResult['INITIAL_BUNDLES'][intval($node['PARENT_ID'])][] = $fNode;
+				$arResult['PRECACHED_POOL_JSON'][intval($levelId)][] = $fNode;
+			}
+		}
+	}
 }
 
 $arResult['RANDOM_TAG'] = rand(999, 99999);

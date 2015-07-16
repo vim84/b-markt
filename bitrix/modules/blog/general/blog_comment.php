@@ -671,20 +671,20 @@ class CAllBlogComment
 			}
 			else
 			{
-				$dbA = CAccess::GetUserCodes($userId);
-				while($arA = $dbA->Fetch())
+				$arCodes = CAccess::GetUserCodesArray($userId);
+				foreach($arCodes as $code)
 				{
-					if($arA["PROVIDER_ID"] == "intranet")
+					if (
+						preg_match('/^DR([0-9]+)/', $code, $match)
+						|| preg_match('/^D([0-9]+)/', $code, $match)
+						|| preg_match('/^IU([0-9]+)/', $code, $match)
+					)
 					{
-						$arEntities["DR"][$arA["ACCESS_CODE"]] = $arA["ACCESS_CODE"];
+						$arEntities["DR"][$code] = $code;
 					}
-					elseif($arA["PROVIDER_ID"] == "socnetgroup")
+					elseif (preg_match('/^SG([0-9]+)_([A-Z])/', $code, $match))
 					{
-						$g = substr($arA["ACCESS_CODE"], 2);
-						$gId = IntVal($g);
-						$gR = substr($g, strpos($g, "_")+1);
-
-						$arEntities["SG"][$gId][$gR] = $gR;
+						$arEntities["SG"][$match[1]][$match[2]] = $match[2];
 					}
 				}
 				$BLOG_POST["UAC_CACHE_".$userId] = $arEntities;

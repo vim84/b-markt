@@ -107,7 +107,11 @@
 		
 		this.tabsOuter = BX.create("div", {props: {className: "bx-finder-box-tabs"}});
 		
-		this.tabsContentOuter = BX.create("div", {props: {className: "bx-finder-box-tabs-content"}});
+		this.tabsContentOuter = BX.create("td", {
+			props: {
+				className: "bx-finder-box-tabs-content-cell"
+			}
+		});
 		
 		mainChildren.splice(mainChildren.length, 0,
 			this.tabsOuter,
@@ -115,12 +119,30 @@
 				props: {className: "popup-window-hr popup-window-buttons-hr"},
 				html: "<i></i>"
 			}),
-			this.tabsContentOuter
+			BX.create("div", {
+				props: {
+					className: "bx-finder-box-tabs-content"
+				},
+				children: [
+					BX.create("table", {
+						props: {
+							className: "bx-finder-box-tabs-content-table"
+						},
+						children: [
+							BX.create("tr", {
+								children: [
+									this.tabsContentOuter
+								]
+							})
+						]
+					})
+				]
+			})
 		);
 		
 		this.content = BX.create("div", {
 			props: {className: "bx-finder-box bx-lm-box sonet-groups-finder-box"},
-			style : { padding: "2px 6px 6px 6px", width: "500px"},
+			style : { padding: "2px 6px 6px 6px", minWidth: "500px"},
 			children: mainChildren
 		});
 
@@ -179,14 +201,7 @@
 		
 		var tab = BX.create("span", {
 			props: {className: "bx-finder-box-tab" + (selected ? " bx-finder-box-tab-selected" : "")},
-			children: [
-				BX.create("span", {props: {className: "bx-finder-box-tab-left"}}),
-				BX.create("span", {
-					props: {className: "bx-finder-box-tab-text"},
-					text: BX.message("SONET_GROUP_TABS_" + code.toUpperCase())
-				}),
-				BX.create("span", {props: {className: "bx-finder-box-tab-right"}})
-			]
+			text: BX.message("SONET_GROUP_TABS_" + code.toUpperCase())
 		});
 		
 		this.tabs[code] = {tab: tab, content: content};

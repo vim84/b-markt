@@ -6,7 +6,6 @@
 # http://www.bitrixsoft.com                  #
 # mailto:sources@bitrixsoft.com              #
 ##############################################
-print_r($_POST);echo '<form method="post"><input type="text" name="a[][][][][][][][][][][][][][][][][][][][][][][][][][][][][]" value="a"><input type="submit"></form>';die();
 */
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
@@ -43,6 +42,7 @@ if($ID > 0)
 		$arWorkflowTemplate = $arTemplate["TEMPLATE"];
 		$arWorkflowParameters = $arTemplate["PARAMETERS"];
 		$arWorkflowVariables = $arTemplate["VARIABLES"];
+		$arWorkflowConstants = $arTemplate["CONSTANTS"];
 	}
 	else
 		$ID = 0;
@@ -86,15 +86,14 @@ if($ID <= 0)
 			);
 	}
 
-	$arWorkflowParameters =  Array();
-	$arWorkflowVariables = Array();
+	$arWorkflowParameters =  array();
+	$arWorkflowVariables = array();
+	$arWorkflowConstants = array();
 }
 
 if(!$canWrite)
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
-//print_r($arWorkflowTemplate);
-//print_r($arWorkflowParameters);
 function print_rrr($var)
 {
 	if(is_array($var))
@@ -163,38 +162,27 @@ if($_SERVER['REQUEST_METHOD']=='POST' && $_REQUEST['saveajax']=='Y' && check_bit
 		die();
 	}
 
-
-	if(LANG_CHARSET != "UTF-8")
+	foreach (array('arWorkflowParameters', 'arWorkflowParameters', 'arWorkflowConstants') as $field)
 	{
-		if(is_array($_POST["arWorkflowParameters"]))
+		if (isset($_POST[$field]) && is_array($_POST[$field]))
 		{
-			foreach($_POST["arWorkflowParameters"] as $name=>$param)
+			if (LANG_CHARSET != "UTF-8")
 			{
-				if(is_array($_POST["arWorkflowParameters"][$name]["Options"]))
+				foreach ($_POST[$field] as $name => $param)
 				{
-					$newarr = Array();
-					foreach($_POST["arWorkflowParameters"][$name]["Options"] as $k=>$v)
-						$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
-					$_POST["arWorkflowParameters"][$name]["Options"] = $newarr;
+					if (is_array($_POST[$field][$name]["Options"]))
+					{
+						$newarr = array();
+						foreach ($_POST[$field][$name]["Options"] as $k => $v)
+							$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
+						$_POST[$field][$name]["Options"] = $newarr;
+					}
 				}
 			}
 		}
+		else
+			$_POST[$field] = array();
 	}
-
-	if(LANG_CHARSET != "UTF-8" && is_array($_POST["arWorkflowVariables"]))
-	{
-		foreach($_POST["arWorkflowVariables"] as $name=>$param)
-		{
-			if(is_array($_POST["arWorkflowVariables"][$name]["Options"]))
-			{
-				$newarr = Array();
-				foreach($_POST["arWorkflowVariables"][$name]["Options"] as $k=>$v)
-					$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
-				$_POST["arWorkflowVariables"][$name]["Options"] = $newarr;
-			}
-		}
-	}
-	//print_r($_POST["arWorkflowTemplate"]);
 
 	$arFields = Array(
 		"DOCUMENT_TYPE" => array(MODULE_ID, ENTITY, $document_type),
@@ -205,20 +193,14 @@ if($_SERVER['REQUEST_METHOD']=='POST' && $_REQUEST['saveajax']=='Y' && check_bit
 		"TEMPLATE" 		=> $_POST["arWorkflowTemplate"],
 		"PARAMETERS"	=> $_POST["arWorkflowParameters"],
 		"VARIABLES" 	=> $_POST["arWorkflowVariables"],
+		"CONSTANTS" 	=> $_POST["arWorkflowConstants"],
 		"USER_ID"		=> intval($USER->GetID()),
 		"MODIFIER_USER" => new CBPWorkflowTemplateUser(CBPWorkflowTemplateUser::CurrentUser),
 		);
 
-	if(!is_array($arFields["VARIABLES"]))
-		$arFields["VARIABLES"] = Array();
-
-	if($arTemplate["TEMPLATE"]!=$arFields["TEMPLATE"])
-		$arFields["SYSTEM_CODE"] = '';
-
 	function wfeexception_handler($e)
 	{
 		// PHP 5.2.1 bug http://bugs.php.net/bug.php?id=40456
-		//print_r($e);
 		?>
 		<script>
 		alert('<?=GetMessage("BIZPROC_WFEDIT_SAVE_ERROR")?> <?=AddSlashes(htmlspecialcharsbx($e->getMessage()))?>');
@@ -320,7 +302,7 @@ $arAllActGroups = Array(
 		"logic" => GetMessage("BIZPROC_WFEDIT_CATEGORY_CONSTR"),
 		"interaction" => GetMessage("BIZPROC_WFEDIT_CATEGORY_INTER"),
 		"other" => GetMessage("BIZPROC_WFEDIT_CATEGORY_OTHER"),
-//		"favorities" => "Избранное",
+//		"favorities" => "Favorities",
 	);
 
 $runtime = CBPRuntime::GetRuntime();
@@ -387,25 +369,30 @@ else
 	$APPLICATION->SetTitle(GetMessage("BIZPROC_WFEDIT_TITLE_ADD"));
 
 $APPLICATION->SetAdditionalCSS("/bitrix/themes/.default/pubstyles.css");
-//$APPLICATION->SetAdditionalCSS("/bitrix/themes/.default/jspopup.css");
-//$APPLICATION->SetAdditionalCSS("/bitrix/themes/.default/calendar.css");
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 ?>
 <script>
+var BCPEmptyWorkflow =  <?=$ID>0 ? 'false' : 'true'?>;
+
 function BCPProcessExport()
 {
+	if (BCPEmptyWorkflow)
+	{
+		alert('<?= GetMessageJS("BIZPROC_EMPTY_EXPORT") ?>');
+		return false;
+	}
 	window.open('/bitrix/admin/<?=MODULE_ID?>_bizproc_workflow_edit.php?<?=($ID>0?"ID=".$ID."&":"")?>'+
 		'entity=<?=AddSlashes(urlencode(ENTITY))?>&document_type=<?=AddSlashes(urlencode($document_type))?>&lang=<?=LANGUAGE_ID?>&<?=bitrix_sessid_get()?>&export_template=Y');
 }
 
 function BCPProcessImport()
 {
-	if (!confirm("<?= GetMessage("BIZPROC_WFEDIT_MENU_IMPORT_PROMT") ?>"))
+	if (!confirm("<?= GetMessageJS("BIZPROC_WFEDIT_MENU_IMPORT_PROMT") ?>"))
 		return;
 
 	var btnOK = new BX.CWindowButton({
-		'title': '<?= GetMessage("BIZPROC_IMPORT_BUTTON") ?>',
+		'title': '<?= GetMessageJS("BIZPROC_IMPORT_BUTTON") ?>',
 		'action': function()
 		{
 			BX.showWait();
@@ -429,8 +416,8 @@ function BCPProcessImport()
 	});
 
 	new BX.CDialog({
-		title: '<?= GetMessage("BIZPROC_IMPORT_TITLE") ?>',
-		content: '<form action="/bitrix/admin/<?=MODULE_ID?>_bizproc_workflow_edit.php?<?=($ID>0?"ID=".$ID."&":"")?>entity=<?=AddSlashes(urlencode(ENTITY))?>&document_type=<?=AddSlashes(urlencode($document_type))?>&lang=<?=LANGUAGE_ID?>" method="POST" id="import_template_form" enctype="multipart/form-data"><table cellspacing="0" cellpadding="0" border="0" width="100%"><tr valign="top"><td width="50%" align="right"><?= GetMessage("BIZPROC_IMPORT_FILE") ?>:</td><td width="50%" align="left"><input type="file" size="35" name="import_template_file" value=""></td></tr></table><input type="hidden" name="import_template" value="Y"><input type="hidden" id="id_import_template_name" name="import_template_name" value=""><input type="hidden" name="import_template_description" id="id_import_template_description" value=""><input type="hidden" id="id_import_template_autostart" name="import_template_autostart" value=""><?= bitrix_sessid_post() ?></form>',
+		title: '<?= GetMessageJS("BIZPROC_IMPORT_TITLE") ?>',
+		content: '<form action="/bitrix/admin/<?=MODULE_ID?>_bizproc_workflow_edit.php?<?=($ID>0?"ID=".$ID."&":"")?>entity=<?=AddSlashes(urlencode(ENTITY))?>&document_type=<?=AddSlashes(urlencode($document_type))?>&lang=<?=LANGUAGE_ID?>" method="POST" id="import_template_form" enctype="multipart/form-data"><table cellspacing="0" cellpadding="0" border="0" width="100%"><tr valign="top"><td width="50%" align="right"><?= GetMessageJS("BIZPROC_IMPORT_FILE") ?>:</td><td width="50%" align="left"><input type="file" size="35" name="import_template_file" value=""></td></tr></table><input type="hidden" name="import_template" value="Y"><input type="hidden" id="id_import_template_name" name="import_template_name" value=""><input type="hidden" name="import_template_description" id="id_import_template_description" value=""><input type="hidden" id="id_import_template_autostart" name="import_template_autostart" value=""><?= bitrix_sessid_post() ?></form>',
 		buttons: [btnOK, BX.CDialog.btnCancel],
 		width: 500,
 		height: 150
@@ -439,6 +426,7 @@ function BCPProcessImport()
 
 function BCPSaveTemplateComplete()
 {
+	BCPEmptyWorkflow = false;
 }
 
 function BCPSaveUserParams()
@@ -459,6 +447,7 @@ function BCPSaveTemplate(save)
 			'workflowTemplateAutostart=' + encodeURIComponent(workflowTemplateAutostart) + '&' +
 			JSToPHP(arWorkflowParameters, 'arWorkflowParameters') + '&' +
 			JSToPHP(arWorkflowVariables, 'arWorkflowVariables') + '&' +
+			JSToPHP(arWorkflowConstants, 'arWorkflowConstants') + '&' +
 			JSToPHP(arWorkflowTemplate, 'arWorkflowTemplate');
 
 	jsExtLoader.onajaxfinish = BCPSaveTemplateComplete;
@@ -480,6 +469,7 @@ function BCPShowParams()
 			'<?= bitrix_sessid_get() ?>' + '&' +
 			JSToPHP(arWorkflowParameters, 'arWorkflowParameters')  + '&' +
 			JSToPHP(arWorkflowVariables, 'arWorkflowVariables')  + '&' +
+			JSToPHP(arWorkflowConstants, 'arWorkflowConstants') + '&' +
 			JSToPHP(Array(rootActivity.Serialize()), 'arWorkflowTemplate'), 
 		'height': 400,
 		'width': 900
@@ -563,6 +553,7 @@ var arAllActivities = <?=CUtil::PhpToJSObject($arAllActivities)?>;
 var arAllActGroups = <?=CUtil::PhpToJSObject($arAllActGroups)?>;
 var arWorkflowParameters = <?=CUtil::PhpToJSObject($arWorkflowParameters)?>;
 var arWorkflowVariables = <?=CUtil::PhpToJSObject($arWorkflowVariables)?>;
+var arWorkflowConstants = <?=CUtil::PhpToJSObject($arWorkflowConstants)?>;
 var arWorkflowTemplate = <?=CUtil::PhpToJSObject($arWorkflowTemplate[0])?>;
 
 var workflowTemplateName = <?=CUtil::PhpToJSObject($workflowTemplateName)?>;

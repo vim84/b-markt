@@ -78,7 +78,6 @@ if (version_compare($php_version, "5.1.0", ">="))
 
 $arKnownAccels = array(
 	'apc' => '<a href="http://pecl.php.net/package/APC">APC</a>',
-	'eaccelerator' => '<a href="http://eaccelerator.net/">eAccelerator</a>',
 	'xcache' => '<a href="http://xcache.lighttpd.net/">XCache</a>',
 	'zend_accelerator' => '<a href="http://www.zend.com/products/platform">Zend Accelerator</a>',
 	'wincache' => '<a href="http://learn.iis.net/page.aspx/678/using-windows-cache-extension-for-php/">Windows Cache Extension for PHP</a>',

@@ -607,3 +607,4 @@ if(!BXHotKeys)
 	BXHotKeys.Init();
 	window.BXHotKeys = BXHotKeys;
 }
+

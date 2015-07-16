@@ -38,7 +38,9 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 		'PRICE' => $strMainID.'_price',
 		'OLD_PRICE' => $strMainID.'_old_price',
 		'DSC_PERC' => $strMainID.'_dsc_perc',
-		'BASKET_PROP_DIV' => $strMainID.'_basket_prop'
+		'BASKET_PROP_DIV' => $strMainID.'_basket_prop',
+
+		'NOT_AVAILABLE_MESS' => $strMainID.'_not_avail'
 	);
 
 	$strObName = 'ob'.preg_replace("/[^a-zA-Z0-9_]/", "x", $strMainID);
@@ -132,11 +134,31 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 	}
 	else
 	{
+		if ($arItem['CAN_BUY'])
+		{
 ?>
 					<a id="<? echo $arItemIDs['BUY_LINK']; ?>" href="javascript:void(0)" rel="nofollow" class="bx_bt_button big shadow cart"><span></span><strong><?
-					echo ('' != $arParams['MESS_BTN_BUY'] ? $arParams['MESS_BTN_BUY'] : GetMessage('CT_BCT_TPL_MESS_BTN_BUY'));
+					if ($arParams['ADD_TO_BASKET_ACTION'] == 'BUY')
+					{
+						echo ('' != $arParams['MESS_BTN_BUY'] ? $arParams['MESS_BTN_BUY'] : GetMessage('CT_BCT_TPL_MESS_BTN_BUY'));
+					}
+					else
+					{
+						echo ('' != $arParams['MESS_BTN_ADD_TO_BASKET'] ? $arParams['MESS_BTN_ADD_TO_BASKET'] : GetMessage('CT_BCT_TPL_MESS_BTN_ADD_TO_BASKET'));
+					}
 					?></strong></a>
 <?
+		}
+		else
+		{
+?>
+			<span id="<? echo $arItemIDs['NOT_AVAILABLE_MESS']; ?>" class="bx_notavailable">
+<?
+			echo ('' != $arParams['MESS_NOT_AVAILABLE'] ? $arParams['MESS_NOT_AVAILABLE'] : GetMessage('CT_BCT_TPL_MESS_PRODUCT_NOT_AVAILABLE'));
+?>
+			</span>
+<?
+		}
 	}
 ?>
 				</div>

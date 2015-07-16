@@ -337,10 +337,13 @@ class HttpRequest extends Request
 
 	protected function convertToPath($path)
 	{
-		$p = strpos($path, "?");
-		if ($p !== false)
+		static $terminate = array("?", "#");
+		foreach($terminate as $term)
 		{
-			$path = substr($path, 0, $p);
+			if(($found = strpos($path, $term)) !== false)
+			{
+				$path = substr($path, 0, $found);
+			}
 		}
 
 		if (substr($path, -1, 1) === "/")

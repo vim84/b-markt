@@ -57,6 +57,7 @@ $MESS["DUMP_DB_CREATE"] = "Создание дампа базы данных";
 $MESS["DUMP_CUR_PATH"] = "Текущий путь:";
 $MESS["INTEGRITY_CHECK"] = "Проверка целостности";
 $MESS["CURRENT_POS"] = "Текущая позиция:";
+$MESS["TIME_LEFT"] = ", осталось примерно #TIME#";
 $MESS["STEP_LIMIT"] = "Длительность шага:";
 $MESS["DISABLE_GZIP"] = "Отключить компрессию архива (снижение нагрузки на процессор):";
 $MESS["INTEGRITY_CHECK_OPTION"] = "Проверить целостность архива после завершения:";

@@ -154,7 +154,7 @@ function BWFVCCreateFieldSave()
 		document.getElementById("id_fld_code").focus();
 		return;
 	}
-	if (fldCode.match(/[^A-Za-z0-9\s._-]/g))
+	if (!fldCode.match(/^[A-Za-z_][A-Za-z0-9_]*$/g))
 	{
 		alert('<?= GetMessage("BPSFA_PD_WRONG_CODE") ?>');
 		document.getElementById("id_fld_code").focus();

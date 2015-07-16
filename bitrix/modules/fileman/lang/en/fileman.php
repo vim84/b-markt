@@ -80,4 +80,6 @@ $MESS["FMST_PANEL_ALL_STICKER_LIST"] = "View All Web-It Notes";
 $MESS["FMST_PANEL_ALL_STICKER_LIST_TITLE"] = "View Web-It Notes available on the website";
 $MESS["FMST_PANEL_STICKERS_TOOLTIP_TITLE"] = "Web-It Notes";
 $MESS["FMST_PANEL_STICKERS_TOOLTIP"] = "Add a new web-it note to the page";
+$MESS["FILEMAN_NAME_ERR"] = "The file or folder name must not include these characters: &gt;&lt;|?*\\/";
+$MESS["FILEMAN_NAME_EMPTY"] = "No file or folder name specified";
 ?>

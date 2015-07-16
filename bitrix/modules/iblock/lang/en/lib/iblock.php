@@ -27,4 +27,5 @@ $MESS["IBLOCK_ENTITY_EDIT_FILE_BEFORE_FIELD"] = "Element edit file enabling to u
 $MESS["IBLOCK_ENTITY_EDIT_FILE_AFTER_FIELD"] = "File containing the element edit form";
 $MESS["IBLOCK_ENTITY_SECTION_CHOOSER_FIELD"] = "Element-to-section binding control";
 $MESS["IBLOCK_ENTITY_SECTION_PROPERTY_FIELD"] = "Have private properties";
+$MESS["IBLOCK_ENTITY_CANONICAL_PAGE_URL_FIELD"] = "Element canonical URL";
 ?>

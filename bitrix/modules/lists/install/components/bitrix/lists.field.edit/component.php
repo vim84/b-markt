@@ -1,6 +1,5 @@
 <?
-if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
-	die();
+if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /** @global CMain $APPLICATION */
 /** @global CUser $USER */
 /** @global CDatabase $DB */
@@ -17,10 +16,9 @@ $this->setFrameMode(false);
 /** @var CCacheManager $CACHE_MANAGER */
 global $CACHE_MANAGER;
 
-if (!CModule::IncludeModule('lists'))
+if(!CModule::IncludeModule('lists'))
 {
 	ShowError(GetMessage("CC_BLFE_MODULE_NOT_INSTALLED"));
-
 	return;
 }
 
@@ -30,29 +28,25 @@ $lists_perm = CListPermissions::CheckAccess(
 	intval($arParams["~IBLOCK_ID"]),
 	$arParams["~SOCNET_GROUP_ID"]
 );
-if ($lists_perm < 0)
+if($lists_perm < 0)
 {
-	switch ($lists_perm)
+	switch($lists_perm)
 	{
-		case CListPermissions::WRONG_IBLOCK_TYPE:
-			ShowError(GetMessage("CC_BLFE_WRONG_IBLOCK_TYPE"));
-
-			return;
-		case CListPermissions::WRONG_IBLOCK:
-			ShowError(GetMessage("CC_BLFE_WRONG_IBLOCK"));
-
-			return;
-		case CListPermissions::LISTS_FOR_SONET_GROUP_DISABLED:
-			ShowError(GetMessage("CC_BLFE_LISTS_FOR_SONET_GROUP_DISABLED"));
-
-			return;
-		default:
-			ShowError(GetMessage("CC_BLFE_UNKNOWN_ERROR"));
-
-			return;
+	case CListPermissions::WRONG_IBLOCK_TYPE:
+		ShowError(GetMessage("CC_BLFE_WRONG_IBLOCK_TYPE"));
+		return;
+	case CListPermissions::WRONG_IBLOCK:
+		ShowError(GetMessage("CC_BLFE_WRONG_IBLOCK"));
+		return;
+	case CListPermissions::LISTS_FOR_SONET_GROUP_DISABLED:
+		ShowError(GetMessage("CC_BLFE_LISTS_FOR_SONET_GROUP_DISABLED"));
+		return;
+	default:
+		ShowError(GetMessage("CC_BLFE_UNKNOWN_ERROR"));
+		return;
 	}
 }
-elseif (
+elseif(
 	(
 		$arParams["~IBLOCK_ID"] > 0
 		&& $lists_perm < CListPermissions::IS_ADMIN
@@ -64,7 +58,6 @@ elseif (
 )
 {
 	ShowError(GetMessage("CC_BLFE_ACCESS_DENIED"));
-
 	return;
 }
 
@@ -73,14 +66,15 @@ $arParams["CAN_EDIT"] =
 	|| (
 		$arParams["~IBLOCK_ID"] > 0
 		&& CIBlockRights::UserHasRightTo($arParams["~IBLOCK_ID"], $arParams["~IBLOCK_ID"], "iblock_edit")
-	);
+	)
+;
 
 $arIBlock = CIBlock::GetArrayByID(intval($arParams["~IBLOCK_ID"]));
 $arResult["~IBLOCK"] = $arIBlock;
 $arResult["IBLOCK"] = htmlspecialcharsex($arIBlock);
 $arResult["IBLOCK_ID"] = $arIBlock["ID"];
 
-if (isset($arParams["SOCNET_GROUP_ID"]) && $arParams["SOCNET_GROUP_ID"] > 0)
+if(isset($arParams["SOCNET_GROUP_ID"]) && $arParams["SOCNET_GROUP_ID"] > 0)
 	$arParams["SOCNET_GROUP_ID"] = intval($arParams["SOCNET_GROUP_ID"]);
 else
 	$arParams["SOCNET_GROUP_ID"] = "";
@@ -119,7 +113,7 @@ $arResult["LIST_FIELDS_URL"] = htmlspecialcharsbx($arResult["~LIST_FIELDS_URL"])
 $obList = new CList($arIBlock["ID"]);
 
 $arFields = $obList->GetFields();
-if (array_key_exists($arParams["FIELD_ID"], $arFields))
+if(array_key_exists($arParams["FIELD_ID"], $arFields))
 {
 	$arResult["FIELD"] = $arFields[$arParams["FIELD_ID"]];
 	$arResult["FIELD_ID"] = $arParams["FIELD_ID"];
@@ -141,107 +135,108 @@ $arResult["LIST_FIELD_EDIT_URL"] = htmlspecialcharsbx($arResult["~LIST_FIELD_EDI
 $bVarsFromForm = false;
 
 //Form submitted
-if ($_SERVER["REQUEST_METHOD"] == "POST" && check_bitrix_sessid())
+if($_SERVER["REQUEST_METHOD"] == "POST" && check_bitrix_sessid())
 {
 	//When Save or Apply buttons was pressed
-	if (isset($_POST["save"]) || isset($_POST["apply"]))
+	if(isset($_POST["save"]) || isset($_POST["apply"]))
 	{
 		$strError = "";
 
 		//Gather fields for update
 		$arField = array(
-			"SORT"               => $_POST["SORT"],
-			"NAME"               => trim($_POST["NAME"], " \n\r\t\x0"),
-			"IS_REQUIRED"        => $_POST["IS_REQUIRED"],
-			"MULTIPLE"           => $_POST["MULTIPLE"],
-			"TYPE"               => $_POST["TYPE"],
-			"DEFAULT_VALUE"      => $_POST["DEFAULT_VALUE"],
+			"SORT" => $_POST["SORT"],
+			"NAME" => trim($_POST["NAME"], " \n\r\t\x0"),
+			"IS_REQUIRED" => $_POST["IS_REQUIRED"],
+			"MULTIPLE" => $_POST["MULTIPLE"],
+			"TYPE" => $_POST["TYPE"],
+			"DEFAULT_VALUE" => $_POST["DEFAULT_VALUE"],
 			"USER_TYPE_SETTINGS" => $_POST["USER_TYPE_SETTINGS"],
-			"SETTINGS"           => $_POST["SETTINGS"],
+			"SETTINGS" => $_POST["SETTINGS"],
 		);
 
-		if (strlen($arField["NAME"]) <= 0)
+		if(strlen($arField["NAME"]) <= 0)
 			$strError = GetMessage("CC_BLFE_BAD_FIELD_NAME")."<br>";
 
-		if ($arField["TYPE"] == "PREVIEW_PICTURE")
+		if($arField["TYPE"] == "PREVIEW_PICTURE")
 		{
 			$arField["DEFAULT_VALUE"]["METHOD"] = "resample";
 			$arField["DEFAULT_VALUE"]["COMPRESSION"] = intval(COption::GetOptionString('main', 'image_resize_quality', '95'));
 		}
 
-		if (preg_match("/^(G|G:|E|E:)/", $arField["TYPE"]))
+		if(preg_match("/^(G|G:|E|E:)/", $arField["TYPE"]))
 		{
 			$arField["LINK_IBLOCK_ID"] = intval($_POST["LINK_IBLOCK_ID"]);
 			$arIBLOCKS = CLists::GetIBlocks($arParams["~IBLOCK_TYPE_ID"], !$arParams["CAN_EDIT"], $arParams["~SOCNET_GROUP_ID"]);
 
-			if (substr($arField["TYPE"], 0, 1) == "G")
+			if(substr($arField["TYPE"], 0, 1) == "G")
 				unset($arIBLOCKS[$arResult["IBLOCK_ID"]]);
 
-			if (!array_key_exists($arField["LINK_IBLOCK_ID"], $arIBLOCKS))
+			if(!array_key_exists($arField["LINK_IBLOCK_ID"], $arIBLOCKS))
 				$strError = GetMessage("CC_BLFE_WRONG_LINK_IBLOCK")."<br>";
 		}
 
-		if (isset($_POST["ROW_COUNT"]) && $_POST["ROW_COUNT"] > 0)
+
+		if(isset($_POST["ROW_COUNT"]) && $_POST["ROW_COUNT"] > 0)
 			$arField["ROW_COUNT"] = intval($_POST["ROW_COUNT"]);
-		if (isset($_POST["COL_COUNT"]) && $_POST["COL_COUNT"] > 0)
+		if(isset($_POST["COL_COUNT"]) && $_POST["COL_COUNT"] > 0)
 			$arField["COL_COUNT"] = intval($_POST["COL_COUNT"]);
 
-		if (isset($_POST["LIST"]))
+		if(isset($_POST["LIST"]))
 			$arField["LIST"] = $_POST["LIST"];
-		if (!is_array($arField["LIST"]))
+		if(!is_array($arField["LIST"]))
 			$arField["LIST"] = array();
 
 		//Import values from textarea
-		if (isset($_POST["LIST_TEXT_VALUES"]) && strlen($_POST["LIST_TEXT_VALUES"]))
+		if(isset($_POST["LIST_TEXT_VALUES"]) && strlen($_POST["LIST_TEXT_VALUES"]))
 		{
 			$max_sort = 0;
 
 			//create values "map"
 			$arListMap = array();
-			foreach ($arField["LIST"] as $i => $arEnum)
+			foreach($arField["LIST"] as $i => $arEnum)
 			{
-				if ($arEnum["SORT"] > $max_sort)
+				if($arEnum["SORT"] > $max_sort)
 					$max_sort = intval($arEnum["SORT"]);
 
 				$arListMap[trim($arEnum["VALUE"], " \t\n\r")] = $arEnum["ID"];
 			}
 
 			//add non empty lines to the list
-			foreach (explode("\n", $_POST["LIST_TEXT_VALUES"]) as $value_line)
+			foreach(explode("\n", $_POST["LIST_TEXT_VALUES"]) as $value_line)
 			{
 				$value = trim($value_line, " \t\n\r");
-				if (strlen($value) > 0 && !isset($arListMap[$value]))
+				if(strlen($value) > 0 && !isset($arListMap[$value]))
 				{
 					$max_sort += 10;
 					$arListMap[$value] = "m".$max_sort;
 					$arField["LIST"]["m".$max_sort] = array(
-						"SORT"  => $max_sort,
+						"SORT" => $max_sort,
 						"VALUE" => $value,
 					);
 				}
 			}
 		}
 
-		if (isset($_POST["LIST_DEF"]) && is_array($_POST["LIST_DEF"]))
+		if(isset($_POST["LIST_DEF"]) && is_array($_POST["LIST_DEF"]))
 		{
-			foreach ($arField["LIST"] as $i => $arEnum)
+			foreach($arField["LIST"] as $i => $arEnum)
 			{
 				$arField["LIST"][$i]["DEF"] = "N";
 			}
 
-			foreach ($_POST["LIST_DEF"] as $def)
+			foreach($_POST["LIST_DEF"] as $def)
 			{
 				$def = intval($def);
-				if ($def > 0 && isset($arField["LIST"][$def]))
+				if($def > 0 && isset($arField["LIST"][$def]))
 				{
 					$arField["LIST"][$def]["DEF"] = "Y";
 				}
 			}
 		}
 
-		if (!$strError)
+		if(!$strError)
 		{
-			if ($arResult["FIELD_ID"])
+			if($arResult["FIELD_ID"])
 			{
 				unset($arField["TYPE"]);
 				$arResult["FIELD_ID"] = $obList->UpdateField($arResult["FIELD_ID"], $arField);
@@ -257,9 +252,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && check_bitrix_sessid())
 			$tab_name = $arResult["FORM_ID"]."_active_tab";
 
 			//And go to proper page
-			if (isset($_POST["save"]))
+			if(isset($_POST["save"]))
 				LocalRedirect($arResult["~LIST_FIELDS_URL"]);
-			elseif ($arResult["FIELD_ID"])
+			elseif($arResult["FIELD_ID"])
 				LocalRedirect(
 					CHTTP::urlAddParams(str_replace(
 							array("#list_id#", "#field_id#", "#group_id#"),
@@ -279,11 +274,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && check_bitrix_sessid())
 			$bVarsFromForm = true;
 		}
 	}
-	elseif (isset($_POST["action"]) && $_POST["action"] === "type_changed")
+	elseif(isset($_POST["action"]) && $_POST["action"]==="type_changed")
 	{
 		$bVarsFromForm = true;
 	}
-	elseif ($arResult["FIELD_ID"] && isset($_POST["action"]) && $_POST["action"] === "delete")
+	elseif($arResult["FIELD_ID"] && isset($_POST["action"]) && $_POST["action"]==="delete")
 	{
 		$obList->DeleteField($arResult["FIELD_ID"]);
 		$obList->Save();
@@ -304,7 +299,7 @@ $arResult["TYPES"] = $obList->GetAvailableTypes($arResult["FIELD_ID"]);
 
 $data = array();
 
-if ($bVarsFromForm)
+if($bVarsFromForm)
 {//There was an error so display form values
 	$data["SORT"] = $_POST["SORT"];
 	$data["NAME"] = $_POST["NAME"];
@@ -316,17 +311,17 @@ if ($bVarsFromForm)
 	if (isset($_POST["COL_COUNT"]))
 		$data["COL_COUNT"] = $_POST["COL_COUNT"];
 
-	if ($data["TYPE"] !== $arResult["FIELD"]["TYPE"])
+	if($data["TYPE"] !== $arResult["FIELD"]["TYPE"])
 	{
 		//field type was changed so it needs adjustment
 		$arMatch = array();
-		if (preg_match("/^(.):(.+)$/", $data["TYPE"], $arMatch))
+		if(preg_match("/^(.):(.+)$/", $data["TYPE"], $arMatch))
 		{
 			$arResult["FIELD"]["PROPERTY_USER_TYPE"] = CIBlockProperty::GetUserType($arMatch[2]);
 		}
 	}
 
-	if (
+	if(
 		$data["TYPE"] !== "PREVIEW_PICTURE"
 		&& $data["TYPE"] !== "DETAIL_PICTURE"
 		&& is_array($_POST["DEFAULT_VALUE"])
@@ -341,29 +336,29 @@ if ($bVarsFromForm)
 
 	$data["SETTINGS"] = $_POST["SETTINGS"];
 
-	if (isset($_POST["LIST"]) && is_array($_POST["LIST"]))
+	if(isset($_POST["LIST"]) && is_array($_POST["LIST"]))
 	{
 		$n = 0;
 		$arResult["LIST"] = array();
-		foreach ($_POST["LIST"] as $k => $v)
+		foreach($_POST["LIST"] as $k => $v)
 		{
 			$match = array();
-			if (preg_match("/^n(\d+)$/", $k, $match))
+			if(preg_match("/^n(\d+)$/", $k, $match))
 			{
-				if (intval($match[1]) > $n)
+				if(intval($match[1]) > $n)
 					$n = intval($match[1]);
 			}
 			$arResult["LIST"][$k] = array(
-				"ID"    => $k,
-				"SORT"  => $v["SORT"],
+				"ID" => $k,
+				"SORT" => $v["SORT"],
 				"VALUE" => $v["VALUE"],
 			);
 		}
-		while ($n >= 0)
+		while($n >= 0)
 		{
-			if (array_key_exists("n".$n, $arResult["LIST"]))
+			if(array_key_exists("n".$n, $arResult["LIST"]))
 			{
-				if (strlen($arResult["LIST"]["n".$n]["VALUE"]) > 0)
+				if(strlen($arResult["LIST"]["n".$n]["VALUE"]) > 0)
 					break;
 				else
 					unset($arResult["LIST"]["n".$n]);
@@ -372,16 +367,16 @@ if ($bVarsFromForm)
 			$n--;
 		}
 		$arResult["LIST"][] = array(
-			"ID"   => "n".($n + 1),
+			"ID" => "n".($n+1),
 			"SORT" => 500,
 			"NAME" => "",
 		);
 	}
-	elseif (preg_match("/^(L|L:)/", $data["TYPE"]))
+	elseif(preg_match("/^(L|L:)/", $data["TYPE"]))
 	{
 		$arResult["LIST"] = array();
 		$arResult["LIST"][] = array(
-			"ID"   => "n0",
+			"ID" => "n0",
 			"SORT" => 500,
 			"NAME" => "",
 		);
@@ -393,17 +388,17 @@ if ($bVarsFromForm)
 
 	$data["LIST_TEXT_VALUES"] = $_POST["LIST_TEXT_VALUES"];
 
-	if (isset($_POST["LIST_DEF"]) && is_array($_POST["LIST_DEF"]))
+	if(isset($_POST["LIST_DEF"]) && is_array($_POST["LIST_DEF"]))
 	{
 		$n = 0;
 		$arResult["LIST_DEF"] = array();
-		foreach ($_POST["LIST_DEF"] as $def)
+		foreach($_POST["LIST_DEF"] as $def)
 		{
-			if (array_key_exists($def, $arResult['LIST']))
+			if(array_key_exists($def, $arResult['LIST']))
 				$arResult["LIST_DEF"][$def] = true;
 		}
 	}
-	elseif (preg_match("/^(L|L:)/", $data["TYPE"]))
+	elseif(preg_match("/^(L|L:)/", $data["TYPE"]))
 	{
 		$arResult["LIST_DEF"] = array();
 	}
@@ -412,12 +407,12 @@ if ($bVarsFromForm)
 		$arResult["LIST_DEF"] = false;
 	}
 
-	if (isset($_POST["LINK_IBLOCK_ID"]) && $_POST["LINK_IBLOCK_ID"] > 0)
+	if(isset($_POST["LINK_IBLOCK_ID"]) && $_POST["LINK_IBLOCK_ID"] > 0)
 	{
 		$data["LINK_IBLOCK_ID"] = intval($_POST["LINK_IBLOCK_ID"]);
 	}
 }
-elseif ($arResult["FIELD_ID"])
+elseif($arResult["FIELD_ID"])
 {//Edit existing field
 	$data["SORT"] = $arResult["FIELD"]["SORT"];
 	$data["NAME"] = $arResult["FIELD"]["NAME"];
@@ -429,26 +424,26 @@ elseif ($arResult["FIELD_ID"])
 	$data["ROW_COUNT"] = $arResult["FIELD"]["ROW_COUNT"];
 	$data["COL_COUNT"] = $arResult["FIELD"]["COL_COUNT"];
 
-	if (isset($arResult["FIELD"]["LINK_IBLOCK_ID"]))
+	if(isset($arResult["FIELD"]["LINK_IBLOCK_ID"]))
 	{
 		$data["LINK_IBLOCK_ID"] = intval($arResult["FIELD"]["LINK_IBLOCK_ID"]);
 	}
 
-	if (preg_match("/^PROPERTY_(\\d+)$/", $arResult["FIELD_ID"], $arMatch))
+	if(preg_match("/^PROPERTY_(\\d+)$/", $arResult["FIELD_ID"], $arMatch))
 	{
 		$arResult["LIST"] = array();
 		$arResult["LIST_DEF"] = array();
 
-		$rsEnum = CIBlockPropertyEnum::GetList(array("sort" => "asc", "value" => "asc"), array("PROPERTY_ID" => $arMatch[1]));
-		while ($ar = $rsEnum->GetNext())
+		$rsEnum = CIBlockPropertyEnum::GetList(array("sort"=>"asc", "value"=>"asc"), array("PROPERTY_ID" => $arMatch[1]));
+		while($ar = $rsEnum->GetNext())
 		{
 			$arResult["LIST"][$ar["ID"]] = $ar;
-			if ($ar["DEF"] == "Y")
+			if($ar["DEF"] == "Y")
 				$arResult["LIST_DEF"][$ar["ID"]] = true;
 		}
 
 		$arResult["LIST"][] = array(
-			"ID"   => "n0",
+			"ID" => "n0",
 			"SORT" => 500,
 			"NAME" => "",
 		);
@@ -474,20 +469,20 @@ else
 	$arResult["LIST_DEF"] = false;
 }
 
-if (preg_match("/^(G|G:|E|E:)/", $data["TYPE"]))
+if(preg_match("/^(G|G:|E|E:)/", $data["TYPE"]))
 {
 	$arResult["LINK_IBLOCKS"] = CLists::GetIBlocks($arParams["~IBLOCK_TYPE_ID"], !$arParams["CAN_EDIT"], $arParams["~SOCNET_GROUP_ID"]);
-	if (substr($data["TYPE"], 0, 1) == "G")
+	if(substr($data["TYPE"], 0, 1) == "G")
 		unset($arResult["LINK_IBLOCKS"][$arResult["IBLOCK_ID"]]);
 }
 
 $arResult["FORM_DATA"] = array();
-foreach ($data as $key => $value)
+foreach($data as $key => $value)
 {
 	$arResult["FORM_DATA"]["~".$key] = $value;
-	if (is_array($value))
+	if(is_array($value))
 	{
-		foreach ($value as $key1 => $value1)
+		foreach($value as $key1 => $value1)
 			$value[$key1] = htmlspecialcharsbx($value1);
 		$arResult["FORM_DATA"][$key] = $value;
 	}
@@ -499,11 +494,11 @@ foreach ($data as $key => $value)
 
 $arResult["CAN_BE_MULTIPLE"] = !$obList->is_field($data["TYPE"]);
 $arResult["CAN_BE_OPTIONAL"] = $data["TYPE"] != "NAME";
-$arResult["IS_READ_ONLY"] = $arResult["FIELD_ID"] ? $obList->is_readonly($arResult["FIELD_ID"]) : CListFieldTypeList::GetByID($data["TYPE"])->IsReadonly();
+$arResult["IS_READ_ONLY"] = $arResult["FIELD_ID"]? $obList->is_readonly($arResult["FIELD_ID"]): CListFieldTypeList::GetByID($data["TYPE"])->IsReadonly();
 
 $this->IncludeComponentTemplate();
 
-if ($arResult["FIELD_ID"])
+if($arResult["FIELD_ID"])
 	$APPLICATION->SetTitle(GetMessage("CC_BLFE_TITLE_EDIT", array("#NAME#" => htmlspecialcharsex($arResult["FIELD"]["NAME"]))));
 else
 	$APPLICATION->SetTitle(GetMessage("CC_BLFE_TITLE_NEW"));

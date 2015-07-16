@@ -45,4 +45,5 @@ $MESS["SPOD_HIDE_MAP"] = "Hide map";
 $MESS["SPOD_REPEAT_PAY"] = "Pay again";
 $MESS["SPOD_CUR_ORDERS"] = "View orders";
 $MESS["SPOD_NUM_SIGN"] = "No.";
+$MESS["SOA_TEMPL_ORDER_PS_ERROR"] = "The selected payment method failed. Please contact the site administrator or select another method.";
 ?>

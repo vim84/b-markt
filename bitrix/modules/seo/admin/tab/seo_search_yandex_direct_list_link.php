@@ -23,6 +23,9 @@ if(count($campaignList) > 0)
 	if(count($arBanners) > 0)
 	{
 ?>
+
+<input id="adv_banner_stat_button" type="button" value="<?=Loc::getMessage('SEO_YANDEX_STATS_LOAD')?>" onclick="loadStat()">
+
 <style>
 .adv-links-list
 {
@@ -32,15 +35,6 @@ if(count($campaignList) > 0)
 .adv-campaign-list
 {
 	padding-left: 25px;
-}
-
-
-span.yandex-delete {
-	display: inline-block;
-	height: 20px;
-	width: 20px;
-	cursor: pointer;
-	background: url("/bitrix/panel/main/images/bx-admin-sprite-small-1.png") no-repeat scroll 5px -2446px rgba(0, 0, 0, 0);
 }
 
 .adv-banner-link,
@@ -68,6 +62,7 @@ span.yandex-delete {
 				{
 ?>
 			<div class="adv-banner-item">
+				<input type="hidden" name="seo_yandex_banner_id[]" value="<?=$banner['BANNER_ID']?>" />
 				<a href="/bitrix/admin/seo_search_yandex_direct_banner_edit.php?lang=<?=LANGUAGE_ID?>&ID=<?=$banner['BANNER_ID']?>&element=<?=$iblockElementInfo['ID']?>&back_url=<?=Converter::getHtmlConverter()->encode(urlencode($APPLICATION->GetCurPageParam('form_element_'.$iblockElementInfo["IBLOCK"]["ID"].'_active_tab=seo_adv_seo_adv', array('form_element_'.$iblockElementInfo["IBLOCK"]["ID"].'_active_tab'))))?>" class="adv-banner-link"><?=Loc::getMessage('SEO_YANDEX_DIRECT_BANNER_LINK_TPL', array(
 							"#XML_ID#" => $banner['BANNER_XML_ID'],
 							'#NAME#' => $banner['BANNER_NAME'],
@@ -85,24 +80,4 @@ span.yandex-delete {
 <?
 
 	}
-?>
-	<script>
-		function deleteLink(bannerId, el)
-		{
-			if(!el._loading)
-			{
-				el._loading = true;
-				el.style.background = 'url("/bitrix/panel/main/images/waiter-small-white.gif") no-repeat scroll center center';
-
-				BX.ajax.loadJSON('/bitrix/tools/seo_yandex_direct.php?action=link_delete&banner='+bannerId+'&link=<?=$iblockElementInfo["ID"]?>&link_type=<?=\Bitrix\Seo\Adv\LinkTable::TYPE_IBLOCK_ELEMENT?>&get_list_html=1&sessid='+BX.bitrix_sessid(), function(res)
-				{
-					if(res.result)
-					{
-						BX('adv_banner_list').innerHTML = res.list_html;
-					}
-				});
-			}
-		}
-	</script>
-<?
 }

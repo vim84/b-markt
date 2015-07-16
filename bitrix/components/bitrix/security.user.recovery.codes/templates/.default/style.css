@@ -27,7 +27,8 @@
 	border: 1px solid #dee3e3;
 	border-radius: 2px;
 	min-height: 195px;
-	padding:24px 285px 24px 19px;
+	overflow: hidden;
+	padding: 24px 19px 24px 19px;
 	position: relative;
 }
 
@@ -35,12 +36,11 @@
 
 .code-p-list-r {
 	background-color: #f1fdcf;
-	bottom: 24px;
-	padding: 22px 24px 52px;
-	position: absolute;
-	top: 24px;
-	right: 24px;
+	float: right;
+	padding: 22px 24px 72px;
 	width: 218px;
+	position: relative;
+	min-height: 100px;
 }
 
 .code-p-list-r .webform-small-button {

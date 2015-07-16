@@ -199,8 +199,8 @@ if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false:
 
 		if(
 			$PathToFile
-			&& file_exists($_SERVER["DOCUMENT_ROOT"]."/".$PathToFile)
-			&& is_file($_SERVER["DOCUMENT_ROOT"]."/".$PathToFile)
+			&& file_exists(CBXVirtualIoFileSystem::ConvertCharset($_SERVER["DOCUMENT_ROOT"]."/".$PathToFile))
+			&& is_file(CBXVirtualIoFileSystem::ConvertCharset($_SERVER["DOCUMENT_ROOT"]."/".$PathToFile))
 		)
 		{
 			$FileSize = filesize($_SERVER["DOCUMENT_ROOT"]."/".$PathToFile);
@@ -210,7 +210,7 @@ if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false:
 				$FileSize = "";
 
 			$ext = strtolower(substr($PathToFile, -4));
-			if($ext == ".wmv" || $ext == "wma")
+			if($ext == ".wmv" || $ext == ".wma")
 				$FileType = "wmv";
 			else
 				$FileType = "flv";

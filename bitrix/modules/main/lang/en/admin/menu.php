@@ -124,4 +124,6 @@ $MESS["main_menu_diag"] = "System Administration";
 $MESS["main_menu_diag_title"] = "Administrator's tools";
 $MESS["MAIN_MENU_COMPOSITE"] = "Composite Website";
 $MESS["MAIN_MENU_COMPOSITE_ALT"] = "Manage composite mode";
+$MESS["MAIN_MENU_EVENT_THEMES"] = "Visual Themes";
+$MESS["MAIN_MENU_EVENT_THEMES_TITLE"] = "Visual themes";
 ?>

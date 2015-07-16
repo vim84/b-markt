@@ -158,14 +158,6 @@ if(($arID = $lAdmin->GroupAction()) && $USER->CanDoOperation('edit_groups'))
 	}
 }
 
-// инициализация списка - выборка данных
-$rsData = CGroup::GetList($by, $order, $arFilter, "Y");
-$rsData = new CAdminResult($rsData, $sTableID);
-$rsData->NavStart();
-
-// установке параметров списка
-$lAdmin->NavText($rsData->GetNavPrint(GetMessage("PAGES")));
-
 // заголовок списка
 $lAdmin->AddHeaders(array(
 	array("id"=>"ID",				"content"=>"ID", 	"sort"=>"id", "default"=>true, "align"=>"right"),
@@ -174,9 +166,18 @@ $lAdmin->AddHeaders(array(
 	array("id"=>"C_SORT", 			"content"=>GetMessage("MAIN_C_SORT"),  "sort"=>"c_sort", "default"=>true, "align"=>"right"),
 	array("id"=>"NAME",				"content"=>GetMessage("NAME"), "sort"=>"name",	"default"=>true),
 	array("id"=>"DESCRIPTION", 		"content"=>GetMessage("MAIN_DESCRIPTION"),  "sort"=>"description", "default"=>false),
-	array("id"=>"USERS", 			"content"=>GetMessage('MAIN_USERS'),  "sort"=>"users", "default"=>true, "align"=>"right"),
-
+	array("id"=>"USERS", 			"content"=>GetMessage('MAIN_USERS'),  "sort"=>"users", "align"=>"right"),
 ));
+
+$showUserCount = in_array("USERS", $lAdmin->GetVisibleHeaderColumns());
+
+// инициализация списка - выборка данных
+$rsData = CGroup::GetList($by, $order, $arFilter, ($showUserCount? "Y" : "N"));
+$rsData = new CAdminResult($rsData, $sTableID);
+$rsData->NavStart();
+
+// установке параметров списка
+$lAdmin->NavText($rsData->GetNavPrint(GetMessage("PAGES")));
 
 // построение списка
 while($arRes = $rsData->NavNext(true, "f_"))

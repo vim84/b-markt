@@ -26,6 +26,7 @@ $checkvalue = $_POST["checkvalue"];
 $packetdate = $_POST["packetdate"];
 
 $bCorrectPayment = True;
+
 if(!($arOrder = CSaleOrder::GetByID($ordernumber)))
 	$bCorrectPayment = False;
 
@@ -35,10 +36,18 @@ if ($bCorrectPayment)
 $ordernumber = CSalePaySystemAction::GetParamValue("ORDER_ID");
 $assist_Shop_IDP = CSalePaySystemAction::GetParamValue("SHOP_IDP");
 $password = CSalePaySystemAction::GetParamValue("SHOP_SECRET_WORLD");
-$check = ToUpper(md5(toUpper(md5($password).md5($assist_Shop_IDP.$ordernumber.$amount.$currency.$orderstate))));
 
-if ($bCorrectPayment && ToUpper($checkvalue) != ToUpper($check))
+if(strlen($password) <= 0)
 	$bCorrectPayment = False;
+
+if($bCorrectPayment)
+{
+	$check = ToUpper(md5(toUpper(md5($password).md5($assist_Shop_IDP.$ordernumber.$amount.$currency.$orderstate))));
+
+ 	if(ToUpper($checkvalue) != ToUpper($check))
+		$bCorrectPayment = False;
+}
+
 $aDesc = array(
 	"In Process" => array(GetMessage("SASP_IP"), GetMessage("SASPD_IP")),
 	"Delayed" => array(GetMessage("SASP_D"), GetMessage("SASPD_D")),

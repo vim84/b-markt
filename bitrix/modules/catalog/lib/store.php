@@ -2,12 +2,12 @@
 
 namespace Bitrix\Catalog;
 
-use Bitrix\Main\Entity;
+use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 
 Loc::loadMessages(__FILE__);
 
-class StoreTable extends Entity\DataManager
+class StoreTable extends Main\Entity\DataManager
 {
 	/**
 	 * Returns DB table name for entity.

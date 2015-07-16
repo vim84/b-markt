@@ -1,5 +1,10 @@
 <?
 //<title>Yandex simple</title>
+
+use Bitrix\Main;
+use Bitrix\Currency;
+use Bitrix\Iblock;
+
 IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/catalog/export_setup_templ.php');
 set_time_limit(0);
 
@@ -99,29 +104,41 @@ if (strlen($strExportErrorMessage)<=0)
 
 if (strlen($strExportErrorMessage)<=0)
 {
-	@fwrite($fp, '<? header("Content-Type: text/xml; charset=windows-1251");?>');
-	@fwrite($fp, '<? echo "<"."?xml version=\"1.0\" encoding=\"windows-1251\"?".">"?>');
-	@fwrite($fp, "\n<!DOCTYPE yml_catalog SYSTEM \"shops.dtd\">\n");
-	@fwrite($fp, "<yml_catalog date=\"".Date("Y-m-d H:i")."\">\n");
-	@fwrite($fp, "<shop>\n");
-	@fwrite($fp, "<name>".$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString("main", "site_name", "")), LANG_CHARSET, 'windows-1251')."</name>\n");
-	@fwrite($fp, "<company>".$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString("main", "site_name", "")), LANG_CHARSET, 'windows-1251')."</company>\n");
-	@fwrite($fp, "<url>http://".htmlspecialcharsbx(strlen($SETUP_SERVER_NAME) > 0 ? $SETUP_SERVER_NAME : COption::GetOptionString("main", "server_name", ""))."</url>\n");
-	@fwrite($fp, "<platform>1C-Bitrix</platform>\n");
+	fwrite($fp, '<? header("Content-Type: text/xml; charset=windows-1251");?>');
+	fwrite($fp, '<? echo "<"."?xml version=\"1.0\" encoding=\"windows-1251\"?".">"?>');
+	fwrite($fp, "\n<!DOCTYPE yml_catalog SYSTEM \"shops.dtd\">\n");
+	fwrite($fp, "<yml_catalog date=\"".Date("Y-m-d H:i")."\">\n");
+	fwrite($fp, "<shop>\n");
+	fwrite($fp, "<name>".$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString("main", "site_name", "")), LANG_CHARSET, 'windows-1251')."</name>\n");
+	fwrite($fp, "<company>".$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString("main", "site_name", "")), LANG_CHARSET, 'windows-1251')."</company>\n");
+	fwrite($fp, "<url>http://".htmlspecialcharsbx(strlen($SETUP_SERVER_NAME) > 0 ? $SETUP_SERVER_NAME : COption::GetOptionString("main", "server_name", ""))."</url>\n");
+	fwrite($fp, "<platform>1C-Bitrix</platform>\n");
 
-	$by="sort";
-	$order="asc";
-	$db_acc = CCurrency::GetList($by, $order);
+	$RUR = 'RUB';
+	$currencyIterator = Currency\CurrencyTable::getList(array(
+		'select' => array('CURRENCY'),
+		'filter' => array('=CURRENCY' => 'RUR')
+	));
+	if ($currency = $currencyIterator->fetch())
+		$RUR = 'RUR';
+	unset($currency, $currencyIterator);
+
 	$strTmp = "<currencies>\n";
+
 	$arCurrencyAllowed = array('RUR', 'RUB', 'USD', 'EUR', 'UAH', 'BYR', 'KZT');
-	while ($arAcc = $db_acc->Fetch())
-	{
-		if (in_array($arAcc['CURRENCY'], $arCurrencyAllowed))
-			$strTmp.= "<currency id=\"".$arAcc["CURRENCY"]."\" rate=\"".(CCurrencyRates::ConvertCurrency(1, $arAcc["CURRENCY"], "RUR"))."\"/>\n";
-	}
+	$currencyIterator = Currency\CurrencyTable::getList(array(
+		'select' => array('CURRENCY'),
+		'filter' => array('@CURRENCY' => $arCurrencyAllowed),
+		'order' => array('SORT' => 'ASC')
+	));
+	while ($currency = $currencyIterator->fetch())
+		$strTmp.= '<currency id="'.$currency['CURRENCY'].'" rate="'.(CCurrencyRates::ConvertCurrency(1, $currency['CURRENCY'], $RUR)).'" />'."\n";
+	unset($currency, $currencyIterator);
+
 	$strTmp.= "</currencies>\n";
 
-	@fwrite($fp, $strTmp);
+	fwrite($fp, $strTmp);
+	unset($strTmp);
 
 	//*****************************************//
 
@@ -144,21 +161,41 @@ if (strlen($strExportErrorMessage)<=0)
 	{
 		$arSiteServers = array();
 
+		$intMaxSectionID = 0;
+		$sectionIterator = Iblock\SectionTable::getList(array(
+			'select' => array(
+				new Main\Entity\ExpressionField('MAX_ID', 'MAX(%s)', array('ID'))
+			)
+		));
+		if ($section = $sectionIterator->fetch())
+			$intMaxSectionID = (int)$section['MAX_ID'];
+		unset($section, $sectionIterator);
+		$intMaxSectionID += 100000000;
+		$maxSections = array();
+
 		foreach ($YANDEX_EXPORT as $ykey => $yvalue)
 		{
-			$filter = Array("IBLOCK_ID"=>intval($yvalue), "ACTIVE"=>"Y", "IBLOCK_ACTIVE"=>"Y", "GLOBAL_ACTIVE"=>"Y");
-			$db_acc = CIBlockSection::GetList(array("left_margin"=>"asc"), $filter);
+			$boolNeedRootSection = false;
+
+			$yvalue = (int)$yvalue;
+			if ($yvalue <= 0)
+				continue;
+
+			$filter = array("IBLOCK_ID" => $yvalue, "ACTIVE" => "Y", "IBLOCK_ACTIVE" => "Y", "GLOBAL_ACTIVE" => "Y");
+			$db_acc = CIBlockSection::GetList(array("LEFT_MARGIN" => "ASC"), $filter, false, array('ID', 'IBLOCK_SECTION_ID', 'NAME'));
 
 			$arAvailGroups = array();
 			while ($arAcc = $db_acc->Fetch())
 			{
-				$strTmpCat.= "<category id=\"".$arAcc["ID"]."\"".(intval($arAcc["IBLOCK_SECTION_ID"])>0?" parentId=\"".$arAcc["IBLOCK_SECTION_ID"]."\"":"").">".yandex_text2xml($arAcc["NAME"], true)."</category>\n";
-				$arAvailGroups[] = intval($arAcc["ID"]);
+				$arAcc['ID'] = (int)$arAcc['ID'];
+				$arAcc['IBLOCK_SECTION_ID'] = (int)$arAcc['IBLOCK_SECTION_ID'];
+				$strTmpCat.= '<category id="'.$arAcc['ID'].'"'.($arAcc['IBLOCK_SECTION_ID'] > 0 ? ' parentId="'.$arAcc['IBLOCK_SECTION_ID'].'"' : '').'>'.yandex_text2xml($arAcc['NAME'], true).'</category>'."\n";
+				$arAvailGroups[] = $arAcc['ID'];
 			}
 
 			//*****************************************//
 
-			$filter = Array("IBLOCK_ID"=>intval($yvalue), "ACTIVE_DATE"=>"Y", "ACTIVE"=>"Y");
+			$filter = array("IBLOCK_ID" => $yvalue, "ACTIVE_DATE" => "Y", "ACTIVE" => "Y");
 			$res = CIBlockElement::GetList(array(), $filter, false, false, $arSelect);
 
 			$total_sum=0;
@@ -194,7 +231,7 @@ if (strlen($strExportErrorMessage)<=0)
 					$arAcc['SERVER_NAME'] = $SETUP_SERVER_NAME;
 				}
 
-				$str_QUANTITY = doubleval($arAcc["CATALOG_QUANTITY"]);
+				$str_QUANTITY = (float)$arAcc['CATALOG_QUANTITY'];
 				$str_QUANTITY_TRACE = $arAcc["CATALOG_QUANTITY_TRACE"];
 				if (($str_QUANTITY <= 0) && ($str_QUANTITY_TRACE == "Y"))
 					$str_AVAILABLE = ' available="false"';
@@ -209,16 +246,16 @@ if (strlen($strExportErrorMessage)<=0)
 				{
 					if (strlen($arAcc["CATALOG_CURRENCY_".$arPTypes[$i]])<=0) continue;
 
-					$tmpPrice = CCurrencyRates::ConvertCurrency($arAcc["CATALOG_PRICE_".$arPTypes[$i]], $arAcc["CATALOG_CURRENCY_".$arPTypes[$i]], "RUR");
+					$tmpPrice = CCurrencyRates::ConvertCurrency($arAcc["CATALOG_PRICE_".$arPTypes[$i]], $arAcc["CATALOG_CURRENCY_".$arPTypes[$i]], $RUR);
 					if ($minPriceRUR<=0 || $minPriceRUR>$tmpPrice)
 					{
 						$minPriceRUR = $tmpPrice;
 						$minPrice = $arAcc["CATALOG_PRICE_".$arPTypes[$i]];
 						$minPriceGroup = $arPTypes[$i];
 						$minPriceCurrency = $arAcc["CATALOG_CURRENCY_".$arPTypes[$i]];
-						if ($minPriceCurrency!="USD" && $minPriceCurrency!="RUR")
+						if ($minPriceCurrency!="USD" && $minPriceCurrency!=$RUR)
 						{
-							$minPriceCurrency = "RUR";
+							$minPriceCurrency = $RUR;
 							$minPrice = $tmpPrice;
 						}
 					}
@@ -226,20 +263,36 @@ if (strlen($strExportErrorMessage)<=0)
 
 				if ($minPrice <= 0) continue;
 
+				$currentSection = false;
 				$bNoActiveGroup = true;
 				$strTmpOff_tmp = "";
 				$db_res1 = CIBlockElement::GetElementGroups($arAcc["ID"], false, array('ID', 'ADDITIONAL_PROPERTY_ID'));
 				while ($ar_res1 = $db_res1->Fetch())
 				{
-					if (0 < intval($ar_res1['ADDITIONAL_PROPERTY_ID']))
+					$ar_res1['ADDITIONAL_PROPERTY_ID'] = (int)$ar_res1['ADDITIONAL_PROPERTY_ID'];
+					$ar_res1['ID'] = (int)$ar_res1['ID'];
+					if ($ar_res1['ADDITIONAL_PROPERTY_ID'] > 0)
 						continue;
-					if (in_array(intval($ar_res1["ID"]), $arAvailGroups))
+					$currentSection = true;
+					if (in_array($ar_res1["ID"], $arAvailGroups))
 					{
 						$strTmpOff_tmp.= "<categoryId>".$ar_res1["ID"]."</categoryId>\n";
 						$bNoActiveGroup = false;
 					}
 				}
-				if ($bNoActiveGroup) continue;
+
+				if (!$currentSection)
+				{
+					$boolNeedRootSection = true;
+					if (!isset($maxSections[$yvalue]))
+						$maxSections[$yvalue] = $intMaxSectionID + $yvalue;
+					$strTmpOff_tmp.= '<categoryId>'.$maxSections[$yvalue]."</categoryId>\n";
+				}
+				else
+				{
+					if ($bNoActiveGroup)
+						continue;
+				}
 
 				if ('' == $arAcc['DETAIL_PAGE_URL'])
 				{
@@ -275,9 +328,7 @@ if (strlen($strExportErrorMessage)<=0)
 					if (is_array($arPictInfo))
 					{
 						if(substr($arPictInfo["SRC"], 0, 1) == "/")
-							$strFile = "http://".$arAcc['SERVER_NAME'].implode("/", array_map("rawurlencode", explode("/", $arPictInfo["SRC"])));
-						elseif(preg_match("/^(http|https):\\/\\/(.*?)\\/(.*)\$/", $arPictInfo["SRC"], $match))
-							$strFile = "http://".$match[2].'/'.implode("/", array_map("rawurlencode", explode("/", $match[3])));
+							$strFile = "http://".$arAcc['SERVER_NAME'].CHTTP::urnEncode($arPictInfo["SRC"], 'utf-8');
 						else
 							$strFile = $arPictInfo["SRC"];
 						$strTmpOff.="<picture>".$strFile."</picture>\n";
@@ -303,21 +354,28 @@ if (strlen($strExportErrorMessage)<=0)
 					));
 				}
 			}
+
+			if ($boolNeedRootSection)
+			{
+				$iblockName = CIBlock::GetArrayByID($yvalue, 'NAME');
+				$strTmpCat .= '<category id="'.$maxSections[$yvalue].'">'.yandex_text2xml(GetMessage('YANDEX_ROOT_DIRECTORY_EXT', array('#NAME#' => $iblockName)), true)."</category>\n";
+				unset($iblockName);
+			}
 		}
 	}
 
-	@fwrite($fp, "<categories>\n");
-	@fwrite($fp, $strTmpCat);
-	@fwrite($fp, "</categories>\n");
+	fwrite($fp, "<categories>\n");
+	fwrite($fp, $strTmpCat);
+	fwrite($fp, "</categories>\n");
 
-	@fwrite($fp, "<offers>\n");
-	@fwrite($fp, $strTmpOff);
-	@fwrite($fp, "</offers>\n");
+	fwrite($fp, "<offers>\n");
+	fwrite($fp, $strTmpOff);
+	fwrite($fp, "</offers>\n");
 
-	@fwrite($fp, "</shop>\n");
-	@fwrite($fp, "</yml_catalog>\n");
+	fwrite($fp, "</shop>\n");
+	fwrite($fp, "</yml_catalog>\n");
 
-	@fclose($fp);
+	fclose($fp);
 }
 
 CCatalogDiscountSave::Enable();
@@ -331,4 +389,3 @@ if ($bTmpUserCreated)
 		unset($USER_TMP);
 	}
 }
-?>

@@ -28,6 +28,8 @@ $edit_php = $USER->CanDoOperation('edit_php');
 if(!$edit_php && !$USER->CanDoOperation('view_other_settings') && !$USER->CanDoOperation('lpa_template_edit'))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
+$isEditingMessageThemePage = $APPLICATION->GetCurPage() == '/bitrix/admin/message_theme_edit.php';
+	
 IncludeModuleLangFile(__FILE__);
 
 $lpa = ($USER->CanDoOperation('lpa_template_edit') && !$edit_php); // Limit PHP access: for non admin users
@@ -52,7 +54,7 @@ if(strlen($ID)>0 && $_REQUEST['edit'] != "N")
 }
 
 $aTabs = array(
-	array("DIV" => "edit1", "TAB" => GetMessage("MAIN_TAB1"), "ICON" => "template_edit", "TITLE" => GetMessage("MAIN_TAB1_TITLE")),
+	array("DIV" => "edit1", "TAB" => GetMessage("MAIN_TAB1"), "ICON" => "template_edit", "TITLE" => ($isEditingMessageThemePage ? GetMessage("MAIN_TAB1_TITLE_THEME") : GetMessage("MAIN_TAB1_TITLE"))),
 	array("DIV" => "edit2", "TAB" => GetMessage("MAIN_TAB2"), "ICON" => "template_edit", "TITLE" => GetMessage("MAIN_TAB2_TITLE")),
 	array("DIV" => "edit3", "TAB" => GetMessage("MAIN_TAB4"), "ICON" => "template_edit", "TITLE" => GetMessage("MAIN_TAB4_TITLE")),
 );
@@ -66,7 +68,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_POST["save"] <> '' || $_POST["appl
 	$strError = "";
 	if ($lpa)
 	{
-		$CONTENT = CMain::ProcessLPA($_POST["CONTENT"], htmlspecialcharsback($str_CONTENT));
+		$CONTENT = LPA::Process($_POST["CONTENT"], htmlspecialcharsback($str_CONTENT));
 		//Add ..->ShowPanel() and WORK_AREA
 		$ucont = strtolower($CONTENT);
 		$sp = '<?$APPLICATION->ShowPanel();?>';
@@ -117,6 +119,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_POST["save"] <> '' || $_POST["appl
 			"STYLES" => $_POST["STYLES"],
 			"TEMPLATE_STYLES" => $_POST["TEMPLATE_STYLES"],
 			"SORT" => $_POST["SORT"],
+			"TYPE" => $_POST["TYPE"],
 			"STYLES_DESCRIPTION" => $stylesDesc,
 		);
 
@@ -134,9 +137,9 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_POST["save"] <> '' || $_POST["appl
 		{
 			$useeditor_param = (isset($_REQUEST["CONTENT_editor"]) && $_REQUEST["CONTENT_editor"] == 'on') ? '&usehtmled=Y' : '';
 			if ($_POST["save"] <> '')
-				LocalRedirect(BX_ROOT."/admin/template_admin.php?lang=".LANGUAGE_ID.$useeditor_param);
+				LocalRedirect(BX_ROOT."/admin/".($isEditingMessageThemePage ? "message_theme_admin.php" : "template_admin.php")."?lang=".LANGUAGE_ID.$useeditor_param);
 			else
-				LocalRedirect(BX_ROOT."/admin/template_edit.php?lang=".LANGUAGE_ID."&ID=".$ID."&".$tabControl->ActiveTabParam().$useeditor_param);
+				LocalRedirect(BX_ROOT."/admin/".($isEditingMessageThemePage ? "message_theme_edit.php" : "template_edit.php")."?lang=".LANGUAGE_ID."&ID=".$ID."&".$tabControl->ActiveTabParam().$useeditor_param);
 		}
 	}
 }
@@ -147,6 +150,7 @@ if($bVarsFromForm)
 	$str_NAME = htmlspecialcharsbx($_POST["NAME"]);
 	$str_DESCRIPTION = htmlspecialcharsbx($_POST["DESCRIPTION"]);
 	$str_SORT = htmlspecialcharsbx($_POST["SORT"]);
+	$str_TYPE = htmlspecialcharsbx($_POST["TYPE"]);
 	$str_CONTENT = htmlspecialcharsbx($_POST["CONTENT"]);
 	$str_STYLES = htmlspecialcharsbx($_POST["STYLES"]);
 	$str_TEMPLATE_STYLES = htmlspecialcharsbx($_POST["TEMPLATE_STYLES"]);
@@ -188,9 +192,9 @@ if ($lpa || $lpa_view)
 $APPLICATION->AddHeadScript("/bitrix/js/main/template_edit.js");
 
 if($bEdit)
-	$APPLICATION->SetTitle(GetMessage("MAIN_T_EDIT_TITLE_EDIT"));
+	$APPLICATION->SetTitle(($isEditingMessageThemePage ? GetMessage("MAIN_T_EDIT_TITLE_EDIT_THEME") : GetMessage("MAIN_T_EDIT_TITLE_EDIT")));
 else
-	$APPLICATION->SetTitle(GetMessage("MAIN_T_EDIT_TITLE_NEW"));
+	$APPLICATION->SetTitle(($isEditingMessageThemePage ? GetMessage("MAIN_T_EDIT_TITLE_NEW_THEME") : GetMessage("MAIN_T_EDIT_TITLE_NEW")));
 
 require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/prolog_admin_after.php");
 
@@ -199,8 +203,8 @@ CAdminMessage::ShowNote($strOK);
 
 $aMenu = array(
 	array(
-		"TEXT"	=> GetMessage("MAIN_T_EDIT_TEMPL_LIST"),
-		"LINK"	=> "/bitrix/admin/template_admin.php?lang=".LANGUAGE_ID."&set_default=Y",
+		"TEXT"	=> ($isEditingMessageThemePage ? GetMessage("MAIN_T_EDIT_TEMPL_LIST_THEME") : GetMessage("MAIN_T_EDIT_TEMPL_LIST")),
+		"LINK"	=> "/bitrix/admin/".($isEditingMessageThemePage ? "message_theme_admin.php" : "template_admin.php")."?lang=".LANGUAGE_ID."&set_default=Y",
 		"TITLE"	=> GetMessage("MAIN_T_EDIT_TEMPL_LIST_TITLE"),
 		"ICON"	=> "btn_list"
 	)
@@ -212,21 +216,21 @@ if (strlen($ID)>0 && $edit_php)
 
 	$aMenu[] = array(
 		"TEXT"	=> GetMessage("MAIN_NEW_RECORD"),
-		"LINK"	=> "/bitrix/admin/template_edit.php?lang=".LANGUAGE_ID,
+		"LINK"	=> "/bitrix/admin/".($isEditingMessageThemePage ? "message_theme_edit.php" : "template_edit.php")."?lang=".LANGUAGE_ID,
 		"TITLE"	=> GetMessage("MAIN_NEW_RECORD_TITLE"),
 		"ICON"	=> "btn_new"
 	);
 
 	$aMenu[] = array(
 		"TEXT"	=> GetMessage("MAIN_COPY_RECORD"),
-		"LINK"	=> "/bitrix/admin/template_admin.php?lang=".LANGUAGE_ID."&ID=".urlencode($ID)."&action=copy&".bitrix_sessid_get(),
+		"LINK"	=> "/bitrix/admin/".($isEditingMessageThemePage ? "message_theme_admin.php" : "template_admin.php")."?lang=".LANGUAGE_ID."&ID=".urlencode($ID)."&action=copy&".bitrix_sessid_get(),
 		"TITLE"	=> GetMessage("MAIN_COPY_RECORD_TITLE"),
 		"ICON"	=> "btn_copy"
 	);
 
 	$aMenu[] = array(
 		"TEXT"	=> GetMessage("MAIN_DELETE_RECORD"),
-		"LINK"	=> "javascript:if(confirm('".GetMessage("MAIN_DELETE_RECORD_CONF")."')) window.location='/bitrix/admin/template_admin.php?ID=".urlencode(urlencode($ID))."&lang=".LANGUAGE_ID."&".bitrix_sessid_get()."&action=delete';",
+		"LINK"	=> "javascript:if(confirm('".GetMessage("MAIN_DELETE_RECORD_CONF")."')) window.location='/bitrix/admin/".($isEditingMessageThemePage ? "message_theme_admin.php" : "template_admin.php")."?ID=".urlencode(urlencode($ID))."&lang=".LANGUAGE_ID."&".bitrix_sessid_get()."&action=delete';",
 		"TITLE"	=> GetMessage("MAIN_DELETE_RECORD_TITLE"),
 		"ICON"	=> "btn_delete"
 	);
@@ -268,6 +272,15 @@ $tabControl->BeginNextTab();
 	<tr>
 		<td><?echo GetMessage("SITE_TEMPL_EDIT_SORT")?></td>
 		<td><input type="text" name="SORT" size="20" value="<? echo $str_SORT?>"></td>
+	</tr>
+	<tr>
+		<td><?echo GetMessage("MAIN_TEMPLATE_TYPE")?></td>
+		<td>
+			<select name="TYPE">
+				<option value="" <?=($str_TYPE==""?"selected":"")?>><?echo GetMessage("MAIN_TEMPLATE_TYPE_SITE")?></option>
+				<option value="mail" <?=($str_TYPE=="mail"?"selected":"")?>><?echo GetMessage("MAIN_TEMPLATE_TYPE_MAIL")?></option>
+			</select>
+		</td>
 	</tr>
 	<tr class="heading">
 		<td colspan="2"><?echo GetMessage("MAIN_T_EDIT_CONTENT", array("#WORK_AREA#"=>'<a href="javascript:void(0)" onclick="document.bform.CONTENT.value+=\'#WORK_AREA#\';" title="'.GetMessage("MAIN_T_EDIT_INSERT_WORK_AREA").'">#WORK_AREA#</a>'))?></td>
@@ -419,12 +432,12 @@ $tabControl->BeginNextTab();
 <?endif?>
 <?
 $tabControl->Buttons();
-$aParams = array("disabled" => (!$edit_php && !$lpa), "back_url" => "template_admin.php?lang=".LANGUAGE_ID);
+$aParams = array("disabled" => (!$edit_php && !$lpa), "back_url" => "".($isEditingMessageThemePage ? "message_theme_admin.php" : "template_admin.php")."?lang=".LANGUAGE_ID);
 $dis = (!$edit_php && !$lpa);
 ?>
 <input <?echo ($dis ? "disabled":"")?> type="submit" name="save" value="<?=GetMessage("admin_lib_edit_save")?>" title="<?=GetMessage("admin_lib_edit_save_title")?>" class="adm-btn-save">
 <input <?echo ($dis ? "disabled":"")?> type="submit" name="apply" value="<?=GetMessage("admin_lib_edit_apply")?>" title="<?GetMessage("admin_lib_edit_apply_title")?>">
-<?if ($USER->CanDoOperation('edit_other_settings') || $USER->CanDoOperation('lpa_template_edit')):?>
+<?if (($USER->CanDoOperation('edit_other_settings') || $USER->CanDoOperation('lpa_template_edit')) && !empty($ID) && !$isEditingMessageThemePage):?>
 <input type="button" value="<?=GetMessage('FILEMAN_PREVIEW_TEMPLATE')?>" name="template_preview" onclick="preview_template('<?=htmlspecialcharsbx(CUtil::JSEscape($ID))?>', '<?= bitrix_sessid()?>');" title="<?=GetMessage('FILEMAN_PREVIEW_TEMPLATE_TITLE')?>">
 <?endif;?>
 <input type="button" value="<?=GetMessage("admin_lib_edit_cancel")?>" name="cancel" onClick="window.location='<?=CUtil::JSEscape($aParams["back_url"])?>'" title="<?=GetMessage("admin_lib_edit_cancel_title")?>">

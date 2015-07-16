@@ -168,6 +168,18 @@ $arPSCorrespondence = array(
 				"VALUE" => "",
 				"TYPE" => "FILE"
 			),
+		"LOGO_DPI" => array(
+				"NAME" => GetMessage("SBLP_LOGO_DPI"),
+				"DESCR" => "",
+				"VALUE" => array(
+					'96' => array('NAME' => GetMessage("SBLP_LOGO_DPI_96")),
+					'600' => array('NAME' => GetMessage("SBLP_LOGO_DPI_600")),
+					'300' => array('NAME' => GetMessage("SBLP_LOGO_DPI_300")),
+					'150' => array('NAME' => GetMessage("SBLP_LOGO_DPI_150")),
+					'72' => array('NAME' => GetMessage("SBLP_LOGO_DPI_72"))
+				),
+				"TYPE" => "SELECT"
+			),
 		"PATH_TO_STAMP" => array(
 				"NAME" => GetMessage("SBLP_PRINT"),
 				"DESCR" => GetMessage("SBLP_PRINT_DESC"),

@@ -1,3 +1,7 @@
+/**
+ * @param basketItemId
+ * @param {{BASKET_ID : string, BASKET_DATA : { GRID : { ROWS : {} }}, COLUMNS: {}, PARAMS: {}, DELETE_ORIGINAL : string }} res
+ */
 function updateBasketTable(basketItemId, res)
 {
 	var table = BX("basket_items"),
@@ -42,7 +46,11 @@ function updateBasketTable(basketItemId, res)
 		oldQuantity,
 		oCellPrice,
 		fullPrice,
-		id;
+		id,
+		oCellDiscount,
+		oCellWeight,
+		oCellCustom,
+		customColumnVal;
 
 	if (!table || typeof res !== 'object')
 	{
@@ -97,335 +105,331 @@ function updateBasketTable(basketItemId, res)
 
 		for (i = 0; i < arColumns.length; i++)
 		{
-			if (arColumns[i] === 'PROPS' || arColumns[i] === 'DELAY' || arColumns[i] === 'DELETE' || arColumns[i] === 'TYPE')
+			switch (arColumns[i])
 			{
-				continue;
-			}
+				case 'PROPS':
+				case 'DELAY':
+				case 'DELETE':
+				case 'TYPE':
+					break;
+				case 'NAME':
+					// first <td> - image and brand
+					oCellName = newRow.insertCell(-1);
+					imageURL = '';
+					cellNameHTML = '';
 
-			if (arColumns[i] === 'NAME')
-			{
-				// first <td> - image and brand
-				oCellName = newRow.insertCell(-1);
-				imageURL = '';
-				cellNameHTML = '';
+					oCellName.setAttribute('class', 'itemphoto');
 
-				oCellName.setAttribute('class', 'itemphoto');
-
-				if (arItem.PREVIEW_PICTURE_SRC.length > 0)
-				{
-					imageURL = arItem.PREVIEW_PICTURE_SRC;
-				}
-				else if (arItem.DETAIL_PICTURE_SRC.length > 0)
-				{
-					imageURL = arItem.DETAIL_PICTURE_SRC;
-				}
-				else
-				{
-					imageURL = basketJSParams.TEMPLATE_FOLDER + '/images/no_photo.png';
-				}
-
-				if (arItem['DETAIL_PAGE_URL'].length > 0)
-				{
-					cellNameHTML = '<div class="bx_ordercart_photo_container">\
-						<a href="' + arItem['DETAIL_PAGE_URL'] + '">\
-							<div class="bx_ordercart_photo" style="background-image:url(\'' + imageURL + '\')"></div>\
-						</a>\
-					</div>';
-				}
-				else
-				{
-					cellNameHTML = '<div class="bx_ordercart_photo_container">\
-						<div class="bx_ordercart_photo" style="background-image:url(\'' + imageURL + '\')"></div>\
-					</div>';
-				}
-
-				if (arItem['BRAND'] && arItem['BRAND'].length > 0)
-				{
-					cellNameHTML += '<div class="bx_ordercart_brand">\
-						<img alt="" src="' + arItem['BRAND'] + '"/>\
-					</div>';
-				}
-
-				oCellName.innerHTML = cellNameHTML;
-
-				// second <td> - name, basket props, sku props
-				oCellItem = newRow.insertCell(-1);
-				cellItemHTML = '';
-				oCellItem.setAttribute('class', 'item');
-
-				if (arItem['DETAIL_PAGE_URL'].length > 0)
-					cellItemHTML += '<h2 class="bx_ordercart_itemtitle"><a href="' + arItem['DETAIL_PAGE_URL'] + '">' + arItem['NAME'] + '</a></h2>';
-				else
-					cellItemHTML += '<h2 class="bx_ordercart_itemtitle">' + arItem['NAME'] + '</h2>';
-
-				cellItemHTML += '<div class="bx_ordercart_itemart">';
-
-				if (bShowPropsColumn)
-				{
-					for (j = 0; j < arItem['PROPS'].length; j++)
+					if (arItem.PREVIEW_PICTURE_SRC.length > 0)
 					{
-						val = arItem['PROPS'][j];
+						imageURL = arItem.PREVIEW_PICTURE_SRC;
+					}
+					else if (arItem.DETAIL_PICTURE_SRC.length > 0)
+					{
+						imageURL = arItem.DETAIL_PICTURE_SRC;
+					}
+					else
+					{
+						imageURL = basketJSParams.TEMPLATE_FOLDER + '/images/no_photo.png';
+					}
 
-						if (arItem.SKU_DATA)
+					if (arItem.DETAIL_PAGE_URL.length > 0)
+					{
+						cellNameHTML = '<div class="bx_ordercart_photo_container">\
+							<a href="' + arItem.DETAIL_PAGE_URL + '">\
+								<div class="bx_ordercart_photo" style="background-image:url(\'' + imageURL + '\')"></div>\
+							</a>\
+						</div>';
+					}
+					else
+					{
+						cellNameHTML = '<div class="bx_ordercart_photo_container">\
+							<div class="bx_ordercart_photo" style="background-image:url(\'' + imageURL + '\')"></div>\
+						</div>';
+					}
+
+					if (arItem.BRAND && arItem.BRAND.length > 0)
+					{
+						cellNameHTML += '<div class="bx_ordercart_brand">\
+							<img alt="" src="' + arItem.BRAND + '"/>\
+						</div>';
+					}
+
+					oCellName.innerHTML = cellNameHTML;
+
+					// second <td> - name, basket props, sku props
+					oCellItem = newRow.insertCell(-1);
+					cellItemHTML = '';
+					oCellItem.setAttribute('class', 'item');
+
+					if (arItem['DETAIL_PAGE_URL'].length > 0)
+						cellItemHTML += '<h2 class="bx_ordercart_itemtitle"><a href="' + arItem['DETAIL_PAGE_URL'] + '">' + arItem['NAME'] + '</a></h2>';
+					else
+						cellItemHTML += '<h2 class="bx_ordercart_itemtitle">' + arItem['NAME'] + '</h2>';
+
+					cellItemHTML += '<div class="bx_ordercart_itemart">';
+
+					if (bShowPropsColumn)
+					{
+						for (j = 0; j < arItem['PROPS'].length; j++)
 						{
-							bSkip = false;
-							for (propId in arItem.SKU_DATA)
-							{
-								if (arItem.SKU_DATA.hasOwnProperty(propId))
-								{
-									arProp = arItem.SKU_DATA[propId];
+							val = arItem['PROPS'][j];
 
-									if (arProp['CODE'] === val['CODE'])
+							if (arItem.SKU_DATA)
+							{
+								bSkip = false;
+								for (propId in arItem.SKU_DATA)
+								{
+									if (arItem.SKU_DATA.hasOwnProperty(propId))
 									{
-										bSkip = true;
+										arProp = arItem.SKU_DATA[propId];
+
+										if (arProp['CODE'] === val['CODE'])
+										{
+											bSkip = true;
+											break;
+										}
+									}
+								}
+								if (bSkip)
+									continue;
+							}
+
+							cellItemHTML += val['NAME'] + ':&nbsp;<span>' + val['VALUE'] + '</span><br/>';
+						}
+					}
+					cellItemHTML += '</div>';
+
+					if (arItem.SKU_DATA)
+					{
+						for (propId in arItem.SKU_DATA)
+						{
+							if (arItem.SKU_DATA.hasOwnProperty(propId))
+							{
+								arProp = arItem.SKU_DATA[propId];
+								bIsImageProperty = false;
+								full = (BX.util.array_keys(arProp['VALUES']).length > 5) ? 'full' : '';
+
+								for (valId in arProp['VALUES'])
+								{
+									arVal = arProp['VALUES'][valId];
+									if (!!arVal && typeof arVal === 'object' && !!arVal['PICT'])
+									{
+										bIsImageProperty = true;
 										break;
 									}
 								}
+
+								// sku property can contain list of images or values
+								if (bIsImageProperty)
+								{
+									cellItemHTML += '<div class="bx_item_detail_scu_small_noadaptive ' + full + '">';
+									cellItemHTML += '<span class="bx_item_section_name_gray">' + arProp['NAME'] + '</span>';
+									cellItemHTML += '<div class="bx_scu_scroller_container">';
+									cellItemHTML += '<div class="bx_scu">';
+
+									cellItemHTML += '<ul id="prop_' + arProp['CODE'] + '_' + arItem['ID'] + '" style="width: 200%; margin-left:0%;" class="sku_prop_list">';
+
+									for (valueId in arProp['VALUES'])
+									{
+										arSkuValue = arProp['VALUES'][valueId];
+										selected = '';
+
+										// get current selected item
+										for (k = 0; k < arItem['PROPS'].length; k++)
+										{
+											arItemProp = arItem['PROPS'][k];
+
+											if (arItemProp['CODE'] === arProp['CODE'])
+											{
+												if (arItemProp['VALUE'] === arSkuValue['NAME'] || arItemProp['VALUE'] === arSkuValue['XML_ID'])
+													selected = 'bx_active';
+											}
+										}
+
+										cellItemHTML += '<li style="width:10%;"\
+															class="sku_prop ' + selected + '"\
+															data-value-id="' + arSkuValue['XML_ID'] + '"\
+															data-element="' + arItem['ID'] + '"\
+															data-property="' + arProp['CODE'] + '"\
+															>\
+															<a href="javascript:void(0);">\
+																<span style="background-image:url(' + arSkuValue['PICT']['SRC'] + ')"></span>\
+															</a>\
+														</li>';
+									}
+
+									cellItemHTML += '</ul>';
+									cellItemHTML += '</div>';
+
+									cellItemHTML += '<div class="bx_slide_left" onclick="leftScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
+									cellItemHTML += '<div class="bx_slide_right" onclick="rightScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
+
+									cellItemHTML += '</div>';
+									cellItemHTML += '</div>';
+								}
+								else // not image
+								{
+									cellItemHTML += '<div class="bx_item_detail_size_small_noadaptive ' + full + '">';
+									cellItemHTML += '<span class="bx_item_section_name_gray">' + arProp['NAME'] + '</span>';
+									cellItemHTML += '<div class="bx_size_scroller_container">';
+									cellItemHTML += '<div class="bx_size">';
+
+									cellItemHTML += '<ul id="prop_' + arProp['CODE'] + '_' + arItem['ID'] + '" style="width: 200%; margin-left:0%;" class="sku_prop_list">';
+
+									for (valueId in arProp['VALUES'])
+									{
+										arSkuValue = arProp['VALUES'][valueId];
+										selected = '';
+
+										// get current selected item
+										for (k = 0; k < arItem['PROPS'].length; k++)
+										{
+											arItemProp = arItem['PROPS'][k];
+
+											if (arItemProp['CODE'] === arProp['CODE'])
+											{
+												if (arItemProp['VALUE'] === arSkuValue['NAME'])
+													selected = 'bx_active';
+											}
+										}
+
+										cellItemHTML += '<li style="width:10%;"\
+															class="sku_prop ' + selected + '"\
+															data-value-id="' + arSkuValue['NAME'] + '"\
+															data-element="' + arItem['ID'] + '"\
+															data-property="' + arProp['CODE'] + '"\
+															>\
+															<a href="javascript:void(0);">' + arSkuValue['NAME'] + '</span></a>\
+														</li>';
+									}
+
+									cellItemHTML += '</ul>';
+									cellItemHTML += '</div>';
+
+									cellItemHTML += '<div class="bx_slide_left" onclick="leftScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
+									cellItemHTML += '<div class="bx_slide_right" onclick="rightScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
+
+									cellItemHTML += '</div>';
+									cellItemHTML += '</div>';
+								}
 							}
-							if (bSkip)
-								continue;
 						}
-
-						cellItemHTML += val['NAME'] + ':&nbsp;<span>' + val['VALUE'] + '</span><br/>';
 					}
-				}
-				cellItemHTML += '</div>';
 
-				if (arItem.SKU_DATA)
-				{
-					for (propId in arItem.SKU_DATA)
+					oCellItem.innerHTML = cellItemHTML;
+					break;
+				case 'QUANTITY':
+					oCellQuantity = newRow.insertCell(-1);
+					oCellQuantityHTML = '';
+					ratio = (parseFloat(arItem['MEASURE_RATIO']) > 0) ? arItem['MEASURE_RATIO'] : 1;
+					max = (parseFloat(arItem['AVAILABLE_QUANTITY']) > 0) ? 'max="' + arItem['AVAILABLE_QUANTITY'] + '"' : '';
+
+					isUpdateQuantity = false;
+
+					if (ratio != 0 && ratio != '')
 					{
-						if (arItem.SKU_DATA.hasOwnProperty(propId))
+						oldQuantity = arItem['QUANTITY'];
+						arItem['QUANTITY'] = getCorrectRatioQuantity(arItem['QUANTITY'], ratio, bUseFloatQuantity);
+
+						if (oldQuantity != arItem['QUANTITY'])
 						{
-							arProp = arItem.SKU_DATA[propId];
-							bIsImageProperty = false;
-							full = (BX.util.array_keys(arProp['VALUES']).length > 5) ? 'full' : '';
-
-							for (valId in arProp['VALUES'])
-							{
-								arVal = arProp['VALUES'][valId];
-
-								if (arVal['PICT'] !== false)
-								{
-									bIsImageProperty = true;
-									break;
-								}
-							}
-
-							// sku property can contain list of images or values
-							if (bIsImageProperty)
-							{
-								cellItemHTML += '<div class="bx_item_detail_scu_small_noadaptive ' + full + '">';
-								cellItemHTML += '<span class="bx_item_section_name_gray">' + arProp['NAME'] + '</span>';
-								cellItemHTML += '<div class="bx_scu_scroller_container">';
-								cellItemHTML += '<div class="bx_scu">';
-
-								cellItemHTML += '<ul id="prop_' + arProp['CODE'] + '_' + arItem['ID'] + '" style="width: 200%; margin-left:0%;" class="sku_prop_list">';
-
-								for (valueId in arProp['VALUES'])
-								{
-									arSkuValue = arProp['VALUES'][valueId];
-									selected = '';
-
-									// get current selected item
-									for (k = 0; k < arItem['PROPS'].length; k++)
-									{
-										arItemProp = arItem['PROPS'][k];
-
-										if (arItemProp['CODE'] === arProp['CODE'])
-										{
-											if (arItemProp['VALUE'] === arSkuValue['NAME'] || arItemProp['VALUE'] === arSkuValue['XML_ID'])
-												selected = 'bx_active';
-										}
-									}
-
-									cellItemHTML += '<li style="width:10%;"\
-														class="sku_prop ' + selected + '"\
-														data-value-id="' + arSkuValue['XML_ID'] + '"\
-														data-element="' + arItem['ID'] + '"\
-														data-property="' + arProp['CODE'] + '"\
-														>\
-														<a href="javascript:void(0);">\
-															<span style="background-image:url(' + arSkuValue['PICT']['SRC'] + ')"></span>\
-														</a>\
-													</li>';
-								}
-
-								cellItemHTML += '</ul>';
-								cellItemHTML += '</div>';
-
-								cellItemHTML += '<div class="bx_slide_left" onclick="leftScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
-								cellItemHTML += '<div class="bx_slide_right" onclick="rightScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
-
-								cellItemHTML += '</div>';
-								cellItemHTML += '</div>';
-							}
-							else // not image
-							{
-								cellItemHTML += '<div class="bx_item_detail_size_small_noadaptive ' + full + '">';
-								cellItemHTML += '<span class="bx_item_section_name_gray">' + arProp['NAME'] + '</span>';
-								cellItemHTML += '<div class="bx_size_scroller_container">';
-								cellItemHTML += '<div class="bx_size">';
-
-								cellItemHTML += '<ul id="prop_' + arProp['CODE'] + '_' + arItem['ID'] + '" style="width: 200%; margin-left:0%;" class="sku_prop_list">';
-
-								for (valueId in arProp['VALUES'])
-								{
-									arSkuValue = arProp['VALUES'][valueId];
-									selected = '';
-
-									// get current selected item
-									for (k = 0; k < arItem['PROPS'].length; k++)
-									{
-										arItemProp = arItem['PROPS'][k];
-
-										if (arItemProp['CODE'] === arProp['CODE'])
-										{
-											if (arItemProp['VALUE'] === arSkuValue['NAME'])
-												selected = 'bx_active';
-										}
-									}
-
-									cellItemHTML += '<li style="width:10%;"\
-														class="sku_prop ' + selected + '"\
-														data-value-id="' + arSkuValue['NAME'] + '"\
-														data-element="' + arItem['ID'] + '"\
-														data-property="' + arProp['CODE'] + '"\
-														>\
-														<a href="javascript:void(0);">' + arSkuValue['NAME'] + '</span></a>\
-													</li>';
-								}
-
-								cellItemHTML += '</ul>';
-								cellItemHTML += '</div>';
-
-								cellItemHTML += '<div class="bx_slide_left" onclick="leftScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
-								cellItemHTML += '<div class="bx_slide_right" onclick="rightScroll(\'' + arProp['CODE'] + '\', ' + arItem['ID'] + ', '+ BX.util.array_keys(arProp['VALUES']).length + ');"></div>';
-
-								cellItemHTML += '</div>';
-								cellItemHTML += '</div>';
-							}
+							isUpdateQuantity = true;
 						}
 					}
-				}
 
-				oCellItem.innerHTML = cellItemHTML;
-			}
-			else if (arColumns[i] === 'QUANTITY')
-			{
-				oCellQuantity = newRow.insertCell(-1);
-				oCellQuantityHTML = '';
-				ratio = (parseFloat(arItem['MEASURE_RATIO']) > 0) ? arItem['MEASURE_RATIO'] : 1;
-				max = (parseFloat(arItem['AVAILABLE_QUANTITY']) > 0) ? 'max="' + arItem['AVAILABLE_QUANTITY'] + '"' : '';
+					oCellQuantity.setAttribute('class', 'custom');
+					oCellQuantityHTML += '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
 
-				isUpdateQuantity = false;
+					oCellQuantityHTML += '<div class="centered">';
+					oCellQuantityHTML += '<table cellspacing="0" cellpadding="0" class="counter">';
+					oCellQuantityHTML += '<tr>';
+					oCellQuantityHTML += '<td>';
 
-				if (ratio != 0 && ratio != '')
-				{
-					oldQuantity = arItem['QUANTITY'];
-					arItem['QUANTITY'] = getCorrectRatioQuantity(arItem['QUANTITY'], ratio, bUseFloatQuantity);
+					oCellQuantityHTML += '<input type="text" size="3" id="QUANTITY_INPUT_' + arItem['ID'] + '"\
+											name="QUANTITY_INPUT_' + arItem['ID'] + '"\
+											size="2" maxlength="18" min="0" ' + max + 'step=' + ratio + '\
+											style="max-width: 50px"\
+											value="' + arItem['QUANTITY'] + '"\
+											onchange="updateQuantity(\'QUANTITY_INPUT_' + arItem['ID'] + '\',\'' + arItem['ID'] + '\', ' + ratio + ',' + bUseFloatQuantity + ')"\
+						>';
 
-					if (oldQuantity != arItem['QUANTITY'])
+					oCellQuantityHTML += '</td>';
+
+					if (ratio != 0
+						&& ratio != ''
+						) // if not Set parent, show quantity control
 					{
-						isUpdateQuantity = true;
+						oCellQuantityHTML += '<td id="basket_quantity_control">\
+							<div class="basket_quantity_control">\
+								<a href="javascript:void(0);" class="plus" onclick="setQuantity(' + arItem['ID'] + ', ' + ratio + ', \'up\', ' + bUseFloatQuantity + ');"></a>\
+								<a href="javascript:void(0);" class="minus" onclick="setQuantity(' + arItem['ID'] + ', ' + ratio + ', \'down\', ' + bUseFloatQuantity + ');"></a>\
+							</div>\
+						</td>';
 					}
-				}
 
-				oCellQuantity.setAttribute('class', 'custom');
-				oCellQuantityHTML += '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
+					if (arItem.hasOwnProperty('MEASURE_TEXT') && arItem['MEASURE_TEXT'].length > 0)
+						oCellQuantityHTML += '<td style="text-align: left">' + arItem['MEASURE_TEXT'] + '</td>';
 
-				oCellQuantityHTML += '<div class="centered">';
-				oCellQuantityHTML += '<table cellspacing="0" cellpadding="0" class="counter">';
-				oCellQuantityHTML += '<tr>';
-				oCellQuantityHTML += '<td>';
+					oCellQuantityHTML += '</tr>';
+					oCellQuantityHTML += '</table>';
+					oCellQuantityHTML += '</div>';
 
-				oCellQuantityHTML += '<input type="text" size="3" id="QUANTITY_INPUT_' + arItem['ID'] + '"\
-										name="QUANTITY_INPUT_' + arItem['ID'] + '"\
-										size="2" maxlength="18" min="0" ' + max + 'step=' + ratio + '\
-										style="max-width: 50px"\
-										value="' + arItem['QUANTITY'] + '"\
-										onchange="updateQuantity(\'QUANTITY_INPUT_' + arItem['ID'] + '\',\'' + arItem['ID'] + '\', ' + ratio + ',' + bUseFloatQuantity + ')"\
-					>';
+					oCellQuantityHTML += '<input type="hidden" id="QUANTITY_' + arItem['ID'] + '" name="QUANTITY_' + arItem['ID'] + '" value="' + arItem['QUANTITY'] + '" />';
 
-				oCellQuantityHTML += '</td>';
+					oCellQuantity.innerHTML = oCellQuantityHTML;
 
-				if (ratio != 0
-					&& ratio != ''
-					) // if not Set parent, show quantity control
-				{
-					oCellQuantityHTML += '<td id="basket_quantity_control">\
-						<div class="basket_quantity_control">\
-							<a href="javascript:void(0);" class="plus" onclick="setQuantity(' + arItem['ID'] + ', ' + ratio + ', \'up\', ' + bUseFloatQuantity + ');"></a>\
-							<a href="javascript:void(0);" class="minus" onclick="setQuantity(' + arItem['ID'] + ', ' + ratio + ', \'down\', ' + bUseFloatQuantity + ');"></a>\
-						</div>\
-					</td>';
-				}
+					if (isUpdateQuantity)
+					{
+						updateQuantity('QUANTITY_INPUT_' + arItem['ID'], arItem['ID'], ratio, bUseFloatQuantity);
+					}
+					break;
+				case 'PRICE':
+					oCellPrice = newRow.insertCell(-1);
+					fullPrice = (arItem['FULL_PRICE_FORMATED'] != arItem['PRICE_FORMATED']) ? arItem['FULL_PRICE_FORMATED'] : '';
 
-				if (arItem.hasOwnProperty('MEASURE_TEXT') && arItem['MEASURE_TEXT'].length > 0)
-					oCellQuantityHTML += '<td style="text-align: left">' + arItem['MEASURE_TEXT'] + '</td>';
+					oCellPrice.setAttribute('class', 'price');
+					oCellPrice.innerHTML += '<div class="current_price" id="current_price_' + arItem['ID'] + '">' + arItem['PRICE_FORMATED'] + '</div>';
+					oCellPrice.innerHTML += '<div class="old_price" id="old_price_' + arItem['ID'] + '">' + fullPrice + '</div>';
 
-				oCellQuantityHTML += '</tr>';
-				oCellQuantityHTML += '</table>';
-				oCellQuantityHTML += '</div>';
-
-				oCellQuantityHTML += '<input type="hidden" id="QUANTITY_' + arItem['ID'] + '" name="QUANTITY_' + arItem['ID'] + '" value="' + arItem['QUANTITY'] + '" />';
-
-				oCellQuantity.innerHTML = oCellQuantityHTML;
-
-				if (isUpdateQuantity)
-				{
-					updateQuantity('QUANTITY_INPUT_' + arItem['ID'], arItem['ID'], ratio, bUseFloatQuantity);
-				}
-			}
-			else if (arColumns[i] === 'PRICE')
-			{
-				oCellPrice = newRow.insertCell(-1);
-				fullPrice = (arItem['FULL_PRICE_FORMATED'] != arItem['PRICE_FORMATED']) ? arItem['FULL_PRICE_FORMATED'] : '';
-
-				oCellPrice.setAttribute('class', 'price');
-				oCellPrice.innerHTML += '<div class="current_price" id="current_price_' + arItem['ID'] + '">' + arItem['PRICE_FORMATED'] + '</div>';
-				oCellPrice.innerHTML += '<div class="old_price" id="old_price_' + arItem['ID'] + '">' + fullPrice + '</div>';
-
-				if (bShowPriceType && arItem['NOTES'].length > 0)
-				{
-					oCellPrice.innerHTML += '<div class="type_price">' + basketJSParams['SALE_TYPE'] + '</div>';
-					oCellPrice.innerHTML += '<div class="type_price_value">' + arItem['NOTES'] + '</div>';
-				}
-			}
-			else if (arColumns[i] == 'DISCOUNT')
-			{
-				var oCellDiscount = newRow.insertCell(-1);
-				oCellDiscount.setAttribute('class', 'custom');
-				oCellDiscount.innerHTML = '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
-				oCellDiscount.innerHTML += '<div id="discount_value_' + arItem['ID'] + '">' + arItem['DISCOUNT_PRICE_PERCENT_FORMATED'] + '</div>';
-			}
-			else if (arColumns[i] == 'WEIGHT')
-			{
-				var oCellWeight = newRow.insertCell(-1);
-				oCellWeight.setAttribute('class', 'custom');
-				oCellWeight.innerHTML = '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
-				oCellWeight.innerHTML += arItem['WEIGHT_FORMATED'];
-			}
-			else
-			{
-				var oCellCustom = newRow.insertCell(-1),
+					if (bShowPriceType && arItem['NOTES'].length > 0)
+					{
+						oCellPrice.innerHTML += '<div class="type_price">' + basketJSParams['SALE_TYPE'] + '</div>';
+						oCellPrice.innerHTML += '<div class="type_price_value">' + arItem['NOTES'] + '</div>';
+					}
+					break;
+				case 'DISCOUNT':
+					oCellDiscount = newRow.insertCell(-1);
+					oCellDiscount.setAttribute('class', 'custom');
+					oCellDiscount.innerHTML = '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
+					oCellDiscount.innerHTML += '<div id="discount_value_' + arItem['ID'] + '">' + arItem['DISCOUNT_PRICE_PERCENT_FORMATED'] + '</div>';
+					break;
+				case 'WEIGHT':
+					oCellWeight = newRow.insertCell(-1);
+					oCellWeight.setAttribute('class', 'custom');
+					oCellWeight.innerHTML = '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
+					oCellWeight.innerHTML += arItem['WEIGHT_FORMATED'];
+					break;
+				default:
+					oCellCustom = newRow.insertCell(-1);
 					customColumnVal = '';
 
-				oCellCustom.setAttribute('class', 'custom');
-				oCellCustom.innerHTML = '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
+					oCellCustom.setAttribute('class', 'custom');
+					oCellCustom.innerHTML = '<span>' + getColumnName(res, arColumns[i]) + ':</span>';
 
-				if (arColumns[i] == 'SUM')
-					customColumnVal += '<div id="sum_' + arItem['ID'] + '">';
+					if (arColumns[i] == 'SUM')
+						customColumnVal += '<div id="sum_' + arItem['ID'] + '">';
 
-				if (typeof(arItem[arColumns[i]]) != 'undefined' )
-				{
-					customColumnVal += arItem[arColumns[i]];
-				}
+					if (typeof(arItem[arColumns[i]]) != 'undefined' )
+					{
+						customColumnVal += arItem[arColumns[i]];
+					}
 
-				if (arColumns[i] == 'SUM')
-					customColumnVal += '</div>';
+					if (arColumns[i] == 'SUM')
+						customColumnVal += '</div>';
 
-				oCellCustom.innerHTML += customColumnVal;
+					oCellCustom.innerHTML += customColumnVal;
+					break;
 			}
 		}
 
@@ -489,35 +493,8 @@ function updateBasketTable(basketItemId, res)
 	}
 
 	// update coupon info
-	if (BX('coupon'))
-	{
-		var couponClass = "";
-
-		if (BX('coupon_approved') && BX('coupon').value.length == 0)
-		{
-			BX('coupon_approved').value = "N";
-		}
-
-		if (res.hasOwnProperty('VALID_COUPON'))
-		{
-			couponClass = (!!res['VALID_COUPON']) ? 'good' : 'bad';
-
-			if (BX('coupon_approved'))
-			{
-				BX('coupon_approved').value = (!!res['VALID_COUPON']) ? 'Y' : 'N'
-			}
-		}
-
-		if (BX('coupon_approved') && BX('coupon').value.length > 0)
-		{
-			couponClass = BX('coupon_approved').value == "Y" ? "good" : "bad";
-		}else
-		{
-			couponClass = "";
-		}
-
-		BX('coupon').className = couponClass;
-	}
+	if (!!res.BASKET_DATA)
+		couponListUpdate(res.BASKET_DATA);
 
 	// update warnings if any
 	if (res.hasOwnProperty('WARNING_MESSAGE'))
@@ -547,7 +524,163 @@ function updateBasketTable(basketItemId, res)
 
 		if (BX('PRICE_WITHOUT_DISCOUNT'))
 			BX('PRICE_WITHOUT_DISCOUNT').innerHTML = (res['BASKET_DATA']['PRICE_WITHOUT_DISCOUNT'] != res['BASKET_DATA']['allSum_FORMATED']) ? res['BASKET_DATA']['PRICE_WITHOUT_DISCOUNT'].replace(/\s/g, '&nbsp;') : '';
+
+		BX.onCustomEvent('OnBasketChange');
 	}
+}
+/**
+ * @param couponBlock
+ * @param {COUPON: string, JS_STATUS: string} oneCoupon - new coupon.
+ */
+function couponCreate(couponBlock, oneCoupon)
+{
+	var couponClass = 'disabled';
+
+	if (!BX.type.isElementNode(couponBlock))
+		return;
+	if (oneCoupon.JS_STATUS === 'BAD')
+		couponClass = 'bad';
+	else if (oneCoupon.JS_STATUS === 'APPLYED')
+		couponClass = 'good';
+
+	couponBlock.appendChild(BX.create(
+		'div',
+		{
+			props: {
+				className: 'bx_ordercart_coupon'
+			},
+			children: [
+				BX.create(
+					'input',
+					{
+						props: {
+							className: couponClass,
+							type: 'text',
+							value: oneCoupon.COUPON,
+							name: 'OLD_COUPON[]'
+						},
+						attrs: {
+							disabled: true,
+							readonly: true
+						}
+					}
+				),
+				BX.create(
+					'span',
+					{
+						props: {
+							className: couponClass
+						},
+						attrs: {
+							'data-coupon': oneCoupon.COUPON
+						}
+					}
+				),
+				BX.create(
+					'div',
+					{
+						props: {
+							className: 'bx_ordercart_coupon_notes'
+						},
+						html: oneCoupon.JS_CHECK_CODE
+					}
+				)
+			]
+		}
+	));
+}
+
+/**
+ * @param {COUPON_LIST : []} res
+ */
+function couponListUpdate(res)
+{
+	var couponBlock,
+		couponClass,
+		fieldCoupon,
+		couponsCollection,
+		couponFound,
+		i,
+		j,
+		key;
+
+	if (!!res && typeof res !== 'object')
+	{
+		return;
+	}
+
+	couponBlock = BX('coupons_block');
+	if (!!couponBlock)
+	{
+		if (!!res.COUPON_LIST && BX.type.isArray(res.COUPON_LIST))
+		{
+			fieldCoupon = BX('coupon');
+			if (!!fieldCoupon)
+			{
+				fieldCoupon.value = '';
+			}
+			couponsCollection = BX.findChildren(couponBlock, { tagName: 'input', property: { name: 'OLD_COUPON[]' } }, true);
+
+			if (!!couponsCollection)
+			{
+				if (BX.type.isElementNode(couponsCollection))
+				{
+					couponsCollection = [couponsCollection];
+				}
+				for (i = 0; i < res.COUPON_LIST.length; i++)
+				{
+					couponFound = false;
+					key = -1;
+					for (j = 0; j < couponsCollection.length; j++)
+					{
+						if (couponsCollection[j].value === res.COUPON_LIST[i].COUPON)
+						{
+							couponFound = true;
+							key = j;
+							couponsCollection[j].couponUpdate = true;
+							break;
+						}
+					}
+					if (couponFound)
+					{
+						couponClass = 'disabled';
+						if (res.COUPON_LIST[i].JS_STATUS === 'BAD')
+							couponClass = 'bad';
+						else if (res.COUPON_LIST[i].JS_STATUS === 'APPLYED')
+							couponClass = 'good';
+
+						BX.adjust(couponsCollection[key], {props: {className: couponClass}});
+						BX.adjust(couponsCollection[key].nextSibling, {props: {className: couponClass}});
+						BX.adjust(couponsCollection[key].nextSibling.nextSibling, {html: res.COUPON_LIST[i].JS_CHECK_CODE});
+					}
+					else
+					{
+						couponCreate(couponBlock, res.COUPON_LIST[i]);
+					}
+				}
+				for (j = 0; j < couponsCollection.length; j++)
+				{
+					if (typeof (couponsCollection[j].couponUpdate) === 'undefined' || !couponsCollection[j].couponUpdate)
+					{
+						BX.remove(couponsCollection[j].parentNode);
+						couponsCollection[j] = null;
+					}
+					else
+					{
+						couponsCollection[j].couponUpdate = null;
+					}
+				}
+			}
+			else
+			{
+				for (i = 0; i < res.COUPON_LIST.length; i++)
+				{
+					couponCreate(couponBlock, res.COUPON_LIST[i]);
+				}
+			}
+		}
+	}
+	couponBlock = null;
 }
 
 function skuPropClickHandler(e)
@@ -678,13 +811,17 @@ function rightScroll(prop, id, count)
 
 function checkOut()
 {
+	if (!!BX('coupon'))
+		BX('coupon').disabled = true;
 	BX("basket_form").submit();
 	return true;
 }
 
 function enterCoupon()
 {
-	recalcBasketAjax();
+	var newCoupon = BX('coupon');
+	if (!!newCoupon && !!newCoupon.value)
+		recalcBasketAjax({'coupon' : newCoupon.value});
 }
 
 // check if quantity is valid
@@ -731,7 +868,7 @@ function updateQuantity(controlId, basketId, ratio, bUseFloatQuantity)
 		// set hidden real quantity value (will be used in actual calculation)
 		BX("QUANTITY_" + basketId).value = newVal;
 
-		recalcBasketAjax();
+		recalcBasketAjax({});
 	}
 	else
 	{
@@ -741,7 +878,7 @@ function updateQuantity(controlId, basketId, ratio, bUseFloatQuantity)
 		{
 			BX("QUANTITY_INPUT_" + basketId).value = newVal;
 			BX("QUANTITY_" + basketId).value = newVal;
-			recalcBasketAjax();
+			recalcBasketAjax({});
 		}else
 		{
 			BX(controlId).value = oldVal;
@@ -819,17 +956,22 @@ function getCorrectRatioQuantity(quantity, ratio, bUseFloatQuantity)
 
 	return result;
 }
-
-function recalcBasketAjax()
+/**
+ *
+ * @param {} params
+ */
+function recalcBasketAjax(params)
 {
 	BX.showWait();
 
 	var property_values = {},
 		action_var = BX('action_var').value,
 		items = BX('basket_items'),
-		delayedItems = BX('delayed_items');
+		delayedItems = BX('delayed_items'),
+		postData,
+		i;
 
-	var postData = {
+	postData = {
 		'sessid': BX.bitrix_sessid(),
 		'site_id': BX.message('SITE_ID'),
 		'props': property_values,
@@ -840,21 +982,27 @@ function recalcBasketAjax()
 		'count_discount_4_all_quantity': BX('count_discount_4_all_quantity').value,
 		'price_vat_show_value': BX('price_vat_show_value').value,
 		'hide_coupon': BX('hide_coupon').value,
-		'use_prepayment': BX('use_prepayment').value,
-		'coupon': !!BX('coupon') ? BX('coupon').value : ""
+		'use_prepayment': BX('use_prepayment').value
 	};
-
 	postData[action_var] = 'recalculate';
+	if (!!params && typeof params === 'object')
+	{
+		for (i in params)
+		{
+			if (params.hasOwnProperty(i))
+				postData[i] = params[i];
+		}
+	}
 
 	if (!!items && items.rows.length > 0)
 	{
-		for (var i = 1; items.rows.length > i; i++)
+		for (i = 1; items.rows.length > i; i++)
 			postData['QUANTITY_' + items.rows[i].id] = BX('QUANTITY_' + items.rows[i].id).value;
 	}
 
 	if (!!delayedItems && delayedItems.rows.length > 0)
 	{
-		for (var i = 1; delayedItems.rows.length > i; i++)
+		for (i = 1; delayedItems.rows.length > i; i++)
 			postData['DELAY_' + delayedItems.rows[i].id] = 'Y';
 	}
 
@@ -945,10 +1093,25 @@ function showBasketItemsList(val)
 	}
 }
 
-BX.ready(function() {
+function deleteCoupon(e)
+{
+	var target = BX.proxy_context,
+		value;
 
+	if (!!target && target.hasAttribute('data-coupon'))
+	{
+		value = target.getAttribute('data-coupon');
+		if (!!value && value.length > 0)
+		{
+			recalcBasketAjax({'delete_coupon' : value});
+		}
+	}
+}
+
+BX.ready(function() {
 	var sku_props = BX.findChildren(BX('basket_items'), {tagName: 'li', className: 'sku_prop'}, true),
-		i;
+		i,
+		couponBlock;
 	if (!!sku_props && sku_props.length > 0)
 	{
 		for (i = 0; sku_props.length > i; i++)
@@ -956,4 +1119,7 @@ BX.ready(function() {
 			BX.bind(sku_props[i], 'click', BX.delegate(function(e){ skuPropClickHandler(e);}, this));
 		}
 	}
+	couponBlock = BX('coupons_block');
+	if (!!couponBlock)
+		BX.bindDelegate(couponBlock, 'click', { 'attribute': 'data-coupon' }, BX.delegate(function(e){deleteCoupon(e); }, this));
 });

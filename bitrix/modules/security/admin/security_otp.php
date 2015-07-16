@@ -129,11 +129,17 @@ $tabControl->BeginNextTab();
 					getMessage('SEC_OTP_DESCRIPTION_INTRO_INTRANET'):
 					getMessage('SEC_OTP_DESCRIPTION_INTRO_SITE'))?>
 			</div>
+			<?
+			if (in_array(LANGUAGE_ID, array('en', 'ru', 'de'), true))
+				$imageLanguage = LANGUAGE_ID;
+			else
+				$imageLanguage = \Bitrix\Main\Localization\Loc::getDefaultLang(LANGUAGE_ID);
+			?>
 			<h3 style="clear:both"><br><?=getMessage('SEC_OTP_DESCRIPTION_USING_TITLE')?></h3>
 			<div style="float: left; margin-right: 20px">
 				<div style="-webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; border: 2px solid #e0e3e5; border-radius: 2px; padding: 5px 10px; background: white; height: 150px;">
-					<div style="float: left; background: url(/bitrix/images/security/ru_login_step0.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px;" ><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_0')?></div>
-					<div style="float: left; background: url(/bitrix/images/security/ru_login_step1.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px; margin-left:20px;"><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_1')?></div>
+					<div style="float: left; background: url(/bitrix/images/security/<?=$imageLanguage?>_login_step0.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px;" ><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_0')?></div>
+					<div style="float: left; background: url(/bitrix/images/security/<?=$imageLanguage?>_login_step1.png) no-repeat top right; width: 220px; height: 120px; padding-top: 20px; margin-left:20px;"><?=getMessage('SEC_OTP_DESCRIPTION_USING_STEP_1')?></div>
 				</div>
 			</div>
 			<div>

@@ -7,6 +7,7 @@ use Bitrix\Main\Context;
 
 final class Loc
 {
+	private static $currentLang = null;
 	private static $messages = array();
 	private static $customMessages = null;
 	private static $includedFiles = array();
@@ -23,18 +24,12 @@ final class Loc
 	 */
 	public static function getMessage($code, $replace = null, $language = null)
 	{
-		static $currentLang = null;
-
 		if($language === null)
 		{
-			if($currentLang === null)
-			{
-				$language = $currentLang = self::getCurrentLang();
-			}
-			else
-			{
-				$language = $currentLang;
-			}
+			if(static::$currentLang === null)
+				static::$currentLang = self::getCurrentLang();
+
+			$language = static::$currentLang;
 		}
 
 		if(!isset(self::$messages[$language][$code]))
@@ -79,6 +74,11 @@ final class Loc
 		return 'en';
 	}
 
+	public static function setCurrentLang($language)
+	{
+		static::$currentLang = $language;
+	}
+
 	/**
 	 * Loads language messages for specified file
 	 *
@@ -89,7 +89,12 @@ final class Loc
 	public static function loadLanguageFile($file, $language = null)
 	{
 		if($language === null)
-			$language = self::getCurrentLang();
+		{
+			if(static::$currentLang === null)
+				static::$currentLang = self::getCurrentLang();
+
+			$language = static::$currentLang;
+		}
 
 		if(!isset(self::$messages[$language]))
 			self::$messages[$language] = array();

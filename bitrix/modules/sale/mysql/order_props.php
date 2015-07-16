@@ -59,7 +59,7 @@ class CSaleOrderProps extends CAllSaleOrderProps
 			"TYPE" => array("FIELD" => "P.TYPE", "TYPE" => "string"),
 			"REQUIED" => array("FIELD" => "P.REQUIED", "TYPE" => "char"),
 			"REQUIRED" => array("FIELD" => "P.REQUIED", "TYPE" => "char"),
-			"DEFAULT_VALUE" => array("FIELD" => "P.DEFAULT_VALUE", "TYPE" => "string"),
+			//"DEFAULT_VALUE" => array("FIELD" => "P.DEFAULT_VALUE", "TYPE" => "string"),
 			"SORT" => array("FIELD" => "P.SORT", "TYPE" => "int"),
 			"USER_PROPS" => array("FIELD" => "P.USER_PROPS", "TYPE" => "char"),
 			"IS_LOCATION" => array("FIELD" => "P.IS_LOCATION", "TYPE" => "char"),
@@ -93,6 +93,8 @@ class CSaleOrderProps extends CAllSaleOrderProps
 			"DELIVERY_ID" => array("FIELD" => "SOD.PROPERTY_ID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_order_props_relation SOD ON P.ID = SOD.PROPERTY_ID", "WHERE" => array("CSaleOrderProps", "PrepareRelation4Where"))
 		);
 		// <-- FIELDS
+
+		self::addPropertyDefaultValueField('P', $arFields);
 
 		$arSqls = CSaleOrder::PrepareSql($arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields);
 
@@ -238,6 +240,9 @@ class CSaleOrderProps extends CAllSaleOrderProps
 
 		if (!CSaleOrderProps::CheckFields("ADD", $arFields))
 			return false;
+
+		// translate here
+		$arFields['DEFAULT_VALUE'] = self::translateLocationIDToCode($arFields);
 
 		$arInsert = $DB->PrepareInsert("b_sale_order_props", $arFields);
 

@@ -23,16 +23,6 @@ Loc::loadMessages(__FILE__);
 
 	<div id="sls-<?=$arResult['RANDOM_TAG']?>" class="bx-slst<?if($arResult['ADMIN_MODE']):?> bx-admin-mode<?endif?>">
 
-		<div data-bx-ui-id="slst-error">
-			<?if(!empty($arResult['ERRORS']['NONFATAL'])):?>
-
-				<?foreach($arResult['ERRORS']['NONFATAL'] as $error):?>
-					<?=ShowError($error)?>
-				<?endforeach?>
-
-			<?endif?>
-		</div>
-
 		<?if(is_array($arResult['DEFAULT_LOCATIONS']) && !empty($arResult['DEFAULT_LOCATIONS'])):?>
 
 			<div class="bx-ui-sls-quick-locations quick-locations">
@@ -55,6 +45,18 @@ Loc::loadMessages(__FILE__);
 
 		<div class="bx-ui-slst-pool">
 		</div>
+
+		<?if(!$arParams['SUPPRESS_ERRORS']):?>
+			<div data-bx-ui-id="slst-error">
+				<?if(!empty($arResult['ERRORS']['NONFATAL'])):?>
+
+					<?foreach($arResult['ERRORS']['NONFATAL'] as $error):?>
+						<?=ShowError($error)?>
+					<?endforeach?>
+
+				<?endif?>
+			</div>
+		<?endif?>
 
 		<script type="text/html" data-template-id="bx-ui-slst-selector-scope">
 
@@ -83,14 +85,6 @@ Loc::loadMessages(__FILE__);
 
 		</script>
 
-		<?/*
-		<script type="text/html" data-template-id="bx-ui-pager-pager-area">
-			<div class="bx-ui-pager-area">
-				Loading ...
-			</div>
-		</script>
-		*/?>
-
 		<div class="bx-ui-slst-loader"></div>
 	</div>
 
@@ -109,7 +103,7 @@ Loc::loadMessages(__FILE__);
 				window.BX.locationSelectors['<?=$arParams['JS_CONTROL_GLOBAL_ID']?>'] = 
 			<?endif?>
 
-			new BX.chainedSelectorsSLS(<?=CUtil::PhpToJSObject(array(
+			new BX.Sale.component.location.selector.steps(<?=CUtil::PhpToJSObject(array(
 
 				// common
 				'scope' => 'sls-'.$arResult['RANDOM_TAG'],
@@ -125,8 +119,8 @@ Loc::loadMessages(__FILE__);
 				),
 
 				'selectedItem' => intval($arResult['LOCATION']['ID']),
-				'knownBundles' => $arResult['INITIAL_BUNDLES'],
-				'rootNodeValue' => intval($arResult['ROOT_NODE']),
+				'knownBundles' => $arResult['PRECACHED_POOL_JSON'],
+				'provideLinkBy' => $arParams['PROVIDE_LINK_BY'],
 
 				'messages' => array(
 					'notSelected' => Loc::getMessage('SALE_SLS_SELECTOR_PROMPT'),
@@ -135,17 +129,23 @@ Loc::loadMessages(__FILE__);
 					'clearSelection' => '--- '.Loc::getMessage('SALE_SLS_OTHER_CANCEL_SELECTION')
 				),
 
-				// other
-				'provideLinkBy' => $arParams['PROVIDE_LINK_BY'],
+				// "js logic"-related part
 				'callback' => $arParams['JS_CALLBACK'],
 				'useSpawn' => $arParams['USE_JS_SPAWN'] == 'Y',
+				'initializeByGlobalEvent' => $arParams['INITIALIZE_BY_GLOBAL_EVENT'],
+				'globalEventScope' => $arParams['GLOBAL_EVENT_SCOPE'],
 
+				// specific
+				'rootNodeValue' => intval($arResult['ROOT_NODE']),
 				'showDefault' => false,
-				'initialBundlesIncomplete' => true,
-				//'insertOptOtherLocation' => $arParams['INSERT_OPT_OTHER_LOCATION'] == 'Y',
 
-				'autoSelectWhenSingle' => $arParams['SELECT_WHEN_SINGLE'] != 'N', // hidden option
+				// a trouble of BX.merge() array over object. will be fixed later, but for now as a hotfix
+				'bundlesIncomplete' => array('a' => true) + (is_array($arResult['BUNDLES_INCOMPLETE']) ? $arResult['BUNDLES_INCOMPLETE'] : array()),
 
+				'autoSelectWhenSingle' => $arParams['SELECT_WHEN_SINGLE'] != 'N',
+				'types' => $arResult['TYPES'],
+
+				// spike for sale.order.ajax
 				'disableKeyboardInput' => $arParams['DISABLE_KEYBOARD_INPUT'] == 'Y',
 				'dontShowNextChoice' => $arParams['DISABLE_KEYBOARD_INPUT'] == 'Y',
 

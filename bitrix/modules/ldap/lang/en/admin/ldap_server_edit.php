@@ -76,4 +76,5 @@ $MESS["LDAP_DEFAULT_DEPARTMENT"] = "My company";
 $MESS["LDAP_EDIT_GROUP_MEMBERS"] = "Group member attribute";
 $MESS["LDAP_EXT_NO_LOADED"] = "LDAP extension for PHP is not loaded";
 $MESS["LDAP_EDIT_MAX_PAGE_SIZE"] = "Maximum number of results returned in one search";
+$MESS["LDAP_EDIT_SYNC_USER_ADD"] = "Create missing users";
 ?>

@@ -39,7 +39,7 @@ $signature = CSalePaySystemAction::GetParamValue("SIGN");
 
 $gensig = base64_encode(sha1($signature.$resp.$signature,1));
 
-if ($insig == $gensig)
+if ($insig == $gensig && strlen($signature) > 0)
 {
 	if ($status == "success")
 	{

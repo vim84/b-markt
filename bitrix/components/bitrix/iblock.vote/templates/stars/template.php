@@ -20,7 +20,9 @@ if($arParams["DISPLAY_AS_RATING"] == "vote_avg")
 		$votesValue = 0;
 }
 else
+{
 	$votesValue = intval($arResult["PROPERTIES"]["rating"]["VALUE"]);
+}
 
 $votesCount = intval($arResult["PROPERTIES"]["vote_count"]["VALUE"]);
 

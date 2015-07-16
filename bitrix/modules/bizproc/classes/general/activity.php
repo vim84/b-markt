@@ -191,8 +191,36 @@ abstract class CBPActivity
 			return $rootActivity->arVariables[$name];
 
 		return null;
-		//else
-		//	throw new Exception(str_replace("#NAME#", htmlspecialcharsbx($name), GetMessage("BPSWA_EMPTY_NAME")));
+	}
+
+	private function GetConstantTypes()
+	{
+		$rootActivity = $this->GetRootActivity();
+		if (method_exists($rootActivity, 'GetWorkflowTemplateId'))
+		{
+			$templateId = $rootActivity->GetWorkflowTemplateId();
+			if ($templateId > 0)
+			{
+				return CBPWorkflowTemplateLoader::getTemplateConstants($templateId);
+			}
+		}
+		return null;
+	}
+
+	public function GetConstant($name)
+	{
+		$constants = $this->GetConstantTypes();
+		if (isset($constants[$name]['Default']))
+			return $constants[$name]['Default'];
+		return null;
+	}
+
+	public function GetConstantType($name)
+	{
+		$constants = $this->GetConstantTypes();
+		if (isset($constants[$name]))
+			return $constants[$name];
+		return array('Type' => null, 'Multiple' => false, 'Required' => false, 'Options' => null);
 	}
 
 	public function IsVariableExists($name)
@@ -363,7 +391,7 @@ abstract class CBPActivity
 				{
 					$calc = new CBPCalc($this);
 					$r = $calc->Calculate($val);
-					if ($r != null)
+					if ($r !== null)
 						return array(2, $r);
 				}
 
@@ -393,6 +421,13 @@ abstract class CBPActivity
 			if (array_key_exists($fieldName, $document))
 			{
 				$result = $document[$fieldName];
+				if (is_array($result) && strtoupper(substr($fieldName, -strlen('_PRINTABLE'))) == '_PRINTABLE')
+					$result = implode(", ", $result);
+				$return = true;
+			}
+			else
+			{
+				$result = '';
 				$return = true;
 			}
 		}
@@ -420,27 +455,32 @@ abstract class CBPActivity
 
 			$return = true;
 		}
-		elseif ($objectName == "Variable")
+		elseif ($objectName == "Variable" || $objectName == 'Constant')
 		{
 			$rootActivity = $this->GetRootActivity();
 
 			if (substr($fieldName, -strlen("_printable")) == "_printable")
 			{
 				$fieldNameTmp = substr($fieldName, 0, strlen($fieldName) - strlen("_printable"));
-				$result = $rootActivity->GetVariable($fieldNameTmp);
+				$result = $objectName == "Variable" ? $rootActivity->GetVariable($fieldNameTmp)
+													: $rootActivity->GetConstant($fieldNameTmp);
+
+				$fieldType = $objectName == "Variable" ? $rootActivity->arVariablesTypes[$fieldNameTmp]
+														: $rootActivity->GetConstantType($fieldNameTmp);
 
 				$rootActivity = $this->GetRootActivity();
 				$documentId = $rootActivity->GetDocumentId();
 
 				$documentService = $this->workflow->GetService("DocumentService");
-				$result = $documentService->GetFieldValuePrintable($documentId, $fieldNameTmp, $rootActivity->arVariablesTypes[$fieldNameTmp]["Type"], $result, $rootActivity->arVariablesTypes[$fieldNameTmp]);
+				$result = $documentService->GetFieldValuePrintable($documentId, $fieldNameTmp, $fieldType["Type"], $result, $fieldType);
 
 				if (is_array($result))
 					$result = implode(", ", $result);
 			}
 			else
 			{
-				$result = $rootActivity->GetVariable($fieldName);
+				$result = $objectName == "Variable" ? $rootActivity->GetVariable($fieldName)
+													: $rootActivity->GetConstant($fieldName);
 			}
 
 			$return = true;
@@ -465,6 +505,13 @@ abstract class CBPActivity
 			$result = null;
 			if ($fieldName == "Now")
 				$result = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")));
+			elseif ($fieldName == "NowLocal")
+			{
+				$result = time();
+				if (CTimeZone::Enabled())
+					$result += CTimeZone::GetOffset();
+				$result = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")), $result);
+			}
 			elseif ($fieldName == "Date")
 				$result = date($DB->DateFormatToPHP(CSite::GetDateFormat("SHORT")));
 			if ($result !== null)
@@ -755,7 +802,9 @@ abstract class CBPActivity
 
 		$classname = 'CBP'.$code;
 
-		return call_user_func_array(array($classname, $method), $arParameters);
+		if (method_exists($classname,$method))
+			return call_user_func_array(array($classname, $method), $arParameters);
+		return false;
 	}
 
 	public function InitializeFromArray($arParams)

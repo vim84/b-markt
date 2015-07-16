@@ -178,13 +178,15 @@ echo $htmlMenu;
 	<!-- Exit -->
 	<div class="menu-separator"></div>
 	<div id="logout_block" class="menu-section  menu-section-groups" <?if (!is_array($arResult["USER"])):?>style="display:none"<?endif?>>
-		<div class="menu-item" onclick="logout()"><?=GetMessage("MB_EXIT");?></div>
+		<div class="menu-item" onclick="logout();"><?=GetMessage("MB_EXIT");?></div>
 	</div>
 </div>
 
 <script type="text/javascript">
 	BX.addCustomEvent("onAuthSuccess", function(data) {
 		BX.remove(BX("auth"));
+		if (BX("user_name"))
+			BX.remove(BX("user_name"));
 		var user_div = BX.create('DIV', {
 			props: {
 				id :  "user_name"
@@ -204,9 +206,9 @@ echo $htmlMenu;
 	function logout()
 	{
 		BX.ajax({
-			timeout:   30,
+		//	timeout:   30,
 			method:   'POST',
-			url: '<?=SITE_DIR?>eshop_app/auth/?logout=yes',
+			url: '<?=SITE_DIR?>eshop_app/?logout=yes',
 			processData: false,
 			onsuccess: function(reply){
 				BX.remove(BX("user_name"));

@@ -1,6 +1,7 @@
 <?
 use Bitrix\Main\Type\Collection;
 use Bitrix\Currency\CurrencyTable;
+use Bitrix\Iblock;
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED!==true) die();
 /** @var CBitrixComponentTemplate $this */
@@ -274,6 +275,15 @@ if ($arResult['CATALOG'] && isset($arResult['OFFERS']) && !empty($arResult['OFFE
 			if (isset($arOffer['DISPLAY_PROPERTIES'][$strOneCode]))
 			{
 				$arResultSKUPropIDs[$strOneCode] = true;
+				if (!isset($arNeedValues[$arSKUPropList[$strOneCode]['ID']]))
+					$arNeedValues[$arSKUPropList[$strOneCode]['ID']] = array();
+				$valueId = (
+					$arSKUPropList[$strOneCode]['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_LIST
+					? $arOffer['DISPLAY_PROPERTIES'][$strOneCode]['VALUE_ENUM_ID']
+					: $arOffer['DISPLAY_PROPERTIES'][$strOneCode]['VALUE']
+				);
+				$arNeedValues[$arSKUPropList[$strOneCode]['ID']][$valueId] = $valueId;
+				unset($valueId);
 				if (!isset($arFilterProp[$strOneCode]))
 					$arFilterProp[$strOneCode] = $arSKUPropList[$strOneCode];
 			}

@@ -52,7 +52,7 @@ $MESS ['BP_DBLA_APPROVE_TEXT'] = "You have to approve or reject the document \"{
 Author: {=Document:CREATED_BY_PRINTABLE}";
 $MESS ['BP_DBLA_TASK_DESC'] = "You have to approve or reject the document \"{=Document:NAME}\".
 
-Proceed by opening the link: http://#HTTP_HOST##TASK_URL#
+Proceed by opening the link: #BASE_HREF##TASK_URL#
 
 Author: {=Document:CREATED_BY_PRINTABLE}";
 $MESS ['BP_DBLA_APPROVE2_TEXT'] = "You have to approve or reject the document \"{=Document:NAME}\".
@@ -60,7 +60,7 @@ $MESS ['BP_DBLA_APPROVE2_TEXT'] = "You have to approve or reject the document \"
 Author: {=Document:CREATED_BY_PRINTABLE}";
 $MESS ['BP_DBLA_MAIL2_TEXT'] = "You have to approve or reject the document \"{=Document:NAME}\".
 
-Proceed by opening the link: http://#HTTP_HOST##TASK_URL#
+Proceed by opening the link: #BASE_HREF##TASK_URL#
 
 Author: {=Document:CREATED_BY_PRINTABLE}";
 ?>

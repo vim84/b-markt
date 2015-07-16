@@ -1035,16 +1035,7 @@ function set_event2()
 </script>
 <?
 	if ($old_module_version=="Y"):
-	?>
-	<tr>
-		<td><?=GetMessage("FORM_SHOW_TEMPLATE")?></td>
-		<?
-		$arList = CForm::GetTemplateList("SHOW");
-		?>
-		<td><?echo SelectBoxFromArray("SHOW_TEMPLATE", $arList, $str_SHOW_TEMPLATE);
-		?><?if ($ID>0) :?>&nbsp;[&nbsp;<a href="/bitrix/admin/form_view.php?lang=<?=LANGUAGE_ID?>&WEB_FORM_ID=<?=$ID?>"><?=GetMessage("FORM_PREVIEW")?></a>&nbsp;]<?endif;?></td>
-	</tr>
-	<?
+
 	$strSql = "SELECT ID FROM b_form_result WHERE FORM_ID='".$ID."' ORDER BY ID desc";
 	$z = $DB->Query($strSql, false, $err_mess.__LINE__);
 	$zr = $z->Fetch();

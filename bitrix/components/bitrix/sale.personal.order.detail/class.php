@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * Bitrix Framework
@@ -24,7 +24,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	const E_CATALOG_MODULE_NOT_INSTALLED 	= 10003;
 
 	/**
-	 * Fatal error list. Any fatal error makes useless further execution of a component code. 
+	 * Fatal error list. Any fatal error makes useless further execution of a component code.
 	 * In most cases, there will be only one error in a list according to the scheme "one shot - one dead body"
 	 *
 	 * @var string[] Array of fatal errors.
@@ -77,7 +77,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 
 	protected $currentCache = null;
 
-	private $dbResult = array();
+	protected $dbResult = array();
 
 	/**
 	 * A convert map for method self::formatDate()
@@ -113,7 +113,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	{
 		if (!Loader::includeModule('sale'))
 			throw new Main\SystemException(Localization\Loc::getMessage("SPOD_SALE_MODULE_NOT_INSTALL"), self::E_SALE_MODULE_NOT_INSTALLED);
-		
+
 		$this->useCatalog = Loader::includeModule('catalog');
 		$this->useHL = Loader::includeModule('highloadblock');
 		$this->useIBlock = Loader::includeModule('iblock');
@@ -125,8 +125,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	 */
 	protected function checkAuthorized()
 	{
-		global $USER;
-		global $APPLICATION;
+		global $USER, $APPLICATION;
 
 		if (!$USER->IsAuthorized())
 			$APPLICATION->AuthForm(Localization\Loc::getMessage("SPOD_ACCESS_DENIED"));
@@ -143,20 +142,18 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 
 		$this->tryParseInt($arParams["CACHE_TIME"], 3600, true);
 
-		$arParams['CACHE_GROUPS'] = trim($arParams['CACHE_GROUPS']);
-		if ('N' != $arParams['CACHE_GROUPS'])
-			$arParams['CACHE_GROUPS'] = 'Y';
-		
+		$arParams['CACHE_GROUPS'] = (isset($arParams['CACHE_GROUPS']) && $arParams['CACHE_GROUPS'] == 'N' ? 'N' : 'Y');
+
 		$this->tryParseString($arParams["PATH_TO_LIST"], $APPLICATION->GetCurPage());
 		$this->tryParseString($arParams["PATH_TO_PAYMENT"], "payment.php");
 
 		$this->tryParseString($arParams["PATH_TO_CANCEL"], $APPLICATION->GetCurPage()."?"."ID=#ID#");
 		$arParams["PATH_TO_CANCEL"] .= (strpos($arParams["PATH_TO_CANCEL"], "?") === false ? "?" : "&");
-		
+
 		$this->tryParseString($arParams["ACTIVE_DATE_FORMAT"], "d.m.Y");
 
 		// fields & props to select from IBlock
-		if(!is_array($arParams["CUSTOM_SELECT_PROPS"])) 
+		if(!is_array($arParams["CUSTOM_SELECT_PROPS"]))
 			$arParams["CUSTOM_SELECT_PROPS"] = array();
 		else
 			$this->tryParseArray($arParams["CUSTOM_SELECT_PROPS"]);
@@ -185,31 +182,32 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 			if(!strlen($item))
 				unset($fld[$k]);
 		}
-		
+
 		$fld = array_unique($fld);
 
 		return $fld;
 	}
 
 	/**
-	 * Function reduces input value to integer type, and, if gets null, passes the default value
-	 * @param mixed $fld Field value
-	 * @param int $default Default value
-	 * @param int $allowZero Allows zero-value of the parameter
-	 * @return int Parsed value
+	 * Function reduces input value to integer type, and, if gets null, passes the default value.
+	 *
+	 * @param int &$fld					Field value.
+	 * @param int $default				Default value.
+	 * @param bool $allowZero			Allows zero-value of the parameter
+	 * @return int
 	 */
 	public static function tryParseInt(&$fld, $default, $allowZero = false)
 	{
-		$fld = intval($fld);
-		if(!$allowZero && !$fld && isset($default))
+		$fld = (int)$fld;
+		if (!$allowZero && !$fld && isset($default))
 			$fld = $default;
-			
+
 		return $fld;
 	}
 
 	/**
 	 * Function processes string value and, if gets null, passes the default value to it
-	 * @param mixed $fld Field value
+	 * @param mixed &$fld Field value
 	 * @param string $default Default value
 	 * @return string Parsed value
 	 */
@@ -248,7 +246,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	/**
 	 * Function could describe what to do when order ID not set. By default, component will redirect to list page.
 	 * @return void
-	 */	
+	 */
 	protected function doCaseOrderIdNotSet()
 	{
 		global $APPLICATION;
@@ -296,6 +294,25 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	}
 
 	/**
+	 * Return order tax list
+	 *
+	 * @param array &$cached		Cached data.
+	 * @return void
+	 */
+	protected function obtainTaxes(&$cached)
+	{
+		$cached['TAX'] = array();
+		if (!empty($this->dbResult['ID']))
+		{
+			$taxIterator = CSaleOrderTax::GetList(array('APPLY_ORDER' => 'ASC'), array('ORDER_ID' => $this->dbResult['ID']));
+			while ($tax = $taxIterator->Fetch())
+				$cached['TAX'][] = $tax;
+			unset($tax, $taxIterator);
+		}
+		$cached['TAX_LIST'] = $cached['TAX'];
+	}
+
+	/**
 	 * Function fetches information about stores in the system, depending on the delivery system.
 	 * This method should should be called only after obtainDataCachedStatic().
 	 * @param mixed[] $cached Cached data taken from obtainDataCachedStructure()
@@ -310,7 +327,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 		{
 			$stores = unserialize($this->dbResult["DELIVERY"]["STORE"]);
 
-			if (is_array($stores) && !empty($stores))
+			if (!empty($stores) && is_array($stores))
 			{
 				$dbStores = CCatalogStore::GetList(
 					array("SORT" => "DESC", "ID" => "DESC"),
@@ -318,7 +335,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 					false,
 					false,
 					array("ID", "TITLE", "ADDRESS", "DESCRIPTION", "IMAGE_ID", "PHONE", "SCHEDULE", "GPS_N", "GPS_S", "ISSUING_CENTER", "SITE_ID", "EMAIL")
-				);	
+				);
 
 				while ($item = $dbStores->Fetch())
 					$cached["DELIVERY_STORE_LIST"][$item['ID']] = $item;
@@ -364,7 +381,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 			// adjust some sale params
 			$arItem["PRICE_VAT_VALUE"] = (($arItem["PRICE"] / ($arItem["VAT_RATE"] +1)) * $arItem["VAT_RATE"]);
 			$arItem["WEIGHT"] = doubleval($arItem["WEIGHT"]);
-			
+
 			// weight manipulation for product that has type "SET" (nabor)
 			if (CSaleBasketHelper::isSetItem($arItem))
 				$arSetParentWeight[$arItem["SET_PARENT_ID"]] += $arItem["WEIGHT"] * $arItem["QUANTITY"];
@@ -421,7 +438,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 					$arSku2Parent[$arItem["PRODUCT_ID"]] = $arItem['PARENT']["ID"];
 
 					$arParents[$arItem["PRODUCT_ID"]]["PRODUCT_ID"] = $arItem['PARENT']["ID"];
-					$arParents[$arItem["PRODUCT_ID"]]["IBLOCK_ID"] = $arItem['PARENT']["IBLOCK_ID"];		
+					$arParents[$arItem["PRODUCT_ID"]]["IBLOCK_ID"] = $arItem['PARENT']["IBLOCK_ID"];
 				}
 
 				if(self::isNonemptyArray($arItem['PROPS']))
@@ -911,15 +928,12 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 					elseif ($arOrderProps["TYPE"] == "LOCATION")
 					{
 						$locationName = "";
-						if(CSaleLocation::isLocationProEnabled())
+						if(CSaleLocation::isLocationProMigrated())
 						{
-							$locationName = Location\Admin\LocationHelper::getLocationPathDisplay($arOrderProps["VALUE"]);
+							$locationName = Location\Admin\LocationHelper::getLocationStringById($arOrderProps["VALUE"]);
 						}
 						else
 						{
-							if(CSaleLocation::isLocationProMigrated())
-								$arOrderProps["VALUE"] = CSaleLocation::getLocationIDbyCODE($arOrderProps["VALUE"]);
-
 							$arVal = CSaleLocation::GetByID($arOrderProps["VALUE"], LANGUAGE_ID);
 
 							$locationName .= (!strlen($arVal["COUNTRY_NAME"]) ? "" : $arVal["COUNTRY_NAME"]);
@@ -1001,7 +1015,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 		if (empty($arOrder))
 		{
 			throw new Main\SystemException(
-				str_replace("#ID#", $this->requestData["ID"], Localization\Loc::getMessage("SPOD_NO_ORDER")), 
+				str_replace("#ID#", $this->requestData["ID"], Localization\Loc::getMessage("SPOD_NO_ORDER")),
 				self::E_ORDER_NOT_FOUND
 			);
 		}
@@ -1024,7 +1038,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	 * Function accuires all required fine-cacheable information to form $arResult.
 	 * To pick up some additional data to the cached part of $arResult, make another method that modifies $cachedData and call it here.
 	 * This method should be called only after obtainDataCachedStatic()
-	 * 
+	 *
 	 * @param mixed[] $cachedData Cached data taken from getDataCached()
 	 * @return void
 	 */
@@ -1034,6 +1048,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 		$this->obtainBasket($cachedData);
 		$this->obtainDeliveryStore($cachedData);
 		$this->obtainPropertyNames($cachedData);
+		$this->obtainTaxes($cachedData);
 
 		// smth else ...
 	}
@@ -1104,7 +1119,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 
 	/**
 	 * Function performs a conversion between a shared cache and the particular structure of our $arResult
-	 * @param mixed[] $cached Cached data taken from obtainDataReferences() 
+	 * @param mixed[] $cached Cached data taken from obtainDataReferences()
 	 * @return mixed[] Data structure that is appropriate for our $arResult
 	 */
 	protected function adaptCachedReferences($cached)
@@ -1113,15 +1128,6 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 
 		// form person type
 		$formed["PERSON_TYPE"] = $cached['PERSON_TYPE'][$this->dbResult["PERSON_TYPE_ID"]];
-
-		// form taxes
-		$formed["TAX_LIST"] = array();
-		if(self::isNonemptyArray($cached['TAX']))
-			foreach($cached['TAX'] as $tax)
-			{
-				if($tax['ORDER_ID'] == $this->dbResult["ID"])
-					$formed["TAX_LIST"][] = $tax;
-			}
 
 		// form status
 		$formed['STATUS'] = $cached['STATUS'][$this->dbResult["STATUS_ID"]];
@@ -1139,8 +1145,9 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	}
 
 	/**
-	 * Function returns reference data as shared cache between this component and sale.personal.order.list
-	 * @throws Main\SystemException
+	 * Function returns reference data as shared cache between this component and sale.personal.order.list.
+	 *
+	 * @throws Exception
 	 * @return void
 	 */
 	protected function obtainDataReferences()
@@ -1158,11 +1165,6 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 				$dbPType = CSalePersonType::GetList(array("SORT"=>"ASC"));
 				while ($arPType = $dbPType->Fetch())
 					$cachedData['PERSON_TYPE'][$arPType["ID"]] = $arPType;
-
-				// Tax list
-				$dbTaxList = CSaleOrderTax::GetList(array("APPLY_ORDER" => "ASC"));
-				while ($arTaxList = $dbTaxList->Fetch())
-					$cachedData['TAX'] = $arTaxList;
 
 				// Save statuses for Filter form
 				$dbStatus = CSaleStatus::GetList(array("SORT"=>"ASC"), array("LID"=>LANGUAGE_ID));
@@ -1202,6 +1204,8 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 
 	/**
 	 * Function contains a mechanism for cacheing data in the component
+	 *
+	 * @throws Exception
 	 * @return void
 	 */
 	protected function obtainDataCached()
@@ -1243,7 +1247,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	 */
 	protected function obtainData()
 	{
-		// Do not reorder calls without a strong need. 
+		// Do not reorder calls without a strong need.
 		// Data obtain order is important and calls depend on each other.
 
 		$this->obtainDataOrder();
@@ -1302,7 +1306,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 			$arResult["STATUS"]["NAME"] = htmlspecialcharsEx($arResult["STATUS"]["NAME"]);
 			if (doubleval($arResult["SUM_PAID"]))
 				$arResult["SUM_PAID_FORMATED"] = SaleFormatCurrency($arResult["SUM_PAID"], $arResult["CURRENCY"]);
-		}		
+		}
 	}
 
 	/**
@@ -1383,7 +1387,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 			{
 				$arBasket["WEIGHT_FORMATED"] = roundEx(doubleval($arBasket["WEIGHT"]/$arResult["WEIGHT_KOEF"]), SALE_WEIGHT_PRECISION)." ".$arResult["WEIGHT_UNIT"];
 				$arBasket["PRICE_FORMATED"] = SaleFormatCurrency($arBasket["PRICE"], $arBasket["CURRENCY"]);
-				
+
 				if (doubleval($arBasket["DISCOUNT_PRICE"]))
 				{
 					$arBasket["DISCOUNT_PRICE_PERCENT"] = $arBasket["DISCOUNT_PRICE"]*100 / ($arBasket["DISCOUNT_PRICE"] + $arBasket["PRICE"]);
@@ -1432,7 +1436,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 		$arResult =& $this->arResult;
 
 		$arResult["ORDER_WEIGHT_FORMATED"] = roundEx(
-			doubleval($arResult["ORDER_WEIGHT"] / $arResult["WEIGHT_KOEF"]), 
+			doubleval($arResult["ORDER_WEIGHT"] / $arResult["WEIGHT_KOEF"]),
 			SALE_WEIGHT_PRECISION)." ".$arResult["WEIGHT_UNIT"];
 	}
 
@@ -1555,7 +1559,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	 */
 	protected static function isNonemptyArray($arr)
 	{
-		return is_array($arr) && !empty($arr);
+		return !empty($arr) && is_array($arr);
 	}
 
 	////////////////////////

@@ -79,11 +79,7 @@ while ($arRes = $rsData->NavNext(true, "f_"))
 {
 	$row =& $lAdmin->AddRow($f_ID, $arRes);
 
-	if ($_REQUEST["mode"] == "excel")
-		$row->AddViewField("TOTAL_MARK", number_format($f_TOTAL_MARK, 2, ".", ""));
-	else
-		$row->AddViewField("TOTAL_MARK", str_replace(" ", "&nbsp;", number_format($f_TOTAL_MARK, 2, ".", " ")));
-
+	$row->AddViewField("TOTAL_MARK", perfmon_NumberFormat($f_TOTAL_MARK, 2));
 	$row->AddCheckField("ACCELERATOR_ENABLED", false);
 
 	$arActions = array();

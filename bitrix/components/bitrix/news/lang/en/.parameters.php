@@ -79,4 +79,5 @@ $MESS["CP_BN_SET_STATUS_404"] = "Set 404 status if no element or section was fou
 $MESS["CP_BN_DETAIL_PAGER_SHOW_ALL"] = "Show the ALL link";
 $MESS["CP_BN_BROWSER_TITLE"] = "Set browser window title from property value";
 $MESS["CP_BN_CACHE_GROUPS"] = "Respect Access Permissions";
+$MESS["CP_BN_DETAIL_SET_CANONICAL_URL"] = "Set canonical URL";
 ?>

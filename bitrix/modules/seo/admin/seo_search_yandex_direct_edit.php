@@ -68,6 +68,9 @@ $back_url = isset($request["back_url"]) ? $request["back_url"] : '';
 $ID = intval($request["ID"]);
 
 $bShowStats = $ID > 0 && $bAllowUpdate;
+$bShowOrderStats = $bShowStats
+	&& Main\ModuleManager::isModuleInstalled('sale')
+	&& Main\Loader::includeModule('currency');
 
 if($ID > 0)
 {
@@ -101,7 +104,6 @@ if($ID > 0)
 		echo $message->Show();
 
 		require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-
 	}
 }
 
@@ -166,53 +168,93 @@ if($bShowStats)
 
 	$first = true;
 
+	$statsBanners = array();
+	$currency = Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_CURRENCY');
 	while($banner = $data->NavNext())
 	{
-		if($first)
+		$statsBanners[$banner['BANNER_ID']] = $banner;
+		if($banner['CURRENCY'])
 		{
-			$currency = Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_CURRENCY');
+			$currency = $banner['CURRENCY'];
+		}
+	}
 
-			if($banner['CURRENCY'] != '')
-			{
-				$currency = $banner['CURRENCY'];
-			}
+	$arHeaders = array(
+		array("id"=>"ID", "content"=>Loc::getMessage("SEO_BANNER_ID"), "sort"=>"BANNER_ID", "default"=>true),
+		array("id"=>"NAME", "content"=>Loc::getMessage('SEO_BANNER_NAME'), "sort"=>"BANNER_NAME", "default"=>true),
+		array("id"=>"XML_ID", "content"=>Loc::getMessage('SEO_BANNER_XML_ID'), "sort"=>"BANNER_XML_ID", "default"=>true),
+		array("id"=>"BANNER_SUM", "content"=>Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_SUM').', '.$currency, "sort" => "BANNER_SUM", "default"=>true, "align" => "right"),
+		array("id"=>"BANNER_SHOWS", "content"=>Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_SHOWS'), "sort" => "BANNER_SHOWS", "default"=>true, "align" => "right"),
+		array("id"=>"BANNER_CLICKS", "content"=>Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_CLICKS'), "sort" => "BANNER_CLICKS", "default"=>true, "align" => "right"),
+		array("id"=>"BANNER_CTR", "content"=>Loc::getMessage('SEO_FORECAST_CTR'), "sort" => "BANNER_CTR", "default"=>true, "align" => "right"),
+	);
 
-			$arHeaders = array(
-				array("id"=>"ID", "content"=>Loc::getMessage("SEO_BANNER_ID"), "sort"=>"BANNER_ID", "default"=>true),
-				array("id"=>"NAME", "content"=>Loc::getMessage('SEO_BANNER_NAME'), "sort"=>"BANNER_NAME", "default"=>true),
-				array("id"=>"XML_ID", "content"=>Loc::getMessage('SEO_BANNER_XML_ID'), "sort"=>"BANNER_XML_ID", "default"=>true),
-				array("id"=>"BANNER_SUM", "content"=>Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_SUM').', '.$currency, "sort" => "BANNER_SUM", "default"=>true, "align" => "right"),
-				array("id"=>"BANNER_SHOWS", "content"=>Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_SHOWS'), "sort" => "BANNER_SHOWS", "default"=>true, "align" => "right"),
-				array("id"=>"BANNER_CLICKS", "content"=>Loc::getMessage('SEO_YANDEX_STATS_GRAPH_AXIS_CLICKS'), "sort" => "BANNER_CLICKS", "default"=>true, "align" => "right"),
-				array("id"=>"BANNER_CTR", "content"=>Loc::getMessage('SEO_FORECAST_CTR'), "sort" => "BANNER_CTR", "default"=>true, "align" => "right"),
-			);
+	if($bShowOrderStats)
+	{
+		$arHeaders = array_merge(
+			array_slice($arHeaders, 0, 3),
+			array(
+				array("id"=>"BANNER_SUM_ORDER", "content"=>Loc::getMessage('SEO_YANDEX_STATS_SUM_ORDER'), /*"sort" => "BANNER_SUM", */"default"=>true, "align" => "right"),
+			),
+			array_slice($arHeaders, 3)
+		);
+	}
 
-			$statsAdminList->AddHeaders($arHeaders);
+	$statsAdminList->AddHeaders($arHeaders);
 
-			$first = false;
+	if(count($statsBanners) > 0)
+	{
+		$dbRes = Adv\OrderTable::getList(array(
+			'filter' => array(
+				'@BANNER_ID' => array_keys($statsBanners),
+				'=CAMPAIGN_ID' => $campaign['ID'],
+				'=PROCESSED' => Adv\OrderTable::PROCESSED,
+				">=TIMESTAMP_X" => $statsDateStart,
+				"<TIMESTAMP_X" => $statsDateFinish,
+
+			),
+			'group' => array(
+				'BANNER_ID'
+			),
+			'select' => array('BANNER_ID', 'BANNER_SUM'),
+			'runtime' => array(
+				new Main\Entity\ExpressionField('BANNER_SUM', 'SUM(SUM)'),
+			),
+		));
+		while($realSale = $dbRes->fetch())
+		{
+			$statsBanners[$realSale['BANNER_ID']]['BANNER_SUM_ORDER'] = $realSale['BANNER_SUM'];
 		}
 
-		$editUrl = "seo_search_yandex_direct_banner_edit.php?lang=".LANGUAGE_ID."&campaign=".$campaign['ID']."&ID=".$banner["BANNER_ID"];
+		foreach($statsBanners as $banner)
+		{
+			$editUrl = "seo_search_yandex_direct_banner_edit.php?lang=".LANGUAGE_ID."&campaign=".$campaign['ID']."&ID=".$banner["BANNER_ID"];
 
-		$row = &$statsAdminList->AddRow($banner["BANNER_ID"], $banner, $editUrl, Loc::getMessage("SEO_BANNER_EDIT_TITLE", array(
-			"#ID#" => $banner["BANNER_ID"],
-			"#XML_ID#" => $banner["BANNER_XML_ID"],
-		)));
-
-		$row->AddViewField("ID", $banner['BANNER_ID']);
-		$row->AddField("NAME", '<a href="'.Converter::getHtmlConverter()->encode($editUrl).'" title="'.Loc::getMessage("SEO_BANNER_EDIT_TITLE", array(
+			$row = &$statsAdminList->AddRow($banner["BANNER_ID"], $banner, $editUrl, Loc::getMessage("SEO_BANNER_EDIT_TITLE", array(
 				"#ID#" => $banner["BANNER_ID"],
 				"#XML_ID#" => $banner["BANNER_XML_ID"],
-			)).'">'.Converter::getHtmlConverter()->encode($banner['BANNER_NAME']).'</a>');
+			)));
+
+			$row->AddViewField("ID", $banner['BANNER_ID']);
+			$row->AddField("NAME", '<a href="'.Converter::getHtmlConverter()->encode($editUrl).'" title="'.Loc::getMessage("SEO_BANNER_EDIT_TITLE", array(
+					"#ID#" => $banner["BANNER_ID"],
+					"#XML_ID#" => $banner["BANNER_XML_ID"],
+				)).'">'.Converter::getHtmlConverter()->encode($banner['BANNER_NAME']).'</a>');
 
 
-		$row->AddViewField('XML_ID', '<a href="https://direct.yandex.ru/registered/main.pl?cmd=showCampMultiEdit&bids='.$banner['BANNER_XML_ID'].'&cid='.$campaign['XML_ID'].'" target="_blank" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_EDIT_EXTERNAL')).'">'.Loc::getMessage('SEO_YANDEX_DIRECT_LINK_TPL', array('#XML_ID#' => $banner['BANNER_XML_ID'])).'</a>');
+			$row->AddViewField('XML_ID', '<a href="https://direct.yandex.ru/registered/main.pl?cmd=showCampMultiEdit&bids='.$banner['BANNER_XML_ID'].'&cid='.$campaign['XML_ID'].'" target="_blank" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_EDIT_EXTERNAL')).'">'.Loc::getMessage('SEO_YANDEX_DIRECT_LINK_TPL', array('#XML_ID#' => $banner['BANNER_XML_ID'])).'</a>');
 
 
-		$row->AddViewField("BANNER_SUM", number_format($banner['BANNER_SUM'], 2, '.', ' '));
-		$row->AddViewField("BANNER_SHOWS", $banner['BANNER_SHOWS']);
-		$row->AddViewField("BANNER_CLICKS", $banner['BANNER_CLICKS']);
-		$row->AddViewField("BANNER_CTR", $banner['BANNER_CTR']);
+			$row->AddViewField("BANNER_SUM", number_format($banner['BANNER_SUM'], 2, '.', ' '));
+
+			$row->AddViewField("BANNER_SHOWS", $banner['BANNER_SHOWS']);
+			$row->AddViewField("BANNER_CLICKS", $banner['BANNER_CLICKS']);
+			$row->AddViewField("BANNER_CTR", number_format($banner['BANNER_CTR'], 2, '.', ' '));
+			if($bShowOrderStats)
+			{
+				$row->AddViewField("BANNER_SUM_ORDER", \CCurrencyLang::CurrencyFormat(doubleval($banner['BANNER_SUM_ORDER']), \Bitrix\Currency\CurrencyManager::getBaseCurrency(), true));
+			}
+		}
 	}
 
 	$statsAdminList->checkListMode();

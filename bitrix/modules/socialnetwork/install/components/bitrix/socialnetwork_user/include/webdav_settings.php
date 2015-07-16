@@ -60,21 +60,28 @@ if (!function_exists("__wd_get_root_section"))
 				"UF_USE_BP" => "N"
 			);
 
+			$bFound = false;
+					
 			if ($object == "user")
 			{
 				$dbUser = CUser::GetByID($object_id);
 				$arUser = $dbUser->Fetch();
-				$arFields["NAME"] = trim($arUser['LAST_NAME']." ".$arUser['FIRST_NAME']);
-				$arFields["NAME"] = trim(!empty($arFields["NAME"]) ? $arFields["NAME"] : $arUser['LOGIN']);
-				$arFields['CREATED_BY'] = $arUser['ID'];
-				$arFields['MODIFIED_BY'] = $arUser['ID'];
-
-				if (CIBlock::GetArrayByID($IBLOCK_ID, "RIGHTS_MODE") === "E")
+				if ($arUser)
 				{
-					$arTasks = CWebDavIblock::GetTasks();
-					$arFields['RIGHTS'] = array(
-						'n0' => array('GROUP_CODE' => 'U'.$object_id, 'TASK_ID' => $arTasks['X'])
-					);
+					$bFound = true;
+
+					$arFields["NAME"] = trim($arUser['LAST_NAME']." ".$arUser['FIRST_NAME']);
+					$arFields["NAME"] = trim(!empty($arFields["NAME"]) ? $arFields["NAME"] : $arUser['LOGIN']);
+					$arFields['CREATED_BY'] = $arUser['ID'];
+					$arFields['MODIFIED_BY'] = $arUser['ID'];
+
+					if (CIBlock::GetArrayByID($IBLOCK_ID, "RIGHTS_MODE") === "E")
+					{
+						$arTasks = CWebDavIblock::GetTasks();
+						$arFields['RIGHTS'] = array(
+							'n0' => array('GROUP_CODE' => 'U'.$object_id, 'TASK_ID' => $arTasks['X'])
+						);
+					}
 				}
 			}
 			else 
@@ -101,40 +108,51 @@ if (!function_exists("__wd_get_root_section"))
 
 				if ($arGroup = $dbGroup->Fetch())
 				{
+					$bFound = true;
+
 					$arFields["NAME"] = GetMessage("SONET_GROUP_PREFIX").$arGroup["NAME"];
-				}
 
-				if (CIBlock::GetArrayByID($IBLOCK_ID, "RIGHTS_MODE") === "E")
-				{
-					$arTasks = CWebDavIblock::GetTasks();
-					$arFields['RIGHTS'] = array(
-						'n0' => array('GROUP_CODE' => 'SG'.$arFields["SOCNET_GROUP_ID"].'_A', 'TASK_ID' => $arTasks['X']),
-						'n1' => array('GROUP_CODE' => 'SG'.$arFields["SOCNET_GROUP_ID"].'_E', 'TASK_ID' => $arTasks['W']),
-						'n2' => array('GROUP_CODE' => 'SG'.$arFields["SOCNET_GROUP_ID"].'_K', 'TASK_ID' => $arTasks['W'])
-					);
+					if (CIBlock::GetArrayByID($IBLOCK_ID, "RIGHTS_MODE") === "E")
+					{
+						$arTasks = CWebDavIblock::GetTasks();
+						$arFields['RIGHTS'] = array(
+							'n0' => array('GROUP_CODE' => 'SG'.$arFields["SOCNET_GROUP_ID"].'_A', 'TASK_ID' => $arTasks['X']),
+							'n1' => array('GROUP_CODE' => 'SG'.$arFields["SOCNET_GROUP_ID"].'_E', 'TASK_ID' => $arTasks['W']),
+							'n2' => array('GROUP_CODE' => 'SG'.$arFields["SOCNET_GROUP_ID"].'_K', 'TASK_ID' => $arTasks['W'])
+						);
+					}
 				}
 			}
 
-			$GLOBALS["UF_USE_BP"] = $arFields["UF_USE_BP"];
-			$GLOBALS["USER_FIELD_MANAGER"]->EditFormAddFields("IBLOCK_".$IBLOCK_ID."_SECTION", $arFields);
-			$bs = new CIBlockSection;
-			$sectionID = $bs->Add($arFields);
-			if (!$sectionID)
+			if ($bFound)
 			{
-				$arParams["ERROR_MESSAGE"] = $bs->LAST_ERROR;
-				return 0;
-			}
+				$GLOBALS["UF_USE_BP"] = $arFields["UF_USE_BP"];
+				$GLOBALS["USER_FIELD_MANAGER"]->EditFormAddFields("IBLOCK_".$IBLOCK_ID."_SECTION", $arFields);
+				$bs = new CIBlockSection;
+				$sectionID = $bs->Add($arFields);
+				if (!$sectionID)
+				{
+					$arParams["ERROR_MESSAGE"] = $bs->LAST_ERROR;
+					return 0;
+				}
 
-			WDClearComponentCache(array(
-				"webdav.element.edit", 
-				"webdav.element.hist", 
-				"webdav.element.upload", 
-				"webdav.element.view", 
-				"webdav.menu",
-				"webdav.section.edit", 
-				"webdav.section.list"));
-			
-			return true;
+				WDClearComponentCache(array(
+					"webdav.element.edit", 
+					"webdav.element.hist", 
+					"webdav.element.upload", 
+					"webdav.element.view", 
+					"webdav.menu",
+					"webdav.section.edit", 
+					"webdav.section.list"));
+					
+				return true;
+			}
+			else
+			{
+				return "NO_OBJECT";
+			}
+		
+
 		/*
 			if ($ob->workflow == 'bizproc')
 			{

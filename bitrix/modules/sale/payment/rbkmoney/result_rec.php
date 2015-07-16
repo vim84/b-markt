@@ -13,7 +13,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 		$techMessage = GetMessage("SALE_RBK_REC_ORDER");
 	}
 
-	if ($bCorrectPayment)
+	$secretKeyB = CSalePaySystemAction::GetParamValue("SECRET_KEY");
+
+	if ($bCorrectPayment && strlen($secretKeyB) > 0)
 	{
 		CSalePaySystemAction::InitParamArrays($arOrder, $arOrder["ID"]);
 		
@@ -21,7 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 		$eshopIdB = CSalePaySystemAction::GetParamValue("ESHOP_ID");
 		$recipientAmountB = number_format(CSalePaySystemAction::GetParamValue("SHOULD_PAY"), 2, '.', '');
 		$recipientCurrencyB = CSalePaySystemAction::GetParamValue("CURRENCY");
-		$secretKeyB = CSalePaySystemAction::GetParamValue("SECRET_KEY");
+
 		if ($recipientCurrencyB == "RUB")
 			$recipientCurrencyB = "RUR";
 		

@@ -1,12 +1,14 @@
 <?
-use Bitrix\Sale\Location\Admin\SiteLocationHelper as Helper;
-
 use Bitrix\Main;
 use Bitrix\Main\Config;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location\Admin\SiteLocationHelper as Helper;
+use Bitrix\Sale\Location\Admin\SearchHelper;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/include.php");
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/prolog.php');
 
 Loc::loadMessages(__FILE__);
 
@@ -55,7 +57,7 @@ try
 				{
 					if($actionSave)
 						$redirectUrl = $returnUrl ? $returnUrl : Helper::getListUrl(); // go to the page of just created item
-			
+
 					// $actionApply : do nothing
 				}
 			}
@@ -79,7 +81,7 @@ try
 			$message = $e->getMessage().(!empty($code) ? ' ('.$code.')' : '');
 
 			$actionFailureMessage = Loc::getMessage('SALE_LOCATION_E_CANNOT_UPDATE_ITEM').(strlen($message) ? ': <br /><br />'.$message : '');
-		
+
 			$DB->Rollback();
 		}
 	}
@@ -146,13 +148,19 @@ if(!$fatalFailure) // no fatals like "module not installed, etc."
 		)
 	));
 
-	$tabControl = new CAdminForm("tabcntrl_zone_edit", array(
+	$tabControl = new CAdminForm(
+		"tabcntrl_zone_edit",
 		array(
-			"DIV" => "main", 
-			"TAB" => Loc::getMessage('SALE_LOCATION_E_MAIN_TAB'), 
-			"TITLE" =>  Loc::getMessage('SALE_LOCATION_E_MAIN_TAB_TITLE')
-		)
-	));
+			array(
+				"DIV" => "main",
+				"TAB" => Loc::getMessage('SALE_LOCATION_E_MAIN_TAB'),
+				"TITLE" =>  Loc::getMessage('SALE_LOCATION_E_MAIN_TAB_TITLE')
+			)
+		),
+		true,
+		true
+	);
+	$tabControl->SetShowSettings(false);
 	$tabControl->BeginPrologContent();
 	$tabControl->EndPrologContent();
 	$tabControl->BeginEpilogContent();
@@ -180,6 +188,8 @@ $APPLICATION->SetTitle(strlen($nameToDisplay) ? Loc::getMessage('SALE_LOCATION_E
 <?//temporal code?>
 <?if(!CSaleLocation::locationProCheckEnabled())require($DOCUMENT_ROOT."/bitrix/modules/main/include/epilog_admin.php");?>
 
+<?SearchHelper::checkIndexesValid();?>
+
 <?if($fatalFailure):?>
 
 	<?CAdminMessage::ShowMessage(array('MESSAGE' => $fatalFailureMessage, 'type' => 'ERROR'))?>
@@ -205,7 +215,7 @@ $APPLICATION->SetTitle(strlen($nameToDisplay) ? Loc::getMessage('SALE_LOCATION_E
 
 	<?$tabControl->BeginCustomField('LOCATIONS', Loc::getMessage('SALE_LOCATION_E_HEADING_LOCATIONS'));?>
 		<tr>
-		
+
 			<tr class="heading">
 				<td colspan="2">
 					<?=GetMessage('SALE_LOCATION_E_FLD_LOCATIONS')?>

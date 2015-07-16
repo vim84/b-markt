@@ -54,13 +54,17 @@ class CBPIMNotifyActivity
 	public static function ValidateProperties($arTestProperties = array(), CBPWorkflowTemplateUser $user = null)
 	{
 		$arErrors = array();
-	
+
 		if (!array_key_exists("MessageUserFrom", $arTestProperties) || count($arTestProperties["MessageUserFrom"]) <= 0)
 			$arErrors[] = array("code" => "NotExist", "parameter" => "MessageUserFrom", "message" => GetMessage("BPIMNA_EMPTY_FROM"));
 		if (!array_key_exists("MessageUserTo", $arTestProperties) || count($arTestProperties["MessageUserTo"]) <= 0)
 			$arErrors[] = array("code" => "NotExist", "parameter" => "MessageUserTo", "message" => GetMessage("BPIMNA_EMPTY_TO"));
 		if (!array_key_exists("MessageSite", $arTestProperties) || strlen($arTestProperties["MessageSite"]) <= 0)
 			$arErrors[] = array("code" => "NotExist", "parameter" => "MessageText", "message" => GetMessage("BPIMNA_EMPTY_MESSAGE"));
+
+		global $USER;
+		if (!$USER->IsAdmin() && !(CModule::IncludeModule("bitrix24") && CBitrix24::IsPortalAdmin($USER->GetID())) && $arTestProperties["MessageUserFrom"] != "user_".$USER->GetID())
+			$arErrors[] = array("code" => "NotExist", "parameter" => "MessageUserFrom", "message" => GetMessage("BPIMNA_EMPTY_FROM"));
 
 		return array_merge($arErrors, parent::ValidateProperties($arTestProperties, $user));
 	}

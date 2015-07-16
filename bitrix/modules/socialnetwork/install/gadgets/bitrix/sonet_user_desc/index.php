@@ -263,11 +263,15 @@ if ($arGadgetParams['CAN_VIEW_PROFILE'])
 	endif;
 
 	if (
-		$arGadgetParams["OTP"]["IS_MANDATORY"]
-			&& ($USER->GetID() == $arParams["USER_ID"] || $USER->CanDoOperation('security_edit_user_otp'))
-		|| (!$arGadgetParams["OTP"]["IS_MANDATORY"]
-			&&$arGadgetParams["OTP"]["IS_EXIST"]
-			&& ($USER->GetID() == $arParams["USER_ID"] || $USER->CanDoOperation('security_edit_user_otp')))
+		$arGadgetParams["OTP"]["IS_ENABLED"] !== "N"
+		&&
+		(
+			$arGadgetParams["OTP"]["IS_MANDATORY"]
+				&& ($USER->GetID() == $arParams["USER_ID"] || $USER->CanDoOperation('security_edit_user_otp'))
+			|| (!$arGadgetParams["OTP"]["IS_MANDATORY"]
+				&&$arGadgetParams["OTP"]["IS_EXIST"]
+				&& ($USER->GetID() == $arParams["USER_ID"] || $USER->CanDoOperation('security_edit_user_otp')))
+		)
 	)
 	{
 	?>

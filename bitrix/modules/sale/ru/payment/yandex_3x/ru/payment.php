@@ -1,7 +1,6 @@
 <?
 global $MESS;
-
-$MESS["SPCP_DTITLE"] = "Яндекс.Деньги 3.x";
+$MESS["SPCP_DTITLE"] = "Яндекс.Касса 3.x";
 $MESS["SHOP_ID"] = "Идентификатор магазина в ЦПП (ShopID)";
 $MESS["SHOP_ID_DESCR"] = "Код магазина, который получен от Яндекс";
 $MESS["SCID"] = "Номер витрины магазина в ЦПП (scid)";
@@ -26,8 +25,11 @@ $MESS["SALE_YTerminals"] = "Терминалы";
 $MESS["SALE_YMobile"] = "Мобильные платежи";
 $MESS["SALE_YSberbank"] = "Сбербанк Онлайн";
 $MESS["SALE_YmPOS"] = "Мобильный терминал (mPOS)";
+$MESS["SALE_YAlphaClick"] = "Альфа-Клик";
+$MESS["SALE_YMasterPass"] = "MasterPass";
+$MESS["SALE_YPromsvyazbank"] = "Промсвязьбанк";
 
-$MESS["SPCP_DDESCR"] = "Работа через Центр Приема Платежей <a href=\"http://money.yandex.ru\" target=\"_blank\">http://money.yandex.ru</a>
+$MESS["SPCP_DDESCR"] = "Работа через Центр Приема Платежей <a href=\"https://kassa.yandex.ru\" target=\"_blank\">https://kassa.yandex.ru</a>
 <br/>Используется протокол commonHTTP-3.0
 <br/><br/>
 <input

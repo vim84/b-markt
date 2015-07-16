@@ -110,7 +110,7 @@ class CIMSettings
 				unset($value[$key]);
 			}
 		}
-		CUserOptions::SetOption('IM', $type, $arSettings, false, $userId);
+		CUserOptions::SetOption('im', $type, $arSettings, false, $userId);
 		if (isset($value[self::PRIVACY_SEARCH]))
 		{
 			$USER_FIELD_MANAGER->Update("USER", $userId, Array('UF_IM_SEARCH' => $value[self::PRIVACY_SEARCH]));

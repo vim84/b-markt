@@ -18,6 +18,12 @@ BX.CCalendarPlannerHandler = function()
 
 BX.CCalendarPlannerHandler.prototype.draw = function(obPlanner, DATA)
 {
+	if(!!this._skipDraw)
+	{
+		this._skipDraw = false;
+		return;
+	}
+
 	this.PLANNER = obPlanner;
 
 	if(!DATA.CALENDAR_ENABLED)
@@ -66,7 +72,7 @@ BX.CCalendarPlannerHandler.prototype.draw = function(obPlanner, DATA)
 				{
 					this.EVENTS_LIST.scrollTop = LAST_EVENT.offsetTop - parseInt(this.EVENTS_LIST.offsetHeight/2);
 				}
-			})();
+			}, this)();
 		}
 	}
 	else
@@ -124,6 +130,7 @@ BX.CCalendarPlannerHandler.prototype.showEvent = function(e)
 
 	BX.onCustomEvent(this, 'onEventWndShow', [this.EVENTWND[event_id]]);
 
+	this._skipDraw = true;
 	this.EVENTWND[event_id].Show(this.PLANNER);
 
 	return BX.PreventDefault(e);

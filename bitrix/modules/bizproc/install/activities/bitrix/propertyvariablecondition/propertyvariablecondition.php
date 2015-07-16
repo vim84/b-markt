@@ -78,6 +78,11 @@ class CBPPropertyVariableCondition
 		if (!is_array($value))
 			$value = array($value);
 
+		if (CBPHelper::IsAssociativeArray($field))
+			$field = array_keys($field);
+		if (CBPHelper::IsAssociativeArray($value))
+			$value = array_keys($value);
+
 		$i = 0;
 		$fieldCount = count($field);
 		$valueCount = count($value);
@@ -91,7 +96,7 @@ class CBPPropertyVariableCondition
 			$f1 = ($fieldCount > $i) ? $field[$i] : $field[$fieldCount - 1];
 			$v1 = ($valueCount > $i) ? $value[$i] : $value[$valueCount - 1];
 
-			if ($type == "datetime")
+			if ($type == "datetime" || $type == "date")
 			{
 				if (($f1Tmp = MakeTimeStamp($f1, FORMAT_DATETIME)) === false)
 				{

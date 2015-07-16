@@ -111,9 +111,51 @@ $arDefaultUrlTemplates404 = array(
 	"group_log_rss_mask" => "group/#group_id#/log/rss/",
 );
 
-$diskEnabled =
-	\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false) &&
-	CModule::includeModule('disk');
+$diskEnabled = (
+	\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false)
+	&& CModule::includeModule('disk')
+);
+
+$bExtranetEnabled = IsModuleInstalled('extranet');
+if ($bExtranetEnabled)
+{
+	$extranetSiteId = COption::GetOptionString("extranet", "extranet_site");
+	if (strlen($extranetSiteId) <= 0)
+	{
+		$bExtranetEnabled = false;
+	}
+}
+
+if (
+	$bExtranetEnabled
+	&& $arParams["SEF_MODE"] == "Y"
+	&& SITE_ID == $extranetSiteId
+	&& !CSocNetUser::IsCurrentUserModuleAdmin()
+	&& CModule::IncludeModule('intranet')
+)
+{
+	if ($USER->IsAuthorized())
+	{
+		$rsCurrentUser = CUser::GetById($USER->GetId());
+		if (
+			($arCurrentUser = $rsCurrentUser->Fetch())
+			&& !empty($arCurrentUser["UF_DEPARTMENT"])
+			&& is_array($arCurrentUser["UF_DEPARTMENT"])
+			&& intval($arCurrentUser["UF_DEPARTMENT"][0]) > 0
+		)
+		{
+			$arRedirectSite = CSocNetLogComponent::GetSiteByDepartmentId($arCurrentUser["UF_DEPARTMENT"]);
+			if (!$arRedirectSite)
+			{
+				$arRedirectSite = array(
+					"LID" => SITE_ID,
+					"SERVER_NAME" => SITE_SERVER_NAME
+				);
+			}
+		}
+	}
+}
+
 if($diskEnabled)
 {
 	$arDefaultUrlTemplates404["group_disk"] = "group/#group_id#/disk/path/#PATH#";
@@ -121,6 +163,7 @@ if($diskEnabled)
 	$arDefaultUrlTemplates404["group_trashcan_list"] = "group/#group_id#/disk/trashcan/#TRASH_PATH#";
 	$arDefaultUrlTemplates404["group_trashcan_file_view"] = "group/#group_id#/disk/trash/file/#TRASH_FILE_PATH#";
 	$arDefaultUrlTemplates404["group_external_link_list"] = "group/#group_id#/disk/external";
+	$arDefaultUrlTemplates404["group_disk_help"] = "group/#group_id#/disk/help";
 	$arDefaultUrlTemplates404["group_disk_bizproc_workflow_admin"] = "group/#group_id#/disk/bp/";
 	$arDefaultUrlTemplates404["group_disk_bizproc_workflow_edit"] = "group/#group_id#/disk/bp_edit/#ID#/";
 	$arDefaultUrlTemplates404["group_disk_start_bizproc"] = "group/#group_id#/disk/bp_start/#ELEMENT_ID#/";
@@ -175,7 +218,6 @@ $arDefaultUrlTemplatesN404 = array(
 	"group_photofull_element_edit" => "page=group_photofull_element_edit&group_id=#group_id#&user_alias=#user_alias#&section_id=#section_id#&element_id=#element_id#&action=#action#",
 	"group_photofull_element_slide_show" => "page=group_photofull_element_slide_show&group_id=#group_id#&user_alias=#user_alias#&section_id=#section_id#&element_id=#element_id#",
 
-
 	"group_calendar" => "page=group_calendar&group_id=#group_id#",
 
 	"message_to_group" => "page=message_to_group&group_id=#group_id#",
@@ -228,7 +270,8 @@ $arDefaultUrlTemplatesN404 = array(
 	"group_log" => "page=group_log&group_id=#group_id#",
 	"group_log_rss" => "page=group_log_rss&group_id=#group_id#&bx_hit_hash=#sign#&events=#events#",
 //	"group_log_rss_mask" => "page=group_log_rss&group_id=#group_id#"
-	);
+);
+
 $arDefaultVariableAliases404 = array();
 $arDefaultVariableAliases = array();
 $componentPage = "";
@@ -250,10 +293,14 @@ $arParams["SET_NAV_CHAIN"] = ($arParams["SET_NAV_CHAIN"] == "N" ? "N" : "Y");
 $arParams["HIDE_OWNER_IN_TITLE"] = ($arParams["HIDE_OWNER_IN_TITLE"] == "Y" ? "Y" : "N");
 
 if (!array_key_exists("PATH_TO_USER_CALENDAR", $arParams))
+{
 	$arParams["PATH_TO_USER_CALENDAR"] = SITE_DIR."company/personal/user/#user_id#/calendar/";
+}
 
 if (!array_key_exists("PATH_TO_USER_LOG", $arParams))
+{
 	$arParams["PATH_TO_USER_LOG"] = $arParams["~PATH_TO_USER_LOG"] = SITE_DIR."company/personal/log/";
+}
 
 if (!array_key_exists("PATH_TO_USER_LOG_ENTRY", $arParams))
 {
@@ -265,7 +312,9 @@ if (!array_key_exists("PATH_TO_USER_LOG_ENTRY", $arParams))
 }
 	
 if (!is_array($arParams["VARIABLE_ALIASES"]))
+{
 	$arParams["VARIABLE_ALIASES"] = array();
+}
 
 if ($arParams["USE_KEYWORDS"] != "N") $arParams["USE_KEYWORDS"] = "Y";
 // for bitrix:main.user.link
@@ -300,24 +349,43 @@ else
 }
 
 if (!array_key_exists("SHOW_FIELDS_TOOLTIP", $arParams))
+{
 	$arParams["SHOW_FIELDS_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_fields", $arTooltipFieldsDefault));
+}
+
 if (!array_key_exists("USER_PROPERTY_TOOLTIP", $arParams))
+{
 	$arParams["USER_PROPERTY_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_properties", $arTooltipPropertiesDefault));
+}
 
-if (IsModuleInstalled('intranet') && !array_key_exists("PATH_TO_CONPANY_DEPARTMENT", $arParams))
+if (
+	IsModuleInstalled('intranet')
+	&& !array_key_exists("PATH_TO_CONPANY_DEPARTMENT", $arParams)
+)
+{
 	$arParams["PATH_TO_CONPANY_DEPARTMENT"] = "/company/structure.php?set_filter_structure=Y&structure_UF_DEPARTMENT=#ID#";
+}
 
-if (IsModuleInstalled("search") && !array_key_exists("PATH_TO_SEARCH_TAG", $arParams))
+if (
+	IsModuleInstalled("search")
+	&& !array_key_exists("PATH_TO_SEARCH_TAG", $arParams)
+)
+{
 	$arParams["PATH_TO_SEARCH_TAG"] = SITE_DIR."search/?tags=#tag#";
+}
 
 if (strlen(trim($arParams["NAME_TEMPLATE"])) <= 0)
+{
 	$arParams["NAME_TEMPLATE"] = CSite::GetNameFormat();
+}
+
 $arParams['SHOW_LOGIN'] = $arParams['SHOW_LOGIN'] != "N" ? "Y" : "N";
 
-if (IsModuleInstalled("intranet"))
-	$arParams['CAN_OWNER_EDIT_DESKTOP'] = $arParams['CAN_OWNER_EDIT_DESKTOP'] != "Y" ? "N" : "Y";
-else
-	$arParams['CAN_OWNER_EDIT_DESKTOP'] = $arParams['CAN_OWNER_EDIT_DESKTOP'] != "N" ? "Y" : "N";
+$arParams['CAN_OWNER_EDIT_DESKTOP'] = (
+	IsModuleInstalled("intranet")
+		? ($arParams['CAN_OWNER_EDIT_DESKTOP'] != "Y" ? "N" : "Y")
+		: ($arParams['CAN_OWNER_EDIT_DESKTOP'] != "N" ? "Y" : "N")
+);
 
 if (intval(trim($arParams["SEARCH_PAGE_RESULT_COUNT"])) <= 0)
 	$arParams["SEARCH_PAGE_RESULT_COUNT"] = "10";
@@ -424,13 +492,17 @@ if ($arParams["SEF_MODE"] == "Y")
 		$arParams["PATH_TO_MESSAGE_FORM_MESS"] = "/company/personal/messages/form/#user_id#/#message_id#/";
 
 	if(!isset($arParams["PATH_TO_USER_TASKS_TEMPLATES"]))
+	{
 		$arParams["PATH_TO_USER_TASKS_TEMPLATES"] = "/company/personal/user/#user_id#/tasks/templates/";
+	}
+
+	if(!isset($arParams["PATH_TO_USER_TEMPLATES_TEMPLATE"]))
+	{
+		$arParams["PATH_TO_USER_TEMPLATES_TEMPLATE"] = "/company/personal/user/#user_id#/tasks/templates/template/#action#/#template_id#/";
+	}
 
 	if(!isset($arParams["PATH_TO_USER_BLOG_POST_IMPORTANT"]))
 		$arParams["PATH_TO_USER_BLOG_POST_IMPORTANT"] = "/company/personal/user/#user_id#/blog/important/";
-
-	if(!isset($arParams["PATH_TO_USER_TEMPLATES_TEMPLATE"]))
-		$arParams["PATH_TO_USER_TEMPLATES_TEMPLATE"] = "/company/personal/user/#user_id#/tasks/templates/template/#action#/#template_id#/";
 
 	if (IsModuleInstalled("video"))
 		if(!isset($arParams["PATH_TO_VIDEO_CALL"]))
@@ -523,6 +595,27 @@ if (strlen($arParams["PATH_TO_USER_BLOG_POST"]) <= 0)
 	$arParams["PATH_TO_USER_BLOG_POST"] = COption::GetOptionString("socialnetwork", "userblogpost_page", false, SITE_ID);
 }
 
+if ($arRedirectSite)
+{
+	if ($arParams["SEF_MODE"] == "Y")
+	{
+		$url =
+			(
+				strlen(trim($arRedirectSite["SERVER_NAME"])) > 0
+				&& $arRedirectSite["SERVER_NAME"] != SITE_SERVER_NAME
+					? (CMain::IsHTTPS() ? "https" : "http")."://".$arRedirectSite["SERVER_NAME"]
+					: ''
+			).
+			COption::GetOptionString("socialnetwork", "workgroups_page", false, $arRedirectSite["LID"]).
+			CComponentEngine::MakePathFromTemplate(
+				$arDefaultUrlTemplates404[$componentPage],
+				$arVariables
+			);
+
+		LocalRedirect($url);
+	}
+}
+
 $arResult = array_merge(
 	array(
 		"SEF_MODE" => $arParams["SEF_MODE"],
@@ -609,45 +702,61 @@ if(check_bitrix_sessid() || $_SERVER['REQUEST_METHOD'] == "PUT")
 	global $bxSocNetSearch;
 	if(!is_object($bxSocNetSearch))
 	{
-		$bxSocNetSearch = new CSocNetSearch($arResult["VARIABLES"]["user_id"], $arResult["VARIABLES"]["group_id"],
-			array(
-				"PATH_TO_GROUP" => $arResult["PATH_TO_GROUP"],
+		if (CModule::IncludeModule('tasks'))
+		{
+			$tasksForumId = intval(CTasksTools::getForumIdForIntranet());
+		}
 
-				"BLOG_GROUP_ID" => $arParams["BLOG_GROUP_ID"],
-				"PATH_TO_GROUP_BLOG" => $arResult["PATH_TO_GROUP_BLOG"],
-				"PATH_TO_GROUP_BLOG_POST" => $arResult["PATH_TO_GROUP_BLOG_POST"],
-				"PATH_TO_GROUP_BLOG_COMMENT" => $arResult["PATH_TO_GROUP_BLOG_POST"]."?commentId=#comment_id###comment_id#",
-				"PATH_TO_USER_BLOG" => "",
-				"PATH_TO_USER_BLOG_POST" => "",
-				"PATH_TO_USER_BLOG_COMMENT" => "",
+		$arSocNetSearchParams = array(
+			"PATH_TO_GROUP" => $arResult["PATH_TO_GROUP"],
 
-				"FORUM_ID" => $arParams["FORUM_ID"],
-				"PATH_TO_GROUP_FORUM_MESSAGE" => $arResult["PATH_TO_GROUP_FORUM_MESSAGE"],
-				"PATH_TO_USER_FORUM_MESSAGE" => "",
+			"BLOG_GROUP_ID" => $arParams["BLOG_GROUP_ID"],
+			"PATH_TO_GROUP_BLOG" => $arResult["PATH_TO_GROUP_BLOG"],
+			"PATH_TO_GROUP_BLOG_POST" => $arResult["PATH_TO_GROUP_BLOG_POST"],
+			"PATH_TO_GROUP_BLOG_COMMENT" => $arResult["PATH_TO_GROUP_BLOG_POST"]."?commentId=#comment_id###comment_id#",
+			"PATH_TO_USER_BLOG" => "",
+			"PATH_TO_USER_BLOG_POST" => "",
+			"PATH_TO_USER_BLOG_COMMENT" => "",
 
-				"PHOTO_GROUP_IBLOCK_ID" => $arParams["PHOTO_GROUP_IBLOCK_ID"],
-				"PATH_TO_GROUP_PHOTO_ELEMENT" => $arResult["PATH_TO_GROUP_PHOTO_ELEMENT"],
-				"PHOTO_USER_IBLOCK_ID" => false,
-				"PATH_TO_USER_PHOTO_ELEMENT" => "",
-				"PHOTO_FORUM_ID" => $arParams["PHOTO_FORUM_ID"],
+			"FORUM_ID" => $arParams["FORUM_ID"],
+			"PATH_TO_GROUP_FORUM_MESSAGE" => $arResult["PATH_TO_GROUP_FORUM_MESSAGE"],
+			"PATH_TO_USER_FORUM_MESSAGE" => "",
 
-				"CALENDAR_GROUP_IBLOCK_ID" => $arParams["CALENDAR_GROUP_IBLOCK_ID"],
-				"PATH_TO_GROUP_CALENDAR_ELEMENT" => $arResult["PATH_TO_GROUP_CALENDAR"]."?EVENT_ID=#element_id#",
+			"PHOTO_GROUP_IBLOCK_ID" => $arParams["PHOTO_GROUP_IBLOCK_ID"],
+			"PATH_TO_GROUP_PHOTO_ELEMENT" => $arResult["PATH_TO_GROUP_PHOTO_ELEMENT"],
+			"PHOTO_USER_IBLOCK_ID" => false,
+			"PATH_TO_USER_PHOTO_ELEMENT" => "",
+			"PHOTO_FORUM_ID" => $arParams["PHOTO_FORUM_ID"],
 
-				"TASK_IBLOCK_ID" => $arParams["TASK_IBLOCK_ID"],
-				"PATH_TO_GROUP_TASK_ELEMENT" => $arResult["PATH_TO_GROUP_TASKS_TASK"],
-				"PATH_TO_USER_TASK_ELEMENT" => "",
-				"TASK_FORUM_ID" => $arParams["TASK_FORUM_ID"],
+			"CALENDAR_GROUP_IBLOCK_ID" => $arParams["CALENDAR_GROUP_IBLOCK_ID"],
+			"PATH_TO_GROUP_CALENDAR_ELEMENT" => $arResult["PATH_TO_GROUP_CALENDAR"]."?EVENT_ID=#element_id#",
 
-				"FILES_PROPERTY_CODE" => $arParams["NAME_FILE_PROPERTY"],
-				"FILES_FORUM_ID" => $arParams["FILES_FORUM_ID"],
-				"FILES_GROUP_IBLOCK_ID" => $arParams["FILES_GROUP_IBLOCK_ID"],
-				"PATH_TO_GROUP_FILES_ELEMENT" => $arResult["PATH_TO_GROUP_FILES_ELEMENT"],
-				"PATH_TO_GROUP_FILES" => $arResult["PATH_TO_GROUP_FILES"],
-				"FILES_USER_IBLOCK_ID" => false,
-				"PATH_TO_USER_FILES_ELEMENT" => "",
-				"PATH_TO_USER_FILES" => "",
-		));
+			"TASK_IBLOCK_ID" => $arParams["TASK_IBLOCK_ID"],
+			"PATH_TO_GROUP_TASK_ELEMENT" => $arResult["PATH_TO_GROUP_TASKS_TASK"],
+			"PATH_TO_USER_TASK_ELEMENT" => "",
+			"TASK_FORUM_ID" => ($tasksForumId > 0 ? $tasksForumId : $arParams["TASK_FORUM_ID"]),
+
+			"FILES_PROPERTY_CODE" => $arParams["NAME_FILE_PROPERTY"],
+			"FILES_FORUM_ID" => $arParams["FILES_FORUM_ID"],
+			"FILES_GROUP_IBLOCK_ID" => $arParams["FILES_GROUP_IBLOCK_ID"],
+			"PATH_TO_GROUP_FILES_ELEMENT" => $arResult["PATH_TO_GROUP_FILES_ELEMENT"],
+			"PATH_TO_GROUP_FILES" => $arResult["PATH_TO_GROUP_FILES"],
+			"FILES_USER_IBLOCK_ID" => false,
+			"PATH_TO_USER_FILES_ELEMENT" => "",
+			"PATH_TO_USER_FILES" => "",
+		);
+
+		if (isset($arResult["PATH_TO_GROUP_WIKI_POST_COMMENT"]))
+		{
+			$arSocNetSearchParams["PATH_TO_GROUP_WIKI_POST_COMMENT"] = $arResult["PATH_TO_GROUP_WIKI_POST_COMMENT"];
+		}
+
+		$bxSocNetSearch = new CSocNetSearch(
+			$arResult["VARIABLES"]["user_id"], 
+			$arResult["VARIABLES"]["group_id"],
+			$arSocNetSearchParams
+		);
+
 		AddEventHandler("search", "BeforeIndex", Array($bxSocNetSearch, "BeforeIndex"));
 		AddEventHandler("iblock", "OnAfterIBlockElementUpdate", Array($bxSocNetSearch, "IBlockElementUpdate"));
 		AddEventHandler("iblock", "OnAfterIBlockElementAdd", Array($bxSocNetSearch, "IBlockElementUpdate"));
@@ -679,6 +788,20 @@ if (IsModuleInstalled("bizproc"))
 }
 /********************************************************************
 				Bizproc
+********************************************************************/
+/********************************************************************
+				Disk
+********************************************************************/
+if(strpos($componentPage, 'group_disk') !== false)
+{
+	if(!CSocNetFeatures::isActiveFeature(SONET_ENTITY_GROUP, $arResult["VARIABLES"]["group_id"], "files"))
+	{
+		ShowError(GetMessage("SONET_FILES_IS_NOT_ACTIVE"));
+		return 0;
+	}
+}
+/********************************************************************
+				Disk
 ********************************************************************/
 /********************************************************************
 				WebDav

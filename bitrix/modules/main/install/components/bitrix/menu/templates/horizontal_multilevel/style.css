@@ -13,7 +13,7 @@
 
 #horizontal-multilevel-menu
 {
-	
+
 }
 
 /*Links*/
@@ -26,7 +26,7 @@
 	text-align:center;
 }
 
-#horizontal-multilevel-menu li 
+#horizontal-multilevel-menu li
 {
 	float:left;
 }
@@ -98,7 +98,7 @@
 }
 
 /*Sub-menu item box*/
-#horizontal-multilevel-menu li li 
+#horizontal-multilevel-menu li li
 {
 	width:100%;
 	border-bottom:1px solid #DEDEDE;

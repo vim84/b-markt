@@ -6,6 +6,7 @@ class CBPStateMachineWorkflowActivity
 	implements IBPActivityEventListener
 {
 	private $documentId = array();
+	private $workflowTemplateId = null;
 	protected $documentType = array();
 
 	private $workflowStatus = CBPWorkflowStatus::Created;
@@ -46,6 +47,16 @@ class CBPStateMachineWorkflowActivity
 		$this->documentId = $documentId;
 	}
 
+	public function GetWorkflowTemplateId()
+	{
+		return $this->workflowTemplateId;
+	}
+
+	public function SetWorkflowTemplateId($workflowTemplateId)
+	{
+		$this->workflowTemplateId = $workflowTemplateId;
+	}
+
 	public function GetWorkflowStatus()
 	{
 		return $this->workflowStatus;
@@ -58,6 +69,26 @@ class CBPStateMachineWorkflowActivity
 		{
 			$this->ClearVariables();
 			$this->ClearProperties();
+		}
+		try
+		{
+			/**
+			 * @var CBPDocumentService $documentService
+			 */
+
+			$documentService = $this->workflow->GetService("DocumentService");
+			$documentService->onWorkflowStatusChange($this->GetDocumentId(), $this->workflow->GetInstanceId(), $status);
+
+			/**
+			 * @var CBPAllStateService $stateService
+			 */
+
+			$stateService = $this->workflow->GetService("StateService");
+			$stateService->onStatusChange($this->workflow->GetInstanceId(), $status);
+		}
+		catch (Exception $e)
+		{
+
 		}
 	}
 

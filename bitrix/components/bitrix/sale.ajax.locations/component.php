@@ -9,7 +9,6 @@ if (!CModule::IncludeModule("sale"))
 	return;
 }
 CUtil::InitJSCore(array('core', 'ajax'));
-
 $arParams["AJAX_CALL"] = $arParams["AJAX_CALL"] == "Y" ? "Y" : "N";
 $arParams["COUNTRY"] = intval($arParams["COUNTRY"]);
 $arParams["REGION"] = intval($arParams["REGION"]);

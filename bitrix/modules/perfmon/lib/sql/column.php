@@ -133,7 +133,7 @@ class Column extends BaseObject
 
 			$token = $tokenizer->nextToken();
 
-			//parentesis after type
+			//parentheses after type
 			if ($lengthLevel == -1)
 			{
 				if ($token->text == '(')
@@ -214,12 +214,12 @@ class Column extends BaseObject
 	 * <p>
 	 * Implemented only for MySQL database. For Oracle or MS SQL returns commentary.
 	 *
-	 * @param BaseObject $target Target object.
+	 * @param Column $target Target object.
 	 * @param string $dbType Database type (MYSQL, ORACLE or MSSQL).
 	 *
 	 * @return array|string
 	 */
-	public function getModifyDdl(BaseObject $target, $dbType = '')
+	public function getModifyDdl(Column $target, $dbType = '')
 	{
 		switch ($dbType)
 		{

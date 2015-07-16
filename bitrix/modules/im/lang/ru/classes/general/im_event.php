@@ -24,4 +24,5 @@ $MESS["IM_EVENT_RATING_PHOTO1_DISLIKE"] = "Мне не нравится ваша
 $MESS["IM_EVENT_RATING_ELSE_DISLIKE"] = "Мне не нравится \"#LINK#\"";
 $MESS["DESKTOP_APPLICATION_NAME"] = "Десктопное приложение";
 $MESS["DESKTOP_APPLICATION_DESC"] = "Для безопасной работы с десктоп-приложением можно создать специальный пароль на этой странице.";
+$MESS["IM_EVENT_RATING_LISTS_NEW_ELEMENT_LIKE"] = "Мне нравится #A_START#ваша запись о запущенном бизнес-процессе \"#TITLE#\"#A_END#";
 ?>

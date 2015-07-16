@@ -197,6 +197,7 @@ JCMainLookupSelector.prototype.Init = function()
 
 	this.LAYOUT = document.getElementById(this.arParams.LAYOUT_ID);
 	this.VISUAL = new JCMainLookupSelectorText(this.arParams.VISUAL);
+	this.VISUAL.parent = this;
 
 	this.VISUAL.onCurrentStringExists = function(str)
 	{
@@ -865,8 +866,18 @@ JCMainLookupSelectorText.prototype.__process = function()
 {
 	this.__current_token = null;
 
-	if (this.TEXT.value == this.arParams.START_TEXT)
+	if (
+		(
+			this.arParams.START_TEXT.length > 0
+			&& this.TEXT.value == this.arParams.START_TEXT
+		) || (
+			this.TEXT.value == ''
+		)
+	)
+	{
+		this.parent.ClearValues();
 		return;
+	}
 
 	var arToks = this.__parse(this.TEXT.value, this.__split_reg, this.__check_reg, this.arTokens);
 
@@ -1239,3 +1250,4 @@ JCMainLookupSelectorToken.prototype.SetPos = function(start, finish)
 };
 
 JCMainLookupSelectorToken.prototype.GetHash = JCMainLookupSelectorText.prototype.GetHash;
+

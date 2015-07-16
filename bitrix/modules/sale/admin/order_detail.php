@@ -23,9 +23,7 @@ if ($saleModulePermissions == "D")
 
 IncludeModuleLangFile(__FILE__);
 
-$ID = 0;
-if (array_key_exists('ID', $_REQUEST))
-	$ID = intval($_REQUEST["ID"]);
+$ID = (isset($_REQUEST['ID']) ? (int)$_REQUEST['ID'] : 0);
 $errorMessage = "";
 
 if ($ID <= 0)
@@ -789,7 +787,7 @@ elseif ($saleModulePermissions >= "U" && check_bitrix_sessid() && !array_key_exi
 		else
 			$errorMessage .= "Error. ";
 	}
-	elseif ($REQUEST_METHOD == "POST" && $save_order_data == "Y")
+	elseif ($_SERVER['REQUEST_METHOD'] == "POST" && $save_order_data == "Y")
 	{
 		if (CSaleOrder::IsLocked($ID, $lockedBY, $dateLock))
 		{
@@ -845,8 +843,19 @@ elseif ($saleModulePermissions >= "U" && check_bitrix_sessid() && !array_key_exi
 		{
 			$ORDER_ID = $ID;
 			CSalePaySystemAction::InitParamArrays($arOrder, $ID, $arPaySys["PSA_PARAMS"]);
-			if (!include($psResultFile))
-				$errorMessageTmp .= GetMessage("ERROR_CONNECT_PAY_SYS").". ";
+
+			try
+			{
+				if (!include($psResultFile))
+					$errorMessageTmp .= GetMessage("ERROR_CONNECT_PAY_SYS").". ";
+			}
+			catch(\Bitrix\Main\SystemException $e)
+			{
+				if($e->getCode() == CSalePaySystemAction::GET_PARAM_VALUE)
+					$errorMessageTmp .= GetMessage("SOA_ERROR_PS")." ";
+				else
+					$errorMessageTmp .= $e->getMessage()." ";
+			}
 		}
 
 		if (strlen($errorMessageTmp) <= 0)
@@ -1846,11 +1855,18 @@ else
 						$arOrderPropsValue[] = $arOrderProps;
 						if ($arOrderProps["TYPE"] == "LOCATION" && $arOrderProps["ACTIVE"] == "Y" && $arOrderProps["IS_LOCATION"] == "Y" && in_array($arOrderProps["INPUT_FIELD_LOCATION"], $arTownOrderProps))
 						{
-							$arLocation = CSaleLocation::GetByID($arOrderProps["VALUE"]);
-							if (IntVal($arLocation["CITY_ID"]) <= 0)
-								$arEnableTownProps[$arOrderProps["INPUT_FIELD_LOCATION"]] = true;
+							if(CSaleLocation::isLocationProMigrated())
+							{
+								$arEnableTownProps[$arOrderProps["INPUT_FIELD_LOCATION"]] = true; //CSaleLocation::checkLocationIsAboveCity($arOrderProps["VALUE"]);
+							}
 							else
-								$arEnableTownProps[$arOrderProps["INPUT_FIELD_LOCATION"]] = false;
+							{
+								$arLocation = CSaleLocation::GetByID($arOrderProps["VALUE"]);
+								if (IntVal($arLocation["CITY_ID"]) <= 0)
+									$arEnableTownProps[$arOrderProps["INPUT_FIELD_LOCATION"]] = true;
+								else
+									$arEnableTownProps[$arOrderProps["INPUT_FIELD_LOCATION"]] = false;
+							}
 						}
 					}
 
@@ -1922,13 +1938,14 @@ else
 
 								if(CSaleLocation::isLocationProEnabled())
 								{
-									print(Location\Admin\LocationHelper::getLocationPathDisplay($arOrderProps['VALUE']));
+									$locationString = Location\Admin\LocationHelper::getLocationStringById($arOrderProps['VALUE']);
+									if(!strlen($locationString))
+										$locationString = $arOrderProps['VALUE'];
+
+									print(htmlspecialcharsEx($locationString));
 								}
 								else
 								{
-									if(CSaleLocation::isLocationProMigrated())
-										$arOrderProps["VALUE"] = CSaleLocation::getLocationIDbyCODE($arOrderProps["VALUE"]);
-
 									$arVal = CSaleLocation::GetByID($arOrderProps["VALUE"], LANG);
 									$locationString = $arVal["COUNTRY_NAME"];
 
@@ -2529,7 +2546,7 @@ else
 					$arDeliveryOrder = array(
 						"PRICE" => $orderTotalPrice,
 						"WEIGHT" => $orderTotalWeight,
-						"LOCATION_FROM" => COption::GetOptionInt('sale', 'location', '', $LID),
+						"LOCATION_FROM" => COption::GetOptionString('sale', 'location', '', $LID),
 						"LOCATION_TO" => $locationData,
 						"LOCATION_ZIP" => $locationZip,
 						"ITEMS" => $arBasketItems
@@ -3739,7 +3756,7 @@ else
 
 												<div class="edit_price">
 													<span class="default_price_product" >
-														<span class="formated_price"><?=CurrencyFormatNumber($arItem["PRICE"], $arItem["CURRENCY"]);?></span>
+														<span class="formated_price"><?=CCurrencyLang::CurrencyFormat($arItem["PRICE"], $arItem["CURRENCY"], false);?></span>
 													</span>
 													<span class="currency_price"><?=$CURRENCY_FORMAT?></span>
 												</div>
@@ -3747,7 +3764,7 @@ else
 												if (0 < $priceDiscount)
 												{
 													?><div class="base_price" id="DIV_BASE_PRICE_WITH_DISCOUNT_<?=$arItem["PRODUCT_ID"]?>">
-														<?=CurrencyFormatNumber($priceBase, $arItem["CURRENCY"]);?>
+														<?=CCurrencyLang::CurrencyFormat($priceBase, $arItem["CURRENCY"], false);?>
 														<span class="currency_price"><?=$CURRENCY_FORMAT?></span>
 													</div><?
 													if ('Y' != $arItem["CUSTOM_PRICE"])
@@ -3769,7 +3786,7 @@ else
 											<?
 											if (!CSaleBasketHelper::isSetItem($arItem)):
 											?>
-												<div><?=CurrencyFormatNumber(($arItem["QUANTITY"] * $arItem["PRICE"]), $arItem["CURRENCY"]);?> <span><?=$CURRENCY_FORMAT?></span></div>
+												<div><?=CCurrencyLang::CurrencyFormat(($arItem["QUANTITY"] * $arItem["PRICE"]), $arItem["CURRENCY"], false);?> <span><?=$CURRENCY_FORMAT?></span></div>
 											<?
 											endif;
 											?>

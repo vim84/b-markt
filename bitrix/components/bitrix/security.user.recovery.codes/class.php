@@ -132,7 +132,7 @@ class CSecurityUserRecoveryCodesComponent
 		}
 
 		$result['ISSUER'] = Option::get('main', 'server_name');
-		if(!$result['ISSUER'])
+		if (!$result['ISSUER'])
 			$result['ISSUER'] = Option::get('security', 'otp_issuer', 'Bitrix');
 
 		$result['CREATE_DATE'] = CUserOptions::GetOption('security', 'recovery_codes_generated', null);

@@ -70,7 +70,7 @@ if($REQUEST_METHOD=="POST" && $_REQUEST['save'] == 'Y')
 
 	<?if (isset($target) && $target == 'editor') die('</script>');?>
 	ShowWaitWindow();
-	
+
 	<?if (strlen($back_url) > 0):?>
 	window.location.href = '<?=CUtil::JSEscape($back_url);?>';
 	<?else:?>
@@ -112,6 +112,7 @@ if (!$bCreate && !isset($_REQUEST['save']))
 		$ch = $arTree->children;
 		if (count($ch) > 0 && strtolower($ch[0]->name) == 'playlist')
 		{
+			$bIncorrectFormat = false;
 			$pl = $ch[0];
 			$tls = $pl->children;
 			for ($i_ = 0, $l_ = count($tls); $i_ < $l_; $i_++)
@@ -121,7 +122,6 @@ if (!$bCreate && !isset($_REQUEST['save']))
 				$tracks = $tls[$i_]->children;
 				for ($i = 0, $l = count($tracks); $i < $l; $i++)
 				{
-					$bIncorrectFormat = false;
 					$track = $tracks[$i];
 					if (strtolower($track->name) == 'track')
 					{
@@ -164,17 +164,12 @@ function getXMLNode($name, $value)
 function getPostVal($param, $ind)
 {
 	$k = $param.'_'.$ind;
-	if (!isset($_POST[$k]) || $_POST[$k] == getListVal() || strlen($_POST[$k]) == 0)
-		return '';
-	return $_POST[$k];
+	return isset($_POST[$k]) ? $_POST[$k] : '';
 }
 
 function getListVal($val)
 {
-	if (strlen($val) > 0)
-		return htmlspecialcharsex($val);
-	//return GetMessage('PLAYLIST_EDIT_NO_DATA');
-	return '-';
+	return $val != '' ? htmlspecialcharsex($val) : '-';
 }
 
 function displayInputRow($id, $val, $i, $width, $fd = false)

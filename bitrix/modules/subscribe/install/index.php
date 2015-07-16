@@ -63,6 +63,7 @@ class subscribe extends CModule
 			RegisterModuleDependences("main", "OnUserDelete", "subscribe", "CSubscription", "OnUserDelete");
 			RegisterModuleDependences("main", "OnUserLogout", "subscribe", "CSubscription", "OnUserLogout");
 			RegisterModuleDependences("main", "OnGroupDelete", "subscribe", "CPosting", "OnGroupDelete");
+			RegisterModuleDependences("sender", "OnConnectorList", "subscribe", "Bitrix\\Subscribe\\SenderEventHandler", "onConnectorListSubscriber");
 
 			//agents
 			CAgent::RemoveAgent("CSubscription::CleanUp();", "subscribe");
@@ -100,6 +101,7 @@ class subscribe extends CModule
 		UnRegisterModuleDependences("main", "OnUserDelete", "subscribe", "CSubscription", "OnUserDelete");
 		UnRegisterModuleDependences("main", "OnGroupDelete", "subscribe", "CPosting", "OnGroupDelete");
 		UnRegisterModuleDependences("main", "OnUserLogout", "subscribe", "CSubscription", "OnUserLogout");
+		UnRegisterModuleDependences("sender", "OnConnectorList", "subscribe", "Bitrix\\Subscribe\\SenderEventHandler", "onConnectorListSubscriber");
 
 		UnRegisterModule("subscribe");
 

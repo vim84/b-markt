@@ -1,6 +1,9 @@
 <?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();?><?
 include(GetLangFileName(dirname(__FILE__)."/", "/payment.php"));
 
+if(!isset($GLOBALS["SALE_INPUT_PARAMS"]))
+	$GLOBALS["SALE_INPUT_PARAMS"] = array();
+
 $req = "";
 if(strlen($_REQUEST['tx']) > 0) // PDT
 {
@@ -92,7 +95,7 @@ if(strlen($req) > 0)
 			$arFields["PAY_VOUCHER_DATE"] = Date(CDatabase::DateFormatToPHP(CLang::GetDateFormat("FULL", LANG)));
 
 			if (IntVal($arOrder["PRICE"]) == IntVal($keyarray["mc_gross"])
-				 && $keyarray["receiver_email"] == CSalePaySystemAction::GetParamValue("BUSINESS")
+				 && ToLower($keyarray["receiver_email"]) == ToLower(CSalePaySystemAction::GetParamValue("BUSINESS"))
 				 && $keyarray["payment_status"] == "Completed"
 				)
 				CSaleOrder::PayOrder($arOrder["ID"], "Y");
@@ -137,7 +140,7 @@ if(strlen($req) > 0)
 			$arFields["PAY_VOUCHER_DATE"] = Date(CDatabase::DateFormatToPHP(CLang::GetDateFormat("FULL", LANG)));
 
 			if (IntVal($arOrder["PRICE"]) == IntVal($_POST["mc_gross"])
-				 && $_POST["receiver_email"] == CSalePaySystemAction::GetParamValue("BUSINESS")
+				 && ToLower($_POST["receiver_email"]) == ToLower(CSalePaySystemAction::GetParamValue("BUSINESS"))
 				 && $_POST["payment_status"] == "Completed"
 				 && strlen($arOrder["PAY_VOUCHER_NUM"]) <= 0
 				 && $arOrder["PAY_VOUCHER_NUM"] != $tx

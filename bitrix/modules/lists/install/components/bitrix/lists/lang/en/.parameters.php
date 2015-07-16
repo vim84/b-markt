@@ -23,4 +23,7 @@ $MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_ADMIN"] = "Business Processes Page URL";
 $MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_EDIT"] = "Business Process Management URL";
 $MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_VARS"] = "Business Process Variables URL";
 $MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_DELETE"] = "Business process deletion URL";
+$MESS["CP_BL_PAGE_EXPORT_EXCEL"] = "Export to Microsoft Excel";
+$MESS["CP_BL_PAGE_BIZPROC_WORKFLOW_CONSTANTS"] = "Workflow constants URL";
+$MESS["CP_BL_PAGE_CATALOG_PROCESSES"] = "Workflows Directory";
 ?>

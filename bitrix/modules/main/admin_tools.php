@@ -671,9 +671,6 @@ function GetDirList($path, &$arDirs, &$arFiles, $arFilter=array(), $sort=array()
 			}
 			else
 			{
-				if(CFileMan::GetFileTypeEx($file) != "php")
-					continue;
-
 				if($file=='.section.php')
 					continue;
 
@@ -767,7 +764,7 @@ function GetDirList($path, &$arDirs, &$arFiles, $arFilter=array(), $sort=array()
 		$by = strtolower($by);
 		if($order!="desc")
 			$order="asc";
-		if($by!="size" && $by!="timestamp")
+		if($by!="size" && $by!="timestamp" && $by!="name_nat")
 			$by="name";
 
 		usort($arDirs, array("_FilesCmp", "cmp_".$by."_".$order));
@@ -815,6 +812,20 @@ class _FilesCmp
 			return 0;
 		return ($a["NAME"] > $b["NAME"]) ? -1 : 1;
 	}
+	function cmp_name_nat_asc($a, $b)
+	{
+		$cmp = strnatcasecmp(trim($a["NAME"]), trim($b["NAME"]));
+		if($cmp == 0)
+			$cmp = strnatcmp(trim($a["NAME"]), trim($b["NAME"]));
+		return $cmp;
+	}
+	function cmp_name_nat_desc($a, $b)
+	{
+		$cmp = strnatcasecmp(trim($a["NAME"]), trim($b["NAME"]));
+		if($cmp == 0)
+			$cmp = strnatcmp(trim($a["NAME"]), trim($b["NAME"]));
+		return $cmp*(-1);
+	}
 }
 
 function SetPrologTitle($prolog, $title)
@@ -860,12 +871,13 @@ function SetPrologTitle($prolog, $title)
 
 function SetPrologProperty($prolog, $property_key, $property_val)
 {
-	if (preg_match("'(\\\$APPLICATION->SetPageProperty\\(\"".preg_quote(EscapePHPString($property_key), "'")."\" *, *\")(.*?)(?<!\\\\)(\"\\);[\r\n]*)'i", $prolog, $regs))
+	if(preg_match("'(\\\$APPLICATION->SetPageProperty\\(\"".preg_quote(EscapePHPString($property_key), "'")."\" *, *)([\"\\'])(.*?)(?<!\\\\)([\"\\'])(\\);[\r\n]*)'i", $prolog, $regs)
+		|| preg_match("'(\\\$APPLICATION->SetPageProperty\\(\\'".preg_quote(EscapePHPString($property_key, "'"), "'")."\\' *, *)([\"\\'])(.*?)(?<!\\\\)([\"\\'])(\\);[\r\n]*)'i", $prolog, $regs))
 	{
 		if (strlen($property_val)<=0)
-			$prolog = str_replace($regs[1].$regs[2].$regs[3], "", $prolog);
+			$prolog = str_replace($regs[1].$regs[2].$regs[3].$regs[4].$regs[5], "", $prolog);
 		else
-			$prolog = str_replace($regs[1].$regs[2].$regs[3], $regs[1].EscapePHPString($property_val).$regs[3], $prolog);
+			$prolog = str_replace($regs[1].$regs[2].$regs[3].$regs[4].$regs[5], $regs[1].$regs[2].EscapePHPString($property_val, $regs[2]).$regs[4].$regs[5], $prolog);
 	}
 	else
 	{

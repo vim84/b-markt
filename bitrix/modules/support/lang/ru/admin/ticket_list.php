@@ -146,4 +146,17 @@ $MESS["SUP_F_SUPPORTTEAM_GROUP"] = "Группа сотрудников техп
 $MESS["SUP_F_COUPON"] = "Купон";
 $MESS["SUP_COUPON"] = "Купон";
 $MESS["SUP_DEADLINE"] = "Крайний срок";
+$MESS["MAIN_ADMIN_LIST_SELECTED"] = "Выбрано:";
+$MESS["MAIN_ADD"] = "Добавить";
+$MESS["MAIN_ADMIN_LIST_CHECKED"] = "Отмечено:";
+$MESS["MAIN_FIND"] = "Найти";
+$MESS["MAIN_FIND_TITLE"] = "Введите строку для поиска";
+$MESS["SUP_EXACT_MATCH"] = "Искать точное совпадение при фильтрации";
+$MESS["SUP_ADD"] = "Добавить";
+$MESS["SUP_TICKET_STATUS"] = "Статус обращения";
+$MESS["SUP_RED_ALT"] = "последний раз в обращение писал клиент техподдержки (вы ответственный)";
+$MESS["SUP_YELLOW_ALT"] = "последний раз в обращение писал клиент техподдержки (вы не ответственный)";
+$MESS["SUP_GREEN_ALT"] = "последний раз в обращение писали вы";
+$MESS["SUP_GREEN_S_ALT"] = "последний раз в обращение писал сотрудник техподдержки";
+$MESS["SUP_GREY_ALT"] = "обращение закрыто";
 ?>

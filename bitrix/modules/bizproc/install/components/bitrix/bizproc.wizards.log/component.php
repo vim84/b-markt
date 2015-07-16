@@ -144,31 +144,6 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 		),
 	);
 
-	$GLOBALS["__bwl_ParseStringParameterTmp_arAllowableUserGroups"] = CBPDocument::GetAllowableUserGroups($documentType);
-	function __bwl_ParseStringParameterTmp($matches)
-	{
-		$result = "";
-		if ($matches[1] == "user")
-		{
-			$user = $matches[2];
-
-			$l = strlen("user_");
-			if (substr($user, 0, $l) == "user_")
-				$result = htmlspecialcharsbx(CBPHelper::ConvertUserToPrintableForm(intval(substr($user, $l))));
-			else
-				$result = $GLOBALS["__bwl_ParseStringParameterTmp_arAllowableUserGroups"][$user];
-		}
-		elseif ($matches[1] == "group")
-		{
-			$result = $GLOBALS["__bwl_ParseStringParameterTmp_arAllowableUserGroups"][$matches[2]];
-		}
-		else
-		{
-			$result = $matches[0];
-		}
-		return $result;
-	}
-
 	$documentId = array("bizproc", "CBPVirtualDocument",$arResult["BP"]["ID"]);
 	$arDocumentStates = CBPDocument::GetDocumentStates($documentType, $documentId);
 
@@ -323,12 +298,7 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 				$status = GetMessage("BPABL_RES_6");
 		}
 
-		$note = $arTrack["ACTION_NOTE"];
-		$note = preg_replace_callback(
-			"/\{=([A-Za-z0-9_]+)\:([A-Za-z0-9_]+)\}/i",
-			"__bwl_ParseStringParameterTmp",
-			$note
-		);
+		$note = CBPTrackingService::parseStringParameter($arTrack["ACTION_NOTE"], $documentType);
 
 		$modified_by = "";
 		if (intval($arTrack["MODIFIED_BY"]) > 0)

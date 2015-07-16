@@ -41,6 +41,13 @@ class SiteLocationTable extends Connector
 		return 'LID';
 	}
 
+	public static function onAfterModifiy()
+	{
+		// todo: re-generate index here later
+
+		Search\Finder::setIndexInvalid();
+	}
+
 	public static function getMap()
 	{
 		return array(

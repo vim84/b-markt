@@ -62,4 +62,5 @@ $MESS["COMP_PARAM_CACHE_MAN"] = "+ Managed";
 $MESS["COMP_PARAM_DATE_FORMAT_SITE"] = "Site date format";
 $MESS["COMP_PARAM_DATETIME_FORMAT_SITE"] = "Site date-time format";
 $MESS["COMP_PARAM_NAME_FORMAT_SITE"] = "Website format";
+$MESS["COMP_PARAM_SEF_RULE"] = "SEF path template";
 ?>

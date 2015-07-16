@@ -569,13 +569,14 @@ class CIMMessage
 	{
 		global $DB;
 
+		CTimeZone::Disable();
 		$strSql ="
 			SELECT
 				M.ID,
 				M.CHAT_ID,
 				M.MESSAGE,
 				M.MESSAGE_OUT,
-				".$DB->DateToCharFunction('M.DATE_CREATE')." DATE_CREATE,
+				".$DB->DatetimeToTimestampFunction('M.DATE_CREATE')." DATE_CREATE,
 				M.EMAIL_TEMPLATE,
 				R.LAST_SEND_ID,
 				R.USER_ID TO_USER_ID,
@@ -585,6 +586,9 @@ class CIMMessage
 				U1.LAST_NAME TO_USER_LAST_NAME,
 				U1.EMAIL TO_USER_EMAIL,
 				U1.LID TO_USER_LID,
+				U1.AUTO_TIME_ZONE AUTO_TIME_ZONE,
+				U1.TIME_ZONE TIME_ZONE,
+				U1.TIME_ZONE_OFFSET TIME_ZONE_OFFSET,
 				M.AUTHOR_ID FROM_USER_ID,
 				U2.LOGIN FROM_USER_LOGIN,
 				U2.NAME FROM_USER_NAME,
@@ -596,11 +600,15 @@ class CIMMessage
 			WHERE R.MESSAGE_TYPE = '".IM_MESSAGE_PRIVATE."' AND R.STATUS < ".IM_STATUS_NOTIFY."
 			".($order == "DESC"? "ORDER BY DATE_CREATE DESC, ID DESC": "")."
 		";
+		CTimeZone::Enable();
 		$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 		$arMessages = Array();
 		while ($arRes = $dbRes->Fetch())
+		{
+			$arRes["DATE_CREATE"] = $arRes["DATE_CREATE"] + CIMMail::GetUserOffset($arRes);
 			$arMessages[$arRes['ID']] = $arRes;
+		}
 
 		return $arMessages;
 	}
@@ -890,7 +898,7 @@ class CIMMessage
 
 		if ($chatId <= 0)
 		{
-			$chatId = IntVal($DB->Add("b_im_chat", Array('AUTHOR_ID' => $fromUserId), Array()));
+			$chatId = IntVal($DB->Add("b_im_chat", Array('TYPE' => IM_MESSAGE_PRIVATE, 'AUTHOR_ID' => $fromUserId), Array()));
 			if ($chatId > 0)
 			{
 				$strSql = "INSERT INTO b_im_relation (CHAT_ID, MESSAGE_TYPE, USER_ID) VALUES (".$chatId.",'".IM_MESSAGE_PRIVATE."',".$fromUserId.")";

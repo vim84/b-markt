@@ -55,13 +55,11 @@ $APPLICATION->includeComponent(
 	array('HIDE_ICONS' => 'Y')
 );
 ?>
-<div class="bx-disk-tab-container"></div>
-<div class="bx-disk-filepage-title"><?= Loc::getMessage('DISK_BP') ?></div>
-<div class="bx-disk-filepage-section">
+<div class="bx-disk-bizproc-section">
 <?
 $APPLICATION->IncludeComponent('bitrix:disk.bizproc.start', '', Array(
 	'MODULE_ID'     => \Bitrix\Disk\Driver::INTERNAL_MODULE_ID,
-	'DOCUMENT_TYPE' => 'STORAGE_'.$arResult['VARIABLES']['STORAGE']->getId(),
+	'STORAGE_ID' => $arResult['VARIABLES']['STORAGE']->getId(),
 	'DOCUMENT_ID'   => $arResult['VARIABLES']['ELEMENT_ID'],
 	'SET_TITLE'     => 'Y'),
 	$component,

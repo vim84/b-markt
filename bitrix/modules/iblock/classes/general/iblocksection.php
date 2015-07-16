@@ -4,6 +4,10 @@ IncludeModuleLangFile(__FILE__);
 class CAllIBlockSection
 {
 	var $LAST_ERROR;
+	protected static $arSectionCodeCache = array();
+	protected static $arSectionPathCache = array();
+	protected static $arSectionNavChainCache = array();
+
 	function GetFilter($arFilter=Array())
 	{
 		global $DB;
@@ -157,6 +161,8 @@ class CAllIBlockSection
 	{
 		global $DB;
 
+		$IBLOCK_ID = (int)$IBLOCK_ID;
+
 		$arFields = array(
 			"ID" => "BS.ID",
 			"CODE" => "BS.CODE",
@@ -192,14 +198,14 @@ class CAllIBlockSection
 		foreach($arSelect as $field)
 		{
 			$field = strtoupper($field);
-			if(array_key_exists($field, $arFields))
+			if (isset($arFields[$field]))
 				$arSqlSelect[$field] = $arFields[$field]." AS ".$field;
 		}
 
-		if(array_key_exists("DESCRIPTION", $arSqlSelect))
+		if (isset($arSqlSelect["DESCRIPTION"]))
 			$arSqlSelect["DESCRIPTION_TYPE"] = $arFields["DESCRIPTION_TYPE"]." AS DESCRIPTION_TYPE";
 
-		if(array_key_exists("LIST_PAGE_URL", $arSqlSelect) || array_key_exists("SECTION_PAGE_URL", $arSqlSelect))
+		if (isset($arSqlSelect["LIST_PAGE_URL"]) || isset($arSqlSelect["SECTION_PAGE_URL"]))
 		{
 			$arSqlSelect["ID"] = $arFields["ID"]." AS ID";
 			$arSqlSelect["CODE"] = $arFields["CODE"]." AS CODE";
@@ -231,17 +237,16 @@ class CAllIBlockSection
 			";
 		}
 
-		static $cache = array();
 		$key = md5($strSelect);
-		if (!isset($cache[$key]))
-			$cache[$key] = array();
+		if (!isset(self::$arSectionNavChainCache[$key]))
+			self::$arSectionNavChainCache[$key] = array();
 
 		$sectionPath = array();
 		do
 		{
-			$SECTION_ID = intval($SECTION_ID);
+			$SECTION_ID = (int)$SECTION_ID;
 
-			if (!isset($cache[$key][$SECTION_ID]))
+			if (!isset(self::$arSectionNavChainCache[$key][$SECTION_ID]))
 			{
 				$rsSection = $DB->Query("
 					SELECT
@@ -250,15 +255,15 @@ class CAllIBlockSection
 						b_iblock_section BS
 						INNER JOIN b_iblock B ON B.ID = BS.IBLOCK_ID
 					WHERE BS.ID=".$SECTION_ID."
-						".($IBLOCK_ID>0? "AND BS.IBLOCK_ID=".intval($IBLOCK_ID): "")."
+						".($IBLOCK_ID > 0 ? "AND BS.IBLOCK_ID=".$IBLOCK_ID : "")."
 				");
-				$cache[$key][$SECTION_ID] = $rsSection->Fetch();
+				self::$arSectionNavChainCache[$key][$SECTION_ID] = $rsSection->Fetch();
 			}
 
-			if ($cache[$key][$SECTION_ID])
+			if (self::$arSectionNavChainCache[$key][$SECTION_ID])
 			{
-				$sectionPath[] = $cache[$key][$SECTION_ID];
-				$SECTION_ID = $cache[$key][$SECTION_ID]["IBLOCK_SECTION_ID"];
+				$sectionPath[] = self::$arSectionNavChainCache[$key][$SECTION_ID];
+				$SECTION_ID = self::$arSectionNavChainCache[$key][$SECTION_ID]["IBLOCK_SECTION_ID"];
 			}
 			else
 			{
@@ -1351,6 +1356,10 @@ class CAllIBlockSection
 					}
 				}
 			}
+
+			unset(self::$arSectionCodeCache[$ID]);
+			self::$arSectionPathCache = array();
+			self::$arSectionNavChainCache = array();
 
 			if($arIBlock["RIGHTS_MODE"] === "E")
 			{
@@ -2514,6 +2523,40 @@ class CAllIBlockSection
 					AND (".implode(" OR ", $arUpdate).")
 			");
 		}
+	}
+	
+	public static function getSectionCodePath($sectionId)
+	{
+		if (!array_key_exists($sectionId, self::$arSectionPathCache))
+		{
+			self::$arSectionPathCache[$sectionId] = "";
+			$res = CIBlockSection::GetNavChain(0, $sectionId, array("ID", "CODE"));
+			while ($a = $res->Fetch())
+			{
+				self::$arSectionCodeCache[$a["ID"]] = urlencode($a["CODE"]);
+				self::$arSectionPathCache[$sectionId] .= urlencode($a["CODE"])."/";
+			}
+			self::$arSectionPathCache[$sectionId] = rtrim(self::$arSectionPathCache[$sectionId], "/");
+
+		}
+		return self::$arSectionPathCache[$sectionId];
+	}
+
+	public static function getSectionCode($sectionId)
+	{
+		global $DB;
+
+		$sectionId = intval($sectionId);
+		if (!array_key_exists($sectionId, self::$arSectionCodeCache))
+		{
+			self::$arSectionCodeCache[$sectionId] = "";
+			$res = $DB->Query("SELECT IBLOCK_ID, CODE FROM b_iblock_section WHERE ID = ".$sectionId);
+			while ($a = $res->Fetch())
+			{
+				self::$arSectionCodeCache[$sectionId] = urlencode($a["CODE"]);
+			}
+		}
+		return self::$arSectionCodeCache[$sectionId];
 	}
 }
 

@@ -11,12 +11,21 @@ use Bitrix\Main;
 use Bitrix\Main\DB;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
+
 use Bitrix\Sale\Location;
+use Bitrix\Sale\Location\DB\BlockInserter;
+use Bitrix\Sale\Location\DB\Helper;
 
 Loc::loadMessages(__FILE__);
 
-final class ChainTable extends Entity\DataManager
+final class ChainTable extends Entity\DataManager implements \Serializable
 {
+	const STEP_SIZE = 	10000;
+	const MTU = 		9999;
+
+	protected $procData = 		array();
+	protected $indexInserter = 	null;
+
 	public static function getFilePath()
 	{
 		return __FILE__;
@@ -24,350 +33,220 @@ final class ChainTable extends Entity\DataManager
 
 	public static function getTableName()
 	{
-		return 'b_sale_loc_chains';
+		return 'b_sale_loc_search_chain';
 	}
 
-	public static function cleanUp()
+	public function serialize()
 	{
-		Main\HttpApplication::getConnection()->query('truncate table '.static::getTableName());
+		return serialize($this->procData);
+	}
+	public function unserialize($data)
+	{
+		$this->procData = unserialize($data);
+		$this->initInsertHandles();
 	}
 
-	const STEP_SIZE = 100;
-
-	public static function reInitData()
+	public function __construct($parameters = array())
 	{
-		static::cleanUp();
+		$this->resetProcess();
 
-		$offset = 0;
-		$stat = array();
+		if(is_array($parameters['TYPES']) && !empty($parameters['TYPES']))
+		{
+			$this->procData['ALLOWED_TYPES'] = array_unique($parameters['TYPES']);
+		}
 
-		$types = array();
 		$typeSort = array();
 		$res = Location\TypeTable::getList(array('select' => array('ID', 'CODE', 'SORT')));
+
 		while($item = $res->fetch())
 		{
-			if($item['CODE'] == 'CITY' || $item['CODE'] == 'VILLAGE' || $item['CODE'] == 'STREET')
-				$types[$item['CODE']] = $item['ID'];
+			if(!is_array($this->procData['ALLOWED_TYPES']) || (is_array($this->procData['ALLOWED_TYPES']) && in_array($item['ID'], $this->procData['ALLOWED_TYPES'])))
+				$this->procData['TYPES'][$item['CODE']] = $item['ID'];
 
-			$typeSort[$item['ID']] = $item['SORT'];
+			$this->procData['TYPE_SORT'][$item['ID']] = $item['SORT'];
 		}
 
-		$typesBack = array_flip($types);
+		$this->procData['TYPES_BACK'] = array_flip($this->procData['TYPES']);
 
-		//_print_r($types);
-		//_print_r($typeSort);
-
-		while(true)
-		{
-			$res = Location\LocationTable::getList(array(
-				'select' => array(
-					'ID', 'TYPE_ID'
-				),
-				'filter' => array(
-					'=TYPE_ID' => array_values($types)
-				),
-				'limit' => self::STEP_SIZE,
-				'offset' => $offset
-			));
-
-			$cnt = 0;
-			while($item = $res->fetch())
-			{
-				$resPath = Location\LocationTable::getPathToNode($item['ID'], array(
-					'select' => array('ID', 'TYPE_ID'),
-					'filter' => array('=TYPE_ID' => array_values($types))
-				));
-				$path = array();
-				while($pItem = $resPath->fetch())
-				{
-					$path[$typesBack[$pItem['TYPE_ID']]] = $pItem['ID'];
-				}
-
-				//_print_r($path);
-
-				$data = array(
-					'CITY_ID' => isset($path['CITY']) ? $path['CITY'] : 0,
-					'VILLAGE_ID' => isset($path['VILLAGE']) ? $path['VILLAGE'] : 0,
-					'STREET_ID' => isset($path['STREET']) ? $path['STREET'] : 0,
-
-					'TYPE_SORT' => $typeSort[$item['TYPE_ID']],
-
-					'LOCATION_ID' => $item['ID']
-				);
-
-				//_print_r($data);
-				foreach($data as &$value)
-					$value = "'".$value."'";
-
-				//static::add($data);
-				$GLOBALS['DB']->query("insert into ".static::getTableName()." (CITY_ID, VILLAGE_ID, STREET_ID, TYPE_SORT, LOCATION_ID) values (".implode(', ', $data).")");
-
-				$cnt++;
-			}
-
-			if(!$cnt)
-				break;
-
-			$offset += self::STEP_SIZE;
-		}
+		$this->initInsertHandles();
 	}
 
-	public static function search($words)
+	public function initInsertHandles()
+	{
+		$this->indexInserter = new BlockInserter(array(
+			'entityName' => '\Bitrix\Sale\Location\Search\ChainTable',
+			'exactFields' => array(
+				'LOCATION_ID', 'RELEVANCY', 'POSITION'
+			),
+			'parameters' => array(
+				'mtu' => static::MTU
+			)
+		));
+	}
+
+	public function resetProcess()
+	{
+		$this->procData = array(
+			'OFFSET' => 	0,
+			'DEPTH' => 	0,
+			'PATH' => 			array(),
+		);
+	}
+
+	public function getOffset()
+	{
+		return $this->procData['OFFSET'];
+	}
+
+	public static function cleanUpData()
+	{
+		Helper::dropTable(static::getTableName());
+
+		Main\HttpApplication::getConnection()->query("create table ".static::getTableName()." (
+
+			LOCATION_ID ".Helper::getSqlForDataType('int').",
+			RELEVANCY ".Helper::getSqlForDataType('int')." default '0',
+			POSITION ".Helper::getSqlForDataType('int')." default '0',
+
+			primary key (POSITION, LOCATION_ID)
+
+		)");
+	}
+
+	public static function getFilterForInitData($parameters = array())
+	{
+		$filter = array();
+
+		if(!is_array($parameters))
+			$parameters = array();
+
+		if(is_array($parameters['TYPES']) && !empty($parameters['TYPES']))
+			$filter['=TYPE_ID'] = array_unique($parameters['TYPES']);
+
+		return $filter;
+	}
+
+	public function initializeData()
 	{
 		$dbConnection = Main\HttpApplication::getConnection();
-		$dbHelper = Main\HttpApplication::getConnection()->getSqlHelper();
 
-		$wordStatTableName = WordStatTable::getTableName();
+		$res = Location\LocationTable::getList(array(
+			'select' => array(
+				'ID', 
+				'TYPE_ID',
+				'DEPTH_LEVEL',
+				'SORT'
+			),
+			//'filter' => static::getFilterForInitData(array('TYPES' => $this->procData['ALLOWED_TYPES'])),
+			'order' => array(
+				'LEFT_MARGIN' => 'asc'
+			),
+			'limit' => self::STEP_SIZE,
+			'offset' => $this->procData['OFFSET']
+		));
 
-		$preparedLike = array();
-		foreach($words as $word)
-			$preparedLike[] = "%TABLE_NAME%.WORD like '".$dbHelper->forSql($word)."%'";
+		$cnt = 0;
+		while($item = $res->fetch())
+		{
+			$name = Location\Name\LocationTable::getList(array('select' => array('NAME'), 'filter' => array('=LOCATION_ID' => $item['ID'], '=LANGUAGE_ID' => 'ru')))->fetch();
 
-		$preparedLike = implode(' or ', $preparedLike);
+			if($item['DEPTH_LEVEL'] < $this->procData['DEPTH'])
+			{
+				$newPC = array();
 
-		$sql = "
-			select C.*, WS_CITY.WORD as CWORD, WS_VILLAGE.WORD as VWORD, WS_STREET.WORD as SWORD from ".static::getTableName()." C
+				foreach($this->procData['PATH'] as $dl => $id)
+				{
+					if($dl >= $item['DEPTH_LEVEL'])
+						break;
 
-				inner join b_sale_loc_word_stat WS_STREET on 
+					$newPC[$dl] = $id;
+				}
 
-					(
-						WS_STREET.TYPE_ID = '7'
-						and
-						WS_STREET.LOCATION_ID = C.STREET_ID
-						and
-						(
-							(".str_replace(array('%TABLE_NAME%'), array('WS_STREET'), $preparedLike).")
-							or
-							(WS_STREET.LOCATION_ID = '0')
-						)
-					)
+				$this->procData['PATH'] = $newPC;
+			}
 
-				inner join b_sale_loc_word_stat WS_VILLAGE on 
+			$this->procData['PATH'][$item['DEPTH_LEVEL']] = array(
+				'TYPE' => $item['TYPE_ID'],
+				'ID' => $item['ID']
+			);
 
-					(
-						WS_VILLAGE.TYPE_ID = '6'
-						and
-						WS_VILLAGE.LOCATION_ID = C.VILLAGE_ID
-						and
-						(
-							(".str_replace(array('%TABLE_NAME%'), array('WS_VILLAGE'), $preparedLike).")
-							or
-							(WS_VILLAGE.LOCATION_ID = '0')
-						)
-					)
+			$this->procData['DEPTH'] = $item['DEPTH_LEVEL'];
 
-				inner join b_sale_loc_word_stat WS_CITY on 
+			if(is_array($this->procData['ALLOWED_TYPES']) && in_array($item['TYPE_ID'], $this->procData['ALLOWED_TYPES']))
+			{
+				$data = array(
+					'LOCATION_ID' => $item['ID'],
+					'RELEVANCY' => $this->procData['TYPE_SORT'][$item['TYPE_ID']], // tmp, will be more complicated calc here later
+				);
+				$wordsAdded = array();
+				$k = 1;
 
-					(
-						WS_CITY.TYPE_ID = '3'
-						and
-						WS_CITY.LOCATION_ID = C.CITY_ID
-						and
-						(
-							(".str_replace(array('%TABLE_NAME%'), array('WS_CITY'), $preparedLike).")
-							or
-							(WS_CITY.LOCATION_ID = '0')
-						)
-					)
+				foreach($this->procData['PATH'] as &$pathItem)
+				{
+					if(!isset($pathItem['WORDS']))
+					{
+						$sql = "
+							select WS.POSITION from ".WordTable::getTableNameWord2Location()." WL
+								inner join ".WordTable::getTableName()." WS on WL.WORD_ID = WS.ID
+							where
+								WL.LOCATION_ID = '".intval($pathItem['ID'])."'
+						";
 
-			order by C.TYPE_SORT desc
-			limit 5
-		";
+						$wordRes = $dbConnection->query($sql);
 
-		/*
-		$sql = "
-			select * from ".static::getTableName()." C
-				where 
-					(
-						C.CITY_ID = 0 or C.CITY_ID in (
-							select LOCATION_ID from b_sale_loc_word_stat 
-								where
-									TYPE_ID = 3
-									and
-									(".$preparedLike.")
-						)
-					)
+						$pathItem['WORDS'] = array();
+						while($wordItem = $wordRes->fetch())
+						{
+							$pathItem['WORDS'][] = $wordItem['POSITION'];
+						}
+						$pathItem['WORDS'] = array_unique($pathItem['WORDS']);
+					}
 
-					and 
+					foreach($pathItem['WORDS'] as $position)
+					{
+						if(!isset($wordsAdded[$position]))
+						{
+							$this->indexInserter->insert(array_merge(array('POSITION' => $position), $data));
+							$wordsAdded[$position] = true;
+						}
+					}
+				}
+				unset($pathItem);
 
-					(
-						C.VILLAGE_ID = 0 or C.VILLAGE_ID in (
-							select LOCATION_ID from b_sale_loc_word_stat 
-								where
-									TYPE_ID = 6
-									and
-									(".$preparedLike.")
-						)
-					)
+			}
 
-					and
+			$cnt++;
+		}
 
-					(
-						C.STREET_ID = 0 or C.STREET_ID in (
-							select LOCATION_ID from b_sale_loc_word_stat 
-								where
-									TYPE_ID = 7
-									and
-									(".$preparedLike.")
-						)
-					)
+		$this->indexInserter->flush();
 
-			order by C.TYPE_SORT desc
-			limit 5
-		";
-		*/
+		$this->procData['OFFSET'] += self::STEP_SIZE;
 
-		print('<pre>');
-		print_r($sql);
-		print('</pre>');
+		return !$cnt;
+	}
 
-		return $dbConnection->query($sql);
+	public static function createIndex()
+	{
+		Helper::createIndex(static::getTableName(), 'LPR', array('LOCATION_ID', 'POSITION', 'RELEVANCY'));
 	}
 
 	public static function getMap()
 	{
 		return array(
 
-			'ID' => array(
+			'LOCATION_ID' => array(
+				'data_type' => 'integer',
+				'primary' => true
+			),
+			'POSITION' => array(
 				'data_type' => 'integer',
 				'primary' => true
 			),
 
-			'CITY_ID' => array(
+			'RELEVANCY' => array(
 				'data_type' => 'integer',
-			),
-			'VILLAGE_ID' => array(
-				'data_type' => 'integer',
-			),
-			'STREET_ID' => array(
-				'data_type' => 'integer',
-			),
-			'TYPE_SORT' => array(
-				'data_type' => 'integer',
-			),
-			'LOCATION_ID' => array(
-				'data_type' => 'integer',
-			),
+			)
 		);
-
-		/*
-		return array(
-
-			'ID' => array(
-				'data_type' => 'integer',
-				'primary' => true,
-				'autocomplete' => true,
-				'title' => 'ID'
-			),
-			'CODE' => array(
-				'data_type' => 'string',
-				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_CODE_FIELD'),
-				'required' => true,
-				'validation' => array(__CLASS__, 'getCodeValidators')
-			),
-
-			'LEFT_MARGIN' => array(
-				'data_type' => 'integer',
-			),
-			'RIGHT_MARGIN' => array(
-				'data_type' => 'integer',
-			),
-			'DEPTH_LEVEL' => array(
-				'data_type' => 'integer',
-			),
-			'SORT' => array(
-				'data_type' => 'integer',
-				'default' => 100,
-				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_SORT_FIELD')
-			),
-			'PARENT_ID' => array(
-				'data_type' => 'integer',
-				'default' => 0,
-				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_PARENT_ID_FIELD')
-			),
-			'TYPE_ID' => array(
-				'data_type' => 'integer',
-				'required' => true,
-				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_TYPE_ID_FIELD')
-			),
-			'LATITUDE' => array(
-				'data_type' => 'float',
-				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_LATITUDE_FIELD')
-			),
-			'LONGITUDE' => array(
-				'data_type' => 'float',
-				'title' => Loc::getMessage('SALE_LOCATION_LOCATION_ENTITY_LONGITUDE_FIELD')
-			),
-
-			// virtual
-			'TYPE' => array(
-				'data_type' => 'Bitrix\Sale\Location\Type',
-				'reference' => array(
-					'=this.TYPE_ID' => 'ref.ID'
-				),
-				'join_type' => "inner"
-			),
-			'NAME' => array(
-				'data_type' => 'Bitrix\Sale\Location\Name\Location',
-				'reference' => array(
-					'=this.ID' => 'ref.LOCATION_ID'
-				),
-				'join_type' => "inner"
-			),
-			'PARENT' => array(
-				'data_type' => 'Bitrix\Sale\Location\Location',
-				'reference' => array(
-					'=this.PARENT_ID' => 'ref.ID'
-				)
-			),
-			'CHILD' => array(
-				'data_type' => 'Bitrix\Sale\Location\Location',
-				'reference' => array(
-					'=this.ID' => 'ref.PARENT_ID'
-				)
-			),
-			'CHILD_CNT' => array(
-				'data_type' => 'integer',
-				'expression' => array(
-					'count(%s)', 
-					'CHILD.ID'
-				)
-			),
-			'CNT' => array(
-				'data_type' => 'integer',
-				'expression' => array(
-					'count(*)'
-				)
-			),
-			'EXTERNAL' => array(
-				'data_type' => 'Bitrix\Sale\Location\External',
-				'reference' => array(
-					'=this.ID' => 'ref.LOCATION_ID'
-				)
-			),
-			'DEFAULT_SORT' => array(
-				'data_type' => 'Bitrix\Sale\Location\DefaultSiteTable',
-				'reference' => array(
-					'=this.CODE' => 'ref.LOCATION_CODE'
-				)
-			),
-
-			// do not remove unless you want migrator to be dead
-			'COUNTRY_ID' => array(
-				'data_type' => 'integer',
-			),
-			'REGION_ID' => array(
-				'data_type' => 'integer',
-			),
-			'CITY_ID' => array(
-				'data_type' => 'integer',
-			),
-			'LOC_DEFAULT' => array(
-				'data_type' => 'string',
-			),
-
-		);
-		*/
 	}
 }
 

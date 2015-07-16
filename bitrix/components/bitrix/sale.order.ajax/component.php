@@ -9,6 +9,7 @@
 /** @global CUser $USER */
 /** @global CMain $APPLICATION */
 use Bitrix\Main\Loader;
+use Bitrix\Sale\DiscountCouponsManager;
 
 if (!Loader::includeModule("sale"))
 {
@@ -592,19 +593,18 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 		}
 		if (empty($arResult["BASKET_ITEMS"]) || !is_array($arResult["BASKET_ITEMS"]))
 		{
-			if ('Y' == $arParams["DISABLE_BASKET_REDIRECT"])
+			if ($arParams["DISABLE_BASKET_REDIRECT"] == 'Y')
 			{
 				return;
 			}
 			else
 			{
-				if(array_key_exists('json', $_REQUEST) && $_REQUEST['json'] == "Y")
+				if (isset($_REQUEST['json']) && $_REQUEST['json'] == "Y")
 				{
 					$APPLICATION->RestartBuffer();
 					echo json_encode(array("success" => "N", "redirect" => $arParams["PATH_TO_BASKET"]));
 					die();
 				}
-
 				LocalRedirect($arParams["PATH_TO_BASKET"]);
 				die();
 			}
@@ -649,7 +649,18 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 						if (is_dir($pathToAction) && file_exists($pathToAction."/pre_payment.php"))
 							$pathToAction .= "/pre_payment.php";
 
-						include_once($pathToAction);
+						try
+						{
+							include_once($pathToAction);
+						}
+						catch(\Bitrix\Main\SystemException $e)
+						{
+							if($e->getCode() == CSalePaySystemAction::GET_PARAM_VALUE)
+								$arResult["ERROR"][] = GetMessage("SOA_TEMPL_ORDER_PS_ERROR");
+							else
+								$arResult["ERROR"][] = $e->getMessage();
+						}
+
 						$psPreAction = new CSalePaySystemPrePayment;
 						if($psPreAction->init())
 						{
@@ -805,24 +816,21 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 							$arUserResult["DELIVERY_LOCATION"] = $curVal;
 						if ($arOrderProps["IS_LOCATION4TAX"]=="Y")
 							$arUserResult["TAX_LOCATION"] = $curVal;
-
-						if(!CSaleLocation::isLocationProMigrated())
+						
+						if (IntVal($curVal)<=0 && IntVal($arUserResult["ORDER_PROP"]["REGION_".$arOrderProps["ID"]]) > 0)
 						{
-							if (IntVal($curVal)<=0 && IntVal($arUserResult["ORDER_PROP"]["REGION_".$arOrderProps["ID"]]) > 0)
+							$dbLoc = CSaleLocation::GetList(array(), array("REGION_ID" => $arUserResult["ORDER_PROP"]["REGION_".$arOrderProps["ID"]], "CITY_ID" => false), false, false, array("ID", "REGION_ID", "CITY_ID"));
+							if($arLoc = $dbLoc->Fetch())
 							{
-								$dbLoc = CSaleLocation::GetList(array(), array("REGION_ID" => $arUserResult["ORDER_PROP"]["REGION_".$arOrderProps["ID"]], "CITY_ID" => false), false, false, array("ID", "REGION_ID", "CITY_ID"));
-								if($arLoc = $dbLoc->Fetch())
-								{
-									$curVal = $arLoc["ID"];
-								}
+								$curVal = $arLoc["ID"];
 							}
-							if(IntVal($curVal)<=0 && IntVal($arUserResult["ORDER_PROP"]["COUNTRY_".$arOrderProps["ID"]]) > 0)
+						}
+						if(IntVal($curVal)<=0 && IntVal($arUserResult["ORDER_PROP"]["COUNTRY_".$arOrderProps["ID"]]) > 0)
+						{
+							$dbLoc = CSaleLocation::GetList(array(), array("COUNTRY_ID" => $arUserResult["ORDER_PROP"]["COUNTRY_".$arOrderProps["ID"]], "REGION_ID" => false, "CITY_ID" => false), false, false, array("ID", "COUNTRY_ID", "REGION_ID", "CITY_ID"));
+							if($arLoc = $dbLoc->Fetch())
 							{
-								$dbLoc = CSaleLocation::GetList(array(), array("COUNTRY_ID" => $arUserResult["ORDER_PROP"]["COUNTRY_".$arOrderProps["ID"]], "REGION_ID" => false, "CITY_ID" => false), false, false, array("ID", "COUNTRY_ID", "REGION_ID", "CITY_ID"));
-								if($arLoc = $dbLoc->Fetch())
-								{
-									$curVal = $arLoc["ID"];
-								}
+								$curVal = $arLoc["ID"];
 							}
 						}
 
@@ -1049,6 +1057,15 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 
 		$propIndex = array();
 
+		if(is_array($_REQUEST['LOCATION_ALT_PROP_DISPLAY_MANUAL']))
+		{
+			foreach($_REQUEST['LOCATION_ALT_PROP_DISPLAY_MANUAL'] as $propId => $switch)
+			{
+				if(intval($propId))
+					$arResult['LOCATION_ALT_PROP_DISPLAY_MANUAL'][intval($propId)] = !!$switch;
+			}
+		}
+
 		while ($arProperties = $dbProperties->GetNext())
 		{
 			$arProperties = getOrderPropFormated($arProperties, $arResult, $arUserResult, $arDeleteFieldLocation);
@@ -1065,15 +1082,18 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 		foreach($propIndex as $propId => $propDesc)
 		{
 			if(intval($propDesc['INPUT_FIELD_LOCATION']) && isset($propIndex[$propDesc['INPUT_FIELD_LOCATION']]))
+			{
 				$propIndex[$propDesc['INPUT_FIELD_LOCATION']]['IS_ALTERNATE_LOCATION_FOR'] = $propId;
+				$propIndex[$propId]['CAN_HAVE_ALTERNATE_LOCATION'] = $propDesc['INPUT_FIELD_LOCATION']; // more strict condition rather INPUT_FIELD_LOCATION, check if the property really exists
+			}
 		}
 
 		foreach(GetModuleEvents("sale", "OnSaleComponentOrderOneStepOrderProps", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, Array(&$arResult, &$arUserResult, &$arParams));
 		/* Order Props End */
 
-		//delete prop for text location
-		if (!CSaleLocation::isLocationProMigrated() && count($arDeleteFieldLocation) > 0)
+		//delete prop for text location (town)
+		if (count($arDeleteFieldLocation) > 0)
 		{
 			foreach ($arDeleteFieldLocation as $fieldId)
 				unset($arResult["ORDER_PROP"]["USER_PROPS_Y"][$fieldId]);
@@ -1082,11 +1102,13 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 		/* Delivery Begin */
 		if ((int)$arUserResult["DELIVERY_LOCATION"] > 0)
 		{
+			$locFrom = COption::GetOptionString('sale', 'location', false, SITE_ID);
+
 			$arFilter = array(
 				"COMPABILITY" => array(
 					"WEIGHT" => $arResult["ORDER_WEIGHT"],
 					"PRICE" => $arResult["ORDER_PRICE"],
-					"LOCATION_FROM" => COption::GetOptionString('sale', 'location', false, SITE_ID),
+					"LOCATION_FROM" => $locFrom,
 					"LOCATION_TO" => $arUserResult["DELIVERY_LOCATION"],
 					"LOCATION_ZIP" => $arUserResult["DELIVERY_LOCATION_ZIP"],
 					"MAX_DIMENSIONS" => $arResult["MAX_DIMENSIONS"],
@@ -1207,7 +1229,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 								"PRICE" => $arResult["ORDER_PRICE"],
 								"WEIGHT" => $arResult["ORDER_WEIGHT"],
 								"DIMENSIONS" => $arResult["ORDER_DIMENSIONS"],
-								"LOCATION_FROM" => COption::GetOptionInt('sale', 'location'),
+								"LOCATION_FROM" => COption::GetOptionString('sale', 'location'),
 								"LOCATION_TO" => $arUserResult["DELIVERY_LOCATION"],
 								"LOCATION_ZIP" => $arUserResult["DELIVERY_LOCATION_ZIP"],
 								"ITEMS" => $arResult["BASKET_ITEMS"],
@@ -1408,7 +1430,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 										"PRICE" => $arResult["ORDER_PRICE"],
 										"WEIGHT" => $arResult["ORDER_WEIGHT"],
 										"DIMENSIONS" => $arResult["ORDER_DIMENSIONS"],
-										"LOCATION_FROM" => COption::GetOptionInt('sale', 'location'),
+										"LOCATION_FROM" => COption::GetOptionString('sale', 'location'),
 										"LOCATION_TO" => $arUserResult["DELIVERY_LOCATION"],
 										"LOCATION_ZIP" => $arUserResult["DELIVERY_LOCATION_ZIP"],
 										"ITEMS" => $arResult["BASKET_ITEMS"],
@@ -1455,7 +1477,6 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 				ExecuteModuleEventEx($arEvent, array(&$arResult, &$arUserResult, &$arParams));
 		}
 		/* Delivery End */
-
 
 		/* Pay Systems Begin */
 		$arFilter = array(
@@ -1586,6 +1607,8 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 		/* End of related order properties */
 
 		/* New discount */
+		DiscountCouponsManager::init();
+
 		foreach(GetModuleEvents("sale", "OnSaleComponentOrderOneStepDiscountBefore", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arResult, &$arUserResult, &$arParams));
 
@@ -1928,7 +1951,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 						"USER_DESCRIPTION" => $arUserResult["ORDER_DESCRIPTION"]
 				);
 
-				$arOrderDat['USER_ID'] = IntVal($USER->GetID());
+				$arOrderDat['USER_ID'] = $arFields['USER_ID'];
 
 				if (IntVal($_POST["BUYER_STORE"]) > 0 && $arUserResult["DELIVERY_ID"] == $arUserResult["DELIVERY_STORE"])
 					$arFields["STORE_ID"] = IntVal($_POST["BUYER_STORE"]);
@@ -1979,7 +2002,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 									"USER_ID" => $USER->GetID()
 								);
 							CSaleOrder::Update($arResult["ORDER_ID"], $arFields);
-							
+
 							if ($withdrawSum == $orderTotalSum)
 							{
 								CSaleOrder::PayOrder($arResult["ORDER_ID"], "Y", False, False);
@@ -2070,7 +2093,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 
 					$bSend = true;
 					foreach(GetModuleEvents("sale", "OnOrderNewSendEmail", true) as $arEvent)
-						if (ExecuteModuleEventEx($arEvent, Array($arResult["ORDER_ID"], &$eventName, &$arFields))===false)
+						if (ExecuteModuleEventEx($arEvent, array($arResult["ORDER_ID"], &$eventName, &$arFields))===false)
 							$bSend = false;
 
 					if($bSend)
@@ -2079,7 +2102,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 						$event->Send($eventName, SITE_ID, $arFields, "N");
 					}
 
-					CSaleMobileOrderPush::send("ORDER_CREATED", array("ORDER_ID" => $arFields["ORDER_ID"]));
+					CSaleMobileOrderPush::send("ORDER_CREATED", array("ORDER_ID" => $arResult["ORDER_ID"]));
 				}
 
 				if (empty($arResult["ERROR"]))

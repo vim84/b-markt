@@ -1,11 +1,16 @@
 <?
+/** @global CMain $APPLICATION */
+/** @global CUser $USER */
+/** @global CDatabase $DB */
 $module_id = 'catalog';
 
 use Bitrix\Main\Loader;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Config\Option;
-use Bitrix\Currency\CurrencyTable;
+use Bitrix\Main;
+use Bitrix\Currency;
+use Bitrix\Catalog;
 
 define('CATALOG_NEW_OFFERS_IBLOCK_NEED','-1');
 
@@ -24,13 +29,23 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 
 	$applyDiscSaveModeList = CCatalogDiscountSave::GetApplyModeList(true);
 
+	$reserveConditionList = array(
+		'O' => Loc::getMessage('CAT_PRODUCT_RESERVE_1_ORDER'),
+		'P' => Loc::getMessage('CAT_PRODUCT_RESERVE_2_PAYMENT'),
+		'D' => Loc::getMessage('CAT_PRODUCT_RESERVE_3_DELIVERY'),
+		'S' => Loc::getMessage('CAT_PRODUCT_RESERVE_4_DEDUCTION')
+	);
+
 	if ($_SERVER['REQUEST_METHOD'] == 'GET' && !empty($_REQUEST['RestoreDefaults']) && !$bReadOnly && check_bitrix_sessid())
 	{
+		$strValTmp = '';
 		if (!$USER->IsAdmin())
 			$strValTmp = Option::get('catalog', 'avail_content_groups');
 
 		Option::delete('catalog', array());
-		$z = CGroup::GetList(($v1="id"),($v2="asc"), array("ACTIVE" => "Y", "ADMIN" => "N"));
+		$v1 = 'id';
+		$v2 = 'asc';
+		$z = CGroup::GetList($v1, $v2, array("ACTIVE" => "Y", "ADMIN" => "N"));
 		while($zr = $z->Fetch())
 			$APPLICATION->DelGroupRight($module_id, array($zr["ID"]));
 
@@ -49,7 +64,7 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 	$strOK = "";
 	if ($_SERVER['REQUEST_METHOD'] == "POST" && !empty($_POST['Update']) && !$bReadOnly && check_bitrix_sessid())
 	{
-		for ($i=0, $cnt = count($arAllOptions); $i < $cnt; $i++)
+		for ($i = 0, $cnt = count($arAllOptions); $i < $cnt; $i++)
 		{
 			$name = $arAllOptions[$i][0];
 			$val = (isset($_POST[$name]) ? trim($_POST[$name]) : '');
@@ -113,7 +128,7 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 		if (!empty($strYandexAgent))
 		{
 			$strYandexAgent = Rel2Abs('/', $strYandexAgent);
-			if (preg_match(BX_CATALOG_FILENAME_REG, $val) || (!file_exists($_SERVER['DOCUMENT_ROOT'].$strYandexAgent) || !is_file($_SERVER['DOCUMENT_ROOT'].$strYandexAgent)))
+			if (preg_match(BX_CATALOG_FILENAME_REG, $strYandexAgent) || (!file_exists($_SERVER['DOCUMENT_ROOT'].$strYandexAgent) || !is_file($_SERVER['DOCUMENT_ROOT'].$strYandexAgent)))
 			{
 				$strWarning .= Loc::getMessage('CAT_PATH_ERR_YANDEX_AGENT').'<br />';
 				$strYandexAgent = '';
@@ -182,8 +197,8 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 
 		if ($viewedPeriodChange || $viewedTimeChange)
 		{
-			CAgent::RemoveAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent(0);', 'catalog');
-			CAgent::AddAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent(0);', 'catalog', 'N', (int)Option::get('catalog', 'viewed_period') * 24 * 3600);
+			CAgent::RemoveAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();', 'catalog');
+			CAgent::AddAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();', 'catalog', 'N', (int)Option::get('catalog', 'viewed_period') * 24 * 3600);
 		}
 
 		if (isset($_POST['viewed_count']))
@@ -307,17 +322,31 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 
 		if ($saleIsInstalled)
 		{
-			Option::set('sale', 'product_reserve_condition', $PRODUCT_RESERVE_CONDITION, '');
-
-			$product_reserve_clear_period = (int)(isset($_POST['product_reserve_clear_period']) ? $_POST['product_reserve_clear_period'] : 0);
-			$prevVal = (int)Option::get('sale', 'product_reserve_clear_period');
-			if ($product_reserve_clear_period != $prevVal)
+			$reserveCondition = '';
+			if (isset($_POST['PRODUCT_RESERVE_CONDITION']))
 			{
-				CAgent::RemoveAgent("CSaleOrder::ClearProductReservedQuantity();", "sale");
-				if ($product_reserve_clear_period > 0)
-					CAgent::AddAgent("CSaleOrder::ClearProductReservedQuantity();", "sale", "N", $product_reserve_clear_period*24*3600);
+				$_POST['PRODUCT_RESERVE_CONDITION'] = (string)$_POST['PRODUCT_RESERVE_CONDITION'];
+				if (isset($reserveConditionList[$_POST['PRODUCT_RESERVE_CONDITION']]))
+					$reserveCondition = $_POST['PRODUCT_RESERVE_CONDITION'];
 			}
-			Option::set('sale', 'product_reserve_clear_period', $product_reserve_clear_period, '');
+			if ($reserveCondition != '')
+				Option::set('sale', 'product_reserve_condition', $reserveCondition, '');
+
+			if (isset($_POST['product_reserve_clear_period']))
+			{
+				$product_reserve_clear_period = (isset($_POST['product_reserve_clear_period']) ? (int)$_POST['product_reserve_clear_period'] : 0);
+				if ($product_reserve_clear_period >= 0)
+				{
+					$prevVal = (int)Option::get('sale', 'product_reserve_clear_period');
+					if ($product_reserve_clear_period != $prevVal)
+					{
+						CAgent::RemoveAgent("CSaleOrder::ClearProductReservedQuantity();", "sale");
+						if ($product_reserve_clear_period > 0)
+							CAgent::AddAgent("CSaleOrder::ClearProductReservedQuantity();", "sale", "N", $product_reserve_clear_period*24*3600);
+					}
+					Option::set('sale', 'product_reserve_clear_period', $product_reserve_clear_period, '');
+				}
+			}
 		}
 
 		if (!$useSaleDiscountOnly)
@@ -332,13 +361,16 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 					Option::set('catalog', 'discsave_apply', $strDiscSaveApply, '');
 				}
 			}
-/*			$discountPercent = '';
-			if (isset($_REQUEST['get_discount_percent_from_base_price']))
-				$discountPercent = (string)$_REQUEST['get_discount_percent_from_base_price'];
-			if ($discountPercent == 'Y' || $discountPercent == 'N')
-				Option::set('catalog', 'get_discount_percent_from_base_price', $discountPercent, '');
-			unset($discountPercent);
-			$strDiscountVat = (!empty($_REQUEST['discount_vat']) && $_REQUEST['discount_vat'] == 'N' ? 'N' : 'Y');
+			if (!$saleIsInstalled)
+			{
+				$discountPercent = '';
+				if (isset($_REQUEST['get_discount_percent_from_base_price']))
+					$discountPercent = (string)$_REQUEST['get_discount_percent_from_base_price'];
+				if ($discountPercent == 'Y' || $discountPercent == 'N')
+					Option::set('catalog', 'get_discount_percent_from_base_price', $discountPercent, '');
+				unset($discountPercent);
+			}
+/*			$strDiscountVat = (!empty($_REQUEST['discount_vat']) && $_REQUEST['discount_vat'] == 'N' ? 'N' : 'Y');
 			Option::set('catalog', 'discount_vat', $strDiscountVat, ''); */
 		}
 
@@ -377,14 +409,10 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 			$arCurrentIBlocks[$arOneIBlock['ID']] = $arIBlockItem;
 		}
 		$arCatalogList = array();
-		$rsCatalogs = CCatalog::GetList(
-			array(),
-			array(),
-			false,
-			false,
-			array('IBLOCK_ID', 'SUBSCRIPTION', 'YANDEX_EXPORT', 'VAT_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID')
-		);
-		while ($arCatalog = $rsCatalogs->Fetch())
+		$catalogIterator = Catalog\CatalogIblockTable::getList(array(
+			'select' => array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID', 'SUBSCRIPTION', 'YANDEX_EXPORT', 'VAT_ID')
+		));
+		while ($arCatalog = $catalogIterator->fetch())
 		{
 			$arCatalog['IBLOCK_ID'] = (int)$arCatalog['IBLOCK_ID'];
 			$arCatalog['PRODUCT_IBLOCK_ID'] = (int)$arCatalog['PRODUCT_IBLOCK_ID'];
@@ -402,6 +430,7 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 				$arCurrentIBlocks[$arCatalog['PRODUCT_IBLOCK_ID']]['OFFERS_PROPERTY_ID'] = $arCatalog['SKU_PROPERTY_ID'];
 			}
 		}
+		unset($arCatalog, $catalogIterator);
 
 		foreach ($arCurrentIBlocks as &$arOneIBlock)
 		{
@@ -703,11 +732,18 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 								'IN_RSS' => 'N',
 								'SORT' => 500,
 							);
-							$rsLanguages = CLanguage::GetList($by="sort", $order="desc",array('ACTIVE' => 'Y'));
-							while ($arLanguage = $rsLanguages->Fetch())
+
+							$languageIterator = Main\Localization\LanguageTable::getList(array(
+								'select' => array('ID'),
+								'filter' => array('=ACTIVE' => 'Y'),
+								'order' => array('SORT' => 'ASC')
+							));
+							while ($language = $languageIterator->fetch())
 							{
-								$arFields['LANG'][$arLanguage['LID']]['NAME'] = $arIBlockInfo['OFFERS_NEW_TYPE'];
+								$arFields['LANG'][$language['ID']]['NAME'] = $arIBlockInfo['OFFERS_NEW_TYPE'];
 							}
+							unset($language, $languageIterator);
+
 							$obIBlockType = new CIBlockType();
 							$mxOffersType = $obIBlockType->Add($arFields);
 							if (!$mxOffersType)
@@ -1150,10 +1186,10 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 		}
 	}
 
-	if(!empty($strWarning))
+	if (!empty($strWarning))
 		CAdminMessage::ShowMessage($strWarning);
 
-	if(!empty($strOK))
+	if (!empty($strOK))
 		CAdminMessage::ShowNote($strOK);
 
 	$aTabs = array(
@@ -1175,7 +1211,14 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 
 	$currentSettings = array();
 	$currentSettings['discsave_apply'] = Option::get('catalog', 'discsave_apply');
-	$currentSettings['get_discount_percent_from_base_price'] = Option::get('catalog', 'get_discount_percent_from_base_price');
+	if ($saleIsInstalled)
+	{
+		$currentSettings['get_discount_percent_from_base_price'] = Option::get('sale', 'get_discount_percent_from_base_price');
+	}
+	else
+	{
+		$currentSettings['get_discount_percent_from_base_price'] = Option::get('catalog', 'get_discount_percent_from_base_price');
+	}
 
 	$strShowCatalogTab = Option::get('catalog', 'show_catalog_tab_with_offers');
 	$strSaveProductWithoutPrice = Option::get('catalog', 'save_product_without_price');
@@ -1363,18 +1406,12 @@ if ($saleIsInstalled)
 		<td>
 			<?
 			$val = (string)Option::get('sale', 'product_reserve_condition');
-			$arConditions = array(
-				"O" => Loc::getMessage("CAT_PRODUCT_RESERVE_1_ORDER"),
-				"P" => Loc::getMessage("CAT_PRODUCT_RESERVE_2_PAYMENT"),
-				"D" => Loc::getMessage("CAT_PRODUCT_RESERVE_3_DELIVERY"),
-				"S" => Loc::getMessage("CAT_PRODUCT_RESERVE_4_DEDUCTION")
-			);
 			?>
 			<select name="PRODUCT_RESERVE_CONDITION" id="sl_reserve">
 				<?
-				foreach($arConditions as $conditionID => $conditionName)
+				foreach($reserveConditionList as $conditionID => $conditionName)
 				{
-					?><option value="<?=$conditionID?>"<?if ($val == $conditionID) echo " selected";?>><?=$conditionName?></option><?
+					?><option value="<?=$conditionID?>"<?if ($val == $conditionID) echo " selected";?>><?=htmlspecialcharsex($conditionName); ?></option><?
 				}
 				?>
 			</select>
@@ -1404,17 +1441,30 @@ if ($saleIsInstalled)
 	</tr>
 	<?
 		}
-/*
 ?>
 	<tr>
 		<td width="40%"><? echo Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_PRICE'); ?></td>
-		<td width="60%">
+		<td width="60%"><?
+		if ($saleIsInstalled)
+		{
+			echo (
+				$currentSettings['get_discount_percent_from_base_price'] == 'Y'
+				? Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_PRICE_YES')
+				: Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_PRICE_NO')
+			);?>&nbsp;<a href="settings.php?lang=<? echo LANGUAGE_ID; ?>&mid=sale&mid_menu=1"><? echo Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_SALE') ?></a><?
+		}
+		else
+		{
+			?>
 			<input type="hidden" name="get_discount_percent_from_base_price" id="get_discount_percent_from_base_price_N" value="N">
 			<input type="checkbox" name="get_discount_percent_from_base_price" id="get_discount_percent_from_base_price_Y" value="Y"<? echo ($currentSettings['get_discount_percent_from_base_price'] == 'Y' ? ' checked' : ''); ?>>
-		</td>
+			<?
+		}
+		?></td>
 
 	</tr>
 <?
+/*
 $strDiscountVat = Option::get('catalog', 'discount_vat');
 ?>
 <tr>
@@ -1641,14 +1691,22 @@ $viewedPeriod = (int)Option::get('catalog', 'viewed_period');
 		$arVal = array_fill_keys(explode(',', $strVal), true);
 	}
 	?><select name="allowed_currencies[]" multiple size="5"><?
-	$currencyIterator = CurrencyTable::getList(array(
-		'select' => array('CURRENCY', 'LANG_FORMAT.FULL_NAME'),
-		'filter' => array('=LANG_FORMAT.LID' => LANGUAGE_ID),
-		'order' => array('SORT' => 'ASC', 'CURRENCY' => 'ASC')
+	$currencyIterator = Currency\CurrencyTable::getList(array(
+		'select' => array('CURRENCY', 'FULL_NAME' => 'RT_LANG.FULL_NAME'),
+		'order' => array('SORT' => 'ASC', 'CURRENCY' => 'ASC'),
+		'runtime' => array(
+			'RT_LANG' => array(
+				'data_type' => 'Bitrix\Currency\CurrencyLang',
+				'reference' => array(
+					'=this.CURRENCY' => 'ref.CURRENCY',
+					'=ref.LID' => new Main\DB\SqlExpression('?', LANGUAGE_ID)
+				)
+			)
+		)
 	));
 	while ($currency = $currencyIterator->fetch())
 	{
-		$currency['FULL_NAME'] = (string)$currency['CURRENCY_CURRENCY_LANG_FORMAT_FULL_NAME'];
+		$currency['FULL_NAME'] = (string)$currency['FULL_NAME'];
 		?><option value="<? echo $currency["CURRENCY"]; ?>"<? echo (isset($arVal[$currency["CURRENCY"]]) ? ' selected' : ''); ?>><?
 		echo $currency['CURRENCY'];
 		if ($currency['FULL_NAME'] != '')
@@ -1712,14 +1770,10 @@ $viewedPeriod = (int)Option::get('catalog', 'viewed_period');
 		$arIBlockFullInfo[$arIBlock['ID']] = $arIBlockItem;
 	}
 
-	$rsCatalogs = CCatalog::GetList(
-		array(),
-		array(),
-		false,
-		false,
-		array('IBLOCK_ID', 'SUBSCRIPTION', 'YANDEX_EXPORT', 'VAT_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID')
-	);
-	while ($arOneCatalog = $rsCatalogs->Fetch())
+	$catalogIterator = Catalog\CatalogIblockTable::getList(array(
+		'select' => array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID', 'SUBSCRIPTION', 'YANDEX_EXPORT', 'VAT_ID')
+	));
+	while ($arOneCatalog = $catalogIterator->fetch())
 	{
 		$arOneCatalog['IBLOCK_ID'] = (int)$arOneCatalog['IBLOCK_ID'];
 		$arOneCatalog['VAT_ID'] = (int)$arOneCatalog['VAT_ID'];
@@ -1753,6 +1807,7 @@ $viewedPeriod = (int)Option::get('catalog', 'viewed_period');
 			$arCatalogList[$arOneCatalog['IBLOCK_ID']] = $arIBlock;
 		unset($arIBlock);
 	}
+	unset($arCatalog, $catalogIterator);
 
 	$arIBlockTypeIDList = array();
 	$arIBlockTypeNameList = array();
@@ -2162,19 +2217,25 @@ BX.hint_replace(BX('hint_reservation'), '<? echo Loc::getMessage('CAT_ENABLE_RES
 			$arUserList = array();
 			$strNameFormat = CSite::GetNameFormat(true);
 
-			$byUser = 'ID';
-			$orderUser = 'ASC';
-			$rsUsers = CUser::GetList(
-				$byUser,
-				$orderUser,
-				array('ID' => implode(' || ', array_keys($userListID))),
-				array('FIELDS' => array('ID', 'LOGIN', 'NAME', 'LAST_NAME', 'SECOND_NAME'))
+			$canViewUserList = (
+				$USER->CanDoOperation('view_subordinate_users')
+				|| $USER->CanDoOperation('view_all_users')
+				|| $USER->CanDoOperation('edit_all_users')
+				|| $USER->CanDoOperation('edit_subordinate_users')
 			);
-			while ($arOneUser = $rsUsers->Fetch())
+			$userIterator = Main\UserTable::getList(array(
+				'select' => array('ID', 'LOGIN', 'NAME', 'LAST_NAME', 'SECOND_NAME'),
+				'filter' => array('ID' => array_keys($userListID))
+			));
+			while ($arOneUser = $userIterator->fetch())
 			{
 				$arOneUser['ID'] = (int)$arOneUser['ID'];
-				$arUserList[$arOneUser['ID']] = '<a href="/bitrix/admin/user_edit.php?lang='.LANGUAGE_ID.'&ID='.$arOneUser['ID'].'">'.CUser::FormatName($strNameFormat, $arOneUser).'</a>';
+				if ($canViewUserList)
+					$arUserList[$arOneUser['ID']] = '<a href="/bitrix/admin/user_edit.php?lang='.LANGUAGE_ID.'&ID='.$arOneUser['ID'].'">'.CUser::FormatName($strNameFormat, $arOneUser).'</a>';
+				else
+					$arUserList[$arOneUser['ID']] = CUser::FormatName($strNameFormat, $arOneUser);
 			}
+			unset($arOneUser, $userIterator, $canViewUserList);
 			if (isset($arUserList[$clearQuantityUser]))
 				$strQuantityUser = $arUserList[$clearQuantityUser];
 			if (isset($arUserList[$clearQuantityReservedUser]))
@@ -2357,10 +2418,14 @@ function showSetsAvailableReindex()
 	return false;
 }
 BX.ready(function(){
-	BX.bind(BX('discount_reindex'), 'click', showDiscountReindex);
-	BX.bind(BX('sets_reindex'), 'click', showSetsAvailableReindex);
+	var discountReindex = BX('discount_reindex'),
+		setsReindex = BX('sets_reindex');
+
+	if (!!discountReindex)
+		BX.bind(discountReindex, 'click', showDiscountReindex);
+	if (!!setsReindex)
+		BX.bind(setsReindex, 'click', showSetsAvailableReindex);
 });
 </script>
 <?
 }
-?>

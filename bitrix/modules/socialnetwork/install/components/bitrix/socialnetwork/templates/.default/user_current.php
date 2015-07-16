@@ -81,6 +81,9 @@ $APPLICATION->IncludeComponent(
 		"SHOW_RATING" => $arParams["SHOW_RATING"],
 		"RATING_ID" => $arParams["RATING_ID"],
 		"BLOG_ALLOW_POST_CODE" => $arParams["BLOG_ALLOW_POST_CODE"],
+		"PATH_TO_USER_SECURITY" => $arResult["PATH_TO_USER_SECURITY"],
+		"PATH_TO_USER_PASSWORDS" => $arResult["PATH_TO_USER_PASSWORDS"],
+		"PATH_TO_USER_CODES" => $arResult["PATH_TO_USER_CODES"],
 	),
 	$component
 );

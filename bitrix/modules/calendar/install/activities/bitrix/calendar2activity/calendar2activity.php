@@ -59,30 +59,7 @@ class CBPCalendar2Activity
 		}
 		else
 		{
-			$arCalendarUser = array();
-			$arCalendarUserTmp = $this->CalendarUser;
-			$arCalendarUserTmp = (is_array($arCalendarUserTmp) ? $arCalendarUserTmp : array($arCalendarUserTmp));
-			$l = strlen("user_");
-
-			foreach ($arCalendarUserTmp as $user)
-			{
-				if (substr($user, 0, $l) == "user_")
-				{
-					$user = intval(substr($user, $l));
-					if ($user > 0)
-						$arCalendarUser[] = $user;
-				}
-				else
-				{
-					$arDSUsers = $documentService->GetUsersFromUserGroup($user, $documentId);
-					foreach ($arDSUsers as $v)
-					{
-						$user = intval($v);
-						if ($user > 0)
-							$arCalendarUser[] = $user;
-					}
-				}
-			}
+			$arCalendarUser = CBPHelper::ExtractUsers($this->CalendarUser, $documentId);
 
 			foreach ($arCalendarUser as $calendarUser)
 			{

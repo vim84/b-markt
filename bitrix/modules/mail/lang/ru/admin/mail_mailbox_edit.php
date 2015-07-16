@@ -31,6 +31,7 @@ $MESS ['MAIL_MBOX_EDT_ADD_NEW_RULE_MANUAL'] = "(ручная настройка)
 $MESS ['MAIL_MBOX_EDT_ADD'] = "Добавить...";
 $MESS ['MAIL_MBOX_EDT_DEL_CONFIRM'] = "Удалить почтовый ящик?";
 $MESS ['MAIL_MBOX_EDT_USE_TLS'] = "Использовать безопасное соединение (TLS):";
+$MESS ['MAIL_MBOX_EDT_SELF_CERT'] = "Разрешить самоподписанный сертификат:";
 $MESS ['MAIL_MBOX_EDT_COMMENT_ASTERISK'] = "Сайт не имеет настроенных почтовых сервисов.";
 $MESS ['MAIL_MBOX_EDT_COMMENT1'] = "Для использования безопасного соединения в PHP должно быть установлено расширение OpenSSL.";
 $MESS ['MAIL_MBOX_SERVER_TYPE'] = "Тип:";

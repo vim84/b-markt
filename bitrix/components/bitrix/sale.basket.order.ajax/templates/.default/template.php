@@ -109,6 +109,13 @@ else
 					document.getElementById("delay_none").style.display = 'block';
 			}
 		}
+		function submitFormProxy()
+		{
+			if(BX.locationSelectorLock === true)
+				return;
+
+			submitForm();
+		}
 		function submitForm()
 		{
 			var orderForm = document.getElementById('ORDER_FORM_ID_NEW');
@@ -148,6 +155,14 @@ else
 		var im = document.getElementById('order_form_id');
 		document.getElementById("form_new").appendChild(newform);
 		newform.appendChild(im);
+
+		<?if(CSaleLocation::isLocationProMigrated()):?>
+			setTimeout(function(){
+				BX.locationSelectorLock = true;
+				BX.onCustomEvent(window, 'sboa-init-loc-selector');
+				BX.locationSelectorLock = false;
+			}, 15); <?//no way to hang on form repaint event, so too bad solution?>
+		<?endif?>
 	</script>
 <?
 }

@@ -7,20 +7,13 @@ $message = ($_SERVER['REQUEST_METHOD'] == "POST" ? $_POST["message_id"] : $_GET[
 $action = strToUpper($_SERVER['REQUEST_METHOD'] == "POST" ? $_POST["ACTION"] : $_GET["ACTION"]);
 $message = (is_array($message) ? $message : array($message));
 
-$arUserSettings = array("first_post" => "show");
-if ($arParams["SHOW_FIRST_POST"] == "Y" && $GLOBALS["USER"]->IsAuthorized())
-{
-	require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/".strToLower($GLOBALS["DB"]->type)."/favorites.php");
-	$arUserSettings = @unserialize(CUserOptions::GetOption("forum", "default_template", ""));
-	$arUserSettings["first_post"] = ($arUserSettings["first_post"] == "hide" ? "hide" : "show");
-}
-$bShowedHeader = false;
 $res = false;
 $arUserSettings = array("first_post" => "show");
 if (!empty($arResult["MESSAGE_FIRST"]) && $GLOBALS["USER"]->IsAuthorized())
 {
 	require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/".strToLower($GLOBALS["DB"]->type)."/favorites.php");
-	$arUserSettings = @unserialize(CUserOptions::GetOption("forum", "default_template", ""));
+	$arUserSettings = CUserOptions::GetOption("forum", "default_template", "");
+	$arUserSettings = (CheckSerializedData($arUserSettings) ? @unserialize($arUserSettings) : array());
 	$arUserSettings["first_post"] = ($arUserSettings["first_post"] == "hide" ? "hide" : "show");
 }
 /********************************************************************

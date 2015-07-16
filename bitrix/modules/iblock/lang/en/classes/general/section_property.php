@@ -7,4 +7,5 @@ $MESS["SP_DISPLAY_TYPE_H"] = "Check boxes with text and images";
 $MESS["SP_DISPLAY_TYPE_K"] = "Radio buttons";
 $MESS["SP_DISPLAY_TYPE_P"] = "Drop-down list";
 $MESS["SP_DISPLAY_TYPE_R"] = "Drop-down list with text and images";
+$MESS["SP_DISPLAY_TYPE_U"] = "Calendar";
 ?>

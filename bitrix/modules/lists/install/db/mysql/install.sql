@@ -27,5 +27,6 @@ create table if not exists b_lists_url
 (
 	IBLOCK_ID int(11) not null,
 	URL varchar(500),
+	LIVE_FEED tinyint(1) DEFAULT 0,
 	primary key pk_b_lists_url(IBLOCK_ID)
 );

@@ -196,4 +196,7 @@ $MESS["MAIN_SITE_SPEED_SETTINGS"] = "Site speed";
 $MESS["MAIN_GATHER_USER_STAT"] = "Collect site traffic statistics";
 $MESS["MAIN_CATALOG_STAT_SETTINGS"] = "Recommendation Service";
 $MESS["MAIN_GATHER_CATALOG_STAT"] = "Use product recommendation service";
+$MESS["MAIN_OPTION_ATTACH_IMAGES"] = "Send images as attachments";
+$MESS["MAIN_OPTION_MAX_FILE_SIZE"] = "Max. attached file size, bytes (0 means no limit):";
+$MESS["MAIN_USE_MINIFIED_ASSETS"] = "Include compressed CSS and JS files:";
 ?>

@@ -1,6 +1,7 @@
 <?
-use Bitrix\Main\Type\Collection;
-require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/general/discount.php");
+use Bitrix\Sale\Internals;
+
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/general/discount.php');
 
 class CSaleDiscount extends CAllSaleDiscount
 {
@@ -36,9 +37,11 @@ class CSaleDiscount extends CAllSaleDiscount
 
 		if ($ID > 0)
 		{
-			self::updateUserGroups($ID, $arFields['USER_GROUPS'], $arFields['ACTIVE'], false);
+			Internals\DiscountGroupTable::updateByDiscount($ID, $arFields['USER_GROUPS'], $arFields['ACTIVE'], true);
 			if (isset($arFields['HANDLERS']))
 				self::updateDiscountHandlers($ID, $arFields['HANDLERS'], false);
+			if (isset($arFields['ENTITIES']))
+				Internals\DiscountEntitiesTable::updateByDiscount($ID, $arFields['ENTITIES'], false);
 		}
 
 		return $ID;
@@ -80,24 +83,19 @@ class CSaleDiscount extends CAllSaleDiscount
 		}
 
 		if (isset($arFields['USER_GROUPS']))
-			self::updateUserGroups($ID, $arFields['USER_GROUPS'], (isset($arFields['ACTIVE']) ? $arFields['ACTIVE'] : ''), true);
-
+		{
+			Internals\DiscountGroupTable::updateByDiscount($ID, $arFields['USER_GROUPS'], (isset($arFields['ACTIVE']) ? $arFields['ACTIVE'] : ''), true);
+		}
+		elseif (isset($arFields['ACTIVE']))
+		{
+			Internals\DiscountGroupTable::changeActiveByDiscount($ID, $arFields['ACTIVE']);
+		}
 		if (isset($arFields['HANDLERS']))
 			self::updateDiscountHandlers($ID, $arFields['HANDLERS'], true);
+		if (isset($arFields['ENTITIES']))
+			Internals\DiscountEntitiesTable::updateByDiscount($ID, $arFields['ENTITIES'], true);
 
 		return $ID;
-	}
-
-	public function Delete($ID)
-	{
-		global $DB;
-		$ID = (int)$ID;
-		if ($ID <= 0)
-			return false;
-
-		$DB->Query("delete from b_sale_discount_group where DISCOUNT_ID = ".$ID, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-		$DB->Query("delete from b_sale_discount_module where DISCOUNT_ID = ".$ID, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-		return $DB->Query("delete from b_sale_discount where ID = ".$ID, true);
 	}
 
 	public function GetList($arOrder = array(), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
@@ -307,111 +305,6 @@ class CSaleDiscount extends CAllSaleDiscount
 		}
 
 		return $dbRes;
-	}
-
-	protected function updateUserGroups($discountID, $userGroups, $active = '', $updateData)
-	{
-		global $DB;
-
-		$discountID = (int)$discountID;
-		if ($discountID <= 0 || empty($userGroups) || !is_array($userGroups))
-			return;
-
-		$active = (string)$active;
-		if ($active !== 'Y' && $active !== 'N')
-		{
-			$strQuery = 'select ID, ACTIVE from b_sale_discount where DISCOUNT_ID = '.$discountID;
-			$rsActive = $DB->Query($strQuery,  false, "File: ".__FILE__."<br>Line: ".__LINE__);
-			if ($activeFromDatabase = $rsActive->Fetch())
-			{
-				$active = $activeFromDatabase['ACTIVE'];
-			}
-		}
-		if ($updateData)
-		{
-			$strQuery = 'delete from b_sale_discount_group where DISCOUNT_ID = '.$discountID;
-			$DB->Query($strQuery,  false, "File: ".__FILE__."<br>Line: ".__LINE__);
-		}
-		foreach ($userGroups as &$value)
-		{
-			$strQuery = "insert into b_sale_discount_group(DISCOUNT_ID, GROUP_ID) values(".$discountID.", ".$value.")";
-			$DB->Query($strQuery, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-		}
-		unset($value);
-	}
-
-	protected function updateDiscountHandlers($discountID, $handlers, $update)
-	{
-		global $DB;
-
-		$discountID = (int)$discountID;
-		if ($discountID <= 0 || empty($handlers) || !is_array($handlers))
-		{
-			return;
-		}
-		if (isset($handlers['MODULES']))
-		{
-			if ($update)
-			{
-				$sqlQuery = 'delete from b_sale_discount_module where DISCOUNT_ID = '.$discountID;
-				$DB->Query($sqlQuery, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
-			}
-			if (!empty($handlers['MODULES']))
-			{
-				foreach ($handlers['MODULES'] as &$oneModuleID)
-				{
-					$fields = array(
-						'DISCOUNT_ID' => $discountID,
-						'MODULE_ID' => $oneModuleID
-					);
-					$insert = $DB->PrepareInsert('b_sale_discount_module', $fields);
-					$sqlQuery = "insert into b_sale_discount_module(".$insert[0].") values(".$insert[1].")";
-					$DB->Query($sqlQuery, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
-				}
-				unset($oneModuleID);
-			}
-		}
-	}
-
-	protected function getDiscountHandlers($discountList)
-	{
-		global $DB;
-
-		$defaultRes = array(
-			'MODULES' => array(),
-			'EXT_FILES' => array()
-		);
-		$result = array();
-		if (!empty($discountList) && is_array($discountList))
-		{
-			$map = array();
-			foreach ($discountList as $value)
-			{
-				$value = (int)$value;
-				if (0 < $value)
-					$map[$value] = true;
-			}
-			if (!empty($map))
-			{
-				$map = array_keys($map);
-				sort($map);
-			}
-			$discountList = $map;
-			if (!empty($discountList))
-			{
-				$result = array_fill_keys($discountList, $defaultRes);
-				$discountIn = implode(', ', $discountList);
-				$sqlQuery = 'select * from b_sale_discount_module where DISCOUNT_ID IN ('.$discountIn.')';
-				$resQuery = $DB->Query($sqlQuery, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
-				while ($row = $resQuery->Fetch())
-				{
-					$row['DISCOUNT_ID'] = (int)$row['DISCOUNT_ID'];
-					$result[$row['DISCOUNT_ID']]['MODULES'][] = $row['MODULE_ID'];
-				}
-			}
-		}
-
-		return $result;
 	}
 }
 ?>

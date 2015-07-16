@@ -467,9 +467,9 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 					if ($arOrderProps["TYPE"]=="LOCATION" && ($arOrderProps["IS_LOCATION"]=="Y" || $arOrderProps["IS_LOCATION4TAX"]=="Y"))
 					{
 						if ($arOrderProps["IS_LOCATION"]=="Y")
-							$arUserResult["DELIVERY_LOCATION"] = IntVal($curVal);
+							$arUserResult["DELIVERY_LOCATION"] = $curVal;
 						if ($arOrderProps["IS_LOCATION4TAX"]=="Y")
-							$arUserResult["TAX_LOCATION"] = IntVal($curVal);
+							$arUserResult["TAX_LOCATION"] = $curVal;
 
 						if (IntVal($curVal)<=0)
 							$bErrorField = True;
@@ -783,6 +783,10 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 						$arUserPropsValues["VALUE"] = explode(",", $arUserPropsValues["VALUE"]);
 					}
 					$curVal = $arUserPropsValues["VALUE"];
+
+					// here we must map location ID to location CODE, kz we always keep CODE in user profile
+					if(CSaleLocation::isLocationProMigrated() && $arUserPropsValues["PROP_TYPE"] == "LOCATION" && strlen($curVal))
+						$curVal = CSaleLocation::getLocationIDbyCODE($curVal);
 				}
 				else
 					$curVal = false;
@@ -960,60 +964,82 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 			}
 			elseif ($arProperties["TYPE"] == "LOCATION")
 			{
-				//enable location town text
-				if ($_REQUEST["is_ajax_post"] == "Y" && $arProperties["IS_LOCATION"] == "Y" && IntVal($arProperties["INPUT_FIELD_LOCATION"]) > 0 && isset($_REQUEST["ORDER_PROP_".$arProperties["ID"]]))
+				if(CSaleLocation::isLocationProMigrated())
 				{
-					$rsLocationsList = CSaleLocation::GetList(
-						array(),
-						array("ID" => $curVal),
-						false,
-						false,
-						array("ID", "CITY_ID")
-					);
-					$arCity = $rsLocationsList->GetNext();
+					$locId = false;
 
-					if (IntVal($arCity["CITY_ID"]) <= 0)
-						unset($arDeleteFieldLocation[$arProperties["ID"]]);
-					else
-						$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
-				}
-				elseif ($arProperties["IS_LOCATION"] == "Y" && IntVal($arProperties["INPUT_FIELD_LOCATION"]) > 0)
-				{
-					$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
-				}
+					if(strlen($curVal))
+						$locId = CSaleLocation::checkLocationIdExists($curVal);
+					elseif(strlen($arProperties["DEFAULT_VALUE"]))
+						$locId = CSaleLocation::checkLocationIdExists($arProperties["DEFAULT_VALUE"]);
 
-				$arProperties["SIZE1"] = ((IntVal($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 1);
-				$dbVariants = CSaleLocation::GetList(
-						array("SORT" => "ASC", "COUNTRY_NAME_LANG" => "ASC", "CITY_NAME_LANG" => "ASC"),
-						array("LID" => LANGUAGE_ID),
-						false,
-						false,
-						array("ID", "COUNTRY_NAME", "CITY_NAME", "SORT", "COUNTRY_NAME_LANG", "CITY_NAME_LANG")
-					);
-				while ($arVariants = $dbVariants->GetNext())
-				{
-					if (IntVal($arVariants["ID"]) == IntVal($curVal) || (!isset($curVal) && IntVal($arVariants["ID"]) == IntVal($arProperties["DEFAULT_VALUE"])))
+					if($locId)
 					{
-						$arVariants["SELECTED"] = "Y";
-						$arProperties["VALUE_FORMATED"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
-						$arProperties["VALUE"] = $arVariants["ID"];
-
+						$arProperties["VALUE"] = $locId;
 						if ($arProperties["IS_LOCATION"]=="Y")
-							$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
+							$arUserResult["DELIVERY_LOCATION"] = $locId;
 						if ($arProperties["IS_LOCATION4TAX"]=="Y")
-							$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
-
+							$arUserResult["TAX_LOCATION"] = $locId;
 					}
-					$arVariants["NAME"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
-					$arProperties["VARIANTS"][] = $arVariants;
 				}
-				if(count($arProperties["VARIANTS"]) == 1)
+				else
 				{
-					$arProperties["VALUE"] = $arProperties["VARIANTS"][0]["ID"];
-					if($arProperties["IS_LOCATION"]=="Y")
-						$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
-					if($arProperties["IS_LOCATION4TAX"]=="Y")
-						$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
+					//enable location town text
+					if ($_REQUEST["is_ajax_post"] == "Y" && $arProperties["IS_LOCATION"] == "Y" && IntVal($arProperties["INPUT_FIELD_LOCATION"]) > 0 && isset($_REQUEST["ORDER_PROP_".$arProperties["ID"]]))
+					{
+						$rsLocationsList = CSaleLocation::GetList(
+							array(),
+							array("ID" => $curVal),
+							false,
+							false,
+							array("ID", "CITY_ID")
+						);
+						$arCity = $rsLocationsList->GetNext();
+
+						if (IntVal($arCity["CITY_ID"]) <= 0)
+							unset($arDeleteFieldLocation[$arProperties["ID"]]);
+						else
+							$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
+					}
+					elseif ($arProperties["IS_LOCATION"] == "Y" && IntVal($arProperties["INPUT_FIELD_LOCATION"]) > 0)
+					{
+						$arDeleteFieldLocation[$arProperties["ID"]] = $arProperties["INPUT_FIELD_LOCATION"];
+					}
+
+					$arProperties["SIZE1"] = ((IntVal($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 1);
+					$dbVariants = CSaleLocation::GetList(
+							array("SORT" => "ASC", "COUNTRY_NAME_LANG" => "ASC", "CITY_NAME_LANG" => "ASC"),
+							array("LID" => LANGUAGE_ID),
+							false,
+							false,
+							array("ID", "COUNTRY_NAME", "CITY_NAME", "SORT", "COUNTRY_NAME_LANG", "CITY_NAME_LANG")
+						);
+					while ($arVariants = $dbVariants->GetNext())
+					{
+						if (IntVal($arVariants["ID"]) == IntVal($curVal) || (!isset($curVal) && IntVal($arVariants["ID"]) == IntVal($arProperties["DEFAULT_VALUE"])))
+						{
+							$arVariants["SELECTED"] = "Y";
+							$arProperties["VALUE_FORMATED"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
+							$arProperties["VALUE"] = $arVariants["ID"];
+
+							if ($arProperties["IS_LOCATION"]=="Y")
+								$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
+							if ($arProperties["IS_LOCATION4TAX"]=="Y")
+								$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
+
+						}
+						$arVariants["NAME"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
+						$arProperties["VARIANTS"][] = $arVariants;
+					}
+					if(count($arProperties["VARIANTS"]) == 1)
+					{
+						$arProperties["VALUE"] = $arProperties["VARIANTS"][0]["ID"];
+						if($arProperties["IS_LOCATION"]=="Y")
+							$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
+						if($arProperties["IS_LOCATION4TAX"]=="Y")
+							$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
+					}
+
 				}
 			}
 			elseif ($arProperties["TYPE"] == "RADIO")
@@ -1048,6 +1074,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 			ExecuteModuleEventEx($arEvent, Array(&$arResult, &$arUserResult, &$arParams));
 		/* Order Props End */
 
+		//_print_r($arResult);
 
 		//delete prop for text location
 		if (count($arDeleteFieldLocation) > 0)
@@ -1811,6 +1838,10 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 
 						if (strlen($curVal) > 0)
 						{
+							// must save CODE, not ID for location
+							if(CSaleLocation::isLocationProMigrated() && $arOrderProperties['TYPE'] == 'LOCATION')
+								$curVal = CSaleLocation::getLocationCODEbyID($curVal);
+
 							$arFields = array(
 									"ORDER_ID" => $arResult["ORDER_ID"],
 									"ORDER_PROPS_ID" => $arOrderProperties["ID"],
@@ -1818,6 +1849,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 									"CODE" => $arOrderProperties["CODE"],
 									"VALUE" => $curVal
 								);
+
 							CSaleOrderPropsValue::Add($arFields);
 
 							if ( $arOrderProperties["USER_PROPS"] == "Y" && IntVal($arUserResult["PROFILE_ID"])<=0 && IntVal($arUserResult["PROFILE_ID_new"])<=0)
@@ -1830,6 +1862,8 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 										"USER_ID" => IntVal($USER->GetID()),
 										"PERSON_TYPE_ID" => $arUserResult["PERSON_TYPE_ID"]
 									);
+
+								// add new profile once in a cycle, if no profile were selected
 								$arUserResult["PROFILE_ID_new"] = CSaleOrderUserProps::Add($arFields);
 								$arUserResult["PROFILE_ID_new"] = IntVal($arUserResult["PROFILE_ID_new"]);
 							}

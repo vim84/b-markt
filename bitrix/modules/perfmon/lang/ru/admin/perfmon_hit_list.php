@@ -1,7 +1,6 @@
 <?
 $MESS["PERFMON_HIT_TITLE"] = "Монитор производительности: хиты";
 $MESS["PERFMON_HIT_PAGE"] = "Хиты";
-$MESS["PERFMON_HIT_FIND"] = "Найти";
 $MESS["PERFMON_HIT_ID"] = "ID";
 $MESS["PERFMON_HIT_DATE_HIT"] = "Время хита";
 $MESS["PERFMON_HIT_SERVER_NAME"] = "Имя сервера";

@@ -268,6 +268,30 @@ $tabControl->Begin();
 	//возьмем массив прав доступа для всей папки
 	$CUR_PERM = GetAccessArrTmp($path);
 
+	$arTaskGroupInh = Array();
+	for($i = 0; $i < $filesCount; $i++)
+	{
+		if($path=='' && $arFiles[$i]=='')
+			$perm = $CUR_PERM['/']['*'];
+		else
+			$perm = $CUR_PERM[$arFiles[$i]]['*'];
+
+		if (substr($perm,0,2) == 'T_')
+			$taskIdGroupInh = intval(substr($perm,2));
+		elseif(strlen($perm) == 1)
+			$taskIdGroupInh = CTask::GetIdByLetter($perm,'main','file');
+		else
+			$taskIdGroupInh = 'NOT_REF';
+
+		if ($taskIdGroupInh != 'NOT_REF')
+		{
+			$z = CTask::GetById($taskIdGroupInh);
+			if (!($r = $z->Fetch()))
+				$taskIdGroupInh = 'NOT_REF';
+		}
+		$arTaskGroupInh[$taskIdGroupInh][]=$arFiles[$i];
+	}
+
 	//for each groups
 	$db_groups = CGroup::GetList($order="sort", $by="asc", array("ACTIVE" => "Y", "ADMIN" => "N"));
 	while($db_groups->ExtractFields("g_")):
@@ -285,6 +309,12 @@ $tabControl->Begin();
 				$pr_taskId = $pAr[0];
 			else
 				$pr_taskId = 'NOT_REF';
+
+			$pArInh = $APPLICATION->GetFileAccessPermission(Array($site, $path), Array($g_ID), true);
+			if (count($pArInh) > 0)
+				$pr_taskIdInh = $pArInh[0];
+			else
+				$pr_taskIdInh = 'NOT_REF';
 		}
 		// *****************************
 
@@ -330,7 +360,12 @@ $tabControl->Begin();
 					<option value="<?=$id?>"<?if(($id == $taskId) && !$bDiff) echo" selected";?>>
 					<?echo htmlspecialcharsbx($ar['title']);
 					if($id == "NOT_REF" && !$bDiff)
-						echo "[".$arPermTypes[$pr_taskId]['title']."]";?>
+					{
+						if($taskIdGroupInh == "NOT_REF")
+							echo "[".$arPermTypes[$pr_taskIdInh]['title']."]";
+						else
+							echo "[".$arPermTypes[$taskIdGroupInh]['title']."]";
+					}?>
 					</option>
 				<?endforeach;?>
 			</select>
@@ -341,16 +376,16 @@ $tabControl->Begin();
 			<table border="0" cellspacing="1" cellpadding="2" width="100%" class="internal in_internal">
 				<tr class="heading">
 					<td valign="middle" align="center" nowrap>
-						<?=GetMessage("FILEMAN_FILE_OR_FOLDER")?>
+						<?=GetMessage("FILEMAN_ACCESS_LEVEL")?>
 					</td>
 					<td valign="top" align="center" nowrap>
-						<?=GetMessage("FILEMAN_ACCESS_LEVEL")?>
+						<?=GetMessage("FILEMAN_FILE_OR_FOLDER")?>
 					</td>
 				</tr>
 			<?
 			foreach ($arTask as $tid => $tmpAr):?>
 				<tr>
-					<td>
+					<td valign="top" align="center">
 						<?=$arPermTypes[$tid]['title']?>
 					</td>
 					<td valign="top" align="left">
@@ -367,31 +402,7 @@ $tabControl->Begin();
 	</tr>
 	<?endwhile;?>
 	<?
-	$arTask = Array();
-	for($i = 0; $i < $filesCount; $i++)
-	{
-		if($path=='' && $arFiles[$i]=='')
-			$perm = $CUR_PERM['/']['*'];
-		else
-			$perm = $CUR_PERM[$arFiles[$i]]['*'];
-
-		if (substr($perm,0,2) == 'T_')
-			$taskId = intval(substr($perm,2));
-		elseif(strlen($perm) == 1)
-			$taskId = CTask::GetIdByLetter($perm,'main','file');
-		else
-			$taskId = 'NOT_REF';
-
-		if ($taskId != 'NOT_REF')
-		{
-			$z = CTask::GetById($taskId);
-			if (!($r = $z->Fetch()))
-				$taskId = 'NOT_REF';
-		}
-		$arTask[$taskId][]=$arFiles[$i];
-	}
-
-	if(count($arTask)>1)
+	if(count($arTaskGroupInh)>1)
 		$bDiff=true;
 	else
 		$bDiff=false;
@@ -404,10 +415,8 @@ $tabControl->Begin();
 			<select name="g_ALL" class="typeselect" <?if($bDiff):?>onChange="Conf(this)"<?endif?>>
 				<option value=""><?= GetMessage("FILEMAN_ACCESS_LEVEL_NOTCH")?></option>
 				<?foreach ($arPermTypes as $id => $ar):?>
-					<option value="<?=$id?>"<?if(($id == $taskId) && !$bDiff) echo" selected";?>>
+					<option value="<?=$id?>"<?if(($id == $taskIdGroupInh) && !$bDiff) echo" selected";?>>
 					<?echo htmlspecialcharsbx($ar['title'])?>
-					<?if($id=="NOT_REF")
-						echo "[".$arPermTypes[$pr_taskId]['title']."]";?>
 					</option>
 				<?endforeach;?>
 			</select>
@@ -418,17 +427,17 @@ $tabControl->Begin();
 			<table border="0" cellspacing="1" cellpadding="2" width="100%" class="internal in_internal">
 				<tr class="heading">
 					<td valign="middle" align="center" nowrap>
-						<?=GetMessage("FILEMAN_FILE_OR_FOLDER")?>
+						<?=GetMessage("FILEMAN_ACCESS_LEVEL")?>
 					</td>
 					<td valign="top" align="center" nowrap>
-						<?=GetMessage("FILEMAN_ACCESS_LEVEL")?>
+						<?=GetMessage("FILEMAN_FILE_OR_FOLDER")?>
 					</td>
 				</tr>
 			<?
-			foreach ($arTask as $tid => $tmpAr):
+			foreach ($arTaskGroupInh as $tid => $tmpAr):
 				?>
 				<tr>
-					<td valign="top" align="center" align="left">
+					<td valign="top" align="center">
 						<?=$arPermTypes[$tid]['title']?>:
 					</td>
 					<td valign="top" align="left">
@@ -438,8 +447,6 @@ $tabControl->Begin();
 				</tr>
 			<?endforeach;?>
 			</table>
-		<?else:?>
-			<?=$arPermTypes[($taskId=="NOT_REF") ? $pr_taskId : $taskId]['title']?>
 		<?endif?>
 		</td>
 	</tr>

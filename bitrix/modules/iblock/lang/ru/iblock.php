@@ -58,6 +58,7 @@ $MESS["IBLOCK_PROP_F"] = "Файл";
 $MESS["IBLOCK_PROP_G"] = "Привязка к разделам";
 $MESS["IBLOCK_PROP_E"] = "Привязка к элементам";
 $MESS["IBLOCK_PROP_DATETIME_DESC"] = "Дата/Время";
+$MESS["IBLOCK_PROP_DATE_DESC"] = "Дата";
 $MESS["IBLOCK_PROP_ELIST_DESC"] = "Привязка к элементам в виде списка";
 $MESS["IBLOCK_PROP_FILEMAN_DESC"] = "Привязка к файлу (на сервере)";
 $MESS["IBLOCK_PROP_HTML_DESC"] = "HTML/текст";

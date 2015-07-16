@@ -45,4 +45,3 @@ function CurrencyFormatNumber($price, $currency)
 {
 	return CCurrencyLang::CurrencyFormat($price, $currency, false);
 }
-?>

@@ -15,4 +15,7 @@ $MESS["BT_MOD_SALE_ERR_DSC_TYPE_BAD"] = "Discount type is invalid.";
 $MESS["BT_MOD_SALE_ERR_DSC_VALUE_ABSENT"] = "Discount amount is not specified.";
 $MESS["BT_MOD_SALE_ERR_DSC_VALUE_BAD"] = "Discount amount is incorrect.";
 $MESS["BT_MOD_SALE_ERR_DSC_ABSENT"] = "The discount ID is incorrect.";
+$MESS["BX_SALE_DISCOUNT_APPLY_MODE_ADD"] = "update applied discounts";
+$MESS["BX_SALE_DISCOUNT_APPLY_MODE_LAST"] = "don't apply if \"Last discount\" is checked";
+$MESS["BX_SALE_DISCOUNT_APPLY_MODE_DISABLE"] = "don't apply if other discounts were applied";
 ?>

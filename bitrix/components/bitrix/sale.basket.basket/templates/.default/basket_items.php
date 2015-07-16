@@ -1,6 +1,8 @@
-<?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?>
-<?
-echo ShowError($arResult["ERROR_MESSAGE"]);
+<?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
+use Bitrix\Sale\DiscountCouponsManager;
+
+if (!empty($arResult["ERROR_MESSAGE"]))
+	ShowError($arResult["ERROR_MESSAGE"]);
 
 $bDelayColumn  = false;
 $bDeleteColumn = false;
@@ -157,12 +159,12 @@ if ($normalCount > 0):
 
 											// if property contains images or values
 											$isImgProperty = false;
-											if (array_key_exists('VALUES', $arProp) && is_array($arProp["VALUES"]) && !empty($arProp["VALUES"]))
+											if (!empty($arProp["VALUES"]) && is_array($arProp["VALUES"]))
 											{
 												foreach ($arProp["VALUES"] as $id => $arVal)
 												{
-													if (isset($arVal["PICT"]) && !empty($arVal["PICT"]) && is_array($arVal["PICT"])
-														&& isset($arVal["PICT"]['SRC']) && !empty($arVal["PICT"]['SRC']))
+													if (!empty($arVal["PICT"]) && is_array($arVal["PICT"])
+														&& !empty($arVal["PICT"]['SRC']))
 													{
 														$isImgProperty = true;
 														break;
@@ -249,7 +251,7 @@ if ($normalCount > 0):
 																?>
 																	<li style="width:10%;"
 																		class="sku_prop <?=$selected?>"
-																		data-value-id="<?=$arSkuValue["NAME"]?>"
+																		data-value-id="<?=($arProp['TYPE'] == 'S' && $arProp['USER_TYPE'] == 'directory' ? $arSkuValue['XML_ID'] : $arSkuValue['NAME']); ?>"
 																		data-element="<?=$arItem["ID"]?>"
 																		data-property="<?=$arProp["CODE"]?>"
 																		>
@@ -423,35 +425,49 @@ if ($normalCount > 0):
 	<input type="hidden" id="count_discount_4_all_quantity" value="<?=($arParams["COUNT_DISCOUNT_4_ALL_QUANTITY"] == "Y") ? "Y" : "N"?>" />
 	<input type="hidden" id="price_vat_show_value" value="<?=($arParams["PRICE_VAT_SHOW_VALUE"] == "Y") ? "Y" : "N"?>" />
 	<input type="hidden" id="hide_coupon" value="<?=($arParams["HIDE_COUPON"] == "Y") ? "Y" : "N"?>" />
-	<input type="hidden" id="coupon_approved" value="N" />
 	<input type="hidden" id="use_prepayment" value="<?=($arParams["USE_PREPAYMENT"] == "Y") ? "Y" : "N"?>" />
 
 	<div class="bx_ordercart_order_pay">
 
-		<div class="bx_ordercart_order_pay_left">
+		<div class="bx_ordercart_order_pay_left" id="coupons_block">
+		<?
+		if ($arParams["HIDE_COUPON"] != "Y")
+		{
+		?>
 			<div class="bx_ordercart_coupon">
-				<?
-				if ($arParams["HIDE_COUPON"] != "Y"):
-
-					$couponClass = "";
-					if (array_key_exists('VALID_COUPON', $arResult))
+				<span><?=GetMessage("STB_COUPON_PROMT")?></span><input type="text" id="coupon" name="COUPON" value="" onchange="enterCoupon();">
+			</div><?
+				if (!empty($arResult['COUPON_LIST']))
+				{
+					foreach ($arResult['COUPON_LIST'] as $oneCoupon)
 					{
-						$couponClass = ($arResult["VALID_COUPON"] === true) ? "good" : "bad";
+						$couponClass = 'disabled';
+						switch ($oneCoupon['STATUS'])
+						{
+							case DiscountCouponsManager::STATUS_NOT_FOUND:
+							case DiscountCouponsManager::STATUS_FREEZE:
+								$couponClass = 'bad';
+								break;
+							case DiscountCouponsManager::STATUS_APPLYED:
+								$couponClass = 'good';
+								break;
+						}
+						?><div class="bx_ordercart_coupon"><input disabled readonly type="text" name="OLD_COUPON[]" value="<?=htmlspecialcharsbx($oneCoupon['COUPON']);?>" class="<? echo $couponClass; ?>"><span class="<? echo $couponClass; ?>" data-coupon="<? echo htmlspecialcharsbx($oneCoupon['COUPON']); ?>"></span><div class="bx_ordercart_coupon_notes"><?
+						if (isset($oneCoupon['CHECK_CODE_TEXT']))
+						{
+							echo (is_array($oneCoupon['CHECK_CODE_TEXT']) ? implode('<br>', $oneCoupon['CHECK_CODE_TEXT']) : $oneCoupon['CHECK_CODE_TEXT']);
+						}
+						?></div></div><?
 					}
-					elseif (array_key_exists('COUPON', $arResult) && !empty($arResult["COUPON"]))
-					{
-						$couponClass = "good";
-					}
-
-				?>
-					<span><?=GetMessage("STB_COUPON_PROMT")?></span>
-					<input type="text" id="coupon" name="COUPON" value="<?=$arResult["COUPON"]?>" onchange="enterCoupon();" size="21" class="<?=$couponClass?>">
-				<?else:?>
-					&nbsp;
-				<?endif;?>
-			</div>
+					unset($couponClass, $oneCoupon);
+				}
+		}
+		else
+		{
+			?>&nbsp;<?
+		}
+?>
 		</div>
-
 		<div class="bx_ordercart_order_pay_right">
 			<table class="bx_ordercart_order_sum">
 				<?if ($bWeightColumn):?>
@@ -488,7 +504,6 @@ if ($normalCount > 0):
 			<div style="clear:both;"></div>
 		</div>
 		<div style="clear:both;"></div>
-
 		<div class="bx_ordercart_order_pay_center">
 
 			<?if ($arParams["USE_PREPAYMENT"] == "Y" && strlen($arResult["PREPAY_BUTTON"]) > 0):?>

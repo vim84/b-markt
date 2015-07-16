@@ -124,4 +124,7 @@ $MESS["FILEMAN_ARCHIVE_STEP_TIME"] = "Archiving Step Duration (seconds)";
 $MESS["FILEMAN_OPTION_USE_CODE_EDITOR"] = "Use syntax highlighting in code editor";
 $MESS["FILEMAN_USE_TRANSLITE_EXTERNAL"] = "Use external service to generate file and folder names";
 $MESS["FILEMAN_OPTION_USE_EDITOR_3"] = "Use new visual editor";
+$MESS["FILEMAN_OPTION_ADD_ERROR_PROPS"] = "Maximum parameter size exceeded: \"Property Types\".";
+$MESS["FILEMAN_OPTION_ADD_ERROR_MENU"] = "Maximum parameter size exceeded: \"Menu Types\".";
+$MESS["FILEMAN_REPLACE_NEW_LINES_WITH_BR"] = "Auto replace newlines with &lt;br&gt; when switching editing mode (Text/HTML/Visual editor)";
 ?>

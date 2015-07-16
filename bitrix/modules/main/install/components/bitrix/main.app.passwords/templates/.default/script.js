@@ -149,3 +149,4 @@ function bx_app_pass_show_delete_window(id)
 
 	popup.show();
 }
+

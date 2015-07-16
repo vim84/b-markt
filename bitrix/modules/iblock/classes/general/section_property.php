@@ -47,6 +47,14 @@ class CIBlockSectionPropertyLink
 				}
 
 				if (
+					array_key_exists("FILTER_HINT", $arLink)
+					&& $arLink["FILTER_HINT"] !== $sectionProperty["FILTER_HINT"]
+				)
+				{
+					$arUpdate["FILTER_HINT"] = $arLink["FILTER_HINT"];
+				}
+
+				if (
 					array_key_exists("IBLOCK_ID", $arLink)
 					&& $arLink["IBLOCK_ID"] !== $sectionProperty["IBLOCK_ID"]
 				)
@@ -110,6 +118,8 @@ class CIBlockSectionPropertyLink
 					$arUpdate["DISPLAY_TYPE"] = $arLink["DISPLAY_TYPE"];
 				if (array_key_exists("DISPLAY_EXPANDED", $arLink))
 					$arUpdate["DISPLAY_EXPANDED"] = $arLink["DISPLAY_EXPANDED"];
+				if (array_key_exists("FILTER_HINT", $arLink))
+					$arUpdate["FILTER_HINT"] = $arLink["FILTER_HINT"];
 				if (array_key_exists("IBLOCK_ID", $arLink))
 					$arUpdate["IBLOCK_ID"] = $arLink["IBLOCK_ID"];
 
@@ -252,10 +262,12 @@ class CIBlockSectionPropertyLink
 					BSP.SMART_FILTER,
 					BSP.DISPLAY_TYPE,
 					BSP.DISPLAY_EXPANDED,
+					BSP.FILTER_HINT,
 					BP.SORT,
 					BS.LEFT_MARGIN,
 					BS.NAME LINK_TITLE,
-					BP.PROPERTY_TYPE
+					BP.PROPERTY_TYPE,
+					BP.USER_TYPE
 				FROM
 					b_iblock B
 					INNER JOIN b_iblock_property BP ON BP.IBLOCK_ID = B.ID
@@ -276,6 +288,7 @@ class CIBlockSectionPropertyLink
 					"SMART_FILTER" => $ar["SMART_FILTER"],
 					"DISPLAY_TYPE" => $ar["DISPLAY_TYPE"],
 					"DISPLAY_EXPANDED" => $ar["DISPLAY_EXPANDED"],
+					"FILTER_HINT" => $ar["FILTER_HINT"],
 					"INHERITED" => $SECTION_ID == $ar["LINK_ID"] ? "N" : "Y",
 					"INHERITED_FROM" => $ar["LINK_ID"],
 					"SORT" => $ar["SORT"],
@@ -295,10 +308,12 @@ class CIBlockSectionPropertyLink
 					BSP.SMART_FILTER,
 					BSP.DISPLAY_TYPE,
 					BSP.DISPLAY_EXPANDED,
+					BSP.FILTER_HINT,
 					BP.SORT,
 					0 LEFT_MARGIN,
 					B.NAME LINK_TITLE,
-					BP.PROPERTY_TYPE
+					BP.PROPERTY_TYPE,
+					BP.USER_TYPE
 				FROM
 					b_iblock B
 					INNER JOIN b_iblock_property BP ON BP.IBLOCK_ID = B.ID
@@ -318,12 +333,14 @@ class CIBlockSectionPropertyLink
 							"SMART_FILTER" => $ar["SMART_FILTER"],
 							"DISPLAY_TYPE" => $ar["DISPLAY_TYPE"],
 							"DISPLAY_EXPANDED" => $ar["DISPLAY_EXPANDED"],
+							"FILTER_HINT" => $ar["FILTER_HINT"],
 							"INHERITED" => $SECTION_ID == 0 && !$bNewSection? "N" : "Y",
 							"INHERITED_FROM" => 0,
 							"SORT" => $ar["SORT"],
 							"LEFT_MARGIN" => $ar["LEFT_MARGIN"],
 							"LINK_TITLE" => $ar["LINK_TITLE"],
 							"PROPERTY_TYPE" => $ar["PROPERTY_TYPE"],
+							"USER_TYPE" => $ar["USER_TYPE"],
 						);
 				}
 				else
@@ -339,6 +356,7 @@ class CIBlockSectionPropertyLink
 						"LEFT_MARGIN" => $ar["LEFT_MARGIN"],
 						"LINK_TITLE" => $ar["LINK_TITLE"],
 						"PROPERTY_TYPE" => $ar["PROPERTY_TYPE"],
+						"USER_TYPE" => $ar["USER_TYPE"],
 					);
 				}
 			}
@@ -367,6 +385,18 @@ class CIBlockSectionPropertyLink
 				"K" => GetMessage("SP_DISPLAY_TYPE_K"),
 				"P" => GetMessage("SP_DISPLAY_TYPE_P"),
 				"R" => GetMessage("SP_DISPLAY_TYPE_R"),
+			);
+		}
+		elseif (
+			$property_type == "S"
+			&& $user_type == "DateTime"
+		)
+		{
+			$result = array(
+				"U" => GetMessage("SP_DISPLAY_TYPE_U"),
+				"F" => GetMessage("SP_DISPLAY_TYPE_F"),
+				"K" => GetMessage("SP_DISPLAY_TYPE_K"),
+				"P" => GetMessage("SP_DISPLAY_TYPE_P"),
 			);
 		}
 		elseif (

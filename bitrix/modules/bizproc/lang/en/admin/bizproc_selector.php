@@ -14,4 +14,5 @@ $MESS["BP_SEL_VARS"] = "Variables";
 $MESS["BP_SEL_ADDIT"] = "Additional Results";
 $MESS["BIZPROC_AS_TITLE_TOOLBAR"] = "Insert Value";
 $MESS["BIZPROC_AS_TITLE"] = "Insert Value";
+$MESS["BP_SEL_CONSTANTS"] = "Constants";
 ?>

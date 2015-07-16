@@ -21,9 +21,9 @@ try
 	CUtil::JSPostUnescape();
 
 	if($_REQUEST['REQUEST_TYPE'] == 'get-path')
-		$data = CBitrixLocationSelectorSystemComponent::processGetPathRequest();
+		$data = CBitrixLocationSelectorSystemComponent::processGetPathRequest($_REQUEST);
 	else // else type == 'search'
-		$data = CBitrixLocationSelectorSystemComponent::processSearchRequest();
+		$data = CBitrixLocationSelectorSystemComponent::processSearchRequestV2($_REQUEST);
 }
 catch(Main\SystemException $e)
 {

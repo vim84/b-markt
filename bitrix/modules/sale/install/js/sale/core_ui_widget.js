@@ -7,7 +7,7 @@
 	// base widget
 	//////////////////////////////
 
-	BX.ui.widget = function(){
+	BX.ui.widget = function(opts){
 
 		BX.merge(this, {
 			opts: {
@@ -43,9 +43,8 @@
 		////////////////////////////
 		/// about initialization
 
-		// member of stack of initializers, must be defined even if do nothing
-		init: function(){
-
+		// only basic things here
+		preInit: function(){
 			var ctx = this,
 				so = this.opts,
 				sc = this.ctrls,
@@ -58,6 +57,15 @@
 
 			if(!code.match(/^[a-zA-Z0-9-_]+$/))
 				throw new Error('Only letters, digitis, "-" and "_" allowed in code');
+		},
+
+		// member of stack of initializers, must be defined even if do nothing
+		init: function(){
+
+			var ctx = this,
+				sc = this.ctrls,
+				so = this.opts,
+				code = this.sys.code;
 
 			if(so.scope !== false){ // some widgets may have no scope
 
@@ -297,6 +305,8 @@
 
 			if(!nf){
 				BX.merge(this.opts, opts);
+
+				BX.ui.widget.prototype.preInit.call(this);
 
 				var init = function(){
 

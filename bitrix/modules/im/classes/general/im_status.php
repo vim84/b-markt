@@ -50,6 +50,7 @@ class CIMStatus
 			CPullStack::AddShared(Array(
 				'module_id' => 'online',
 				'command' => 'user_status',
+				'expiry' => 120,
 				'params' => self::PrepereToPush($status)
 			));
 		}

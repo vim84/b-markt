@@ -36,13 +36,14 @@ if ($_REQUEST['unique_id'])
 			if ($_SERVER['REQUEST_METHOD'] == $_GET['method'])
 				echo "SUCCESS";
 			else
-				echo 'Incorrect $_SERVER[REQUEST_METHOD]: '.$_SERVER['REQUEST_METHOD'].', expected: '.$_GET['method'];
+				echo 'Incorrect $_SERVER[REQUEST_METHOD]: '.$_SERVER['REQUEST_METHOD'].', expected: '.preg_replace('#[^A-Z]#', '', $_GET['method']);
 		break;
 		case 'compression':
 			echo str_repeat('SUCCESS', 8*1024);
 		break;
 		case 'perf':
 			define("NOT_CHECK_PERMISSIONS", true);
+			define("LDAP_NO_PORT_REDIRECTION", true);
 			require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 			require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
 			echo $main_exec_time;
@@ -625,7 +626,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 			}
 			catch(e)
 			{
-				console.warn(result);
+				console.log(e);
 				alert('<?=GetMessage("SC_TEST_FAIL")?>');
 			}
 		}
@@ -675,7 +676,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 			}
 			catch(e)
 			{
-				console.log(result);
+				console.log(e);
 				strNextRequest = '';
 				strResult = '<span class="sc_error"><?=GetMessage("SC_TEST_FAIL")?></span>';
 			}
@@ -866,7 +867,6 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 				catch(e)
 				{
 					console.log(e);
-					console.log(result);
 					strNextRequest = '';
 					BX('express_status').innerHTML = result;
 				}

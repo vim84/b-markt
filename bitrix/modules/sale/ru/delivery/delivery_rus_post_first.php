@@ -78,6 +78,9 @@ class CDeliveryRusPostFirst
 		$shopLocationId = CSaleHelper::getShopLocationId($siteId);
 		$arShopLocation = CSaleLocation::GetByID($shopLocationId);
 
+		if(!$arShopLocation)
+			$arShopLocation = array();
+
 		$shopPrevLocationId = COption::GetOptionString('sale', 'delivery_rus_post_first_prev_loc', 0);
 
 		/* if shop's location was changed */
@@ -107,7 +110,7 @@ class CDeliveryRusPostFirst
 		$arTarifs = CSaleHelper::getOptionOrImportValues(
 									'delivery_rus_post_first_tarifs',
 									array('CDeliveryRusPostFirst', 'getTarifsByRegionFromCsv'),
-									array($arShopLocation['REGION_NAME_LANG'])
+									array($arShopLocation)
 						);
 
 		foreach (self::$TARIFS as $arTarif)
@@ -121,7 +124,6 @@ class CDeliveryRusPostFirst
 						'GROUP' => 'wrapper',
 			);
 		}
-
 
 		/* Additional services */
 		foreach (self::$SERVICES as $serviceId => $arService)
@@ -240,30 +242,44 @@ class CDeliveryRusPostFirst
 
 	/* Particular handler helper functions*/
 
-	public static function getTarifNumFromCsv($regionNameLang)
+	public static function getTarifNumFromCsv(array $arShopLocation)
 	{
-		$csvFile = CSaleHelper::getCsvObject(DELIVERY_RPF_CSV_PATH.'/tarif_regions.csv');
+		if(empty($arShopLocation) || !isset($arShopLocation["REGION_ID"]) || !isset($arShopLocation['REGION_NAME_LANG']))
+			return false;
+
+		$regionCodeFromCode = $regionCodeFromName = "";
+
+		$dbRes = \Bitrix\Sale\Location\LocationTable::getById($arShopLocation["REGION_ID"]);
+
+		if($locReg = $dbRes->fetch())
+			$regionCodeFromCode = $locReg["CODE"];
+
+		$regionCodeFromName = self::getRegionCodeByOldName($arShopLocation['REGION_NAME_LANG']);
+
+		$csvFile = CSaleHelper::getCsvObject(DELIVERY_RP_CSV_PATH.'/tarif_regions.csv');
 		$tarifNumber = false;
 		$COL_TARIF_NUM = 0;
 
 		while ($arRes = $csvFile->Fetch())
 		{
-			if(in_array($regionNameLang, $arRes))
+			if(
+				(strlen($regionCodeFromCode) > 0 && in_array($regionCodeFromCode, $arRes))
+				|| (strlen($regionCodeFromName) > 0 && in_array($regionCodeFromName, $arRes))
+			)
 			{
 				$tarifNumber = $arRes[$COL_TARIF_NUM];
 				break;
 			}
 		}
-
 		return $tarifNumber;
 	}
 
-	public static function getTarifsByRegionFromCsv($regionNameLang)
+	public static function getTarifsByRegionFromCsv(array $arShopLocation)
 	{
-		if(strlen(trim($regionNameLang)) <= 0)
+		if(empty($arShopLocation))
 			return false;
 
-		$tarifNumber = self::getTarifNumFromCsv($regionNameLang);
+		$tarifNumber = self::getTarifNumFromCsv($arShopLocation);
 
 		if($tarifNumber === false)
 			return false;
@@ -280,6 +296,7 @@ class CDeliveryRusPostFirst
 
 			$arTarifs[$arRes[$COL_TARIF_ITEMS]] = $arRes[$tarifNumber];
 		}
+
 		return $arTarifs;
 	}
 
@@ -359,6 +376,22 @@ class CDeliveryRusPostFirst
 
 		$arDebug[] = 'Total value: '.$totalPrice;
 		return $totalPrice;
+	}
+
+	protected static function getRegionCodeByOldName($regionLangName)
+	{
+		if(strlen($regionLangName) <= 0)
+			return "";
+
+		static $data = array();
+
+		if(empty($data))
+		{
+			require_once(dirname(__FILE__).'/rus_post/old_loc_to_codes.php');
+			$data = $locToCode;
+		}
+
+		return isset($data[$regionLangName]) ? $data[$regionLangName] : "";
 	}
 }
 

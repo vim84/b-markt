@@ -10,6 +10,7 @@ $arTLangs = GetTLangList();
 
 $NO_TRANSLATE = array_key_exists('download_translate_lang', $_REQUEST) && $_REQUEST['download_translate_lang'] == 'N';
 
+$path = $_REQUEST["path"];
 if(preg_match("#\.\.[\\/]#".BX_UTF_PCRE_MODIFIER, $path))
 	$path = "";
 
@@ -61,6 +62,24 @@ if (!empty($arFileFilter) && !empty($arFiles))
 	$arFiles = $arTemp;
 }
 
+$customScriptsFile = $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/langs.txt";
+if(file_exists($customScriptsFile) && $_REQUEST["use_custom_list"]=="Y")
+{
+	$customScriptsList = array();
+	$customScriptsListTemp = file($customScriptsFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+	foreach($customScriptsListTemp as $pathScript)
+		$customScriptsList[replace_lang_id($pathScript, '#LANG_ID#')] = true;
+
+	$arTemp = array();
+	foreach ($arFiles as $f)
+	{
+		$fname = replace_lang_id($f['PATH'], '#LANG_ID#');
+		if($customScriptsList[$fname])
+			$arTemp[] = $f;
+	}
+	$arFiles = $arTemp;
+}
+
 $arrCSV = GetTCSVArray();
 $strCSV = '"file";"key";';
 foreach ($arTLangs as $l)
@@ -82,14 +101,12 @@ foreach ($arrCSV as $file => $arTranslations)
 			$val = str_replace('"', '""', $arLangTexts[$l]);
 			$val = str_replace("\\", "\\\\", $val);
 			$_strCSV .= '"'.$val.'";';
-			if (empty($val)){
+			if (empty($val))
 				$_noTranslate = true;
-			}
 		}
 		$_strCSV .= "\r\n";
-		if (!$NO_TRANSLATE || ( $NO_TRANSLATE && $_noTranslate)) {
+		if (!$NO_TRANSLATE || ( $NO_TRANSLATE && $_noTranslate))
 			$strCSV .= $_strCSV;
-		}
 	}
 }
 
@@ -105,5 +122,4 @@ header('Content-Disposition: attachment; filename="'.$csv_fn.'"');
 
 echo $strCSV;
 
-require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/epilog_admin_after.php");
-?>
+//require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/epilog_admin_after.php");

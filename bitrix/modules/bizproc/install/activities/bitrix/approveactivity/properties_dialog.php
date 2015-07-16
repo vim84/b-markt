@@ -112,3 +112,12 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 		</select>
 	</td>
 </tr>
+<tr>
+	<td align="right"><?= GetMessage("BPAR_PD_ACCESS_CONTROL") ?>:</td>
+	<td>
+		<select name="access_control">
+			<option value="Y"<?= $arCurrentValues["access_control"] == "Y" ? " selected" : "" ?>><?= GetMessage("BPAA_PD_YES") ?></option>
+			<option value="N"<?= $arCurrentValues["access_control"] != "Y" ? " selected" : "" ?>><?= GetMessage("BPAA_PD_NO") ?></option>
+		</select>
+	</td>
+</tr>

@@ -452,7 +452,7 @@ while($arRes = $dbResultList->Fetch())
 
 	if($arSelectFieldsMap['TOTAL'])
 	{
-			$f_TOTAL = ($arRes['CURRENCY']) ? CurrencyFormatNumber(doubleval($arRes['TOTAL']), $arRes['CURRENCY']) : '';
+			$f_TOTAL = ($arRes['CURRENCY']) ? CCurrencyLang::CurrencyFormat(doubleval($arRes['TOTAL']), $arRes['CURRENCY'], false) : '';
 
 		$row->AddViewField("TOTAL", $f_TOTAL);
 	}

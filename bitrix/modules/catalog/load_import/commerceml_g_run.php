@@ -118,6 +118,7 @@ function cmlStartElement($parser, $name, $attrs)
 						)
 					);
 				}
+				\Bitrix\Iblock\PropertyIndex\Manager::markAsInvalid($arIBlock["ID"]);
 			}
 			elseif ($USER->IsAdmin())
 			{

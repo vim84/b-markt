@@ -1,7 +1,10 @@
 <?
 $MESS["MAIN_T_EDIT_TITLE_EDIT"] = "Редактирование шаблона";
+$MESS["MAIN_T_EDIT_TITLE_EDIT_THEME"] = "Редактирование темы";
 $MESS["MAIN_T_EDIT_TITLE_NEW"] = "Новый шаблон";
+$MESS["MAIN_T_EDIT_TITLE_NEW_THEME"] = "Новая тема";
 $MESS["MAIN_T_EDIT_TEMPL_LIST"] = "Список шаблонов";
+$MESS["MAIN_T_EDIT_TEMPL_LIST_THEME"] = "Список тем";
 $MESS["MAIN_T_EDIT_NAME"] = "Название:";
 $MESS["MAIN_T_EDIT_DESCRIPTION"] = "Описание:";
 $MESS["MAIN_T_EDIT_CONTENT"] = "Внешний вид шаблона сайта (рабочую область заменить #WORK_AREA#)";
@@ -35,6 +38,7 @@ $MESS["MAIN_DELETE_RECORD"] = "Удалить";
 $MESS["MAIN_DELETE_RECORD_CONF"] = "Вы уверены что хотите удалить данный шаблон?";
 $MESS["MAIN_TAB1"] = "Шаблон";
 $MESS["MAIN_TAB1_TITLE"] = "Настройки шаблона сайта";
+$MESS["MAIN_TAB1_TITLE_THEME"] = "Настройки темы оформления";
 $MESS["MAIN_TAB2"] = "Стили сайта";
 $MESS["MAIN_TAB2_TITLE"] = "Файл стилей сайта (styles.css)";
 $MESS["MAIN_TAB3"] = "Дополнительные файлы";
@@ -65,4 +69,7 @@ $MESS["template_edit_structure"] = "Управление структурой";
 $MESS["templ_edit_error_wa"] = "Установите в шаблоне разделитель #WORK_AREA#.";
 $MESS["MAIN_T_EDIT_INSERT_WORK_AREA"] = "Добавить разделитель в поле ввода шаблона (в невизуальном режиме)";
 $MESS["SITE_TEMPL_EDIT_SORT"] = "Порядок:";
+$MESS["MAIN_TEMPLATE_TYPE"] = "Тип:";
+$MESS["MAIN_TEMPLATE_TYPE_SITE"] = "Шаблон сайта";
+$MESS["MAIN_TEMPLATE_TYPE_MAIL"] = "Шаблон для почтовых писем";
 ?>

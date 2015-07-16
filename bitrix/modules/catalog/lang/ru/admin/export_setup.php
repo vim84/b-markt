@@ -90,4 +90,5 @@ $MESS["CES_DATE_CREATE"] = "Дата создания";
 $MESS["CES_MODIFIED_BY"] = "Кем изменен";
 $MESS["CES_TIMESTAMP_X"] = "Дата изменения";
 $MESS["CES_DEFAULT_PROFILE"] = "системный";
+$MESS["CES_CRON_AGENT_ERRORS"] = "Профили одновременно выполняются на агенте и привязаны к cron. Одновременное использование этих возможностей не рекомендуется";
 ?>

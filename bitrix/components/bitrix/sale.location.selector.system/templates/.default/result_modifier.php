@@ -25,7 +25,8 @@ foreach($arResult['FOR_JS']['DATA']['LOCATION'] as &$location)
 	if(is_array($location['PATH']))
 	{
 		$name = current($location['PATH']);
-		$location['NAME'] = $name['NAME'];
+		$location['DISPLAY'] = $name['NAME'];
+		$location['VALUE'] = $location['ID'];
 
 		foreach($location['PATH'] as $id => $pathElem)
 		{
@@ -48,7 +49,14 @@ $arResult['FOR_JS']['DATA']['PATH_NAMES'] = $pathNames;
 
 // groups
 if(is_array($arResult['CONNECTIONS']['GROUP']))
+{
 	$arResult['FOR_JS']['DATA']['GROUPS'] = $arResult['CONNECTIONS']['GROUP'];
+	foreach($arResult['FOR_JS']['DATA']['GROUPS'] as &$group)
+	{
+		$group['DISPLAY'] = $group['NAME'];
+		$group['VALUE'] = $group['ID'];
+	}
+}
 
 // connected
 

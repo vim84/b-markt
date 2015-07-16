@@ -18,7 +18,6 @@ if (!empty($arParams["form_index"]))
 	$arParams["form_index"] = preg_replace("/[^a-z0-9]/is", "_", $arParams["form_index"]);
 $arParams["tabIndex"] = intval(!empty($arParams["TAB_INDEX"]) ? $arParams["TAB_INDEX"] : 10);
 $arParams["FORM_ID"] = "REPLIER".$arParams["form_index"];
-$arParams["jsObjName"] = "oLHE".$arParams["form_index"];
 $arParams["EDITOR_CODE_DEFAULT"] = ($arParams["EDITOR_CODE_DEFAULT"] == "Y" ? "Y" : "N");
 /*******************************************************************/
 if (LANGUAGE_ID == 'ru') {

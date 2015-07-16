@@ -3,6 +3,8 @@
 /** @global CDatabase $DB */
 /** @global CUser $USER */
 
+use Bitrix\Iblock;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 CModule::IncludeModule("iblock");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/iblock/prolog.php");
@@ -47,6 +49,7 @@ $arDefPropInfo = array(
 	'SMART_FILTER' => 'N',
 	'DISPLAY_TYPE' => '',
 	'DISPLAY_EXPANDED' => 'N',
+	'FILTER_HINT' => '',
 );
 
 $arDisabledPropFields = array(
@@ -78,6 +81,7 @@ $arHiddenPropFields = array(
 	'SMART_FILTER',
 	'DISPLAY_TYPE',
 	'DISPLAY_EXPANDED',
+	'FILTER_HINT',
 );
 
 function CheckIBlockTypeID($strIBlockTypeID,$strNewIBlockTypeID,$strNeedAdd)
@@ -185,7 +189,7 @@ function ConvProp(&$arProperty,$arHiddenPropFields)
 function GetPropertyInfo($strPrefix, $ID, $boolUnpack = true, $arHiddenPropFields = array())
 {
 	global $arDefPropInfo;
-	$boolUnpack = (true == $boolUnpack ? true : false);
+	$boolUnpack = ($boolUnpack === true);
 	$arResult = false;
 
 	if (!is_array($arHiddenPropFields))
@@ -243,6 +247,14 @@ function GetPropertyInfo($strPrefix, $ID, $boolUnpack = true, $arHiddenPropField
 				$arResult['SMART_FILTER'] = ('Y' == $arResult['SMART_FILTER'] ? 'Y' : 'N');
 				$arResult['DISPLAY_TYPE'] = substr($arResult['DISPLAY_TYPE'], 0, 1);
 				$arResult['DISPLAY_EXPANDED'] = ('Y' == $arResult['DISPLAY_EXPANDED'] ? 'Y' : 'N');
+				$arProperty['FILTER_HINT'] = trim($arProperty['FILTER_HINT']);
+				if ($arProperty['FILTER_HINT'])
+				{
+					$TextParser = new CBXSanitizer();
+					$TextParser->SetLevel(CBXSanitizer::SECURE_LEVEL_LOW);
+					$TextParser->ApplyHtmlSpecChars(false);
+					$arProperty['FILTER_HINT'] = $TextParser->SanitizeHtml($arProperty['FILTER_HINT']);
+				}
 				$arResult['MULTIPLE_CNT'] = intval($arResult['MULTIPLE_CNT']);
 				if (0 >= $arResult['MULTIPLE_CNT'])
 					$arResult['MULTIPLE_CNT'] = $arDefPropInfo['MULTIPLE_CNT'];
@@ -283,32 +295,32 @@ function GetSKUProperty($ID,$SKUID)
 	return $arResult;
 }
 
-function CheckSKUProperty($ID,$SKUID)
+function CheckSKUProperty($ID, $SKUID)
 {
 	$arResult = false;
-	$ID = intval($ID);
-	$SKUID = intval($SKUID);
-	if ((0 < $ID) && (0 < $SKUID))
+	$ID = (int)$ID;
+	$SKUID = (int)$SKUID;
+	if ($ID > 0 && $SKUID > 0)
 	{
 		$intSKUPropID = 0;
 		$ibp = new CIBlockProperty();
 		$arProp = GetSKUProperty($ID,$SKUID);
 
-		if ((false === $arProp) || ((true == is_array($arProp)) && ('N' != $arProp['MULTIPLE'])))
+		if (empty($arProp) || (is_array($arProp) && $arProp['MULTIPLE'] != 'N'))
 		{
 			$arOFProperty = array(
 				'NAME' => GetMessage('IB_E_OF_SKU_PROPERTY_NAME'),
 				'IBLOCK_ID' => $SKUID,
-				'PROPERTY_TYPE' => 'E',
-				'USER_TYPE' =>'SKU',
+				'PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_ELEMENT,
+				'USER_TYPE' => CIBlockPropertyTools::USER_TYPE_SKU_LINK,
 				'LINK_IBLOCK_ID' => $ID,
 				'ACTIVE' => 'Y',
 				'SORT' => '5',
 				'MULTIPLE' => 'N',
-				'CODE' => 'CML2_LINK',
-				'XML_ID' => 'CML2_LINK',
-				"FILTRABLE" => "Y",
-				"SEARCHABLE" => "N",
+				'CODE' => CIBlockPropertyTools::CODE_SKU_LINK,
+				'XML_ID' => CIBlockPropertyTools::XML_SKU_LINK,
+				'FILTRABLE' => 'Y',
+				'SEARCHABLE' => 'N',
 			);
 			$intSKUPropID = $ibp->Add($arOFProperty);
 			if (!$intSKUPropID)
@@ -319,11 +331,11 @@ function CheckSKUProperty($ID,$SKUID)
 				);
 			}
 		}
-		elseif (('SKU' != $arProp['USER_TYPE']) || ('CML2_LINK' != $arProp['XML_ID']))
+		elseif ($arProp['USER_TYPE'] != CIBlockPropertyTools::USER_TYPE_SKU_LINK || $arProp['XML_ID'] != CIBlockPropertyTools::XML_SKU_LINK)
 		{
 			$arFields = array(
-				'USER_TYPE' => 'SKU',
-				'XML_ID' => 'CML2_LINK',
+				'USER_TYPE' => CIBlockPropertyTools::USER_TYPE_SKU_LINK,
+				'XML_ID' => CIBlockPropertyTools::XML_SKU_LINK,
 			);
 			$boolFlag = $ibp->Update($arProp['ID'],$arFields);
 			if (false === $boolFlag)
@@ -340,7 +352,8 @@ function CheckSKUProperty($ID,$SKUID)
 		{
 			$intSKUPropID = $arProp['ID'];
 		}
-		if (0 < intval($intSKUPropID))
+		$intSKUPropID = (int)$intSKUPropID;
+		if ($intSKUPropID > 0)
 			$arResult = array(
 				'RESULT' => 'OK',
 				'VALUE' => $intSKUPropID,
@@ -356,15 +369,15 @@ function CheckSKUProperty($ID,$SKUID)
 	return $arResult;
 }
 
-function ConvertToSafe($arProp,$arDisFields)
+function ConvertToSafe($arProp, $arDisFields)
 {
-	if (true == is_array($arProp))
+	if (is_array($arProp))
 	{
 		foreach ($arProp as $key => $value)
 		{
-			if (false == in_array($key,$arDisFields))
+			if (!in_array($key, $arDisFields))
 			{
-				if (false == is_array($value))
+				if (!is_array($value))
 				{
 					$arProp[$key] = htmlspecialcharsbx($value);
 				}
@@ -387,9 +400,10 @@ function ConvertToSafe($arProp,$arDisFields)
 	return $arProp;
 }
 
-function __AddPropCellID($intOFPropID,$strPrefix,$arPropInfo)
+function __AddPropCellID($intOFPropID, $strPrefix, $arPropInfo)
 {
-	return (0 < intval($intOFPropID) ? $intOFPropID : '');
+	$intOFPropID = (int)$intOFPropID;
+	return ($intOFPropID > 0 ? $intOFPropID : '');
 }
 
 function __AddPropCellName($intOFPropID,$strPrefix,$arPropInfo)
@@ -405,7 +419,7 @@ function __AddPropCellName($intOFPropID,$strPrefix,$arPropInfo)
 function __AddPropCellType($intOFPropID,$strPrefix,$arPropInfo)
 {
 	static $arUserTypeList = null;
-	if (null === $arUserTypeList)
+	if ($arUserTypeList === null)
 	{
 		$arUserTypeList = CIBlockProperty::GetUserType();
 		\Bitrix\Main\Type\Collection::sortByColumn($arUserTypeList, array('DESCRIPTION' => SORT_STRING));
@@ -503,7 +517,7 @@ function __AddPropCellDetail($intOFPropID,$strPrefix,$arPropInfo)
 function __AddPropCellDelete($intOFPropID,$strPrefix,$arPropInfo)
 {
 	$strResult = '&nbsp;';
-	if ((true == isset($arPropInfo['SHOW_DEL'])) && ('Y' == $arPropInfo['SHOW_DEL']))
+	if (isset($arPropInfo['SHOW_DEL']) && $arPropInfo['SHOW_DEL'] == 'Y')
 		$strResult = '<input type="checkbox" name="'.$strPrefix.$intOFPropID.'_DEL" id="'.$strPrefix.$intOFPropID.'_DEL" value="Y">';
 	return $strResult;
 }
@@ -544,7 +558,7 @@ $arCellAttr = array(4,5,6,9,10);
 $bBizproc = CModule::IncludeModule("bizproc");
 $bCatalog = CModule::IncludeModule('catalog');
 
-$arIBTYPE = CIBlockType::GetByIDLang($type, LANG);
+$arIBTYPE = CIBlockType::GetByIDLang($type, LANGUAGE_ID);
 
 if($arIBTYPE!==false):
 
@@ -552,7 +566,7 @@ $strWarning="";
 $bVarsFromForm = false;
 
 if(
-	$_SERVER["REQUEST_METHOD"] === "POST"
+	$_SERVER["REQUEST_METHOD"] == "POST"
 	&& check_bitrix_sessid()
 	&& CIBlockRights::UserHasRightTo($ID, $ID, "iblock_edit")
 	&& strlen($_POST["Update"]) > 0
@@ -577,6 +591,7 @@ if(
 		"CODE"=>$CODE,
 		"LIST_PAGE_URL"=>$LIST_PAGE_URL,
 		"DETAIL_PAGE_URL"=>$DETAIL_PAGE_URL,
+		"CANONICAL_PAGE_URL"=>$CANONICAL_PAGE_URL,
 		"INDEX_ELEMENT"=>$INDEX_ELEMENT,
 		"IBLOCK_TYPE_ID"=>$type,
 		"LID"=>$LID,
@@ -654,13 +669,20 @@ if(
 		while($p = $props->Fetch())
 		{
 			$arProperty = GetPropertyInfo($strPREFIX_IB_PROPERTY, $p['ID'], true, $arHiddenPropFields);
-			$res = $ibp->CheckFields($arProperty, $p["ID"], true);
-			if(!$res)
+			if (!is_array($arProperty))
 			{
-				$strWarning .= GetMessage("IB_E_PROPERTY_ERROR").": ".$ibp->LAST_ERROR."<br>";
+				$strWarning .= GetMessage("IB_E_PROPERTY_ERROR")." [".$p['ID']."] ".$p['NAME']."<br>";
 				$bVarsFromForm = true;
 			}
-
+			else
+			{
+				$res = $ibp->CheckFields($arProperty, $p["ID"], true);
+				if(!$res)
+				{
+					$strWarning .= GetMessage("IB_E_PROPERTY_ERROR").": ".$ibp->LAST_ERROR."<br>";
+					$bVarsFromForm = true;
+				}
+			}
 			$arProperties[$p["ID"]] = $arProperty;
 		}
 	}
@@ -669,7 +691,7 @@ if(
 	for($i=0; $i<$intPropCount; $i++)
 	{
 		$arProperty = GetPropertyInfo($strPREFIX_IB_PROPERTY, 'n'.$i, true, $arHiddenPropFields);
-		if (false == is_array($arProperty))
+		if (!is_array($arProperty))
 			continue;
 		$res = $ibp->CheckFields($arProperty, false, true);
 		if(!$res)
@@ -820,10 +842,11 @@ if(
 			$ibp = new CIBlockProperty();
 			foreach($arProperties as $property_id => $arProperty)
 			{
+				$property_id = (int)$property_id;
 				$arProperty["IBLOCK_ID"] = $ID;
-				if(intval($property_id) > 0)
+				if ($property_id > 0)
 				{
-					if ((true == isset($arProperty['DEL'])) && ('Y' == $arProperty['DEL']))
+					if (isset($arProperty['DEL']) && $arProperty['DEL'] == 'Y')
 					{
 						if(!CIBlockProperty::Delete($property_id) && ($ex = $APPLICATION->GetException()))
 						{
@@ -843,8 +866,8 @@ if(
 				}
 				else
 				{
-					$PropID = $ibp->Add($arProperty);
-					if(IntVal($PropID)<=0)
+					$PropID = (int)$ibp->Add($arProperty);
+					if($PropID <= 0)
 					{
 						$strWarning .= $ibp->LAST_ERROR."<br>";
 						$bVarsFromForm = true;
@@ -944,7 +967,7 @@ if(
 					//$SKU_RIGHTS = ('Y' == $SKU_RIGHTS ? 'Y' : 'N');
 					$SKU_RIGHTS = 'N';
 
-					if ((true == is_array($arCatalog)) && ('O' == $arCatalog['CATALOG_TYPE']))
+					if (is_array($arCatalog) && $arCatalog['CATALOG_TYPE'] == 'O')
 					{
 						$IS_CATALOG = 'Y';
 						$arOffersFields = array(
@@ -957,8 +980,7 @@ if(
 						if (false == $boolFlag)
 						{
 							$bVarsFromForm = true;
-							$ex = $APPLICATION->GetException();
-							if (true == is_object($ex))
+							if ($ex = $APPLICATION->GetException())
 							{
 								$strWarning .= $ex->GetString()."<br>";
 							}
@@ -979,29 +1001,29 @@ if(
 
 						if (false == $arCatalog || 'P' == $arCatalog['CATALOG_TYPE'])
 						{
-							if ('Y' == $IS_CATALOG)
+							if ($IS_CATALOG == 'Y')
 							{
 								$boolFlag = $obCatalog->Add($arOffersFields);
 							}
-							if (true == $boolFlag && 'Y' == $arOffersFields['YANDEX_EXPORT'])
+							if ($boolFlag && $arOffersFields['YANDEX_EXPORT'] == 'Y')
 								$boolNeedAgent = true;
 						}
 						else
 						{
-							if (('Y' == $IS_CATALOG) || ('Y' == $SUBSCRIPTION))
+							if ($IS_CATALOG == 'Y' || $SUBSCRIPTION == 'Y')
 							{
 								$boolFlag = $obCatalog->Update($ID,$arOffersFields);
-								if ($boolFlag == true)
+								if ($boolFlag)
 									$boolNeedAgent = ($YANDEX_EXPORT != $arCatalog['YANDEX_EXPORT']);
 							}
 							elseif (('Y' != $IS_CATALOG) && ('Y' != $SUBSCRIPTION))
 							{
 								$boolFlag = $obCatalog->Delete($ID);
-								if ($boolFlag == true)
+								if ($boolFlag)
 									$boolNeedAgent == ('Y' == $arCatalog['YANDEX_EXPORT']);
 							}
 						}
-						if (false == $boolFlag)
+						if (!$boolFlag)
 						{
 							$bVarsFromForm = true;
 							if($ex = $APPLICATION->GetException())
@@ -1022,7 +1044,7 @@ if(
 								elseif (CATALOG_NEW_OFFERS_IBLOCK_NEED == $OF_IBLOCK_ID)
 								{
 									$arCheckIBlockType = CheckIBlockTypeID($OF_IBLOCK_TYPE_ID,$OF_NEW_IBLOCK_TYPE_ID,$OF_CREATE_IBLOCK_TYPE_ID);
-									if (false === $arCheckIBlockType)
+									if (!$arCheckIBlockType)
 									{
 										$bVarsFromForm = true;
 										$strWarning .= GetMessage('IB_E_OF_ERR_IBLOCK_TYPE_UNKNOWN_ERR').'<br>';
@@ -1405,6 +1427,7 @@ $str_PROPERTY_FILE_TYPE = "jpg, gif, bmp, png, jpeg";
 $str_LIST_PAGE_URL="#SITE_DIR#/".$arIBTYPE["ID"]."/index.php?ID=#IBLOCK_ID#";
 $str_SECTION_PAGE_URL="#SITE_DIR#/".$arIBTYPE["ID"]."/list.php?SECTION_ID=#SECTION_ID#";
 $str_DETAIL_PAGE_URL="#SITE_DIR#/".$arIBTYPE["ID"]."/detail.php?ID=#ELEMENT_ID#";
+$str_CANONICAL_PAGE_URL="";
 $str_SORT="500";
 $str_VERSION="1";
 $str_RSS_ACTIVE="N";
@@ -1462,7 +1485,7 @@ else
 	$str_IPROPERTY_TEMPLATES["ELEMENT_PREVIEW_PICTURE_FILE_NAME"] = \Bitrix\Iblock\Template\Helper::convertModifiersToArray($str_IPROPERTY_TEMPLATES["ELEMENT_PREVIEW_PICTURE_FILE_NAME"]);
 	$str_IPROPERTY_TEMPLATES["ELEMENT_DETAIL_PICTURE_FILE_NAME"] = \Bitrix\Iblock\Template\Helper::convertModifiersToArray($str_IPROPERTY_TEMPLATES["ELEMENT_DETAIL_PICTURE_FILE_NAME"]);
 
-	if (true == $bCatalog)
+	if ($bCatalog)
 	{
 		$arCatalog = CCatalog::GetByIDExt($ID);
 		if (false !== $arCatalog)
@@ -1519,7 +1542,7 @@ if($bVarsFromForm)
 	$str_LID = $LID;
 	$str_IPROPERTY_TEMPLATES = $_POST["IPROPERTY_TEMPLATES"];
 
-	if (true == $bCatalog)
+	if ($bCatalog)
 	{
 		$DB->InitTableVarsForEdit("b_catalog_iblock", "", "str_");
 		if (isset($USED_SKU) && ('Y' == $USED_SKU || 'N' == $USED_SKU))
@@ -1586,6 +1609,24 @@ $u = new CAdminPopupEx(
 );
 $u->Show();
 
+$arItems = CIBlockParameters::GetPathTemplateMenuItems("DETAIL", "__SetUrlVar", "mnu_CANONICAL_PAGE_URL", "CANONICAL_PAGE_URL");
+array_unshift($arItems, array("SEPARATOR" => true));
+array_unshift($arItems, array(
+	"TEXT" => "https://",
+	"TITLE" => "",
+	"ONCLICK" => "__SetUrlVar('https://', 'mnu_CANONICAL_PAGE_URL', 'CANONICAL_PAGE_URL')",
+));
+array_unshift($arItems, array(
+	"TEXT" => "http://",
+	"TITLE" => "",
+	"ONCLICK" => "__SetUrlVar('http://', 'mnu_CANONICAL_PAGE_URL', 'CANONICAL_PAGE_URL')",
+));
+$u = new CAdminPopupEx(
+	"mnu_CANONICAL_PAGE_URL",
+	$arItems,
+	array("zIndex" => 2000)
+);
+$u->Show();
 ?>
 <script>
 	var InheritedPropertiesTemplates = new JCInheritedPropertiesTemplates(
@@ -1600,24 +1641,45 @@ $u->Show();
 	function __SetUrlVar(id, mnu_id, el_id)
 	{
 		var obj_ta = BX(el_id);
-		obj_ta.focus();
-		obj_ta.value += id;
+		//IE
+		if (document.selection)
+		{
+			obj_ta.focus();
+			var sel = document.selection.createRange();
+			sel.text = id;
+			//var range = obj_ta.createTextRange();
+			//range.move('character', caretPos);
+			//range.select();
+		}
+		//FF
+		else if (obj_ta.selectionStart || obj_ta.selectionStart == '0')
+		{
+			var startPos = obj_ta.selectionStart;
+			var endPos = obj_ta.selectionEnd;
+			var caretPos = startPos + id.length;
+			obj_ta.value = obj_ta.value.substring(0, startPos) + id + obj_ta.value.substring(endPos, obj_ta.value.length);
+			obj_ta.setSelectionRange(caretPos, caretPos);
+			obj_ta.focus();
+		}
+		else
+		{
+			obj_ta.value += id;
+			obj_ta.focus();
+		}
 
 		BX.fireEvent(obj_ta, 'change');
 		obj_ta.focus();
 	}
 </script>
 <script type="text/javascript">
-var CellTPL = new Array();
+var CellTPL = [],
+	CellAttr = [];
 <?
 foreach ($arCellTemplates as $key => $value)
 {
 	?>CellTPL[<? echo $key; ?>] = '<? echo $value; ?>';
 <?
 }
-?>
-var CellAttr = new Array();
-<?
 foreach ($arCellAttr as $key => $value)
 {
 	?>CellAttr[<? echo $key; ?>] = '<? echo $value; ?>';
@@ -1818,14 +1880,14 @@ $tabControl->BeginNextTab();
 		<tr>
 			<td ><?echo GetMessage("IB_E_XML_ID")?>:</td>
 			<td>
-				<input type="text" name="XML_ID"  size="20" maxlength="50" value="<?echo $str_XML_ID?>">
+				<input type="text" name="XML_ID"  size="20" maxlength="55" value="<?echo $str_XML_ID?>">
 			</td>
 		</tr>
 	<?endif?>
 	<tr>
 		<td ><?echo GetMessage("IB_E_LIST_PAGE_URL")?></td>
 		<td>
-			<input type="text" name="LIST_PAGE_URL" id="LIST_PAGE_URL" size="40" maxlength="255" value="<?echo $str_LIST_PAGE_URL?>">
+			<input type="text" name="LIST_PAGE_URL" id="LIST_PAGE_URL" size="55" maxlength="255" value="<?echo $str_LIST_PAGE_URL?>">
 			<input type="button" id="mnu_LIST_PAGE_URL" value='...'>
 		</td>
 	</tr>
@@ -1833,7 +1895,7 @@ $tabControl->BeginNextTab();
 		<tr>
 			<td ><?echo GetMessage("IB_E_SECTION_PAGE_URL")?></td>
 			<td>
-				<input type="text" name="SECTION_PAGE_URL" id="SECTION_PAGE_URL" size="40" maxlength="255" value="<?echo $str_SECTION_PAGE_URL?>">
+				<input type="text" name="SECTION_PAGE_URL" id="SECTION_PAGE_URL" size="55" maxlength="255" value="<?echo $str_SECTION_PAGE_URL?>">
 				<input type="button" id="mnu_SECTION_PAGE_URL" value='...'>
 			</td>
 		</tr>
@@ -1841,8 +1903,15 @@ $tabControl->BeginNextTab();
 	<tr>
 		<td ><?echo GetMessage("IB_E_DETAIL_PAGE_URL")?></td>
 		<td>
-			<input type="text" name="DETAIL_PAGE_URL" id="DETAIL_PAGE_URL" size="40" maxlength="255" value="<?echo $str_DETAIL_PAGE_URL?>">
+			<input type="text" name="DETAIL_PAGE_URL" id="DETAIL_PAGE_URL" size="55" maxlength="255" value="<?echo $str_DETAIL_PAGE_URL?>">
 			<input type="button" id="mnu_DETAIL_PAGE_URL" value='...'>
+		</td>
+	</tr>
+	<tr>
+		<td ><?echo GetMessage("IB_E_CANONICAL_PAGE_URL")?></td>
+		<td>
+			<input type="text" name="CANONICAL_PAGE_URL" id="CANONICAL_PAGE_URL" size="55" maxlength="255" value="<?echo $str_CANONICAL_PAGE_URL?>">
+			<input type="button" id="mnu_CANONICAL_PAGE_URL" value='...'>
 		</td>
 	</tr>
 	<?if($arIBTYPE["SECTIONS"]=="Y"):?>
@@ -1929,7 +1998,7 @@ $tabControl->BeginNextTab();
 		);
 		?>
 		<?echo GetMessage("IB_E_FILE_BEFORE")?></td>
-		<td><input type="text" name="EDIT_FILE_BEFORE" size="50"  maxlength="255" value="<?echo $str_EDIT_FILE_BEFORE?>">&nbsp;<input type="button" name="browse" value="..." onClick="BtnClick()"></td>
+		<td><input type="text" name="EDIT_FILE_BEFORE" size="55"  maxlength="255" value="<?echo $str_EDIT_FILE_BEFORE?>">&nbsp;<input type="button" name="browse" value="..." onClick="BtnClick()"></td>
 	</tr>
 	<tr>
 		<td>
@@ -1951,7 +2020,7 @@ $tabControl->BeginNextTab();
 		);
 		?>
 		<?echo GetMessage("IB_E_FILE_AFTER")?></td>
-		<td><input type="text" name="EDIT_FILE_AFTER" size="50"  maxlength="255" value="<?echo $str_EDIT_FILE_AFTER?>">&nbsp;<input type="button" name="browse" value="..." onClick="BtnClick2()"></td>
+		<td><input type="text" name="EDIT_FILE_AFTER" size="55"  maxlength="255" value="<?echo $str_EDIT_FILE_AFTER?>">&nbsp;<input type="button" name="browse" value="..." onClick="BtnClick2()"></td>
 	</tr>
 	<tr class="heading">
 		<td colspan="2"><?echo GetMessage("IB_E_DESCRIPTION")?></td>
@@ -3125,6 +3194,7 @@ $tabControl->BeginNextTab();
 							$arProp["SMART_FILTER"] = $arPropLinks[$arProp["ID"]]["SMART_FILTER"];
 							$arProp["DISPLAY_TYPE"] = $arPropLinks[$arProp["ID"]]["DISPLAY_TYPE"];
 							$arProp["DISPLAY_EXPANDED"] = $arPropLinks[$arProp["ID"]]["DISPLAY_EXPANDED"];
+							$arProp["FILTER_HINT"] = $arPropLinks[$arProp["ID"]]["FILTER_HINT"];
 						}
 						else
 						{
@@ -3132,14 +3202,15 @@ $tabControl->BeginNextTab();
 							$arProp["SMART_FILTER"] = "N";
 							$arProp["DISPLAY_TYPE"] = "";
 							$arProp["DISPLAY_EXPANDED"] = "N";
+							$arProp["FILTER_HINT"] = "";
 						}
 
 						ConvProp($arProp,$arHiddenPropFields);
-						if (true == $bVarsFromForm)
+						if ($bVarsFromForm)
 						{
 							$intPropID = $arProp['ID'];
 							$arTempo = GetPropertyInfo($strPREFIX_IB_PROPERTY, $intPropID, false, $arHiddenPropFields);
-							if (true == is_array($arTempo))
+							if (is_array($arTempo))
 								$arProp = $arTempo;
 							$arProp['ID'] = $intPropID;
 						}
@@ -3155,7 +3226,7 @@ $tabControl->BeginNextTab();
 				for ($i = 0; $i < $intPropCount; $i++)
 				{
 					$arProp = GetPropertyInfo($strPREFIX_IB_PROPERTY, 'n'.$i, false, $arHiddenPropFields);
-					if (true == is_array($arProp))
+					if (is_array($arProp))
 					{
 						$arProp = ConvertToSafe($arProp,$arDisabledPropFields);
 						$arProp['ID'] = 'n'.$intPropNumber;
@@ -3163,7 +3234,7 @@ $tabControl->BeginNextTab();
 						$intPropNumber++;
 					}
 				}
-				for (0; $intPropNumber < PROPERTY_EMPTY_ROW_SIZE; $intPropNumber++)
+				for ($i = 0; $intPropNumber < PROPERTY_EMPTY_ROW_SIZE; $intPropNumber++)
 				{
 					$arProp = $arDefPropInfo;
 					ConvProp($arProp,$arHiddenPropFields);
@@ -4226,7 +4297,7 @@ if ($bCatalog)
 			'IS_OFFERS' => 'N',
 		);
 		$ar_res1 = CCatalog::GetByID($arIBlock['ID']);
-		if (true == is_array($ar_res1))
+		if (is_array($ar_res1))
 		{
 			$arIBlockItem['IS_CATALOG'] = 'Y';
 			$arIBlockItem['SUBSCRIPTION'] = $ar_res1['SUBSCRIPTION'];
@@ -4367,7 +4438,7 @@ if ($bCatalog)
 							}
 						}
 					}
-					if (true == $boolAdd)
+					if ($boolAdd)
 					{
 						?><option value="<? echo intval($value['ID']); ?>"<? echo ($value['ID'] == $str_OF_IBLOCK_ID ? ' selected' : ''); ?>><? echo $value['FULL_NAME']; ?></option><?
 					}
@@ -4423,11 +4494,11 @@ if ($bCatalog)
 					while ($arProp = $rsProps->Fetch())
 					{
 						ConvProp($arProp,$arHiddenPropFields);
-						if (true == $bVarsFromForm)
+						if ($bVarsFromForm)
 						{
 							$intPropID = $arProp['ID'];
 							$arTempo = GetPropertyInfo($strPREFIX_OF_PROPERTY, $intPropID, false, $arHiddenPropFields);
-							if (true == is_array($arTempo))
+							if (is_array($arTempo))
 								$arProp = $arTempo;
 							$arProp['ID'] = $intPropID;
 						}
@@ -4444,7 +4515,7 @@ if ($bCatalog)
 				for ($i = 0; $i < $intPropCount; $i++)
 				{
 					$arProp = GetPropertyInfo($strPREFIX_OF_PROPERTY, 'n'.$i, false, $arHiddenPropFields);
-					if (true == is_array($arProp))
+					if (is_array($arProp))
 					{
 						$arProp = ConvertToSafe($arProp,$arDisabledPropFields);
 						$arProp['ID'] = 'n'.$intPropNumber;
@@ -4452,7 +4523,7 @@ if ($bCatalog)
 						$intPropNumber++;
 					}
 				}
-				for (0; $intPropNumber < PROPERTY_EMPTY_ROW_SIZE; $intPropNumber++)
+				for ($i = 0; $intPropNumber < PROPERTY_EMPTY_ROW_SIZE; $intPropNumber++)
 				{
 					$arProp = $arDefPropInfo;
 					ConvProp($arProp,$arHiddenPropFields);
@@ -4477,20 +4548,16 @@ if ($bCatalog)
 	}
 	?>
 <script type="text/javascript">
-	var is_cat = BX('IS_CATALOG_Y');
-	var is_cont = BX('IS_CONTENT_Y');
-	var is_yand = BX('YANDEX_EXPORT_Y');
-	var vat_id = BX('VAT_ID');
-
-	var cat_type =  BX('CATALOG_TYPE');
-
-	var use_sku = BX('USED_SKU_Y');
-	var ob_sku_settings = BX('SKU-SETTINGS');
-
-	var ob_offers_add = BX('offers_add_info');
-
-	var ob_of_iblock_type_id = BX('OF_IBLOCK_TYPE_ID');
-	var ob_of_new_iblock_type_id = BX('OF_NEW_IBLOCK_TYPE_ID');
+	var is_cat = BX('IS_CATALOG_Y'),
+		is_cont = BX('IS_CONTENT_Y'),
+		is_yand = BX('YANDEX_EXPORT_Y'),
+		vat_id = BX('VAT_ID'),
+		cat_type =  BX('CATALOG_TYPE'),
+		use_sku = BX('USED_SKU_Y'),
+		ob_sku_settings = BX('SKU-SETTINGS'),
+		ob_offers_add = BX('offers_add_info'),
+		ob_of_iblock_type_id = BX('OF_IBLOCK_TYPE_ID'),
+		ob_of_new_iblock_type_id = BX('OF_NEW_IBLOCK_TYPE_ID');
 
 	//var ob_sku_rights = BX('offers_rights');
 
@@ -4876,14 +4943,14 @@ $tabControl->BeginNextTab();
 
 <?else:?>
 <br>
-<?echo ShowError(GetMessage("IBLOCK_BAD_IBLOCK"));?>
+<? ShowError(GetMessage("IBLOCK_BAD_IBLOCK"));?>
 
 <?
 endif;
 
 else: //if($arIBTYPE!==false):?>
 <br>
-<?echo ShowError(GetMessage("IBLOCK_BAD_BLOCK_TYPE_ID"));?>
+<?	ShowError(GetMessage("IBLOCK_BAD_BLOCK_TYPE_ID"));?>
 
 <?
 endif;// if($arIBTYPE!==false):

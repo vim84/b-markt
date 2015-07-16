@@ -96,6 +96,7 @@ class form extends CModule
 		}
 
 		RegisterModule("form");
+		RegisterModuleDependences("sender", "OnConnectorList", "form", "\\Bitrix\\Form\\SenderEventHandler", "onConnectorListForm");
 
 		return true;
 	}
@@ -167,6 +168,7 @@ class form extends CModule
 
 		}
 
+		UnRegisterModuleDependences("sender", "OnConnectorList", "form", "\\Bitrix\\Form\\SenderEventHandler", "onConnectorListForm");
 		COption::RemoveOption("form");
 		UnRegisterModule("form");
 

@@ -442,7 +442,26 @@ if($str_TYPE == "MULTISELECT")
 	<tr>
 		<td width="40%"><?echo GetMessage("F_DEFAULT_VALUE");?>:</td>
 		<td width="60%">
-			<input type="text" name="DEFAULT_VALUE" value="<?echo $str_DEFAULT_VALUE ?>">
+			<?if($str_TYPE == 'LOCATION' && CSaleLocation::isLocationProMigrated()):?>
+				<?$GLOBALS["APPLICATION"]->IncludeComponent(
+					"bitrix:sale.location.selector.".\Bitrix\Sale\Location\Admin\Helper::getWidgetAppearance(),
+					"",
+					array(
+						"ID" => $str_DEFAULT_VALUE,
+						"CODE" => '',
+						"INPUT_NAME" => "DEFAULT_VALUE",
+						"CACHE_TYPE" => "A",
+						"CACHE_TIME" => "36000000",
+						"PROVIDE_LINK_BY" => "id",
+						"SEARCH_BY_PRIMARY" => "N",
+						"SHOW_DEFAULT_LOCATIONS" => "N"
+					),
+					null,
+					array('HIDE_ICONS' => 'Y')
+				);?>
+			<?else:?>
+				<input type="text" name="DEFAULT_VALUE" value="<?echo $str_DEFAULT_VALUE ?>">
+			<?endif?>
 		</td>
 	</tr>
 	<tr>

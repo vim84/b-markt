@@ -423,12 +423,15 @@ diskController.prototype = {
 			{
 				BX.remove(res);
 			}
-			files = BX.findChildren(form, {
-				tagName : "INPUT",
-				attribute : {
-					name : this.handler.params.controlName
-				}
-			}, true);
+			if (this.handler.params && this.handler.params.controlName)
+			{
+				files = BX.findChildren(form, {
+					tagName : "INPUT",
+					attribute : {
+						name : this.handler.params.controlName
+					}
+				}, true);
+			}
 			if (files)
 			{
 				for (ii = 0; ii < files.length; ii++)
@@ -661,6 +664,27 @@ fileController.prototype.bindFile = function(file)
 			fileController.superclass.bindFile.apply(this, arguments);
 	}
 };
+fileController.prototype.clean = function()
+{
+	fileController.superclass.clean.apply(this, arguments);
+	if (this["handler"] && this.handler["agent"] && this.handler.agent["inputName"])
+	{
+		var res, files, ii, form = BX(this.manager.formID);
+		files = BX.findChildren(form, {
+			tagName : "INPUT",
+			attribute : {
+				name : this.handler.agent.inputName + "[]"
+			}
+		}, true);
+		if (files)
+		{
+			for (ii = 0; ii < files.length; ii++)
+			{
+				BX.remove(files[ii]);
+			}
+		}
+	}
+};
 
 window.LHEPostForm = function(formID, params)
 {
@@ -687,6 +711,34 @@ window.LHEPostForm = function(formID, params)
 	});
 	this.initParsers(params);
 	this.initFiles(formID, params);
+
+	BX.ready(
+		BX.delegate(
+			function()
+			{
+				if (BX('lhe_button_submit_' + formID, true))
+				{
+					BX.bind(BX('lhe_button_submit_' + formID, true), 'mousedown', function(){ BX.addClass(this, 'feed-add-button-press'); });
+					BX.bind(BX('lhe_button_submit_' + formID, true), 'mouseup', function(){ BX.removeClass(this, 'feed-add-button-press'); });
+					BX.bind(BX('lhe_button_submit_' + formID, true), 'click', BX.proxy(function(e){
+						BX.onCustomEvent(this.eventNode, 'OnButtonClick', ['submit']);
+						return BX.PreventDefault(e);
+					}, this));
+				}
+				if (BX('lhe_button_cancel_' + formID, true))
+				{
+					BX.bind(BX('lhe_button_cancel_' + formID, true), 'mousedown', function(){ BX.addClass(this, 'feed-add-button-press'); });
+					BX.bind(BX('lhe_button_cancel_' + formID, true), 'mouseup', function(){ BX.removeClass(this, 'feed-add-button-press'); });
+					BX.bind(BX('lhe_button_cancel_' + formID, true), 'click', BX.proxy(function(e){
+						BX.onCustomEvent(this.eventNode, 'OnButtonClick', ['cancel']);
+						return BX.PreventDefault(e);
+					}, this));
+				}
+			},
+			this
+		)
+	);
+
 	this.inited = true;
 	BX.addCustomEvent(BX(this.formID), 'onAutoSavePrepare', function(ob) { ob.FORM.setAttribute("bx-lhe-autosave-prepared", "Y"); });
 
@@ -1465,15 +1517,19 @@ window.LHEPostForm.prototype = {
 	},
 	OnEditorInitedAfter : function(editor)
 	{
+		BX.addCustomEvent(editor, "OnIframeDrop", BX.proxy(function(){BX.onCustomEvent(this.eventNode, "OnIframeDrop", arguments);}, this));
+		BX.addCustomEvent(editor, "OnIframeDragOver", BX.proxy(function(){BX.onCustomEvent(this.eventNode, "OnIframeDragOver", arguments);}, this));
+		BX.addCustomEvent(editor, "OnIframeDragLeave", BX.proxy(function(){BX.onCustomEvent(this.eventNode, "OnIframeDragLeave", arguments);}, this));
+
 		// Contextmenu changing for images/files
 		editor.contextMenu.items['postimage'] =
 			editor.contextMenu.items['postdocument'] =
 				editor.contextMenu.items['postfile'] =
 					[
 						{
-							text: BX.message('BXEdDelFromText'),
+							TEXT: BX.message('BXEdDelFromText'),
 							bbMode: true,
-							onclick: function()
+							ACTION: function()
 							{
 								var node = editor.contextMenu.GetTargetItem('postimage');
 								if (!node)
@@ -1609,6 +1665,20 @@ window.LHEPostForm.getEditor = function(editor)
 window.LHEPostForm.getHandler = function(editor)
 {
 	return repo.handler[(typeof editor == "object" ? editor.id : editor)];
+};
+window.LHEPostForm.unsetHandler = function(editor)
+{
+	var editorId = (typeof editor == "object" ? editor.id : editor);
+
+	if (!repo.handler[editorId])
+		return;
+
+	if (repo.handler[editorId].oEditor)
+		repo.handler[editorId].oEditor.Destroy();
+
+	// TODO: unregister event handlers here
+
+	repo.handler[editorId] = null;
 };
 window.LHEPostForm.reinitData = function(editorID, text, data)
 {
@@ -2350,7 +2420,7 @@ window.BxInsertMention = function (params)
 				mention = BX.create('SPAN',
 					{
 						props: {className: 'bxhtmled-metion'},
-						text: item.name
+						text: BX.util.htmlspecialcharsback(item.name)
 					}, doc),
 				// &nbsp; - for chrome
 				spaceNode = BX.create('SPAN', {html: (bNeedComa ? ',&nbsp;' : '&nbsp;')}, doc);
@@ -2364,6 +2434,15 @@ window.BxInsertMention = function (params)
 			else
 			{
 				editor.selection.InsertNode(mention, range);
+			}
+
+			if (mention && mention.parentNode)
+			{
+				var parentMention = BX.findParent(mention, {className: 'bxhtmled-metion'}, doc.body);
+				if (parentMention)
+				{
+					editor.util.InsertAfter(mention, parentMention);
+				}
 			}
 
 			if (mention && mention.parentNode)

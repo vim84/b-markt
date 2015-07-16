@@ -6,10 +6,12 @@ CREATE TABLE b_bp_workflow_template (
 	AUTO_EXECUTE int NOT NULL DEFAULT 0,
 	NAME varchar(255) NULL,
 	DESCRIPTION text NULL,
-	TEMPLATE blob NULL,
+	TEMPLATE mediumblob NULL,
 	PARAMETERS blob NULL,
 	VARIABLES blob NULL,
+	CONSTANTS blob NULL,
 	MODIFIED datetime NOT NULL,
+	IS_MODIFIED char(1) NOT NULL default 'N',
 	USER_ID int NULL,
 	SYSTEM_CODE varchar(50),
 	ACTIVE char(1) NOT NULL default 'Y',
@@ -79,6 +81,9 @@ CREATE TABLE b_bp_task (
 	NAME varchar(128) NOT NULL,
 	DESCRIPTION text NULL,
 	PARAMETERS text NULL,
+	STATUS int NOT NULL default 0,
+	IS_INLINE char(1) NOT NULL default 'N',
+	DOCUMENT_NAME varchar(255) null,
 	primary key (ID),
 	index ix_bp_tasks_sort(OVERDUE_DATE, MODIFIED),
 	index ix_bp_tasks_wf(WORKFLOW_ID)
@@ -88,6 +93,9 @@ CREATE TABLE b_bp_task_user (
 	ID int NOT NULL auto_increment,
 	USER_ID int NOT NULL,
 	TASK_ID int NOT NULL,
+	STATUS int NOT NULL default 0,
+	DATE_UPDATE datetime NULL,
+	ORIGINAL_USER_ID int NOT NULL default 0,
 	primary key (ID),
 	unique ix_bp_task_user(USER_ID, TASK_ID)
 );
@@ -105,20 +113,9 @@ CREATE TABLE b_bp_history (
 	index ix_bp_history_doc(DOCUMENT_ID, ENTITY, MODULE_ID)
 );
 
-/*
-	SELECT *
-	FROM b_iblock_element e
-	WHERE e.IBLOCK_ID = 5
-		AND e.ID IN (
-			SELECT intval(s.DOCUMENT_ID)
-			FROM b_bp_workflow_state s
-				INNER JOIN b_bp_workflow_permissions p ON (s.ID = p.WORKFLOW_ID)
-			WHERE s.MODULE_ID = 'iblock'
-				AND s.ENTITY = 'CIBlockDocument'
-				AND p.PERMISSION = 'read'
-				AND (intval(p.OBJECT_ID) IN ($USER->GetGroups())
-					OR p.OBJECT_ID = 'Author' AND e.OWNER_ID = $USER->GetID()
-					OR substr(p.OBJECT_ID, 0, strlen("USER_")) = "USER_" AND intval(substr(p.OBJECT_ID, strlen("USER_"))) = $USER->GetID()
-				)
-		)
-*/
+CREATE TABLE b_bp_workflow_state_identify (
+	ID int NOT NULL auto_increment,
+	WORKFLOW_ID varchar(32) NOT NULL,
+	primary key (ID),
+	unique ix_bp_wsi_wf(WORKFLOW_ID)
+);

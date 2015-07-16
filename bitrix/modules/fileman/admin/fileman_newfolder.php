@@ -38,7 +38,7 @@ foreach($armt as $key => $title)
 		$bMenuTypeExists = true;
 }
 
-//проверим права на доступ в эту папку
+//check folder access
 if (!$USER->CanDoFileOperation('fm_create_new_folder',$arPath))
 	$strWarning = '<img src="/bitrix/images/fileman/deny.gif" width="28" height="28" border="0" align="left" alt="">'.GetMessage("ACCESS_DENIED");
 else if(!$io->DirectoryExists($abs_path))
@@ -208,7 +208,17 @@ if ($USER->CanDoFileOperation('fm_create_new_folder',$arPath))
 	$tabControl->Begin();
 	$tabControl->BeginNextTab();
 
-	$arTemplates = CFileman::GetFileTemplates();
+	$site_template = false;
+	$rsSiteTemplates = CSite::GetTemplateList($site);
+	while($arSiteTemplate = $rsSiteTemplates->Fetch())
+	{
+		if(strlen($arSiteTemplate["CONDITION"])<=0)
+		{
+			$site_template = $arSiteTemplate["TEMPLATE"];
+			break;
+		}
+	}
+	$arTemplates = CFileman::GetFileTemplates(LANGUAGE_ID, array($site_template));
 	?>
 	<tr>
 		<td><label for="bxfm_sectionname" style="font-weight: bold;"><?=GetMessage("FILEMAN_NEWFOLDER_SEACTION_NAME")?></label></td>
@@ -229,7 +239,7 @@ if ($USER->CanDoFileOperation('fm_create_new_folder',$arPath))
 		<td><?=GetMessage("FILEMAN_NEWFOLDER_MENU")?></td>
 		<td>
 			<select name="menutype" <?if($mkmenu!="Y")echo " disabled"?>>
-				<?for($i=0; $i<count($arMenuTypes); $i++):?>
+				<?for($i = 0, $l = count($arMenuTypes); $i < $l; $i++):?>
 				<option value="<?echo htmlspecialcharsex($arMenuTypes[$i][0])?>" <?if($menutype==$arMenuTypes[$i][0])echo " selected"?>><?echo htmlspecialcharsex("[".$arMenuTypes[$i][0]."] ".$arMenuTypes[$i][1])?></option>
 				<?endfor;?>
 			</select>
@@ -251,7 +261,7 @@ if ($USER->CanDoFileOperation('fm_create_new_folder',$arPath))
 		<td><?=GetMessage("FILEMAN_NEWFOLDER_INDEX_TEMPLATE")?></td>
 		<td>
 		<select name="template" <?if($mkindex!="Y")echo " disabled"?>>
-			<?for($i=0; $i<count($arTemplates); $i++):?>
+			<?for($i = 0, $l = count($arTemplates); $i < $l; $i++):?>
 			<option value="<?echo htmlspecialcharsex($arTemplates[$i]["file"])?>"<?if($template==$arTemplates[$i]["file"])echo " selected"?>><?echo htmlspecialcharsex($arTemplates[$i]["name"])?></option>
 			<?endfor;?>
 		</select>

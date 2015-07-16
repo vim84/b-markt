@@ -59,7 +59,7 @@ class CBPStateActivity
 		$stateService = $this->workflow->GetService("StateService");
 
 		$stateInitialization = null;
-		for ($i = 0; $i < count($this->arActivities); $i++)
+		for ($i = 0, $sz = sizeof($this->arActivities); $i < $sz; $i++)
 		{
 			if (is_a($this->arActivities[$i], "CBPStateInitializationActivity"))
 				$stateInitialization = $this->arActivities[$i];
@@ -100,7 +100,7 @@ class CBPStateActivity
 
 	private function ExecuteState()
 	{
-		for ($i = 0; $i < count($this->arActivities); $i++)
+		for ($i = 0, $s = sizeof($this->arActivities); $i < $s; $i++)
 		{
 			$eventDriven = $this->arActivities[$i];
 			if (!is_a($eventDriven, "CBPEventDrivenActivity"))
@@ -130,7 +130,7 @@ class CBPStateActivity
 			if (strlen($this->nextStateName) > 0)
 			{
 				$stateFinalization = null;
-				for ($i = 0; $i < count($this->arActivities); $i++)
+				for ($i = 0, $s = sizeof($this->arActivities); $i < $s; $i++)
 				{
 					if (is_a($this->arActivities[$i], "CBPStateFinalizationActivity"))
 						$stateFinalization = $this->arActivities[$i];
@@ -164,7 +164,7 @@ class CBPStateActivity
 			$stateFinalization = null;
 			if (strlen($this->nextStateName) > 0)
 			{
-				for ($i = 0; $i < count($this->arActivities); $i++)
+				for ($i = 0, $s = sizeof($this->arActivities); $i < $s; $i++)
 				{
 					if (is_a($this->arActivities[$i], "CBPStateFinalizationActivity"))
 						$stateFinalization = $this->arActivities[$i];
@@ -198,7 +198,7 @@ class CBPStateActivity
 	public function Cancel()
 	{
 		$flag = true;
-		for ($i = 0; $i < count($this->arActivities); $i++)
+		for ($i = 0, $s = sizeof($this->arActivities); $i < $s; $i++)
 		{
 			$activity2 = $this->arActivities[$i];
 			if (is_a($activity2, "CBPEventDrivenActivity"))
@@ -297,8 +297,10 @@ class CBPStateActivity
 			{
 				foreach ($arAllowableOperations as $operationKey => $operationValue)
 				{
+					$current = $documentService->toExternalOperations($documentType, $arCurrentActivity["Properties"]["Permission"]);
+
 					$arCurrentValues["permission_".$operationKey] = CBPHelper::UsersArrayToString(
-						$arCurrentActivity["Properties"]["Permission"][$operationKey],
+						$current[$operationKey],
 						$arWorkflowTemplate,
 						$documentType
 					);
@@ -372,7 +374,7 @@ final class CBPStateEventActivitySubscriber
 			$stateActivity->isListenTrigerred = true;
 
 			$arActivities = $stateActivity->CollectNestedActivities();
-			for ($i = 0; $i < count($arActivities); $i++)
+			for ($i = 0, $s = sizeof($arActivities); $i < $s; $i++)
 			{
 				$activity2 = $arActivities[$i];
 				if (!is_a($activity2, "CBPEventDrivenActivity"))
@@ -381,6 +383,8 @@ final class CBPStateEventActivitySubscriber
 				$parentEventHandler = $stateActivity->arActivityState[$i];
 
 				$activity3 = $activity2->GetEventActivity();
+				if (method_exists($activity3, 'OnStateExternalEvent'))
+					$activity3->OnStateExternalEvent($arEventParameters);
 				$activity3->Unsubscribe($parentEventHandler);
 			}
 

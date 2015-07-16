@@ -135,6 +135,12 @@ if (empty($arParams['IBLOCK_ID']))
 	return;
 }
 
+if (array_key_exists('SOCNET_GROUP_ID', $arParams) && empty($arParams['SOCNET_GROUP_ID']))
+{
+	ShowError(GetMessage('WIKI_ACCESS_DENIED'));
+	return;
+}
+
 $arResult['SOCNET'] = false;
 if (CWikiSocnet::isEnabledSocnet() && !empty($arParams['SOCNET_GROUP_ID']))
 {
@@ -265,6 +271,13 @@ if($this->StartResultCache(false, array($USER->GetGroups(), $arCache)))
 		$documentId = array('iblock', 'CWikiDocument', $arParams['ELEMENT_ID']);
 		$arErrorsTmp = array();
 		$arHistoryResult = CBPDocument::GetDocumentFromHistory($historyId, $arErrorsTmp);
+
+		if ($arHistoryResult['DOCUMENT_ID'] !== $documentId)
+		{
+			$this->AbortResultCache();
+			ShowError(GetMessage('WIKI_ACCESS_DENIED'));
+			return;
+		}
 
 		if (count($arErrorsTmp) > 0)
 		{

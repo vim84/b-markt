@@ -43,7 +43,7 @@ $arFilter = array(
 
 if($lAdmin->EditAction())
 {
-	foreach($FIELDS as $ID => $arFields)
+	foreach($FIELDS as $ID => $postFields)
 	{
 		$DB->StartTransaction();
 		$ID = IntVal($ID);
@@ -53,6 +53,24 @@ if($lAdmin->EditAction())
 
 		if(!CIBlockRights::UserHasRightTo($ID, $ID, "iblock_edit"))
 			continue;
+
+		$allowedFields = array(
+			"NAME",
+			"SORT",
+			"ACTIVE",
+			"LIST_PAGE_URL",
+			"DETAIL_PAGE_URL",
+			"CANONICAL_PAGE_URL",
+			"CODE",
+			"INDEX_ELEMENT",
+			"WORKFLOW",
+		);
+		$arFields = array();
+		foreach ($allowedFields as $fieldId)
+		{
+			if (array_key_exists($fieldId, $postFields))
+				$arFields[$fieldId] = $postFields[$fieldId];
+		}
 
 		$ib = new CIBlock;
 		if(!$ib->Update($ID, $arFields))
@@ -155,6 +173,10 @@ $arHeader = array(
 	array(
 		"id"=>"DETAIL_PAGE_URL",
 		"content"=>GetMessage("IBLOCK_ADM_HEADER_DETAIL_URL"),
+	),
+	array(
+		"id"=>"CANONICAL_PAGE_URL",
+		"content"=>GetMessage("IBLOCK_ADM_HEADER_CANONICAL_PAGE_URL"),
 	),
 	array(
 		"id"=>"ELEMENT_CNT",
@@ -260,6 +282,7 @@ while($dbrs = $rsIBlocks->NavNext(true, "f_"))
 		$row->AddInputField("CODE");
 		$row->AddInputField("LIST_PAGE_URL");
 		$row->AddInputField("DETAIL_PAGE_URL");
+		$row->AddInputField("CANONICAL_PAGE_URL");
 		$row->AddCheckField("INDEX_ELEMENT");
 		if($bWorkflow)
 			$row->AddCheckField("WORKFLOW");

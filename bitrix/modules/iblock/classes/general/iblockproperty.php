@@ -316,6 +316,8 @@ class CAllIBlockProperty
 							$arLink["DISPLAY_TYPE"] = $arFields["DISPLAY_TYPE"];
 						if (array_key_exists("DISPLAY_EXPANDED", $arFields))
 							$arLink["DISPLAY_EXPANDED"] = $arFields["DISPLAY_EXPANDED"];
+						if (array_key_exists("FILTER_HINT", $arFields))
+							$arLink["FILTER_HINT"] = $arFields["FILTER_HINT"];
 						CIBlockSectionPropertyLink::Add(0, $ID, $arLink);
 					}
 				}
@@ -509,6 +511,8 @@ class CAllIBlockProperty
 						$arLink["DISPLAY_TYPE"] = $arFields["DISPLAY_TYPE"];
 					if (array_key_exists("DISPLAY_EXPANDED", $arFields))
 						$arLink["DISPLAY_EXPANDED"] = $arFields["DISPLAY_EXPANDED"];
+					if (array_key_exists("FILTER_HINT", $arFields))
+						$arLink["FILTER_HINT"] = $arFields["FILTER_HINT"];
 					CIBlockSectionPropertyLink::Set(0, $ID, $arLink);
 				}
 				else
@@ -974,6 +978,27 @@ class CAllIBlockProperty
 			"GetAdminFilterHTML" => array("CIBlockPropertyDateTime","GetAdminFilterHTML"),
 			"GetPublicFilterHTML" => array("CIBlockPropertyDateTime","GetPublicFilterHTML"),
 			"AddFilterFields" => array("CIBlockPropertyDateTime","AddFilterFields"),
+		);
+	}
+
+	function _Date_GetUserTypeDescription()
+	{
+		return array(
+			"PROPERTY_TYPE" => "S",
+			"USER_TYPE" => "Date",
+			"DESCRIPTION" => GetMessage("IBLOCK_PROP_DATE_DESC"),
+			//optional handlers
+			"GetPublicViewHTML" => array("CIBlockPropertyDate","GetPublicViewHTML"),
+			"GetPublicEditHTML" => array("CIBlockPropertyDate","GetPublicEditHTML"),
+			"GetAdminListViewHTML" => array("CIBlockPropertyDate","GetAdminListViewHTML"),
+			"GetPropertyFieldHtml" => array("CIBlockPropertyDate","GetPropertyFieldHtml"),
+			"CheckFields" => array("CIBlockPropertyDate","CheckFields"),
+			"ConvertToDB" => array("CIBlockPropertyDate","ConvertToDB"),
+			"ConvertFromDB" => array("CIBlockPropertyDate","ConvertFromDB"),
+			"GetSettingsHTML" => array("CIBlockPropertyDate","GetSettingsHTML"),
+			"GetAdminFilterHTML" => array("CIBlockPropertyDate","GetAdminFilterHTML"),
+			"GetPublicFilterHTML" => array("CIBlockPropertyDate","GetPublicFilterHTML"),
+			"AddFilterFields" => array("CIBlockPropertyDate","AddFilterFields"),
 		);
 	}
 

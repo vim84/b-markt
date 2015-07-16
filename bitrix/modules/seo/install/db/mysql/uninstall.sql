@@ -9,5 +9,6 @@ DROP TABLE if exists b_seo_adv_group;
 DROP TABLE if exists b_seo_adv_banner;
 DROP TABLE if exists b_seo_adv_region;
 DROP TABLE if exists b_seo_adv_link;
+DROP TABLE if exists b_seo_adv_order;
 DROP TABLE if exists b_seo_adv_log;
 DROP TABLE if exists b_seo_yandex_direct_stat;

@@ -1,12 +1,14 @@
 <?
-use Bitrix\Sale\Location\Admin\DefaultSiteHelper as Helper;
-
 use Bitrix\Main;
 use Bitrix\Main\Config;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location\Admin\DefaultSiteHelper as Helper;
+use Bitrix\Sale\Location\Admin\SearchHelper;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/include.php");
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/prolog.php');
 
 Loc::loadMessages(__FILE__);
 
@@ -184,6 +186,8 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admi
 //temporal code
 if(!CSaleLocation::locationProCheckEnabled())
 	require($_SERVER['DOCUMENT_ROOT']."/bitrix/modules/main/include/epilog_admin.php");
+
+SearchHelper::checkIndexesValid();
 
 if($fatalFailure):
 	CAdminMessage::ShowMessage(array('MESSAGE' => $fatalFailureMessage, 'type' => 'ERROR'));

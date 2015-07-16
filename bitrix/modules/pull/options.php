@@ -1,6 +1,4 @@
 <?php
-if(!$USER->IsAdmin())
-	return;
 
 IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].BX_ROOT.'/modules/pull/options.php');
 IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].BX_ROOT.'/modules/main/options.php');
@@ -18,7 +16,7 @@ $aTabs = array(
 	),
 );
 $tabControl = new CAdminTabControl("tabControl", $aTabs);
-if(strlen($_POST['Update'].$_GET['RestoreDefaults'])>0 && check_bitrix_sessid())
+if(strlen($_POST['Update'].$_GET['RestoreDefaults'])>0 && check_bitrix_sessid() && $MOD_RIGHT>='W')
 {
 	if(strlen($_GET['RestoreDefaults'])>0)
 	{
@@ -48,6 +46,16 @@ if(strlen($_POST['Update'].$_GET['RestoreDefaults'])>0 && check_bitrix_sessid())
 		if ($_POST['path_to_listener_secure'] != "" && CPullOptions::GetListenSecureUrl() != $_POST['path_to_listener_secure'])
 		{
 			CPullOptions::SetListenSecureUrl($_POST['path_to_listener_secure']);
+			$send = true;
+		}
+		if ($_POST['path_to_modern_listener'] != "" && CPullOptions::GetListenUrl("", false, true) != $_POST['path_to_modern_listener'])
+		{
+			CPullOptions::SetListenUrl($_POST['path_to_modern_listener'], false, true);
+			$send = true;
+		}
+		if ($_POST['path_to_modern_listener_secure'] != "" && CPullOptions::GetListenSecureUrl("", false, true) != $_POST['path_to_modern_listener_secure'])
+		{
+			CPullOptions::SetListenSecureUrl($_POST['path_to_modern_listener_secure'], false, true);
 			$send = true;
 		}
 		if ($_POST['path_to_mobile_listener'] != "" && CPullOptions::GetListenUrl("", true) != $_POST['path_to_mobile_listener'])
@@ -220,9 +228,8 @@ $arExcludeSites = CPullOptions::GetExcludeSites();
 			<?=GetMessage("PULL_OPTIONS_NGINX_VERSION_034_DESC")?>
 		</td>
 	</tr>
-	<tr>
-		<td width="40%"></td>
-		<td width="60%"></td>
+	<tr class="heading">
+		<td colspan="2"><b><?=GetMessage('PULL_OPTIONS_HEAD_PUB')?></b></td>
 	</tr>
 	<tr>
 		<td><?=GetMessage("PULL_OPTIONS_PATH_TO_PUBLISH")?>:</td>
@@ -238,9 +245,25 @@ $arExcludeSites = CPullOptions::GetExcludeSites();
 			<?=GetMessage("PULL_OPTIONS_NGINX_BUFFERS_DESC")?>
 		</td>
 	</tr>
+	<tr class="heading">
+		<td colspan="2"><b><?=GetMessage('PULL_OPTIONS_HEAD_SUB_MODERN')?></b></td>
+	</tr>
+	<tr>
+		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER")?>:</td>
+		<td><input id="config_path_to_modern_listener" type="text" size="40" value="<?=htmlspecialcharsbx(CPullOptions::GetListenUrl("", false, true))?>" name="path_to_modern_listener" <?=(CPullOptions::GetQueueServerStatus()? '':'disabled="true"')?>></td>
+	</tr>
+	<tr>
+		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER_SECURE")?>:</td>
+		<td><input id="config_path_to_modern_listener_secure" type="text" size="40" value="<?=htmlspecialcharsbx(CPullOptions::GetListenSecureUrl("", false, true))?>" name="path_to_modern_listener_secure" <?=(CPullOptions::GetQueueServerStatus()? '':'disabled="true"')?>></td>
+	</tr>
 	<tr>
 		<td width="40%"></td>
-		<td width="60%"></td>
+		<td width="60%">
+			<?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER_MODERN_DESC")?>
+		</td>
+	</tr>
+	<tr class="heading">
+		<td colspan="2"><b><?=GetMessage('PULL_OPTIONS_HEAD_SUB')?></b></td>
 	</tr>
 	<tr>
 		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER")?>:</td>
@@ -256,12 +279,15 @@ $arExcludeSites = CPullOptions::GetExcludeSites();
 			<?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER_DESC")?>
 		</td>
 	</tr>
+	<tr class="heading">
+		<td colspan="2"><b><?=GetMessage('PULL_OPTIONS_HEAD_SUB_MOB')?></b></td>
+	</tr>
 	<tr>
-		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_MOBILE_LISTENER")?>:</td>
+		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER")?>:</td>
 		<td><input id="config_path_to_mobile_listener" type="text" size="40" value="<?=htmlspecialcharsbx(CPullOptions::GetListenUrl("", true))?>" name="path_to_mobile_listener" <?=(CPullOptions::GetQueueServerStatus()? '':'disabled="true"')?>></td>
 	</tr>
 	<tr>
-		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_MOBILE_LISTENER_SECURE")?>:</td>
+		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER_SECURE")?>:</td>
 		<td><input id="config_path_to_mobile_listener_secure" type="text" size="40" value="<?=htmlspecialcharsbx(CPullOptions::GetListenSecureUrl("", true))?>" name="path_to_mobile_listener_secure" <?=(CPullOptions::GetQueueServerStatus()? '':'disabled="true"')?>></td>
 	</tr>
 	<tr>
@@ -270,20 +296,19 @@ $arExcludeSites = CPullOptions::GetExcludeSites();
 			<?=GetMessage("PULL_OPTIONS_PATH_TO_MOBILE_LISTENER_DESC")?>
 		</td>
 	</tr>
-	<tr>
-		<td width="40%"></td>
-		<td width="60%"></td>
+	<tr class="heading">
+		<td colspan="2"><b><?=GetMessage('PULL_OPTIONS_HEAD_SUB_WS')?></b></td>
 	</tr>
 	<tr>
 		<td align="right" width="50%"><?=GetMessage("PULL_OPTIONS_WEBSOCKET")?>:</td>
 		<td><input type="checkbox" size="40" value="Y" <?=(CPullOptions::GetWebSocket()?' checked':'')?> id="config_websocket" name="websocket" <?=(CPullOptions::GetQueueServerStatus() && CPullOptions::GetQueueServerVersion() > 1 ? '': 'disabled="true"')?>></td>
 	</tr>
 	<tr>
-		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_WEBSOCKET")?>:</td>
+		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER")?>:</td>
 		<td><input id="config_path_to_websocket" type="text" size="40" value="<?=htmlspecialcharsbx(CPullOptions::GetWebSocketUrl())?>" name="path_to_websocket" <?=(!CPullOptions::GetQueueServerStatus() || !CPullOptions::GetWebSocketStatus() ? 'disabled="true"': '')?></td>
 	</tr>
 	<tr>
-		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_WEBSOCKET_SECURE")?>:</td>
+		<td ><?=GetMessage("PULL_OPTIONS_PATH_TO_LISTENER_SECURE")?>:</td>
 		<td><input id="config_path_to_websocket_secure" type="text" size="40" value="<?=htmlspecialcharsbx(CPullOptions::GetWebSocketSecureUrl())?>" name="path_to_websocket_secure" <?=(!CPullOptions::GetQueueServerStatus() || !CPullOptions::GetWebSocketStatus() ? 'disabled="true"': '')?></td>
 	</tr>
 	<tr>
@@ -292,15 +317,10 @@ $arExcludeSites = CPullOptions::GetExcludeSites();
 			<?=GetMessage("PULL_OPTIONS_WEBSOCKET_DESC")?>
 		</td>
 	</tr>
-	<tr>
-		<td width="40%"></td>
-		<td width="60%"></td>
-	</tr>
-	<tr>
-		<td width="40%"></td>
-		<td width="60%"></td>
-	</tr>
 	<?if (count($arSites) > 1):?>
+	<tr class="heading">
+		<td colspan="2"><b><?=GetMessage('PULL_OPTIONS_HEAD_BLOCK')?></b></td>
+	</tr>
 	<tr valign="top">
 		<td><?=GetMessage("PULL_OPTIONS_SITES")?>:</td>
 		<td>
@@ -326,6 +346,8 @@ BX.bind(BX('config_nginx'), 'change', function(){
 			BX('config_path_to_publish').disabled = false;
 			BX('config_path_to_listener').disabled = false;
 			BX('config_path_to_listener_secure').disabled = false;
+			BX('config_path_to_modern_listener').disabled = false;
+			BX('config_path_to_modern_listener_secure').disabled = false;
 			BX('config_path_to_mobile_listener').disabled = false;
 			BX('config_path_to_mobile_listener_secure').disabled = false;
 
@@ -352,6 +374,8 @@ BX.bind(BX('config_nginx'), 'change', function(){
 		BX('config_path_to_publish').disabled = true;
 		BX('config_path_to_listener').disabled = true;
 		BX('config_path_to_listener_secure').disabled = true;
+		BX('config_path_to_modern_listener').disabled = true;
+		BX('config_path_to_modern_listener_secure').disabled = true;
 		BX('config_path_to_mobile_listener').disabled = true;
 		BX('config_path_to_mobile_listener_secure').disabled = true;
 

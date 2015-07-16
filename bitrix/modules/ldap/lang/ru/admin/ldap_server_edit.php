@@ -76,4 +76,5 @@ $MESS["LDAP_DEFAULT_DEPARTMENT"] = "Моя компания";
 $MESS["LDAP_EDIT_GROUP_MEMBERS"] = "Атрибут членов группы";
 $MESS["LDAP_EXT_NO_LOADED"] = "Не загружено расширение LDAP для PHP";
 $MESS["LDAP_EDIT_MAX_PAGE_SIZE"] = "Максимальное количество объектов, возвращаемых при одном поиске";
+$MESS["LDAP_EDIT_SYNC_USER_ADD"] = "Создавать несуществующих пользователей";
 ?>

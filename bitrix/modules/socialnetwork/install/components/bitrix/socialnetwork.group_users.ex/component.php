@@ -77,6 +77,8 @@ if (
 }
 else
 {
+	CSocNetTools::InitGlobalExtranetArrays();
+
 	$arGroupSites = array();
 	$rsGroupSite = CSocNetGroup::GetSite($arGroup["ID"]);
 	while ($arGroupSite = $rsGroupSite->Fetch())
@@ -195,10 +197,11 @@ else
 						"USER_PERSONAL_PHOTO" => $arRequests["USER_PERSONAL_PHOTO"],
 						"USER_PERSONAL_PHOTO_IMG" => $arImage,
 						"USER_PERSONAL_GENDER" => $arRequests["USER_PERSONAL_GENDER"],
-						"USER_WORK_POSITION" => $arRequests["USER_WORK_POSITION"],						
+						"USER_WORK_POSITION" => $arRequests["USER_WORK_POSITION"],
 						"USER_PROFILE_URL" => $pu,
 						"SHOW_PROFILE_LINK" => $canViewProfile,
 						"IS_ONLINE" => ($arRequests["USER_IS_ONLINE"] == "Y"),
+						"USER_IS_EXTRANET" => (isset($GLOBALS["arExtranetUserID"]) && is_array($GLOBALS["arExtranetUserID"]) && in_array($arRequests["USER_ID"], $GLOBALS["arExtranetUserID"]) ? "Y" : "N")
 					);
 				}
 				$arResult["Users"]["NAV_STRING"] = $dbRequests->GetPageNavStringEx($navComponentObject, GetMessage("SONET_GUE_USERS_NAV"), "", false);
@@ -288,7 +291,8 @@ else
 						"USER_PROFILE_URL" => $pu,
 						"SHOW_PROFILE_LINK" => $canViewProfile,
 						"IS_ONLINE" => ($arRequests["USER_IS_ONLINE"] == "Y"),
-						"IS_OWNER" => ($arRequests["ROLE"] == SONET_ROLES_OWNER)
+						"IS_OWNER" => ($arRequests["ROLE"] == SONET_ROLES_OWNER),
+						"USER_IS_EXTRANET" => (isset($GLOBALS["arExtranetUserID"]) && is_array($GLOBALS["arExtranetUserID"]) && in_array($arRequests["USER_ID"], $GLOBALS["arExtranetUserID"]) ? "Y" : "N")
 					);
 				}
 				$arResult["Moderators"]["NAV_STRING"] = $dbRequests->GetPageNavStringEx($navComponentObject, GetMessage("SONET_GUE_MODS_NAV"), "", false);
@@ -385,6 +389,7 @@ else
 							"USER_PROFILE_URL" => $pu,
 							"SHOW_PROFILE_LINK" => $canViewProfile,
 							"IS_ONLINE" => ($arRequests["USER_IS_ONLINE"] == "Y"),
+							"USER_IS_EXTRANET" => (isset($GLOBALS["arExtranetUserID"]) && is_array($GLOBALS["arExtranetUserID"]) && in_array($arRequests["USER_ID"], $GLOBALS["arExtranetUserID"]) ? "Y" : "N")
 						);
 					}
 					$arResult["Ban"]["NAV_STRING"] = $dbRequests->GetPageNavStringEx($navComponentObject, GetMessage("SONET_GUE_BAN_NAV"), "", false);

@@ -9,6 +9,4 @@ $MESS["SALE_LOCATION_LOCATION_ENTITY_LATITUDE_TYPE_ERROR"] = "Широта до�
 $MESS["SALE_LOCATION_LOCATION_ENTITY_LONGITUDE_TYPE_ERROR"] = "Долгота должна быть числом";
 $MESS["SALE_LOCATION_LOCATION_ENTITY_LATITUDE_RANGE_ERROR"] = "Широта должна быть в пределах от -90 до +90";
 $MESS["SALE_LOCATION_LOCATION_ENTITY_LONGITUDE_RANGE_ERROR"] = "Долгота должна быть в пределах от -180 до +180";
-$MESS["SALE_LOCATION_LOCATION_ENTITY_BAD_ARGUMENT_CODE_UNSET_EXCEPTION"] = "Неверные входные параметры: код узла не задан";
-$MESS["SALE_LOCATION_LOCATION_ENTITY_BAD_ARGUMENT_PRIMARY_UNSET_EXCEPTION"] = "Неверные входные параметры: ID узла";
 ?>

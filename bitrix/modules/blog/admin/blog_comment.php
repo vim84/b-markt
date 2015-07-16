@@ -193,7 +193,7 @@ if (($arID = $lAdmin->GroupAction()) && $blogModulePermissions >= "W")
 					BXClearCache(True, "/".$site."/blog/".$blogUrl."/first_page/");
 					BXClearCache(True, "/".$site."/blog/".$blogUrl."/comment/".$postID."/");
 					BXClearCache(True, "/".$site."/blog/".$blogUrl."/rss_out/".$postID."/C/");
-					BXClearCache(True, "/blog/comment/".$postID."/");
+					BXClearCache(True, "/blog/comment/".intval($postID / 100)."/".$postID."/");
 				}
 			}
 			BXClearCache(True, "/".$site."/blog/last_comments/");

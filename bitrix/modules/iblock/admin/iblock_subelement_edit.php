@@ -1,5 +1,10 @@
 <?
 use Bitrix\Main\Loader;
+use Bitrix\Iblock;
+
+/** @global CUser $USER */
+/** @global CMain $APPLICATION */
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 Loader::includeModule('iblock');
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/iblock/prolog.php");
@@ -398,16 +403,19 @@ do{ //one iteration loop
 
 	//Find out files properties
 	$arFileProps = array();
-	$properties = CIBlockProperty::GetList(
-		array(),
-		array("IBLOCK_ID"=>$IBLOCK_ID, "PROPERTY_TYPE" => "F", "ACTIVE"=>"Y")
-	);
-	while($prop_fields = $properties->Fetch())
-		$arFileProps[] = $prop_fields['ID'];
+	$propertyIterator = Iblock\PropertyTable::getList(array(
+		'select' => array('ID'),
+		'filter' => array('=IBLOCK_ID' => $IBLOCK_ID, '=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_FILE, '=ACTIVE' => 'Y')
+	));
+	while ($property = $propertyIterator->fetch())
+		$arFileProps[] = $property['ID'];
+	unset($property, $propertyIterator);
 
 	//Assembly properties values from $_POST and $_FILES
 
-	$PROP = $_POST['PROP'];
+	$PROP = array();
+	if (isset($_POST['PROP']))
+		$PROP = $_POST['PROP'];
 
 	//Recover some user defined properties
 	if(is_array($PROP))
@@ -456,6 +464,15 @@ do{ //one iteration loop
 
 	foreach($arFileProps as $k1)
 	{
+		if (isset($PROP_del[$k1]) && is_array($PROP_del[$k1]))
+		{
+			foreach ($PROP_del[$k1] as $prop_value_id => $tmp)
+			{
+				if (!array_key_exists($prop_value_id, $PROP[$k1]))
+					$PROP[$k1][$prop_value_id] = null;
+			}
+		}
+
 		if (isset($PROP[$k1]) && is_array($PROP[$k1]))
 		{
 			foreach ($PROP[$k1] as $prop_value_id => $prop_value)
@@ -894,7 +911,8 @@ do{ //one iteration loop
 			{
 				?><script type="text/javascript">
 				top.BX.closeWait(); top.BX.WindowManager.Get().AllowClose(); top.BX.WindowManager.Get().Close();
-				top.ReloadOffers();
+				if (!!top.ReloadSubList)
+					top.ReloadSubList();
 				</script><?
 				die();
 			}
@@ -1809,7 +1827,7 @@ if ($arShowTabs['bizproc']):
 		}
 		?>
 		<?
-		$arEvents = CBPDocument::GetAllowableEvents($USER->GetID(), $arCurrentUserGroups, $arDocumentState);
+		$arEvents = CBPDocument::GetAllowableEvents($USER->GetID(), $arCurrentUserGroups, $arDocumentState, $arIBlock["RIGHTS_MODE"] === "E");
 		if (!empty($arEvents))
 		{
 			?>
@@ -2001,9 +2019,7 @@ if ($ID > 0 && !$bSubCopy && BX_SUB_SETTINGS)
 				}
 			}";
 		}
-		$tabControl->ButtonsPublic(array(
-			$setBtn
-		));
+		$tabControl->ButtonsPublic(array($setBtn));
 		unset($setBtn, $reloadParams);
 	}
 }
@@ -2021,4 +2037,3 @@ $tabControl->Show();
 }
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-?>

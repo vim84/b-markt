@@ -133,7 +133,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_POST["save"] <> '' || $_POST["appl
 		$em = new CEventMessage;
 		if($_POST["SITE_MESSAGE_LINK"] == "C" && $_POST["SITE_MESSAGE_LINK_C_SITE"] <> '')
 		{
-			$db_msg = CEventMessage::GetList(($o = ""), ($b = ""), array("SITE_ID"=>$_POST["SITE_MESSAGE_LINK_C_SITE"]));
+			$db_msg = CEventMessage::GetList($o = "", $b = "", array("SITE_ID"=>$_POST["SITE_MESSAGE_LINK_C_SITE"]));
 			while($ar_msg = $db_msg->Fetch())
 			{
 				unset($ar_msg["TIMESTAMP_X"]);
@@ -143,7 +143,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_POST["save"] <> '' || $_POST["appl
 		}
 		elseif($_POST["SITE_MESSAGE_LINK"] == "E" && $_POST["SITE_MESSAGE_LINK_E_SITE"] <> '')
 		{
-			$db_msg = CEventMessage::GetList(($o = ""), ($b = ""), array("SITE_ID"=>$_POST["SITE_MESSAGE_LINK_E_SITE"]));
+			$db_msg = CEventMessage::GetList($o = "", $b = "", array("SITE_ID"=>$_POST["SITE_MESSAGE_LINK_E_SITE"]));
 			while($ar_msg = $db_msg->Fetch())
 			{
 				$msg_id = $ar_msg["ID"];
@@ -165,7 +165,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_POST["save"] <> '' || $_POST["appl
 			$rsSite = CSite::GetList($by="sort", $order="asc", array("ID" => $LID));
 			$arSite = $rsSite->GetNext();
 
-			$siteDir = "/".trim($arSite["DIR"], "/")."/";
+			$siteDir = "/".ltrim(rtrim($arSite["DIR"], "/")."/", "/");
 			$p = CSite::GetSiteDocRoot($LID).$siteDir;
 			CheckDirPath($p);
 
@@ -540,7 +540,7 @@ endforeach;
 
 			//templates
 			$arSiteTemplates = array();
-			$db_res = CSiteTemplate::GetList(array("sort"=>"asc", "name"=>"asc"), array(), array("ID", "NAME"));
+			$db_res = CSiteTemplate::GetList(array("sort"=>"asc", "name"=>"asc"), array("TYPE" => ""), array("ID", "NAME"));
 			while($arRes = $db_res->GetNext())
 				$arSiteTemplates[] = $arRes;
 
@@ -559,13 +559,12 @@ endforeach;
 				<td><a title="<?=GetMessage('MAIN_PREVIEW_TEMPLATE')?>" href="javascript:void(0)" onClick="if(document.getElementById('SITE_TEMPLATE[<?=$i?>][TEMPLATE]').selectedIndex>0)window.open((document.bform.SERVER_NAME.value?'http://'+document.bform.SERVER_NAME.value:'') + document.bform.DIR.value+'?bitrix_preview_site_template='+document.getElementById('SITE_TEMPLATE[<?=$i?>][TEMPLATE]')[document.getElementById('SITE_TEMPLATE[<?=$i?>][TEMPLATE]').selectedIndex].value);return false;"><img src="/bitrix/images/main/preview.gif" width="16" height="16" border="0"></a></td>
 				<td><input type="text" size="2" name="SITE_TEMPLATE[<?=$i?>][SORT]" value="<?=htmlspecialcharsex($val["SORT"])?>"></td>
 				<td><?ConditionSelect($i);?></td>
-				<td style="width:100%" align="left"><?
+				<td align="left"><?
 ConditionShow(array(
-	"i"		=>$i,
-	"field_name"	=>"SITE_TEMPLATE[$i]",
-	"form"		=>"bform"
-		)
-	);
+	"i" => $i,
+	"field_name" => "SITE_TEMPLATE[$i]",
+	"form" => "bform"
+));
 			?></td>
 			</tr>
 			<?endforeach;?>

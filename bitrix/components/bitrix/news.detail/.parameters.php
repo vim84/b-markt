@@ -86,6 +86,12 @@ $arComponentParameters = array(
 			"URL_TEMPLATES"
 		),
 		"SET_TITLE" => array(),
+		"SET_CANONICAL_URL" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BND_SET_CANONICAL_URL"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
 		"SET_BROWSER_TITLE" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
 			"NAME" => GetMessage("CP_BND_SET_BROWSER_TITLE"),

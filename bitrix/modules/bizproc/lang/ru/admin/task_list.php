@@ -13,4 +13,6 @@ $MESS["BPATL_WORKFLOW_STATE"] = "Статус";
 $MESS["BPATL_USER"] = "Пользователь";
 $MESS["BPATL_USER_ID"] = "ID пользователя";
 $MESS["BPATL_USER_NOT_FOUND"] = "Пользователь №#USER_ID# не найден";
+$MESS["MAIN_ADMIN_LIST_SELECTED"] = "Выбрано:";
+$MESS["MAIN_ADMIN_LIST_CHECKED"] = "Отмечено:";
 ?>

@@ -757,9 +757,10 @@
 
 .feed-add-button,
 .feed-add-button-transparent {
-	background-color: rgba(47, 199, 247, 1);
+	background-color: #2fc7f7;
 	border-radius: 2px;
 	color: #fff;
+	cursor: pointer;
 	display: inline-block;
 	font-size: 12px;
 	font-weight: bold;
@@ -791,7 +792,7 @@
 }
 
 .feed-add-button:hover {
-	background-color: rgba(63, 221, 255, 1);
+	background-color: #3fddff;
 	color: #fff;
 }
 
@@ -1102,7 +1103,7 @@
 .feed-post-title-block {
 	color: #7f7f7f;
 	font-size: 14px;
-	line-height: normal;
+	line-height: 16px;
 	min-height: 23px;
 	padding: 0 45px 4px 0;
 }
@@ -1168,7 +1169,7 @@
 	font-size: 12px;
 	margin: 0;
 	overflow: hidden;
-	padding: 12px 0 0;
+	padding: 12px 0 1px;
 	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 	vertical-align: top;
 }
@@ -1193,12 +1194,12 @@
 }
 
 .feed-add-post-destination-icon {
-	background: url("images/log/live_feed_sprite_6.png?3") no-repeat 0 -79px;
+	background: url("images/log/live_feed_sprite_6.png?3") no-repeat 0 -78px;
 	display: inline-block;
-	height: 14px;
-	margin: 2px 6px 0 0;
+	height: 17px;
+	margin: 0 6px 0 0;
 	position: static;
-	vertical-align: top;
+	vertical-align: middle;
 	width: 10px;
 }
 
@@ -1212,10 +1213,9 @@
 .feed-post-title {
 	border-bottom: 1px solid transparent;
 	color: #000 !important;
-	display: inline-block;
+	display: inline;
 	font-size: 14px;
 	font-weight: bold;
-	margin: 1px 0 0;
 	text-decoration: none;
 	vertical-align: top;
 }
@@ -1237,6 +1237,12 @@
 
 .feed-post-text-block-inner-inner {
 	padding-bottom: 15px;
+	overflow-x: auto;
+}
+
+.feed-post-text-block-inner-inner img,
+.feed-com-img-wrap {
+	max-width: 100%;
 }
 
 .feed-com-text-inner-inner a,
@@ -1581,6 +1587,10 @@ span.feed-add-post-destination-new:hover {
 	transition: border-color 0.2s linear;
 }
 
+.feed-inform-comments .feed-inform-comments-nolink {
+	cursor: auto;
+}
+
 .feed-post-time-wrap:hover {
 	text-decoration: underline;
 }
@@ -1611,14 +1621,14 @@ span.feed-add-post-destination-new:hover {
 .feed-post-informers .ilike-light .bx-ilike-right, .feed-com-informers .ilike-light .bx-ilike-right {
 	height: 14px !important;
 	padding: 0 1px 0 14px !important;
-	background-position: 0 -43px;
 }
 
-.feed-inform-ilike .ilike-light .bx-ilike-right {
+.feed-post-informers .ilike-light .bx-ilike-right {
 	background-position: 0 -44px;
 }
+
 .feed-com-informers .ilike-light .bx-ilike-right {
-	background-position: 0 -43px;
+	background-position: 0 -44px;
 	padding-left: 14px !important;
 }
 
@@ -1844,6 +1854,7 @@ span.feed-add-post-destination-new:hover {
 .feed-cancel-com:active {
 	border-bottom: 1px solid transparent;
 	color: #000;
+	cursor: pointer;
 	display: inline-block;
 	font-size: 14px;
 	line-height: normal;
@@ -1998,7 +2009,7 @@ span.feed-add-post-destination-new:hover {
 	color: #000;
 	font-size: 13px;
 	margin-top: 7px;
-	max-width: 581px;
+	max-width: 873px;
 	padding: 7px 25px 9px 22px;
 }
 
@@ -2032,7 +2043,7 @@ span.feed-add-post-destination-new:hover {
 }
 
 .feed-workday-avatar {
-	background: url("images/log/live_feed_sprite_6.png?3") no-repeat -50px -180px #fff;
+	background: url("images/log/live_feed_sprite_6.png?3") no-repeat -26px -163px #535c6a;
 	border-radius: 50%;
 	display: inline-block;
 	height: 39px;
@@ -2260,6 +2271,10 @@ span.feed-add-post-destination-new:hover {
 	display: block;
 }
 
+.bxcal-att-popup-img-not-empty {
+	background-color: #fff;
+}
+
 .bxcal-att-popup-name {
 	cursor: pointer;
 	display: block;
@@ -2330,6 +2345,7 @@ span.feed-add-post-destination-new:hover {
 }
 
 .feed-calendar-view-icon .feed-calendar-view-icon-fake-link {
+	border-bottom: none!important;
 	left: 0;
 	position: absolute;
 	text-decoration: none !important;
@@ -2461,7 +2477,6 @@ span.feed-add-post-destination-new:hover {
 	line-height: 24px;
 	margin: 12px 0 5px;
 	padding: 19px 19px 17px;
-	min-width: auto;
 }
 
 .feed-post-block-new .feed-info-block .feed-post-text-block-inner-inner {
@@ -3086,10 +3101,8 @@ a.sonet-log-field-textbox-clear {
 }
 
 .sonet-log-pagetitle-block {
-	position: absolute;
-	right: 0;
-	top: 0;
 	white-space: nowrap;
+	padding-top: 6px;
 }
 
 .sonet-log-pagetitle-button {
@@ -3279,7 +3292,7 @@ table.quote td {
 }
 
 .feed-grat-block.feed-info-block .feed-grat-img-heart {
-	background-position: -13px -8px;
+	background-position: -13px -7px;
 	background-color: #fe5857;
 }
 
@@ -3290,7 +3303,7 @@ table.quote td {
 
 .feed-grat-block.feed-info-block .feed-grat-img-cup {
 	background-position: -134px -8px;
-	background-color: #ae914b;
+	background-color: #ffa800;
 }
 
 .feed-grat-block.feed-info-block .feed-grat-img-money {
@@ -3324,7 +3337,7 @@ table.quote td {
 }
 
 .feed-grat-block.feed-info-block .feed-grat-img-star {
-	background-position: -134px -191px;
+	background-position: -134px -190px;
 	background-color: #29ad49;
 }
 
@@ -3784,12 +3797,17 @@ table.crm-feed-info-table tr .crm-feed-info-right-cell {
 
 .crm-feed-info-table .crm-feed-company-avatar {
 	left: 6px;
+	top: 0!important;
 }
 
 .crm-feed-info-table .crm-feed-user-block {
+	display: inline-block;
+	cursor: pointer;
+	min-height: 29px;
+	text-decoration: none;
 	padding-left: 50px;
+	position: relative;	
 }
-
 
 .crm-feed-client-name, .crm-feed-user-name {
 	color: #2067b0;

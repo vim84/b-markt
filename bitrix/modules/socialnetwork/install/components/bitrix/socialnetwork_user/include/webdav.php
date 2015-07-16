@@ -384,7 +384,10 @@ $arParams["ROOT_SECTION_ID"] = __wd_get_root_section(
 	LocalRedirect($APPLICATION->GetCurPageParam("", array("create_lib", "sessid")));
 }*/
 
-if ($object == "user")
+if (
+	$object == "user"
+	&& $arParams["ROOT_SECTION_ID"] !== "NO_OBJECT"
+)
 {
 	CIBlockWebdavSocnet::CreateSharedFolder(
 		$arParams["IBLOCK_ID"],

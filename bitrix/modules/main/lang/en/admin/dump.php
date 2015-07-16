@@ -50,11 +50,13 @@ $MESS["MAIN_DUMP_FOOTER_MASK"] = "The following rules apply to exclusion masks:
  <li>/files/d*/*.ht* - excludes files with extensions starting with &quot;ht&quot; in directories starting with &quot;/files/d&quot;.</li>";
 $MESS["MAIN_DUMP_ERROR"] = "Error";
 $MESS["ERR_EMPTY_RESPONSE"] = "Server returned an empty response. Please contact your hosting company for log review for date: #DATE#";
+$MESS["DUMP_NO_PERMS"] = "No free disk space or no permission to create backup on server";
 $MESS["DUMP_NO_PERMS_READ"] = "Error opening the backup file for reading.";
 $MESS["DUMP_DB_CREATE"] = "Creating database dump";
 $MESS["DUMP_CUR_PATH"] = "Current path:";
 $MESS["INTEGRITY_CHECK"] = "Integrity Check";
 $MESS["CURRENT_POS"] = "Progress:";
+$MESS["TIME_LEFT"] = ", approx. time remaining #TIME#";
 $MESS["STEP_LIMIT"] = "Step Duration:";
 $MESS["DISABLE_GZIP"] = "Disable compression (reduces CPU load)";
 $MESS["INTEGRITY_CHECK_OPTION"] = "Check backup integrity when completed";
@@ -104,6 +106,8 @@ $MESS["MAIN_DUMP_ENC_PASS"] = "Archive password (at least 6 characters):";
 $MESS["MAIN_DUMP_SAVE_PASS"] = "Please keep your password safe. You won't be able to extract files from the archive if your password is lost.";
 $MESS["MAIN_DUMP_SAVE_PASS_AUTO"] = "The password you provide will be encrypted and saved locally. Your license key will be used as the encryption parameter. You are strongly advised to change the password at least once a month.";
 $MESS["MAIN_DUMP_MAX_ARCHIVE_SIZE"] = "Maximum uncompressed volume size (MB):";
+$MESS["MAIN_DUMP_MAX_ARCHIVE_SIZE_VALUES"] = "possible values: 11 to 2047";
+$MESS["MAIN_DUMP_MAX_ARCHIVE_SIZE_INFO"] = "PHP restricts the size of an archive file part to 2 GB max. Don't use values over 200 MB because it will increase archive and extract times substantially. Optimum value is 100 MB.";
 $MESS["DUMP_MAIN_SESISON_ERROR"] = "Your session has expired. Please reload the page.";
 $MESS["DUMP_MAIN_ERROR"] = "Error! ";
 $MESS["DUMP_MAIN_REGISTERED"] = "Registered";
@@ -130,7 +134,7 @@ $MESS["DUMP_MAIN_DOWNLOAD_CLOUDS"] = "Download data from clouds and add it to ba
 $MESS["DUMP_MAIN_ARC_DATABASE"] = "Add database to backup";
 $MESS["DUMP_MAIN_DB_EXCLUDE"] = "Exclude from database:";
 $MESS["DUMP_MAIN_ARC_MODE"] = "Archive mode";
-$MESS["DUMP_MAIN_MULTISITE"] = "If your system has multiple websites with different paths to web server root directory, such websites will be backed up and restored individually. This is a special case: a full archive is created only once, for one of the websites; when backing up other websites, you will have to exclude the kernel and database using the <b>Advanced Settings</b>. If the backup copies will then be used to restore websites at another web server, you'll have to create the symbolic links to folders <b>bitrix</b> and <b>upload</b> manually.";
+$MESS["DUMP_MAIN_MULTISITE_INFO"] = "If you select multiple sites to archive, the first site will be saved in the archive root, while the public files of the other sites will be saved in <b>/bitrix/backup/sites</b>. You will have to move them to their appropriate locations and create symlinks manually when restoring.";
 $MESS["BCL_BACKUP_USAGE"] = "Space used: #USAGE# of #QUOTA#.";
 $MESS["DUMP_BXCLOUD_NA"] = "Bitrix Cloud Storage is unavailable";
 $MESS["DUMP_ERR_NON_ASCII"] = "National characters are not allowed in the password to avoid restoration problems.";
@@ -195,8 +199,4 @@ Bitrix Cloud Monitor will create backup copies by navigating to a special URL at
 By default, the backup copy is saved to Bitrix Cloud in encrypted form in multiple locations. This is the most secure way to preserve your data.
 
 If Bitrix Cloud services are inaccessible but the agents are scheduled using cron, the backup copy will be created locally.";
-$MESS["DUMP_NO_PERMS"] = "No free disk space or no permission to create backup on server";
-$MESS["MAIN_DUMP_MAX_ARCHIVE_SIZE_VALUES"] = "possible values: 11 to 2047";
-$MESS["MAIN_DUMP_MAX_ARCHIVE_SIZE_INFO"] = "PHP restricts the size of an archive file part to 2 GB max. Don't use values over 200 MB because it will increase archive and extract times substantially. Optimum value is 100 MB.";
-$MESS["DUMP_MAIN_MULTISITE_INFO"] = "If you select multiple sites to archive, the first site will be saved in the archive root, while the public files of the other sites will be saved in <b>/bitrix/backup/sites</b>. You will have to move them to their appropriate locations and create symlinks manually when restoring.";
 ?>

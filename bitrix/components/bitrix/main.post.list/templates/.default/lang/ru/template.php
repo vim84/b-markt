@@ -14,7 +14,7 @@ $MESS["BLOG_C_BUTTON_MORE"] = "Ещё";
 $MESS["JERROR_NO_MESSAGE"] = "Не введен текст комментария";
 $MESS["JQOUTE_AUTHOR_WRITES"] = "пишет";
 $MESS["B_B_PC_COM_ERROR"] = "Ошибка добавления комментария:";
-$MESS["MPL_HAVE_WRITTEN"] = " написал:";
+$MESS["MPL_HAVE_WRITTEN"] = "написал:";
 $MESS["MPL_SAFE_EDIT"] = "Вы пишете сообщение. Сбросить изменения?";
 
 ?>

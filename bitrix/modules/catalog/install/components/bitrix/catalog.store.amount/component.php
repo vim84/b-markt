@@ -3,16 +3,18 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
 
 use Bitrix\Main\Loader;
 
-global $USER_FIELD_MANAGER;
+global $USER_FIELD_MANAGER, $APPLICATION;
 
 if (!function_exists("getStringCatalogStoreAmount"))
 {
 	function getStringCatalogStoreAmount($amount, $minAmount)
 	{
+		$amount = (float)$amount;
+		$minAmount = (float)$minAmount;
 		$message = GetMessage("NOT_MUCH_GOOD");
-		if (intval($amount) == 0)
+		if ($amount <= 0)
 			$message = GetMessage("ABSENT");
-		elseif (intval($amount) >= $minAmount)
+		elseif ($amount >= $minAmount)
 			$message = GetMessage("LOT_OF_GOOD");
 		return $message;
 	}
@@ -49,6 +51,7 @@ if (isset($arParams['USE_STORE_PHONE']) && $arParams['USE_STORE_PHONE'] == 'Y')
 	$arParams['FIELDS'][] = "PHONE";
 if (isset($arParams['SCHEDULE']) && $arParams['SCHEDULE'] == 'Y')
 	$arParams['FIELDS'][] = "SCHEDULE";
+$arParams['SHOW_EMPTY_STORE'] = (isset($arParams['SHOW_EMPTY_STORE']) && $arParams['SHOW_EMPTY_STORE'] == 'N' ? 'N' : 'Y');
 
 if ($arParams["ELEMENT_ID"] <= 0 && $arParams["ELEMENT_CODE"] != '')
 {
@@ -78,6 +81,7 @@ if ($arParams["ELEMENT_ID"] <= 0)
 
 if ($this->StartResultCache())
 {
+	$arResult['STORES'] = array();
 	$isProductExistSKU = CCatalogSKU::IsExistOffers($arParams['ELEMENT_ID'], $iblockId);
 	if ($isProductExistSKU)
 	{
@@ -111,14 +115,18 @@ if ($this->StartResultCache())
 			$filter = array('PRODUCT_ID' => $sku['ID']);
 			if (!empty($arParams['STORES']))
 				$filter['STORE_ID'] = $arParams['STORES'];
-			$storeIterator = CCatalogStoreProduct::GetList(array(), $filter, false, false, array("STORE_ID", "AMOUNT"));
+			$storeIterator = CCatalogStoreProduct::GetList(array(), $filter, false, false, array('ID', 'STORE_ID', 'AMOUNT'));
 			while ($store = $storeIterator->Fetch())
 			{
 				if ($arParams["SHOW_GENERAL_STORE_INFORMATION"] == "Y")
 					$sum += $store['AMOUNT'];
 				else
-					$amount[$store['STORE_ID']] = $store['AMOUNT'];
+				{
+					$amount[$store['STORE_ID']] = 0;
+					$amount[$store['STORE_ID']] += $store['AMOUNT'];
+				}
 			}
+			unset($store, $storeIterator, $filter);
 
 			if ($arParams["SHOW_GENERAL_STORE_INFORMATION"] == "Y")
 				$productSku[$sku['ID']][] = $sum;
@@ -238,7 +246,7 @@ if ($this->StartResultCache())
 				if (!empty($userField) && !empty($prop[$userField]))
 				{
 					ob_start();
-					$GLOBALS["APPLICATION"]->IncludeComponent(
+					$APPLICATION->IncludeComponent(
 						"bitrix:system.field.view",
 						$userFields[$userField]["USER_TYPE_ID"],
 						array("arUserField" => array_merge($userFields[$userField], array('VALUE' => $prop[$userField]))),
@@ -279,12 +287,12 @@ if ($this->StartResultCache())
 		$arResult['JS']["USE_MIN_AMOUNT"] = ($arParams["USE_MIN_AMOUNT"] == 'Y');
 		$arResult['JS']["MIN_AMOUNT"] = $arParams["MIN_AMOUNT"];
 
+		$arResult['JS']['STORES'] = array();
 		if ($arParams["SHOW_GENERAL_STORE_INFORMATION"] == "Y")
 			$arResult['JS']['STORES'][] = 0;
-		else
+		elseif (!empty($arResult['STORES']))
 			foreach ($arResult['STORES'] as $store)
 				$arResult['JS']['STORES'][] = $store['ID'];
 	}
 	$this->IncludeComponentTemplate();
 }
-?>

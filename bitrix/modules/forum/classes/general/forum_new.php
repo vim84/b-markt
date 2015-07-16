@@ -698,6 +698,72 @@ class CAllForumNew
 		return array("FIELD"=>$key, "NEGATIVE"=>$strNegative, "OPERATION"=>$strOperation);
 	}
 
+	public static function prepareField($operation, $type, $vals)
+	{
+		$val = '';
+		if ($operation == "IN")
+		{
+			if (is_string($vals))
+				$vals = explode(",", $vals);
+			else if (!is_array($vals))
+				$vals = array($vals);
+			if ($type == "int")
+			{
+				array_walk($vals, create_function("&\$item", "\$item=intval(\$item);"));
+				$vals = array_unique($vals);
+				$val = implode(",", $vals);
+			}
+			elseif ($type == "double")
+			{
+				array_walk($vals, create_function("&\$item", "\$item=doubleval(\$item);"));
+				$vals = array_unique($vals);
+				$val = implode(",", $vals);
+			}
+			elseif ($type == "datetime")
+			{
+				array_walk($vals, create_function("&\$item", "\$item=\"'\".\$GLOBALS[\"DB\"]->CharToDateFunction(\$GLOBALS[\"DB\"]->ForSql(\$item), \"FULL\").\"'\";"));
+				$vals = array_unique($vals);
+				$val = implode(",", $vals);
+			}
+			elseif ($type == "date")
+			{
+				array_walk($vals, create_function("&\$item", "\$item=\"'\".\$GLOBALS[\"DB\"]->CharToDateFunction(\$GLOBALS[\"DB\"]->ForSql(\$item), \"SHORT\").\"'\";"));
+				$vals = array_unique($vals);
+				$val = implode(",", $vals);
+			}
+			else
+			{
+				array_walk($vals, create_function("&\$item", "\$item=\"'\".\$GLOBALS[\"DB\"]->ForSql(\$item).\"'\";"));
+				$vals = array_unique($vals);
+				$val = implode(",", $vals);
+			}
+		}
+		else if ($type === "int")
+		{
+			$val = intval($vals);
+			$val = ($val > 0 ? $val : '');
+		}
+		elseif ($type === "double")
+		{
+			$val = doubleval(str_replace(",", ".", $vals));
+			$val = ($val > 0 ? $val : '');
+		}
+		elseif ($type === "datetime")
+		{
+			$val = $GLOBALS["DB"]->CharToDateFunction($GLOBALS["DB"]->ForSql($vals), "FULL");
+		}
+		elseif ($type === "date")
+		{
+			$val = $GLOBALS["DB"]->CharToDateFunction($GLOBALS["DB"]->ForSql($vals), "SHORT");
+		}
+		else if ($type == "string" || $type == "char")
+		{
+			$val = $GLOBALS["DB"]->ForSql($vals);
+		}
+
+		return $val;
+	}
+
 	function GetSelectFields($arAddParams = array())
 	{
 		global $DB;

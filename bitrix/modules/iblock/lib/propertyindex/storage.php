@@ -15,6 +15,7 @@ class Storage
 	const DICTIONARY = 2;
 	const STRING = 3;
 	const NUMERIC = 4;
+	const DATETIME = 5;
 
 	/**
 	 * @param integer $iblockId Information block identifier.

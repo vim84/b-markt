@@ -1559,7 +1559,7 @@ window.BxEditEventGridSearch = function(event)
 				{
 					this.MeetText.value = '';
 				}
-				this.Reinvite.checked = true;
+				this.Reinvite.checked = false;
 			}
 			else
 			{

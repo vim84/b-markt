@@ -495,10 +495,10 @@ final class Frame
 		}
 	}
 
-	public static function onBeforeLocalRedirect(&$url, $skip_security_check)
+	public static function onBeforeLocalRedirect(&$url, $skip_security_check, $isExternal)
 	{
 		global $APPLICATION;
-		if (!self::isAjaxRequest() || ($skip_security_check !== true && !preg_match("~^/\\w~", $url)))
+		if (!self::isAjaxRequest() || ($isExternal && $skip_security_check !== true))
 		{
 			return;
 		}
@@ -674,8 +674,8 @@ final class Frame
 
 			r.open("GET", u, true);
 			r.setRequestHeader("BX-ACTION-TYPE", "get_dynamic");
-			r.setRequestHeader("BX-REF", document.referrer || "");
 			r.setRequestHeader("BX-CACHE-MODE", m);
+			try { r.setRequestHeader("BX-REF", document.referrer || "");} catch(e) {}
 
 			if (m === "APPCACHE")
 			{
@@ -721,8 +721,8 @@ final class Frame
 JS;
 
 		return array(
-			"start" => "<style>".str_replace(array("\n", "\t"), "", self::getInjectedCSS())."</style>\n".
-						"<script>".str_replace(array("\n", "\t"), "", $inlineJS)."</script>"
+			"start" => '<style type="text/css">'.str_replace(array("\n", "\t"), "", self::getInjectedCSS())."</style>\n".
+						'<script type="text/javascript">'.str_replace(array("\n", "\t"), "", $inlineJS)."</script>"
 		);
 	}
 

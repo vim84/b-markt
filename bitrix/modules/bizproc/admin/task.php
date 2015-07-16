@@ -29,7 +29,7 @@ if ($taskId > 0)
 		array("ID" => $taskId, "USER_ID" => $allowAdminAccess ? $userId : $USER->GetID()),
 		false,
 		false,
-		array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS", "USER_ID")
+		array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS", "USER_ID", 'STATUS', 'USER_STATUS',)
 	);
 	$arTask = $dbTask->GetNext();
 }
@@ -45,7 +45,7 @@ if (!$arTask)
 			array("WORKFLOW_ID" => $workflowId, "USER_ID" => $allowAdminAccess ? $userId : $USER->GetID()),
 			false,
 			false,
-			array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS", "USER_ID")
+			array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS", "USER_ID", 'STATUS', 'USER_STATUS',)
 		);
 		$arTask = $dbTask->GetNext();
 	}
@@ -60,6 +60,7 @@ if (!$arTask)
 }
 else
 {
+	$arTask["PARAMETERS"]["DOCUMENT_ID"] = CBPStateService::GetStateDocumentId($arTask['WORKFLOW_ID']);
 	$backUrl = "/".ltrim(trim($_REQUEST["back_url"]), "\\/");
 	if (strlen($backUrl) <= 0)
 		$backUrl = "/bitrix/admin/bizproc_task_list.php?lang=".LANGUAGE_ID;
@@ -67,6 +68,12 @@ else
 		$backUrl = CBPDocument::GetDocumentAdminPage($arTask["PARAMETERS"]["DOCUMENT_ID"]);
 
 	$showType = "Form";
+
+	if ($arTask['STATUS'] > CBPTaskStatus::Running || $arTask['USER_STATUS'] > CBPTaskUserStatus::Waiting)
+	{
+		$showType = "Success";
+	}
+
 	if ($_SERVER["REQUEST_METHOD"] == "POST" && $_POST["action"] == "doTask" && check_bitrix_sessid())
 	{
 		$arErrorsTmp = array();
@@ -144,7 +151,7 @@ else
 					<?
 					$dbUserTmp = CUser::GetByID($arTask["USER_ID"]);
 					$arUserTmp = $dbUserTmp->GetNext();
-					$str = CUser::FormatName(COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID), $arUserTmp, true);
+					$str = $arUserTmp? CUser::FormatName(COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID), $arUserTmp, true) : GetMessage('BPAT_USER_NOT_FOUND');
 					$str .= " [".$arTask["USER_ID"]."]";
 					echo $str;
 					?>

@@ -95,6 +95,23 @@ BX.SocNetLogDestination.init = function(arParams)
 		var type = BX.SocNetLogDestination.obItemsSelected[arParams.name][itemId];
 		BX.SocNetLogDestination.runSelectCallback(itemId, type, arParams.name);
 	}
+
+	if (
+		typeof (arParams.LHEObjName) != 'undefined'
+		&& BX('div' + arParams.LHEObjName)
+	)
+	{
+		BX.addCustomEvent(BX('div' + arParams.LHEObjName), 'OnShowLHE', function(show) {
+			if (!show)
+			{
+				if (BX.SocNetLogDestination.isOpenDialog())
+				{
+					BX.SocNetLogDestination.closeDialog();
+				}
+				BX.SocNetLogDestination.closeSearch();
+			}
+		});
+	}
 };
 
 BX.SocNetLogDestination.reInit = function(name)
@@ -147,19 +164,25 @@ BX.SocNetLogDestination.openDialog = function(name, params)
 			}, this)
 		},
 		content:
-		'<div class="bx-finder-box bx-lm-box '+BX.SocNetLogDestination.obWindowClass[name] +'" style="width: 450px; padding-bottom: 8px;">'+
+		'<div class="bx-finder-box bx-lm-box '+BX.SocNetLogDestination.obWindowClass[name] +'" style="min-width: 450px; padding-bottom: 8px;">'+
 			(!BX.SocNetLogDestination.obLastEnable[name] && !BX.SocNetLogDestination.obSonetgroupsEnable[name] && !BX.SocNetLogDestination.obDepartmentEnable[name]? '':
 			'<div class="bx-finder-box-tabs">'+
-				(BX.SocNetLogDestination.obLastEnable[name] ? '<a hidefocus="true" onclick="return BX.SocNetLogDestination.SwitchTab(\''+name+'\', this, \'last\')" class="bx-finder-box-tab bx-lm-tab-last bx-finder-box-tab-selected" href="#switchTab"><span class="bx-finder-box-tab-left"></span><span class="bx-finder-box-tab-text">'+BX.message('LM_POPUP_TAB_LAST')+'</span><span class="bx-finder-box-tab-right"></span></a>':'')+
-				(BX.SocNetLogDestination.obSonetgroupsEnable[name] ? '<a hidefocus="true" onclick="return BX.SocNetLogDestination.SwitchTab(\''+name+'\', this, \'group\')" class="bx-finder-box-tab bx-lm-tab-sonetgroup" href="#switchTab"><span class="bx-finder-box-tab-left"></span><span class="bx-finder-box-tab-text">'+BX.message('LM_POPUP_TAB_SG')+'</span><span class="bx-finder-box-tab-right"></span></a>':'')+
-				(BX.SocNetLogDestination.obDepartmentEnable[name] ? '<a hidefocus="true" id="destDepartmentTab_'+name+'" onclick="return BX.SocNetLogDestination.SwitchTab(\''+name+'\', this, \'department\')" class="bx-finder-box-tab bx-lm-tab-department" href="#switchTab"><span class="bx-finder-box-tab-left"></span><span class="bx-finder-box-tab-text">'+(BX.SocNetLogDestination.obUserSearchArea[name] == 'E' ? BX.message('LM_POPUP_TAB_STRUCTURE_EXTRANET') : BX.message('LM_POPUP_TAB_STRUCTURE'))+'</span><span class="bx-finder-box-tab-right"></span></a>':'')+
+				(BX.SocNetLogDestination.obLastEnable[name] ? '<a hidefocus="true" onclick="return BX.SocNetLogDestination.SwitchTab(\''+name+'\', this, \'last\')" class="bx-finder-box-tab bx-lm-tab-last bx-finder-box-tab-selected" href="#switchTab">'+BX.message('LM_POPUP_TAB_LAST')+'</a>':'')+
+				(BX.SocNetLogDestination.obSonetgroupsEnable[name] ? '<a hidefocus="true" onclick="return BX.SocNetLogDestination.SwitchTab(\''+name+'\', this, \'group\')" class="bx-finder-box-tab bx-lm-tab-sonetgroup" href="#switchTab">'+BX.message('LM_POPUP_TAB_SG')+'</a>':'')+
+				(BX.SocNetLogDestination.obDepartmentEnable[name] ? '<a hidefocus="true" id="destDepartmentTab_'+name+'" onclick="return BX.SocNetLogDestination.SwitchTab(\''+name+'\', this, \'department\')" class="bx-finder-box-tab bx-lm-tab-department" href="#switchTab">'+(BX.SocNetLogDestination.obUserSearchArea[name] == 'E' ? BX.message('LM_POPUP_TAB_STRUCTURE_EXTRANET') : BX.message('LM_POPUP_TAB_STRUCTURE'))+'</a>':'')+
 			'</div><div class="popup-window-hr popup-window-buttons-hr"><i></i></div>')+
 			'<div class="bx-finder-box-tabs-content bx-finder-box-tabs-content-window">'+
-				(BX.SocNetLogDestination.obLastEnable[name] ? '<div class="bx-finder-box-tab-content bx-lm-box-tab-content-last' + (BX.SocNetLogDestination.obLastEnable[name] ? ' bx-finder-box-tab-content-selected' : '') + '">'
-					+BX.SocNetLogDestination.getItemLastHtml(false, false, name)+
-				'</div>' : '') +
-				(BX.SocNetLogDestination.obSonetgroupsEnable[name] ? '<div class="bx-finder-box-tab-content bx-lm-box-tab-content-sonetgroup' + (!BX.SocNetLogDestination.obLastEnable[name] && BX.SocNetLogDestination.obSonetgroupsEnable[name] ? ' bx-finder-box-tab-content-selected' : '') + '"></div>' : '') +
-				(BX.SocNetLogDestination.obDepartmentEnable[name] ? '<div class="bx-finder-box-tab-content bx-lm-box-tab-content-department' + (!BX.SocNetLogDestination.obLastEnable[name] && !BX.SocNetLogDestination.obSonetgroupsEnable[name] && BX.SocNetLogDestination.obDepartmentEnable[name] ? ' bx-finder-box-tab-content-selected' : '') + '"></div>' : '') +
+				'<table class="bx-finder-box-tabs-content-table">'+
+					'<tr>'+
+						'<td class="bx-finder-box-tabs-content-cell">'+
+							(BX.SocNetLogDestination.obLastEnable[name] ? '<div class="bx-finder-box-tab-content bx-lm-box-tab-content-last' + (BX.SocNetLogDestination.obLastEnable[name] ? ' bx-finder-box-tab-content-selected' : '') + '">'
+								+BX.SocNetLogDestination.getItemLastHtml(false, false, name)+
+							'</div>' : '') +
+							(BX.SocNetLogDestination.obSonetgroupsEnable[name] ? '<div class="bx-finder-box-tab-content bx-lm-box-tab-content-sonetgroup' + (!BX.SocNetLogDestination.obLastEnable[name] && BX.SocNetLogDestination.obSonetgroupsEnable[name] ? ' bx-finder-box-tab-content-selected' : '') + '"></div>' : '') +
+							(BX.SocNetLogDestination.obDepartmentEnable[name] ? '<div class="bx-finder-box-tab-content bx-lm-box-tab-content-department' + (!BX.SocNetLogDestination.obLastEnable[name] && !BX.SocNetLogDestination.obSonetgroupsEnable[name] && BX.SocNetLogDestination.obDepartmentEnable[name] ? ' bx-finder-box-tab-content-selected' : '') + '"></div>' : '') +
+						'</td>'+
+					'</tr>'+
+				'</table>'+
 			'</div>'+
 		'</div>'
 	});
@@ -217,13 +240,20 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 
 		for (var group in items)
 		{
-			if((BX.SocNetLogDestination.obDepartmentSelectDisable[name] && group == 'department'))
+			if (
+				BX.SocNetLogDestination.obDepartmentSelectDisable[name]
+				&& group == 'department'
+			)
+			{
 				continue;
+			}
 
 			for (var i in BX.SocNetLogDestination.obItems[name][group])
 			{
 				if (BX.SocNetLogDestination.obItemsSelected[name][i])
+				{
 					continue;
+				}
 
 				partsSearchText = text.toLowerCase().split(" ");
 
@@ -232,6 +262,10 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 					if (BX.SocNetLogDestination.obItems[name][group][i].name.toLowerCase().indexOf(text.toLowerCase()) < 0)
 					{
 						continue;
+					}
+					else
+					{
+						bFound = true;
 					}
 				}
 				else
@@ -457,11 +491,17 @@ BX.SocNetLogDestination.openSearch = function(items, name, params)
 			}, this)
 		},
 		content:
-		'<div class="bx-finder-box bx-lm-box '+BX.SocNetLogDestination.obWindowClass[name] +'" style="width: 450px; padding-bottom: 8px;">'+
+		'<div class="bx-finder-box bx-lm-box '+BX.SocNetLogDestination.obWindowClass[name] +'" style="min-width: 450px; padding-bottom: 8px;">'+
 			'<div class="bx-finder-box-tabs-content">'+
-				'<div id="bx-lm-box-search-content" class="bx-finder-box-tab-content bx-finder-box-tab-content-selected">'
-					+BX.SocNetLogDestination.getItemLastHtml(items, true, name)+
-				'</div>'+
+				'<table class="bx-finder-box-tabs-content-table">'+
+					'<tr>'+
+						'<td class="bx-finder-box-tabs-content-cell">'+
+							'<div id="bx-lm-box-search-content" class="bx-finder-box-tab-content bx-finder-box-tab-content-selected">'
+								+BX.SocNetLogDestination.getItemLastHtml(items, true, name)+
+							'</div>'+
+						'</td>'+
+					'</tr>'+
+				'</table>'+
 			'</div>'+
 		'</div>'
 	});
@@ -914,12 +954,18 @@ BX.SocNetLogDestination.getHtmlByTemplate7 = function(name, item, params)
 BX.SocNetLogDestination.SwitchTab = function(name, currentTab, type)
 {
 	var tabsContent = BX.findChildren(
-		BX.findChild(currentTab.parentNode.parentNode, { tagName : "div", className : "bx-finder-box-tabs-content"}),
+		BX.findChild(
+			currentTab.parentNode.parentNode,
+			{ tagName : "td", className : "bx-finder-box-tabs-content-cell"},
+			true
+		),
 		{ tagName : "div" }
 	);
 
 	if (!tabsContent)
+	{
 		return false;
+	}
 
 	var tabIndex = 0;
 	var tabs = BX.findChildren(currentTab.parentNode, { tagName : "a" });
@@ -1074,7 +1120,6 @@ BX.SocNetLogDestination.unSelectItem = function(name, element, template, itemId,
 	if(!name)
 		name = 'lm';
 
-	delete BX.SocNetLogDestination.obItemsLast[name][type][itemId];
 	if (!BX.SocNetLogDestination.obItemsSelected[name][itemId])
 		return false;
 

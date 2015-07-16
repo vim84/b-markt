@@ -43,6 +43,23 @@ else
 	</NOSCRIPT>
 
 	<script>
+
+		<?if(CSaleLocation::isLocationProEnabled()):?>
+
+			var BXCallAllowed = false;
+			function submitFormProxy(item, isFinal)
+			{
+				if(isFinal && BXCallAllowed){
+					BXCallAllowed = false;
+					submitForm();
+				}
+			}
+
+			BX(function(){
+				BXCallAllowed = true;
+			});
+		<?endif?>
+
 		function submitForm(val)
 		{
 			if(val != 'Y') 
@@ -110,7 +127,20 @@ else
 						}
 					}
 					else
-						BX('order_form_content').innerHTML = reply;
+					{
+						var reply = BX.processHTML(reply);
+
+						BXCallAllowed = false;
+
+						BX('order_form_content').innerHTML = reply.HTML;
+						if(typeof reply.SCRIPT !== 'undefined')
+						{
+							for(var k in reply.SCRIPT)
+								BX.evalGlobal(reply.SCRIPT[k].JS);
+						}
+
+						BXCallAllowed = true;
+					}
 					app.hidePopupLoader();
 
 				},

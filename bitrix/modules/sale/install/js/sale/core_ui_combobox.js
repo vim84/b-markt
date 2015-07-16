@@ -8,41 +8,41 @@ BX.ui.combobox = function(opts, nf){
 	BX.merge(this, {
 		opts: { // default options
 
-			pageSize: 				5, // amount of variants to show
+			pageSize:				5, //20// amount of variants to show
 
-			selectedItem: 			false,
-			knownItems: 			[], // already known items which go directly to the cache
+			selectedItem:			false,
+			knownItems:				[], // already known items which go directly to the cache
 
 			// behaviour
-			//selectOnBlur: 			true, // if true, plugin will select first item in variant list when user types tab button on fake input with string being incomplete typed in
-			selectByClick: 			true, // item can be selected by clicking on it
-			chooseUsingArrows: 		true, // item can be choosable when user presses arrow up\down while input is in focus
-			selectOnEnter: 			true, // item can be selected by pressing Enter on it
-			openDdByAltArrow: 		true, // dropdown can be opened by pressing Alt+ArrowDown when input is in focus
-			closeDdByEscape: 		true, // dropdown can be closed by pressing Esc when input is in focus
+			//selectOnBlur:			true, // if true, plugin will select first item in variant list when user types tab button on fake input with string being incomplete typed in
+			selectByClick:			true, // item can be selected by clicking on it
+			chooseUsingArrows:		true, // item can be choosable when user presses arrow up\down while input is in focus
+			selectOnEnter:			true, // item can be selected by pressing Enter on it
+			openDdByAltArrow:		true, // dropdown can be opened by pressing Alt+ArrowDown when input is in focus
+			closeDdByEscape:		true, // dropdown can be closed by pressing Esc when input is in focus
 
-			scrollToVariantOnArrow: true,
-			closePopupOnOuterClick: true, // if true, popup will be closed when user clicks outside the widget
+			scrollToVariantOnArrow:	true,
+			closePopupOnOuterClick:	true, // if true, popup will be closed when user clicks outside the widget
 
 			messages: {
-				nothingFound: 		'Sorry, nothing found',
-				notSelected: 		'-- Not selected',
-				error: 				'Error occured',
-				clearSelection: 	'Deselect'
+				nothingFound:		'Sorry, nothing found',
+				notSelected:		'-- Not selected',
+				error:				'Error occured',
+				clearSelection:		'Deselect'
 			},
 
 			// magic design-related values
-			arrowScrollAdditional: 	0,
-			pageUpWardOffset: 		0,
-			wrapTagName: 			'span',
-			dropdownHConstraint: 		0, // limit dropdown height with this value, if greather than zero
-			dropdownHConstraintType: 	'max-height', // constraint type of dropdown height
+			arrowScrollAdditional:		0,
+			pageUpWardOffset:			0,
+			wrapTagName:				'span',
+			dropdownHConstraint:		0, // limit dropdown height with this value, if greather than zero
+			dropdownHConstraintType:	'max-height', // constraint type of dropdown height
 
 			// fx and decorators
-			inputDebounceTimeout: 	500, // time of reaction on input content change. Should not be too small
-			scrollThrottleTimeout: 	300, // timeout of reaction on dropdown scroll. Should not be too small
-			selectByClickTimeout: 	200, // for better fx perception, should not be too large
-			startSearchLen: 		2, // minimum string length search will start with
+			inputDebounceTimeout:	500, // time of reaction on input content change. Should not be too small
+			scrollThrottleTimeout:	300, // timeout of reaction on dropdown scroll. Should not be too small
+			selectByClickTimeout:	200, // for better fx perception, should not be too large
+			startSearchLen:			2, // minimum string length search will start with
 
 			bindEvents: {
 				'init': function(){ // after all we do this
@@ -51,29 +51,29 @@ BX.ui.combobox = function(opts, nf){
 			}
 		},
 		vars: { // significant variables
-			opened: 				false, // whether dropdown is opened or not
-			eventLock: 				false,
-			displayPageMutex: 		false,
-			keyboardMutex: 			false,
-			allEventMutex: 			false,
+			opened:					false, // whether dropdown is opened or not
+			eventLock:				false,
+			displayPageMutex:		false,
+			keyboardMutex:			false,
+			allEventMutex:			false,
 
 			cache: { // item cache
-				nodes: 				{}, // data index, keeps data for each node ever loaded
-				search: 			{ // cache for request: map from query string to a set of items in responce. Here pagenavigation can be implemented without a trouble
-					origin: false // origin order came from item discover
-				} 
+				nodes:				{}, // data index, keeps data for each node ever loaded
+				search:				{ // cache for request: map from query string to a set of items in responce. Here pagenavigation can be implemented without a trouble
+					origin: false // this is the default item order, "as it came" from options or item discover. On open popup without filtering this "index" is used to output items
+				}
 			},
 
-			applyFilter: 			false,
-			filtered: 				[], // items currently filtered by the last filter or non-filter tryDisplayPage() call
-			lastSource: 			false,
+			applyFilter:			false,
+			filtered:				[], // items currently filtered by the last filter or non-filter tryDisplayPage() call
+			lastSource:				false,
 
-			pager: 					false, // control that is responsible for lazy page display
-			selector: 				false, // control that is responsible for handling arrow-up\down item selection
+			pager:					false, // control that is responsible for lazy page display
+			selector:				false, // control that is responsible for handling arrow-up\down item selection
 
-			value: 					false, // actually, [VALUE,DISPLAY] pair id
+			value:					false, // actually, [VALUE,DISPLAY] pair id
 
-			outSideClickScope: 		null
+			outSideClickScope:		null
 		},
 		ctrls: { // links to controls
 		},
@@ -223,11 +223,11 @@ BX.merge(BX.ui.combobox.prototype, {
 
 	bindEvents: function(){
 
-		var sc = 	this.ctrls,
-			so = 	this.opts,
-			sv = 	this.vars,
-			ctx = 	this,
-			code = 	this.sys.code;
+		var sc =	this.ctrls,
+			so =	this.opts,
+			sv =	this.vars,
+			ctx =	this,
+			code =	this.sys.code;
 
 		this.bindEventsMouse();
 		this.bindEventsKeyboard();
@@ -271,11 +271,11 @@ BX.merge(BX.ui.combobox.prototype, {
 
 	bindEventsMouse: function(){
 
-		var sc = 	this.ctrls,
-			so = 	this.opts,
-			sv = 	this.vars,
-			ctx = 	this,
-			code = 	this.sys.code;
+		var sc =	this.ctrls,
+			so =	this.opts,
+			sv =	this.vars,
+			ctx =	this,
+			code =	this.sys.code;
 
 		if(so.selectByClick){
 
@@ -296,16 +296,11 @@ BX.merge(BX.ui.combobox.prototype, {
 				if(typeof id != 'undefined' && typeof sv.cache.nodes[id] != 'undefined'){
 					ctx.vars.selector.selectById(id); // aware selector of which id is currently selected
 
-					// makeup purpose, just as an experiment
-					var d = new BX.deferred();
-					d.done(function(){
-						//ctx.selectItem(id);
-						ctx.setValue(id);
-						if(so.focusOnMouseSelect)
-							sc.inputs.fake.focus();
-					});
-					d.startRace(so.selectByClickTimeout, true);
-					ctx.fireEvent('item-selected-by-mouse', [id, node, d]);
+					ctx.setValue(id);
+					if(so.focusOnMouseSelect)
+						sc.inputs.fake.focus();
+
+					ctx.fireEvent('item-selected-by-mouse', [id, node]);
 				}else
 					ctx.setValue('');
 			});
@@ -343,10 +338,10 @@ BX.merge(BX.ui.combobox.prototype, {
 
 	bindEventsKeyboard: function(){
 
-		var sc = 	this.ctrls,
-			so = 	this.opts,
-			sv = 	this.vars,
-			ctx = 	this;
+		var sc =	this.ctrls,
+			so =	this.opts,
+			sv =	this.vars,
+			ctx =	this;
 
 		if('value' in sc.inputs.fake){ // check if it is an input at least
 
@@ -391,26 +386,31 @@ BX.merge(BX.ui.combobox.prototype, {
 
 						if(so.scrollToVariantOnArrow){
 
-							var item = sv.selector.getSelected().data.node;
+							var selected = sv.selector.getSelected();
 
-							// here we determine if currently selected item is not in the visible area
-							var pos = BX.pos(item, sc.dropdown);
+							if(typeof selected != 'undefined'){
 
-							var a = pos.top;
-							var b = pos.height;
-							var c = sc.dropdown.clientHeight;
-							var d = sc.dropdown.scrollTop;
+								var item = selected.data.node;
 
-							var e = so.arrowScrollAdditional;
+								// here we determine if currently selected item is not in the visible area
+								var pos = BX.pos(item, sc.dropdown);
 
-							var scrollTo = false;
-							if(a + b > c + d)
-								scrollTo = a + b - (c + d) + e;
-							else if(a < d)
-								scrollTo = -(d - a + e);
+								var a = pos.top;
+								var b = pos.height;
+								var c = sc.dropdown.clientHeight;
+								var d = sc.dropdown.scrollTop;
 
-							if(scrollTo != false)
-								sv.pager.scrollTo(scrollTo, false, 1);
+								var f = so.arrowScrollAdditional;
+
+								var scrollTo = false;
+								if(a + b > c + d)
+									scrollTo = a + b - (c + d) + f;
+								else if(a < d)
+									scrollTo = -(d - a + f);
+
+								if(scrollTo != false)
+									sv.pager.scrollTo(scrollTo, false, 1);
+							}
 						}
 
 						BX.PreventDefault(e);
@@ -460,28 +460,8 @@ BX.merge(BX.ui.combobox.prototype, {
 
 	// common
 
-	// fill current item cache with values
-	fillCache: function(items){
-
-		var sv = this.vars;
-
-		if(!items.length)
-			return;
-
-		var needFillOrigin = false;
-		if(sv.cache.search.origin == false){
-			needFillOrigin = true;
-			sv.cache.search.origin = [];
-		}
-
-		// first fill items themselves
-		for(var k in items){
-			if(needFillOrigin)
-				sv.cache.search.origin.push(items[k].VALUE);
-			sv.cache.nodes[items[k].VALUE] = items[k];
-		}
-
-		this.fireEvent('after-cache-filled', []);
+	addItems2Cache: function(items){
+		this.fillCache(items);
 	},
 
 	clearCache: function(){
@@ -491,6 +471,18 @@ BX.merge(BX.ui.combobox.prototype, {
 	// set focus to fake input
 	focus: function(){
 		this.ctrls.inputs.fake.focus();
+	},
+
+	// todo
+	checkDisabled: function(){
+	},
+
+	// todo
+	disable: function(){
+	},
+
+	// todo
+	enable: function(){
 	},
 
 	setValue: function(value){
@@ -508,9 +500,9 @@ BX.merge(BX.ui.combobox.prototype, {
 		else // set
 			this.setCurrentValue('');
 
-		var sv = 	this.vars,
-			sc = 	this.ctrls,
-			ctx = 	this;
+		var sv =	this.vars,
+			sc =	this.ctrls,
+			ctx =	this;
 
 		// todo: here we require another semaphore to ensure noboy calls setValue twice while discover is in progress
 
@@ -539,11 +531,11 @@ BX.merge(BX.ui.combobox.prototype, {
 		this.ctrls.inputs.fake.setAttribute('tabindex', index);
 	},
 
-	cancelRequest: function(){
-	},
-
 	setTargetInputName: function(newName){
 		this.ctrls.inputs.origin.setAttribute('name', newName);
+	},
+	
+	cancelRequest: function(){
 	},
 
 	// low-level, use with caution
@@ -575,6 +567,36 @@ BX.merge(BX.ui.combobox.prototype, {
 	},
 
 	// specific
+
+	// fill current item cache with values
+	fillCache: function(items, parameters){
+
+		var sv = this.vars;
+
+		if(!items.length)
+			return;
+
+		if(!BX.type.isPlainObject(parameters))
+			parameters = {};
+
+		parameters.modifyOrigin =			parameters.modifyOrigin || sv.cache.search.origin === false;
+		var arrayOperation =				parameters.modifyOriginPosition == 'prepend' ? 'unshift' : 'push';
+
+		if(sv.cache.search.origin === false)
+			sv.cache.search.origin = [];
+
+		// first fill items themselves
+		for(var k in items)
+		{
+			if(parameters.modifyOrigin)
+			{
+				sv.cache.search.origin[arrayOperation](items[k].VALUE);
+			}
+			sv.cache.nodes[items[k].VALUE] = items[k];
+		}
+
+		this.fireEvent('after-cache-filled', []);
+	},
 
 	getLastSource: function(){
 		return this.vars.lastSource;
@@ -641,8 +663,8 @@ BX.merge(BX.ui.combobox.prototype, {
 
 	discoverItems: function(callback){
 
-		var sv = 	this.vars,
-			ctx = 	this;
+		var sv =	this.vars,
+			ctx =	this;
 
 		var discover = new BX.deferred();
 
@@ -677,17 +699,19 @@ BX.merge(BX.ui.combobox.prototype, {
 
 	tryDisplayPage: function(source){
 
-		var sv = 	this.vars,
-			ctx = 	this,
-			query = this.ctrls.inputs.fake.value;
+		var sv =	this.vars,
+			ctx =	this,
+			query =	this.ctrls.inputs.fake.value;
 
 		sv.applyFilter = (source == 'search' && BX.type.isNotEmptyString(query));
 		sv.lastSource = source;
 
 		this.discoverItems(function(){
 
+			ctx.fireEvent('before-display-page', []);
+
 			// page number to be displayed with
-			var pageNum = 	sv.applyFilter ? 0 : ctx.getPageNumberOfSelected();
+			var pageNum = sv.applyFilter ? 0 : ctx.getPageNumberOfSelected();
 			sv.filtered = [];
 
 			if(sv.applyFilter){
@@ -726,7 +750,7 @@ BX.merge(BX.ui.combobox.prototype, {
 
 	getPage: function(pageNum){
 
-		var sv = 		this.vars,
+		var sv =		this.vars,
 			so =		this.opts;
 
 		return sv.filtered.slice((pageNum * so.pageSize), ((pageNum + 1) * so.pageSize));
@@ -789,12 +813,17 @@ BX.merge(BX.ui.combobox.prototype, {
 		var pagerRows = [];
 		var selectorRows = [];
 
-		for(var k in page)
-			this.createItemForPage(page[k], sv.cache.nodes[page[k]], pagerRows, selectorRows);
-
+		// special option "deselect"
 		if(sv.lastSource == 'toggle' && pageNum == 0 && sv.value !== false){
-			var domItem = this.createItemForPage('', {DISPLAY: so.messages.clearSelection}, pagerRows, selectorRows, true);
+			var domItem = this.createItemForPage('', {DISPLAY: so.messages.clearSelection}, pagerRows, selectorRows);
 			BX.addClass(domItem, 'bx-ui-'+code+'-deselect-item');
+		}
+
+		var id2dom = {};
+		for(var k in page)
+		{
+			this.createItemForPage(page[k], sv.cache.nodes[page[k]], pagerRows, selectorRows);
+			id2dom[sv.cache.nodes[page[k]].VALUE] = pagerRows[k];
 		}
 
 		this.fireEvent('after-page-built', [pageNum, pagerRows, selectorRows]);
@@ -802,18 +831,33 @@ BX.merge(BX.ui.combobox.prototype, {
 		this.showDropdown();
 
 		sv.selector.addPage(selectorRows, pageNum);
+
 		if(this.checkPageIsLast(pageNum))
 			sv.pager.setBottomReached();
 
 		var prevCnt = this.vars.pager.getPageCount();
+
+		sv.pager.lockScrollEvents();
 		sv.pager.addPage(pagerRows, pageNum);
 
 		if(prevCnt == 0){
-			if(sv.value !== false)
+			var selected = false;
+			if(sv.value !== false){
 				this.vars.selector.selectById(sv.value);
-			else
+				selected = sv.value;
+			}else{
 				this.vars.selector.selectFirst();
+				selected = this.vars.selector.getSelected().id;
+			}
+
+			// here we must additionally scroll page to the selected node
+			if(selected !== false && typeof id2dom[selected] != 'undefined'){
+				this.vars.pager.scrollToNode(id2dom[selected]);
+			}
 		}
+
+		sv.pager.unLockScrollEvents();
+		sv.pager.dispatchScrollEvents();
 
 		this.fireEvent('after-page-display', [sv.cache.nodes, pageNum]);
 	},
@@ -836,6 +880,12 @@ BX.merge(BX.ui.combobox.prototype, {
 	},
 
 	showDropdown: function(){
+
+		if(this.vars.opened)
+			return;
+
+		if(this.vars.opened)
+			return;
 
 		var flip = !this.vars.opened;
 		this.vars.opened = true;
@@ -1055,7 +1105,7 @@ BX.ui.itemSelectManager = function(){
 	this.fireEvent = function(eventName, args, scope){
 		scope = scope || this;
 		args = args || [];
-		
+
 		BX.onCustomEvent(scope, 'bx-ui-item-select-manager-'+eventName, args);
 	},
 
@@ -1096,7 +1146,7 @@ BX.ui.itemSelectManager = function(){
 
 	this.append = function(item){
 		var tail = this.tail;
-		
+
 		this.data[item.id] = {id: item.id, data: item.data, next: null, previous: tail};
 
 		if(this.tail != null)
@@ -1113,7 +1163,7 @@ BX.ui.itemSelectManager = function(){
 
 	this.prepend = function(item){
 		var head = this.head;
-		
+
 		this.data[item.id] = {id: item.id, data: item.data, next: head, previous: null};
 
 		if(this.head != null)

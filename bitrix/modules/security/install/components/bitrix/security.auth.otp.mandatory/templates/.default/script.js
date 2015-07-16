@@ -56,6 +56,28 @@ BX.Security.AuthOtpMandatory = (function getAuthOtpMandatory(BX)
 		);
 
 		this._errorContainer = this._container.querySelector('[data-role="error-container"]');
+
+		BX.bind(
+			BX('connect-mobile-manual-input'),
+			'click',
+			function(event)
+			{
+				BX.PreventDefault(event);
+				BX('connect-by-manual-input').style.display = '';
+				BX('connect-by-qr').style.display = 'none';
+			}
+		);
+
+		BX.bind(
+			BX('connect-mobile-scan-qr'),
+			'click',
+			function(event)
+			{
+				BX.PreventDefault(event);
+				BX('connect-by-manual-input').style.display = 'none';
+				BX('connect-by-qr').style.display = '';
+			}
+		);
 	};
 
 	Otp.prototype.onCheck = function(elSync1, elSync2)

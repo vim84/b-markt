@@ -30,6 +30,17 @@ function error_alert()
 		}
 	}
 }
+
+function fancy_output($content)
+{
+	if (isTextMode())
+	{
+		return sprintf('<pre>%s</pre>', htmlspecialcharsEx($content));
+	}
+
+	return sprintf('<p>%s</e>', $content);
+}
+
 define("BX_COMPRESSION_DISABLED", true);
 /* This code captures parse errors*/
 
@@ -72,19 +83,10 @@ if(
 		if (isTextMode())
 			ini_set('html_errors', 0);
 
-		ob_start();
+		ob_start('fancy_output');
 		$query = rtrim($_POST['query'], ";\x20\n").";\n";
 		eval($query);
-		$response = ob_get_clean();
-
-		if (isTextMode())
-		{
-			printf('<pre>%s</pre>', htmlspecialcharsEx($response));
-		}
-		else
-		{
-			printf('<p>%s</p>', $response);
-		}
+		ob_end_flush();
 	}
 
 	require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/epilog_admin_js.php");

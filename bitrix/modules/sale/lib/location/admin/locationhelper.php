@@ -129,13 +129,19 @@ final class LocationHelper extends NameHelper
 		$errors = parent::validateUpdateRequest($data);
 
 		// if type is set in data and not empty, it must exist
-		if(strlen($data['TYPE_ID']))
+		$typeError = false;
+		if(intval($data['TYPE_ID']))
 		{
-			$types = self::getTypeList();
+			$type = Location\TypeTable::getList(array('select' => array('ID'), 'filter' => array('=ID' => intval($data['TYPE_ID']))))->fetch();
 
-			if(!($data['TYPE_ID'] = intval($data['TYPE_ID'])) || !isset($types[$data['TYPE_ID']]))
-				$errors[] = Loc::getMessage('SALE_LOCATION_ADMIN_LOCATION_HELPER_ENTITY_TYPE_ID_UNKNOWN_ERROR');
+			if(!$type)
+				$typeError = true;
 		}
+		else
+			$typeError = true;
+
+		if($typeError)
+			$errors[] = Loc::getMessage('SALE_LOCATION_ADMIN_LOCATION_HELPER_ENTITY_TYPE_ID_UNKNOWN_ERROR');
 
 		// formally check service ids in EXTERNAL parameter
 		if(is_array($data['EXTERNAL']) && !empty($data['EXTERNAL']))
@@ -201,9 +207,62 @@ final class LocationHelper extends NameHelper
 		return $parameters;
 	}
 
+	// crud over entity: update
+	public static function update($primary, $data, $batch = false)
+	{
+		$success = true;
+		$entityClass = static::getEntityClass();
+
+		$data = static::convertToArray($data);
+		$data = static::proxyUpdateRequest($data);
+		$errors = static::validateUpdateRequest($data);
+
+		if(empty($errors))
+		{
+			$res = $entityClass::update($primary, $data, array('RESET_LEGACY' => !$batch));
+			if(!$res->isSuccess())
+			{
+				$success = false;
+				$errors = $res->getErrorMessages();
+			}
+		}
+		else
+			$success = false;
+
+		return array(
+			'success' => $success,
+			'errors' => $errors
+		);
+	}
+
+	// crud over entity: delete
+	public static function delete($primary, $batch = false)
+	{
+		$success = true;
+		$errors = array();
+		$entityClass = static::getEntityClass();
+
+		$res = $entityClass::delete($primary, array('RESET_LEGACY' => !$batch));
+		if(!$res->isSuccess())
+		{
+			$success = false;
+			$errors = $res->getErrorMessages();
+		}
+
+		return array(
+			'success' => $success,
+			'errors' => $errors
+		);
+	}
+
 	#####################################
 	#### Entity-specific
 	#####################################
+
+	public static function checkFirstImportDone()
+	{
+		return \Bitrix\Main\Config\Option::get('sale', 'sale_locationpro_import_performed', '') == 'Y';
+	}
 
 	public static function getParentId($id)
 	{
@@ -244,30 +303,23 @@ final class LocationHelper extends NameHelper
 		return $services;
 	}
 
+	/**
+	 * @deprecated
+	 * 
+	 * Use TypeHelper::getTypes() instead
+	 */
 	public static function getTypeList()
 	{
 		static $types;
 
 		if($types == null)
 		{
-			$res = Location\TypeTable::getList(array(
-				'filter' => array(
-					'NAME.LANGUAGE_ID' => LANGUAGE_ID,
-				),
-				'select' => array(
-					'ID',
-					'LNAME' => 'NAME.NAME'
-				),
-				'order' => array(
-					'SORT' => 'asc',
-					'NAME.NAME' => 'asc'
-				)
-			));
-			$res->addReplacedAliases(array('LNAME' => 'NAME'));
-
 			$types = array();
-			while($item = $res->Fetch())
-				$types[intval($item['ID'])] = htmlspecialcharsbx($item['NAME']);
+			$typesWithNames = Location\Admin\TypeHelper::getTypes();
+			foreach($typesWithNames as $type)
+			{
+				$types[intval($type['ID'])] = $type['NAME_CURRENT'];
+			}
 		}
 
 		return $types;
@@ -494,37 +546,52 @@ final class LocationHelper extends NameHelper
 		}
 	}
 
-	public static function getLocationPathDisplay($code)
+	public static function getLocationStringById($primary, $behaviour = array('INVERSE' => false, 'DELIMITER' => ', ', 'LANGUAGE_ID' => LANGUAGE_ID))
 	{
-		if(!strlen($code))
-			return '';
+		return static::getLocationStringByCondition(array('=ID' => $primary), $behaviour);
+	}
 
-		$parameters = array(
-			'select' => array('LNAME' => 'NAME.NAME'),
-			'filter' => array('NAME.LANGUAGE_ID' => LANGUAGE_ID)
-		);
+	public static function getLocationStringByCode($primary, $behaviour = array('INVERSE' => false, 'DELIMITER' => ', ', 'LANGUAGE_ID' => LANGUAGE_ID))
+	{
+		return static::getLocationStringByCondition(array('=CODE' => $primary), $behaviour);
+	}
+
+	protected static function getLocationStringByCondition($condition, $behaviour = array('INVERSE' => false, 'DELIMITER' => ', ', 'LANGUAGE_ID' => LANGUAGE_ID))
+	{
+		if(isset($behaviour) && !is_array($behaviour))
+			$behaviour = array();
+
+		if(!isset($behaviour['DELIMITER']))
+			$behaviour['DELIMITER'] = ', ';
+
+		if(!isset($behaviour['LANGUAGE_ID']))
+			$behaviour['LANGUAGE_ID'] = LANGUAGE_ID;
 
 		try
 		{
-			$res = Location\LocationTable::getPathToNodeByCode($code, $parameters);
+			$res = Location\LocationTable::getPathToNodeByCondition($condition, array('select' => array('LNAME' => 'NAME.NAME'), 'filter' => array('=NAME.LANGUAGE_ID' => $behaviour['LANGUAGE_ID'])));
+			$path = array();
+			while($item = $res->fetch())
+			{
+				$path[] = $item['LNAME'];
+			}
+
+			if($behaviour['INVERSE'])
+				$path = array_reverse($path);
+
+			return implode($behaviour['DELIMITER'], $path);
 		}
-		catch(\Exception $e)
+		catch(\Bitrix\Main\SystemException $e)
 		{
-			return $code;
+			return '';
 		}
-
-		$path = array();
-		while($item = $res->fetch())
-			$path[] = $item['LNAME'];
-
-		return implode(', ', array_reverse($path));
 	}
 
 	public static function getLocationsByZip($zip, $parameters = array())
 	{
 		$zip = trim($zip);
 
-		if(!strlen($zip) || !preg_match('#^\d{6}$#', $zip))
+		if(!strlen($zip) || !preg_match('#^\d+$#', $zip))
 			throw new Main\SystemException('Empty or incorrect zip code passed');
 
 		if(!is_array($parameters))
@@ -544,6 +611,20 @@ final class LocationHelper extends NameHelper
 	// checks if new location enabled or not
 	public static function checkLocationEnabled()
 	{
-		return static::checkLocationMigrated() && Main\Config\Option::get('sale', 'sale_locationpro_enabled', '') == 'Y';
+		return static::checkLocationMigrated();
+	}
+
+	/**
+	 * @deprecated
+	 */
+	public static function getLocationPathDisplay($primary)
+	{
+		if(!strlen($primary))
+			return '';
+
+		if((string) $primary === (string) intval($primary))
+			return static::getLocationStringById($primary);
+		else
+			return static::getLocationStringByCode($primary);
 	}
 }

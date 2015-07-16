@@ -84,7 +84,7 @@
 		if (typeof(BXIM) != 'undefined' && BXIM.messenger && BXIM.messenger.closeMenuPopup)
 			BXIM.messenger.closeMenuPopup();
 
-		if (BX.calendar && BX.calendar.get().popup)
+		if (typeof(BX) != 'undefined' && BX.calendar && BX.calendar.get().popup)
 			BX.calendar.get().popup.close();
 	};
 
@@ -347,6 +347,16 @@
 			textElement = textElement.replace(new RegExp("("+highlightText.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")+")",'ig'), '<span class="bx-messenger-highlight">$1</span>');
 		}
 
+		if (false)
+		{
+			textElement = textElement.replace(
+				/^(\s*<img\s+src=[^>]+?data-code=[^>]+?width=")(\d+)("[^>]+?height=")(\d+)("[^>]+?class="bx-smile"\s*\/?>\s*)$/,
+				function doubleSmileSize(match, start, width, middle, height, end) {
+					return start + (parseInt(width, 10) * 2) + middle + (parseInt(height, 10) * 2) + end;
+				}
+			);
+		}
+
 		if (true)
 		{
 			textElement = textElement.replace(/\[USER=([0-9]{1,})\](.*?)\[\/USER\]/ig, function(whole, userId, text)
@@ -550,8 +560,10 @@
 	};
 
 	/* Concact List */
-	BX.MessengerCommon.prototype.contactListRedraw = function(send)
+	BX.MessengerCommon.prototype.contactListRedraw = function(params)
 	{
+		params = params || {};
+
 		if (this.BXIM.messenger.contactListSearchText != null && this.BXIM.messenger.contactListSearchText.length == 0)
 			this.BXIM.messenger.recentListReturn = false;
 
@@ -568,7 +580,7 @@
 
 		if (this.BXIM.messenger.contactListSearchText.length > 0)
 		{
-			this.contactListPrepareSearch('contactList', this.BXIM.messenger.popupContactListElementsWrap, this.BXIM.messenger.contactListSearchText, {params: false, timeout: this.isMobile()? 500: 100})
+			this.contactListPrepareSearch('contactList', this.BXIM.messenger.popupContactListElementsWrap, this.BXIM.messenger.contactListSearchText, params.FORCE? {}: {params: false, timeout: this.isMobile()? 500: 100})
 		}
 		else
 		{
@@ -583,8 +595,8 @@
 			}
 		}
 
-		send = send == true;
-		if (!this.isMobile() && send)
+		params.SEND = params.SEND == true;
+		if (!this.isMobile() && params.SEND)
 		{
 			BX.localStorage.set('mrd', {viewGroup: this.BXIM.settings.viewGroup, viewOffline: this.BXIM.settings.viewOffline}, 5);
 		}
@@ -594,7 +606,7 @@
 	{
 		if (params.params != false)
 		{
-			var searchParams = {'groupOpen': true, 'viewOffline': false, 'viewGroup': true, 'viewChat': false, 'extra': false, 'searchText': search};
+			var searchParams = {'groupOpen': true, 'viewOffline': false, 'viewGroup': true, 'viewChat': false, 'viewOfflineWithPhones': false, 'extra': false, 'searchText': search};
 			for (var i in params)
 			{
 				if (i == 'timeout' || i == 'params')
@@ -644,6 +656,7 @@
 		var viewGroup =  typeof(params.viewGroup) != 'undefined'? params.viewGroup: activeSearch || !this.BXIM.settings? false: this.BXIM.settings.viewGroup;
 		var viewOffline =  typeof(params.viewOffline) != 'undefined'? params.viewOffline: activeSearch || !this.BXIM.settings? true: this.BXIM.settings.viewOffline;
 		var viewChat =  typeof(params.viewChat) != 'undefined'? params.viewChat: true;
+		var viewOfflineWithPhones =  typeof(params.viewOfflineWithPhones) != 'undefined'? params.viewOfflineWithPhones: false;
 
 		if (this.isMobile())
 		{
@@ -706,11 +719,19 @@
 			if (i != 'last' && i != 0 )
 				groups[i] = groupsTmp[i];
 		}
-		if (activeSearch && viewChat)
+		if (viewChat)
 		{
-			groups['chat'] = {'id': 'chat', 'name': BX.message('IM_CL_CHAT'), 'status':'open'};
 			var groupChat = [];
-			for (var i in this.BXIM.messenger.chat) groupChat.push(i);
+			for (var i in this.BXIM.messenger.chat)
+			{
+				if (!activeSearch && this.BXIM.messenger.chat[i].style == 'call')
+					continue;
+				
+				groupChat.push(i);
+			}
+
+			groupChat.sort(function(a, b) {i = this.BXIM.messenger.chat[a].name; ii = this.BXIM.messenger.chat[b].name; if (i < ii) { return -1; } else if (i > ii) { return 1;}else{ return 0;}});
+
 			userInGroup['chat'] = {'id':'chat', 'users': groupChat, 'isChat': true};
 		}
 
@@ -726,7 +747,6 @@
 			{
 				for (var j = 0; j < userInGroup[i].users.length; j++)
 				{
-
 					var user = this.BXIM.messenger.users[userInGroup[i].users[j]];
 					if (typeof(user) == 'undefined' || this.BXIM.userId == user.id || typeof(user.name) == 'undefined' || exceptUsers[user.id] || userDrowedInGroup[i+'_'+user.id])
 						continue;
@@ -768,7 +788,12 @@
 					if (extraEnable && this.countWriting(user.id))
 						writingMessage = 'bx-messenger-cl-status-writing';
 
-					if (i != 'last' && viewOffline == false && this.getUserStatus(user.id) == "offline" && newMessage == '')
+					var userOnlineStatus = this.getUserStatus(user.id);
+					if (viewOfflineWithPhones && user.phoneDevice && userOnlineStatus == "offline")
+					{
+						userOnlineStatus = 'online';
+					}
+					if (!activeSearch && i != 'last' && viewOffline == false && userOnlineStatus == "offline" && newMessage == '')
 						continue;
 
 					if (this.isMobile())
@@ -785,8 +810,8 @@
 					}
 
 					userItems.push(BX.create("a", {
-						props : { className: "bx-messenger-cl-item bx-messenger-cl-id-"+user.id+" bx-messenger-cl-status-" +this.getUserStatus(user.id)+ " " +newMessage+" "+writingMessage },
-						attrs : { href:'#user'+user.id, 'data-userId' : user.id, 'data-name' : user.name, 'data-status' : this.getUserStatus(user.id), 'data-avatar' : user.avatar },
+						props : { className: "bx-messenger-cl-item bx-messenger-cl-id-"+user.id+" bx-messenger-cl-status-" +userOnlineStatus+ " " +newMessage+" "+writingMessage },
+						attrs : { href:'#user'+user.id, 'data-userId' : user.id, 'data-name' : user.name, 'data-status' : userOnlineStatus, 'data-avatar' : user.avatar },
 						html :  '<span class="bx-messenger-cl-count">'+newMessageCount+'</span>'+
 								'<span class="bx-messenger-cl-avatar"><img class="bx-messenger-cl-avatar-img'+(this.isBlankAvatar(user.avatar)? " bx-messenger-cl-avatar-img-default": "")+'" '+src+'><span class="bx-messenger-cl-status"></span></span>'+
 								'<span class="bx-messenger-cl-user">'+
@@ -794,7 +819,6 @@
 									'<div class="bx-messenger-cl-user-desc">'+this.getUserPosition(user.id)+'</div>'+
 								'</span>'
 					}));
-
 				}
 				if (userItems.length > 0)
 				{
@@ -898,14 +922,14 @@
 			{
 				var skipGroup = true;
 				for (var s = 0; s < arSearch.length; s++)
-					if (this.BXIM.messenger.groups[i].name.toLowerCase().indexOf(arSearch[s].toLowerCase()) >= 0)
+					if (this.BXIM.messenger.groups[i].name && this.BXIM.messenger.groups[i].name.toLowerCase().indexOf(arSearch[s].toLowerCase()) >= 0)
 						skipGroup = false;
 
 				if (skipGroup)
 				{
 					for (var s = 0; s < arSearchAlt.length; s++)
 					{
-						if (this.BXIM.messenger.groups[i].name.toLowerCase().indexOf(arSearchAlt[s].toLowerCase()) >= 0)
+						if (this.BXIM.messenger.groups[i].name && this.BXIM.messenger.groups[i].name.toLowerCase().indexOf(arSearchAlt[s].toLowerCase()) >= 0)
 							skipGroup = false;
 					}
 				}
@@ -946,7 +970,12 @@
 						if (extraEnable && this.countWriting(user.id))
 							writingMessage = 'bx-messenger-cl-status-writing';
 
-						if (i != 'last' && viewOffline == false && this.getUserStatus(user.id) == "offline" && newMessage == '')
+						var userOnlineStatus = this.getUserStatus(user.id);
+						if (viewOfflineWithPhones && user.phoneDevice && userOnlineStatus == "offline")
+						{
+							userOnlineStatus = 'online';
+						}
+						if (i != 'last' && viewOffline == false && userOnlineStatus == "offline" && newMessage == '')
 							continue;
 
 						if (this.isMobile())
@@ -963,8 +992,8 @@
 						}
 
 						userItems.push(BX.create("span", {
-							props : { className: "bx-messenger-cl-item bx-messenger-cl-id-"+user.id+" bx-messenger-cl-status-" +this.getUserStatus(user.id)+ " " +newMessage+" "+writingMessage },
-							attrs : { 'data-userId' : user.id, 'data-name' : user.name, 'data-status' : this.getUserStatus(user.id), 'data-avatar' : user.avatar },
+							props : { className: "bx-messenger-cl-item bx-messenger-cl-id-"+user.id+" bx-messenger-cl-status-" +userOnlineStatus+ " " +newMessage+" "+writingMessage },
+							attrs : { 'data-userId' : user.id, 'data-name' : user.name, 'data-status' : userOnlineStatus, 'data-avatar' : user.avatar },
 							html :  '<span class="bx-messenger-cl-count">'+newMessageCount+'</span>'+
 									'<span class="bx-messenger-cl-avatar"><img class="bx-messenger-cl-avatar-img'+(this.isBlankAvatar(user.avatar)? " bx-messenger-cl-avatar-img-default": "")+'" '+src+'><span class="bx-messenger-cl-status"></span></span>'+
 									'<span class="bx-messenger-cl-user">'+
@@ -1005,7 +1034,7 @@
 		{
 			this.BXIM.messenger.popupContactListSearchInput.value = '';
 			this.BXIM.messenger.contactListSearchText = '';
-			BX.localStorage.set('mns', this.contactListSearchText, 5);
+			BX.localStorage.set('mns', this.BXIM.messenger.contactListSearchText, 5);
 			if (this.BXIM.messenger.recentListReturn)
 			{
 				this.BXIM.messenger.recentList = true;
@@ -1094,10 +1123,15 @@
 			url: this.BXIM.pathToAjax+'?CONTACT_LIST&V='+this.BXIM.revision,
 			method: 'POST',
 			dataType: 'json',
+			skipAuthCheck: true,
 			timeout: 30,
 			data: {'IM_CONTACT_LIST' : 'Y', 'IM_AJAX_CALL' : 'Y', 'DESKTOP' : (!this.isMobile() && this.BXIM.desktop && this.BXIM.desktop.ready()? 'Y': 'N'), 'sessid': BX.bitrix_sessid()},
 			onsuccess: BX.delegate(function(data)
 			{
+				if (data && data.BITRIX_SESSID)
+				{
+					BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+				}
 				if (data.ERROR == '')
 				{
 					for (var i in data.USERS)
@@ -1105,6 +1139,16 @@
 
 					for (var i in data.GROUPS)
 						this.BXIM.messenger.groups[i] = data.GROUPS[i];
+
+					for (var i in data.CHATS)
+					{
+						if (this.BXIM.messenger.chat[i] && this.BXIM.messenger.chat[i].fake)
+							data.CHATS[i].fake = true;
+						else if (!this.BXIM.messenger.chat[i])
+							data.CHATS[i].fake = true;
+
+						this.BXIM.messenger.chat[i] = data.CHATS[i];
+					}
 
 					for (var i in data.USER_IN_GROUP)
 					{
@@ -1158,10 +1202,9 @@
 				else
 				{
 					this.BXIM.messenger.contactListLoad = false;
-					if (data.ERROR == 'SESSION_ERROR' && this.sendAjaxTry < 2)
+					if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
 					{
 						this.BXIM.messenger.sendAjaxTry++;
-						BX.message({'bitrix_sessid': data.BITRIX_SESSID});
 						setTimeout(BX.delegate(this.contactListGetFromServer, this), 2000);
 						BX.onCustomEvent(window, 'onImError', [data.ERROR, data.BITRIX_SESSID]);
 					}
@@ -1304,7 +1347,7 @@
 							}
 
 							if (this.BXIM.messenger.contactList)
-								this.userListRedraw();
+								this.contactListRedraw({FORCE: true});
 
 							this.BXIM.messenger.userInGroup['other']['users'] = _users;
 							this.BXIM.messenger.woUserInGroup['other']['users'] = _woUsers;
@@ -1321,6 +1364,7 @@
 	/* Recent list */
 	BX.MessengerCommon.prototype.recentListRedraw = function(params)
 	{
+		clearTimeout(this.BXIM.messenger.redrawRecentListTimeout);
 		if (this.MobileActionNotEqual('RECENT'))
 			return false;
 
@@ -1533,7 +1577,19 @@
 		this.BXIM.messenger.recent = newRecent;
 
 		if (this.BXIM.messenger.recentList)
-			this.recentListRedraw();
+		{
+			if (this.isMobile())
+			{
+				clearTimeout(this.BXIM.messenger.redrawRecentListTimeout);
+				this.BXIM.messenger.redrawRecentListTimeout = setTimeout(BX.delegate(function(){
+					this.recentListRedraw();
+				}, this), 300);
+			}
+			else
+			{
+				this.recentListRedraw();
+			}
+		}
 	};
 
 	BX.MessengerCommon.prototype.recentListHide = function(userId, sendAjax)
@@ -1574,10 +1630,15 @@
 			url: this.BXIM.pathToAjax+'?RECENT_LIST&V='+this.BXIM.revision,
 			method: 'POST',
 			dataType: 'json',
+			skipAuthCheck: true,
 			timeout: 30,
 			data: {'IM_RECENT_LIST' : 'Y', 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()},
 			onsuccess: BX.delegate(function(data)
 			{
+				if (data && data.BITRIX_SESSID)
+				{
+					BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+				}
 				if (data.ERROR == '')
 				{
 					this.BXIM.messenger.recent = [];
@@ -1648,7 +1709,6 @@
 					if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
 					{
 						this.BXIM.messenger.sendAjaxTry++;
-						BX.message({'bitrix_sessid': data.BITRIX_SESSID});
 						setTimeout(BX.delegate(this.recentListGetFromServer, this), 2000);
 						BX.onCustomEvent(window, 'onImError', [data.ERROR, data.BITRIX_SESSID]);
 					}
@@ -1686,14 +1746,17 @@
 		{
 			message.params = {};
 		}
+
+		this.BXIM.messenger.openChatFlag = this.BXIM.messenger.currentTab.toString().substr(0, 4) == 'chat'? true: false;
+
 		var edited = message.params && message.params.IS_EDITED == 'Y';
 		var deleted = message.params && message.params.IS_DELETED == 'Y';
 		var temp = message.id.indexOf('temp') == 0;
 		var retry = temp && message.retry;
 		var system = message.senderId == 0;
-		var isChat = this.BXIM.messenger.openChatFlag && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == "group";
+		var isChat = this.BXIM.messenger.openChatFlag && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)] && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == "group";
 		var likeEnable = this.BXIM.ppServerStatus;
-		if (this.BXIM.messenger.openChatFlag && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == "call")
+		if (this.BXIM.messenger.openChatFlag && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)] && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == "call")
 			likeEnable = false;
 
 		var likeCount = likeEnable && typeof(message.params.LIKE) == "object" && message.params.LIKE.length > 0? message.params.LIKE.length: '';
@@ -1793,7 +1856,7 @@
 			if (!BX('bx-im-go-'+dateGroupTitle))
 			{
 				var dateGroupChildren = []
-				if (this.BXIM.desktop && this.BXIM.desktop.run() || this.isMobile())
+				if (this.BXIM.desktop && this.BXIM.desktop.run())
 				{
 					dateGroupChildren = [
 						BX.create("a", {attrs: {name: 'bx-im-go-'+message.date}, props : { className: "bx-messenger-content-group-link"}}),
@@ -2251,7 +2314,31 @@
 				method: 'POST',
 				dataType: 'json',
 				timeout: 30,
-				data: {'IM_START_WRITING' : 'Y', 'DIALOG_ID' : dialogId, 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()}
+				data: {'IM_START_WRITING' : 'Y', 'DIALOG_ID' : dialogId, 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()},
+				onsuccess: BX.delegate(function(data)
+				{
+					if (data && data.BITRIX_SESSID)
+					{
+						BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+					}
+					if (data.ERROR == 'AUTHORIZE_ERROR' && this.BXIM.desktop.ready() && this.BXIM.messenger.sendAjaxTry < 3)
+					{
+						this.BXIM.messenger.sendAjaxTry++;
+						BX.onCustomEvent(window, 'onImError', [data.ERROR]);
+					}
+					else if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
+					{
+						this.BXIM.messenger.sendAjaxTry++;
+						BX.onCustomEvent(window, 'onImError', [data.ERROR, data.BITRIX_SESSID]);
+					}
+					else
+					{
+						if (data.ERROR == 'AUTHORIZE_ERROR' || data.ERROR == 'SESSION_ERROR')
+						{
+							BX.onCustomEvent(window, 'onImError', [data.ERROR]);
+						}
+					}
+				}, this)
 			});
 			this.BXIM.messenger.writingSendListTimeout[dialogId] = setTimeout(BX.delegate(function(){
 				this.endSendWriting(dialogId);
@@ -2312,8 +2399,7 @@
 					this.BXIM.messenger.openCallFlag = false;
 					this.BXIM.messenger.extraClose();
 				}
-				if (this.BXIM.messenger.recentList)
-					BX.MessengerCommon.recentListRedraw();
+				BX.MessengerCommon.userListRedraw();
 			}
 		}
 		else
@@ -2339,10 +2425,10 @@
 								this.BXIM.messenger.currentTab = 0;
 								this.BXIM.messenger.openChatFlag = false;
 								this.BXIM.messenger.openCallFlag = false;
-								BX.localStorage.set('mct', this.currentTab, 15);
+								BX.localStorage.set('mct', this.BXIM.messenger.currentTab, 15);
 								this.BXIM.messenger.extraClose();
 							}
-							if (this.recentList)
+							if (this.BXIM.messenger.recentList)
 								BX.MessengerCommon.recentListRedraw();
 						}
 						BX.localStorage.set('mcl', data.CHAT_ID, 5);
@@ -2924,7 +3010,7 @@
 			else if (command == 'online_list')
 			{
 				var contactListRedraw = false;
-				for (var i in this.users)
+				for (var i in this.BXIM.messenger.users)
 				{
 					if (typeof(params.USERS[i]) == 'undefined')
 					{
@@ -3092,10 +3178,10 @@
 				if (!(this.BXIM.messenger.popupMessenger != null && this.BXIM.messenger.currentTab == i && this.BXIM.isFocus()))
 				{
 					contactListRedraw = true;
-					if (this.unreadMessage[i])
-						this.unreadMessage[i] = BX.util.array_unique(BX.util.array_merge(this.unreadMessage[i], unreadMessage[i]));
+					if (this.BXIM.messenger.unreadMessage[i])
+						this.BXIM.messenger.unreadMessage[i] = BX.util.array_unique(BX.util.array_merge(this.BXIM.messenger.unreadMessage[i], unreadMessage[i]));
 					else
-						this.unreadMessage[i] = unreadMessage[i];
+						this.BXIM.messenger.unreadMessage[i] = unreadMessage[i];
 				}
 				skipPopup = true;
 			}
@@ -3280,15 +3366,19 @@
 					method: 'POST',
 					dataType: 'json',
 					timeout: 60,
+					skipAuthCheck: true,
 					data: sendData,
 					onsuccess: BX.delegate(function(data)
 					{
+						if (data && data.BITRIX_SESSID)
+						{
+							BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+						}
 						if (data.ERROR != '')
 						{
 							if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
 							{
 								this.BXIM.messenger.sendAjaxTry++;
-								BX.message({'bitrix_sessid': data.BITRIX_SESSID});
 								setTimeout(BX.delegate(function(){
 									this.readMessage(userId, false, true);
 								}, this), 2000);
@@ -3308,7 +3398,7 @@
 						}
 					}, this),
 					onfailure: BX.delegate(function()	{
-						this.sendAjaxTry = 0;
+						this.BXIM.messenger.sendAjaxTry = 0;
 						try {
 							if (typeof(_ajax) == 'object' && _ajax.status == 0)
 								BX.onCustomEvent(window, 'onImError', ['CONNECT_ERROR']);
@@ -3442,10 +3532,8 @@
 				elements = BX.findChildrenByClassName(this.BXIM.messenger.popupMessengerBodyWrap, "bx-messenger-content-item-text-wrap");
 			}
 
-			if (elements.length < 20)
+			if (!this.isMobile() && elements.length < 20)
 			{
-				if (this.isMobile())
-					app.pullDownLoadingStop();
 				return false;
 			}
 
@@ -3696,7 +3784,7 @@
 					}
 					if (this.BXIM.messenger.currentTab == 'chat'+data.CHAT_ID)
 					{
-						if (this.BXIM.messenger.chat[data.CHAT_ID].style == 'call')
+						if (this.BXIM.messenger.chat[data.CHAT_ID] && this.BXIM.messenger.chat[data.CHAT_ID].style == 'call')
 						{
 							this.BXIM.messenger.openCallFlag = true;
 						}
@@ -3721,6 +3809,7 @@
 			url: this.BXIM.pathToAjax+'?LOAD_LAST_MESSAGE&V='+this.BXIM.revision,
 			method: 'POST',
 			dataType: 'json',
+			skipAuthCheck: true,
 			timeout: 90,
 			data: {'IM_LOAD_LAST_MESSAGE' : 'Y', 'CHAT' : userIsChat? 'Y': 'N', 'USER_ID' : userId, 'USER_LOAD' : userIsChat? (this.BXIM.messenger.chat[userId.toString().substr(4)] && this.BXIM.messenger.chat[userId.toString().substr(4)].fake? 'Y': 'N'): 'Y', 'TAB' : this.BXIM.messenger.currentTab, 'READ' : this.BXIM.messenger.BXIM.isFocus()? 'Y': 'N', 'MOBILE' : this.isMobile()? 'Y': 'N', 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()},
 			onsuccess: BX.delegate(function(data)
@@ -3729,6 +3818,11 @@
 
 				if (!data)
 					return false;
+
+				if (data && data.BITRIX_SESSID)
+				{
+					BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+				}
 
 				if (data.ERROR == '')
 				{
@@ -3839,7 +3933,7 @@
 					}
 					if (this.BXIM.messenger.currentTab == data.USER_ID)
 					{
-						if (this.BXIM.messenger.currentTab.toString().substr(0, 4) == 'chat' && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == 'call')
+						if (this.BXIM.messenger.currentTab.toString().substr(0, 4) == 'chat' && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)] && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == 'call')
 						{
 							this.BXIM.messenger.openCallFlag = true;
 						}
@@ -3866,10 +3960,9 @@
 						this.BXIM.messenger.openCallFlag = false;
 						this.BXIM.messenger.extraClose();
 					}
-					else if (data.ERROR == 'SESSION_ERROR' && this.sendAjaxTry < 2)
+					else if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
 					{
 						this.BXIM.messenger.sendAjaxTry++;
-						BX.message({'bitrix_sessid': data.BITRIX_SESSID});
 						setTimeout(BX.delegate(function(){this.loadLastMessage(userId, userIsChat)}, this), 2000);
 						BX.onCustomEvent(window, 'onImError', [data.ERROR, data.BITRIX_SESSID]);
 					}
@@ -4134,11 +4227,18 @@
 			url: this.BXIM.pathToAjax+'?MESSAGE_SEND&V='+this.BXIM.revision,
 			method: 'POST',
 			dataType: 'json',
+			skipAuthCheck: true,
 			timeout: 60,
 			data: {'IM_SEND_MESSAGE' : 'Y', 'CHAT': sendMessageToChat? 'Y': 'N', 'ID' : 'temp'+messageTmpIndex, 'RECIPIENT_ID' : recipientId, 'MESSAGE' : messageText, 'TAB' : this.BXIM.messenger.currentTab, 'USER_TZ_OFFSET': BX.message('USER_TZ_OFFSET'), 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()},
 			onsuccess: BX.delegate(function(data)
 			{
 				this.BXIM.messenger.sendMessageFlag--;
+
+				if (data && data.BITRIX_SESSID)
+				{
+					BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+				}
+
 				if (data.ERROR == '')
 				{
 					this.BXIM.messenger.sendAjaxTry = 0;
@@ -4241,10 +4341,9 @@
 				}
 				else
 				{
-					if (data.ERROR == 'SESSION_ERROR' && this.sendAjaxTry < 2)
+					if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
 					{
-						this.sendAjaxTry++;
-						BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+						this.BXIM.messenger.sendAjaxTry++;
 						setTimeout(BX.delegate(function(){
 							this.BXIM.messenger.sendMessageTmp[messageTmpIndex] = false;
 							this.sendMessageAjax(messageTmpIndex, recipientId, messageText, sendMessageToChat);
@@ -4253,7 +4352,7 @@
 					}
 					else if (data.ERROR == 'AUTHORIZE_ERROR')
 					{
-						this.sendAjaxTry++;
+						this.BXIM.messenger.sendAjaxTry++;
 						if (this.BXIM.desktop && this.BXIM.desktop.ready())
 						{
 							setTimeout(BX.delegate(function (){
@@ -4294,7 +4393,7 @@
 
 				BX.MessengerCommon.drawProgessMessage('temp'+messageTmpIndex, {title: BX.message('IM_M_RETRY'), chat: sendMessageToChat? 'Y':'N'});
 
-				this.sendAjaxTry = 0;
+				this.BXIM.messenger.sendAjaxTry = 0;
 				try {
 					if (typeof(_ajax) == 'object' && _ajax.status == 0)
 						BX.onCustomEvent(window, 'onImError', ['CONNECT_ERROR']);
@@ -4833,6 +4932,11 @@
 						BX.MessengerCommon.drawTab(recipientId);
 						window.onbeforeunload = this.BXIM.disk.OldBeforeUnload;
 
+						this.BXIM.disk.filesRegister[chatId] = {};
+
+						if (this.BXIM.disk.formAgents['imDialog']["clear"])
+							this.BXIM.disk.formAgents['imDialog'].clear();
+
 						return false;
 					}
 
@@ -4883,7 +4987,6 @@
 
 					delete this.BXIM.messenger.message[data.MESSAGE_TMP_ID];
 
-
 					var idx = BX.util.array_search(''+data.MESSAGE_TMP_ID+'', this.BXIM.messenger.showMessage[data.RECIPIENT_ID]);
 					if (this.BXIM.messenger.showMessage[data.RECIPIENT_ID][idx])
 						this.BXIM.messenger.showMessage[data.RECIPIENT_ID][idx] = ''+data.MESSAGE_ID+'';
@@ -4928,8 +5031,13 @@
 				onfailure: BX.delegate(function(){
 					this.BXIM.messenger.sendMessageFlag--;
 					delete this.BXIM.messenger.message[tmpMessageId];
+					this.BXIM.disk.filesRegister[chatId] = {};
+
 					BX.MessengerCommon.drawTab(recipientId);
 					window.onbeforeunload = this.BXIM.disk.OldBeforeUnload;
+
+					if (this.BXIM.disk.formAgents['imDialog']["clear"])
+						this.BXIM.disk.formAgents['imDialog'].clear();
 
 				}, this)
 			});
@@ -4980,6 +5088,8 @@
 		if (!this.BXIM.disk.files[formFields.REG_CHAT_ID][fileId])
 			return false;
 
+		item.deleteFile();
+
 		this.BXIM.disk.files[formFields.REG_CHAT_ID][fileId].status = "error";
 		this.BXIM.disk.files[formFields.REG_CHAT_ID][fileId].errorText = file.error;
 		BX.MessengerCommon.diskRedrawFile(formFields.REG_CHAT_ID, fileId);
@@ -5024,7 +5134,7 @@
 			data: {'IM_FILE_UNREGISTER' : 'Y', CHAT_ID: stream.post.REG_CHAT_ID, FILES: stream.post.REG_PARAMS, MESSAGES: JSON.stringify(messages), 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()}
 		});
 		window.onbeforeunload = this.BXIM.disk.OldBeforeUnload;
-		BX.MessengerCommon.drawTab(this.messenger.getRecipientByChatId(stream.post.REG_CHAT_ID));
+		BX.MessengerCommon.drawTab(this.BXIM.messenger.getRecipientByChatId(stream.post.REG_CHAT_ID));
 	}
 
 	BX.MessengerCommon = new BX.MessengerCommon();

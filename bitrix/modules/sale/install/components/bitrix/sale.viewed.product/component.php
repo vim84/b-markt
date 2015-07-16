@@ -1,5 +1,8 @@
 <?
-
+/** @global CMain $APPLICATION
+ * @global CUser $USER
+ * @global array $arParams */
+use Bitrix\Main\Loader;
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
 $arParams["VIEWED_COUNT"] = IntVal($arParams["VIEWED_COUNT"]);
@@ -25,20 +28,29 @@ if (!isset($arParams["VIEWED_CURRENCY"]) || strlen($arParams["VIEWED_CURRENCY"])
 $arResult = array();
 $arFilter = array();
 
-if (!CModule::IncludeModule("sale"))
+if (!Loader::includeModule('sale'))
 {
 	ShowError(GetMessage("VIEWE_NOT_INSTALL"));
 	return;
 }
-if (!CModule::IncludeModule("catalog"))
+
+if (!Loader::includeModule('catalog'))
 {
 	ShowError(GetMessage("VIEWCATALOG_NOT_INSTALL"));
 	return;
 }
 
-$arFilter["LID"] = SITE_ID;
-$arFilter["FUSER_ID"] = CSaleBasket::GetBasketUserID();
-$arGroups = $USER->GetUserGroupArray();
+$fuserId = (int)CSaleBasket::GetBasketUserID(true);
+$newUser = $fuserId <= 0;
+
+if (!$newUser)
+{
+	$arFilter = array(
+		'LID' => SITE_ID,
+		'FUSER_ID' => $fuserId
+	);
+}
+unset($fuserId);
 
 //add to basket
 if (isset($_REQUEST[$arParams["ACTION_VARIABLE"]]) && isset($_REQUEST[$arParams["PRODUCT_ID_VARIABLE"]]))
@@ -88,24 +100,26 @@ if (isset($_REQUEST[$arParams["ACTION_VARIABLE"]]) && isset($_REQUEST[$arParams[
 
 $arViewed = array();
 $arViewedId = array();
-$db_res = CSaleViewedProduct::GetList(
-		array(
-			"DATE_VISIT" => "DESC"
-		),
-		$arFilter,
-		false,
-		array(
-			"nTopCount" => $arParams["VIEWED_COUNT"]
-		),
-		array('ID', 'IBLOCK_ID', 'PRICE', 'CURRENCY', 'CAN_BUY', 'PRODUCT_ID', 'DATE_VISIT', 'DETAIL_PAGE_URL', 'DETAIL_PICTURE', 'PREVIEW_PICTURE', 'NAME', 'NOTES')
-);
-while ($arItems = $db_res->Fetch())
-{
-	$arViewedId[] = $arItems["PRODUCT_ID"];
-	$arViewed[$arItems["PRODUCT_ID"]] = $arItems;
-}
 $arElementSort = array();
-
+if (!$newUser)
+{
+	$db_res = CSaleViewedProduct::GetList(
+			array(
+				"DATE_VISIT" => "DESC"
+			),
+			$arFilter,
+			false,
+			array(
+				"nTopCount" => $arParams["VIEWED_COUNT"]
+			),
+			array('ID', 'IBLOCK_ID', 'PRICE', 'CURRENCY', 'CAN_BUY', 'PRODUCT_ID', 'DATE_VISIT', 'DETAIL_PAGE_URL', 'DETAIL_PICTURE', 'PREVIEW_PICTURE', 'NAME', 'NOTES')
+	);
+	while ($arItems = $db_res->Fetch())
+	{
+		$arViewedId[] = $arItems["PRODUCT_ID"];
+		$arViewed[$arItems["PRODUCT_ID"]] = $arItems;
+	}
+}
 //check catalog
 if (!empty($arViewedId))
 {
@@ -188,7 +202,7 @@ if (!empty($arViewedId))
 		else
 			$arOffersIblock = $arCacheOffersIblock[$arElements["IBLOCK_ID"]];
 
-		if ($arOffersIblock["OFFERS_IBLOCK_ID"] > 0)
+		if (isset($arOffersIblock["OFFERS_IBLOCK_ID"]) && $arOffersIblock["OFFERS_IBLOCK_ID"] > 0)
 		{
 			$arItems["OFFERS"] = array();
 
@@ -304,4 +318,3 @@ if (!empty($arViewedId))
 }
 
 $this->IncludeComponentTemplate();
-?>

@@ -34,6 +34,11 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 
 		self::tryParseInt($arParams['EXCLUDE_SUBTREE']);
 
+		self::tryParseBoolean($arParams['PRESELECT_TREE_TRUNK']);
+
+		// about preloading
+		self::tryParseBoolean($arParams['PRECACHE_LAST_LEVEL']);
+
 		return $arParams;
 	}
 
@@ -54,6 +59,105 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 		);
 	}
 
+	protected function obtainCacheDependentData()
+	{
+		parent::obtainCacheDependentData();
+
+		if(!is_array($this->dbResult['PRECACHED_POOL']))
+			$this->dbResult['PRECACHED_POOL'] = array();
+
+		$this->dbResult['BUNDLES_INCOMPLETE'] = array();
+
+		// all bundles that are in PATH are incomplete by the way there were obtained, so ...
+		$this->dbResult['BUNDLES_INCOMPLETE'][0] = true; // first level incomplete
+		if(is_array($this->dbResult['PATH']))
+		{
+			foreach($this->dbResult['PATH'] as $levelId => $level)
+				$this->dbResult['BUNDLES_INCOMPLETE'][$levelId] = true;
+		}
+
+		if($this->arParams['PRECACHE_LAST_LEVEL'])
+		{
+			$parameters = $this->getLocationListParameters();
+			if(!is_array($parameters))
+				$parameters = array();
+			if(!is_array($parameters['filter']))
+				$parameters['filter'] = array();
+			if(!is_array($parameters['order']))
+				$parameters['order'] = array('SORT' => 'asc', 'NAME.NAME' => 'asc');
+
+			$parentId = false;
+
+			// if smth is selected
+			if(is_array($this->dbResult['LOCATION']) && intval($this->dbResult['LOCATION']['ID']))
+			{
+				// then last level is
+				if($this->dbResult['LOCATION']['CHILD_CNT'] > 0)
+					$parentId = intval($this->dbResult['LOCATION']['ID']); // the child level of a selected node
+				else
+					$parentId = intval($this->dbResult['LOCATION']['PARENT_ID']); // or the level of a selected node
+			}
+			else // none is selected
+			{
+				if(!empty($this->dbResult['TREE_TRUNK'])) // our tree has common trunk
+				{
+					// get the last element of TREE_TRUNK
+					$lastId = false;
+					foreach($this->dbResult['TREE_TRUNK'] as $id => $node)
+					{
+						$lastId = $node['ID'];
+					}
+
+					if($lastId != false)
+						$parentId = $lastId;
+				}
+				else // have no trunk
+				{
+					$parentId = 0; // just root
+				}
+			}
+
+			if($parentId !== false)
+			{
+				// ... but if we get some bundle here, then it becomes complete
+				unset($this->dbResult['BUNDLES_INCOMPLETE'][$parentId]);
+
+				$parameters['filter']['=PARENT_ID'] = $parentId;
+				$res = Location\LocationTable::getList($parameters);
+				$res->addReplacedAliases(array('LNAME' => 'NAME'));
+				while($item = $res->fetch())
+				{
+					$this->dbResult['PRECACHED_POOL'][$item['PARENT_ID']][$item['ID']] = $item;
+				}
+			}
+		}
+
+		// filter through site link, if needed
+		foreach($this->dbResult['PRECACHED_POOL'] as $parent => &$items)
+		{
+			if(is_array($items))
+			{
+				$this->identifyLinkType($items);
+				foreach($items as $k => &$item)
+				{
+					if(isset($item['LINK_TYPE']))
+					{
+						if($item['LINK_TYPE'] != Location\SiteLocationTable::LSTAT_IS_CONNECTOR && $item['LINK_TYPE'] != Location\SiteLocationTable::LSTAT_BELOW_CONNECTOR)
+							$items[$k]['IS_UNCHOOSABLE'] = true;
+
+						if($item['LINK_TYPE'] == Location\SiteLocationTable::LSTAT_IN_NOT_CONNECTED_BRANCH)
+						{
+							unset($items[$k]);
+							continue;
+						}
+
+						unset($item['LINK_TYPE']);
+					}
+				}
+			}
+		}
+	}
+
 	protected function obtainCachedData(&$cachedData)
 	{
 		parent::obtainCachedData($cachedData);
@@ -64,47 +168,59 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 
 	protected function obtainDataTreeTrunk(&$cachedData)
 	{
-		// check for static tree
-		$forkItemFilter = false;
-
-		$res = Location\LocationTable::getList(array(
-			'group' => array('DEPTH_LEVEL'),
-			'select' => array('DEPTH_LEVEL', 'CNT'),
-			'order' => array('DEPTH_LEVEL' => 'asc')
-		));
-		$forkAtLevel = 0;
-		while($item = $res->fetch())
-		{
-			if($item['CNT'] < 2)
-				$forkAtLevel = $item['DEPTH_LEVEL'];
-			else
-				break;
-		}
-
-		if($forkAtLevel > 0)
-			$forkItemFilter = array('DEPTH_LEVEL' => $forkAtLevel);
-
-		// check for tree filtered by site
-
-		if($this->filterBySite && is_array($cachedData['TEMP']['CONNECTORS']) && !empty($cachedData['TEMP']['CONNECTORS']))
-		{
-			$dcp = Location\LocationTable::getDeepestCommonParent($cachedData['TEMP']['CONNECTORS'], array('select' => array('ID')))->fetch();
-
-			if(is_array($dcp) && intval($dcp['ID']))
-				$forkItemFilter = array('ID' => intval($dcp['ID']));
-		}
-
 		$cachedData['TREE_TRUNK'] = array();
-		if(is_array($forkItemFilter) && !empty($forkItemFilter)) // get fork item id
+
+		if($this->arParams['PRESELECT_TREE_TRUNK'])
 		{
-			$res = Location\LocationTable::getPathToNodeByCondition($forkItemFilter, array(
-				'select' => array_merge($this->getNodeSelectFields(), array('LNAME' => 'NAME.NAME')),
-				'filter' => array('=NAME.LANGUAGE_ID' => LANGUAGE_ID)
+			// check for static tree
+			$forkItemFilter = false;
+
+			$res = Location\LocationTable::getList(array(
+				'group' => array('DEPTH_LEVEL'),
+				'select' => array('DEPTH_LEVEL', 'CNT'),
+				'order' => array('DEPTH_LEVEL' => 'asc')
 			));
-			$res->addReplacedAliases(array('LNAME' => 'NAME'));
+			$forkAtLevel = 0;
 			while($item = $res->fetch())
 			{
-				$cachedData['TREE_TRUNK'][] = $item;
+				if($item['CNT'] < 2)
+					$forkAtLevel = $item['DEPTH_LEVEL'];
+				else
+					break;
+			}
+
+			if($forkAtLevel > 0)
+				$forkItemFilter = array('DEPTH_LEVEL' => $forkAtLevel);
+
+			// check for tree filtered by site
+
+			if($this->filterBySite && is_array($cachedData['TEMP']['CONNECTORS']) && !empty($cachedData['TEMP']['CONNECTORS']))
+			{
+				if(count($cachedData['TEMP']['CONNECTORS']) == 1)
+				{
+					$item = current($cachedData['TEMP']['CONNECTORS']);
+					$forkItemFilter = array('ID' => intval($item['ID']));
+				}
+				else
+				{
+					$dcp = Location\LocationTable::getDeepestCommonParent($cachedData['TEMP']['CONNECTORS'], array('select' => array('ID')))->fetch();
+
+					if(is_array($dcp) && intval($dcp['ID']))
+						$forkItemFilter = array('ID' => intval($dcp['ID']));
+				}
+			}
+
+			if(is_array($forkItemFilter) && !empty($forkItemFilter)) // get fork item id
+			{
+				$res = Location\LocationTable::getPathToNodeByCondition($forkItemFilter, array(
+					'select' => array_merge($this->getNodeSelectFields(), array('LNAME' => 'NAME.NAME')),
+					'filter' => array('=NAME.LANGUAGE_ID' => LANGUAGE_ID)
+				));
+				$res->addReplacedAliases(array('LNAME' => 'NAME'));
+				while($item = $res->fetch())
+				{
+					$cachedData['TREE_TRUNK'][] = $item;
+				}
 			}
 		}
 	}
@@ -113,18 +229,151 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 	{
 		parent::obtainDataAdditional();
 
-		if($this->filterBySite && is_array($this->dbResult['PATH']) && !empty($this->dbResult['PATH']))
+		if(is_array($this->dbResult['PATH']))
 		{
-			$linkTypeMap = Location\SiteLocationTable::getLinkStatusForMultipleNodes($this->dbResult['PATH'], $this->arParams['FILTER_SITE_ID'], $this->dbResult['TEMP']['CONNECTORS']);
-
-			foreach($linkTypeMap as $id => $linkType)
+			$this->identifyLinkType($this->dbResult['PATH']);
+			foreach($this->dbResult['PATH'] as &$item)
 			{
-				if(!in_array($linkType, array(Location\SiteLocationTable::LSTAT_IS_CONNECTOR, Location\SiteLocationTable::LSTAT_BELOW_CONNECTOR)))
-					$this->dbResult['PATH'][$id]['IS_UNCHOOSABLE'] = true;
+				if(isset($item['LINK_TYPE']))
+				{
+					if($item['LINK_TYPE'] != Location\SiteLocationTable::LSTAT_IS_CONNECTOR && $item['LINK_TYPE'] != Location\SiteLocationTable::LSTAT_BELOW_CONNECTOR)
+						$item['IS_UNCHOOSABLE'] = true;
+
+					unset($item['LINK_TYPE']);
+				}
 			}
 		}
 	}
 
+	protected function identifyLinkType(&$items)
+	{
+		if($this->filterBySite && is_array($items) && !empty($items))
+		{
+			$linkTypeMap = Location\SiteLocationTable::getLinkStatusForMultipleNodes($items, $this->arParams['FILTER_SITE_ID'], $this->dbResult['TEMP']['CONNECTORS']);
+
+			foreach($linkTypeMap as $id => $linkType)
+			{
+				$items[$id]['LINK_TYPE'] = $linkType;
+			}
+		}
+	}
+
+	protected function getCacheDependences()
+	{
+		return parent::getCacheDependences().self::getStrForVariable($this->arParams['PRESELECT_TREE_TRUNK']);
+	}
+
+	protected static function getPathNodesSelect()
+	{
+		// here should be array('VALUE' => 'ID', 'DISPLAY' => 'NAME.NAME', 'CODE');
+		// but due to orm failure we have to modify the result later
+		return array('ID', 'DISPLAY' => 'NAME.NAME', 'CODE');
+	}
+
+	#### query serve functions
+
+	protected static $allowedAdditionals = array(
+		'PATH' => true,
+		'IS_UNCHOOSABLE' => true
+	);
+
+	protected static function processSearchRequestV2ModifyParameters($parameters)
+	{
+		$parameters = parent::processSearchRequestV2ModifyParameters($parameters);
+
+		// always sorted by sort, name
+		$parameters['order'] = array('SORT' => 'asc', 'NAME.NAME' => 'asc');
+
+		if(isset($parameters['filter']['PARENT_ID']) || isset($parameters['filter']['=PARENT_ID']))
+		{
+			// in case of searching by PARENT_ID
+			// this will be post-processed
+			unset($parameters['filter']['SITE_ID']);
+			unset($parameters['filter']['=SITE_ID']);
+		}
+
+		return $parameters;
+	}
+
+	protected static function processSearchRequestV2AfterSearchFormatResult(&$data, $parameters)
+	{
+		if(is_array($data['ITEMS']) && !empty($data['ITEMS']))
+		{
+			// check SITE, in case of searching by PARENT_ID
+			if(is_array($parameters['filter']) && (isset($parameters['filter']['PARENT_ID']) || isset($parameters['filter']['=PARENT_ID'])))
+			{
+				// post-process for linking with site
+				$key = false;
+				if(isset($parameters['filter']['SITE_ID']))
+					$key = 'SITE_ID';
+				elseif(isset($parameters['filter']['=SITE_ID']))
+					$key = '=SITE_ID';
+
+				if($key)
+				{
+					$siteId = $parameters['filter'][$key];
+
+					$points = array();
+					$res = Location\SiteLocationTable::getConnectedLocations($siteId, array('select' => array(
+							'ID' => 'ID',
+							'LEFT_MARGIN' => 'LEFT_MARGIN',
+							'RIGHT_MARGIN' => 'RIGHT_MARGIN'
+						)
+					), array('GET_LINKED_THROUGH_GROUPS' => true));
+
+					while($item = $res->fetch())
+						$points[intval($item['ID'])] = $item;
+
+					$res = Location\SiteLocationTable::getLinkStatusForMultipleNodes($data['ITEMS'], $siteId, $points);
+					foreach($data['ITEMS'] as $k => &$item)
+					{
+						if($res[$item['ID']] == Location\SiteLocationTable::LSTAT_IN_NOT_CONNECTED_BRANCH)
+							unset($data['ITEMS'][$k]);
+
+						$item['IS_UNCHOOSABLE'] = ($res[$item['ID']] == Location\SiteLocationTable::LSTAT_ABOVE_CONNECTOR);
+					}
+				}
+			}
+
+			// drop meaningless data
+			foreach($data['ITEMS'] as $k => &$item)
+			{
+				if($data['ITEMS'][$k]['IS_PARENT'] == '0')
+					unset($data['ITEMS'][$k]['IS_PARENT']);
+			}
+		}
+
+		parent::processSearchRequestV2AfterSearchFormatResult($data, $parameters);
+	}
+
+	public function formatResult()
+	{
+		parent::formatResult();
+
+		if(is_array($this->arResult['PATH']))
+		{
+			foreach($this->arResult['PATH'] as &$node)
+			{
+				unset($node['LEFT_MARGIN']);
+				unset($node['RIGHT_MARGIN']);
+			}
+		}
+
+		unset($this->arResult['LOCATION']['LEFT_MARGIN']);
+		unset($this->arResult['LOCATION']['RIGHT_MARGIN']);
+	}
+
+	protected static function getClassName()
+	{
+		return __CLASS__;
+	}
+
+	////////////////////////////////////////////////////////
+	// DEPRECATED methods to support DEPRECATED query method
+
+	/**
+	 * @deprecated
+	 */
 	public static function processSearchRequest()
 	{
 		static::checkRequiredModules();
@@ -156,7 +405,7 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 		$result = static::processSearchGetList($parameters);
 		$result = static::processSearchGetAdditional($result);
 
-		if(strlen($siteId))
+		if(strlen($siteId) && is_array($result['ITEMS']) && !empty($result['ITEMS']))
 		{
 			$res = Location\SiteLocationTable::getLinkStatusForMultipleNodes($result['ITEMS'], $siteId, $points);
 			foreach($result['ITEMS'] as $k => &$item)
@@ -198,36 +447,9 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 		return $result;
 	}
 
-	/*
-	protected static function processSearchGetList($parameters)
-	{
-		//_dump_r($parameters);
-
-		$proxedParams = array(
-			'select' => array(
-				'ID',
-				'CODE',
-				'SORT',
-				'LNAME' => 'NAME.NAME',
-				'LEFT_MARGIN',
-				'RIGHT_MARGIN'
-			),
-			'filter' => array(
-			)
-		);
-
-		//_dump_r($proxedParams);
-
-		$res = Location\LocationTable::getListFast($parameters);
-		
-		$result = array();
-		while($item = $res->fetch())
-			$result[] = $item;
-
-		return $result;
-	}
-	*/
-
+	/**
+	 * @deprecated
+	 */
 	protected static function processSearchGetAdditionalPathNodes(&$data)
 	{
 		if($_REQUEST['SHOW']['PATH'])
@@ -241,6 +463,9 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 		}
 	}
 
+	/**
+	 * @deprecated
+	 */
 	protected static function getPathToNodes($list)
 	{
 		$res = Location\LocationTable::getPathToMultipleNodes(
@@ -285,24 +510,5 @@ class CBitrixLocationSelectorStepsComponent extends CBitrixLocationSelectorSearc
 		$result['PATH_ITEMS'] = $pathItems;
 
 		return $result;
-	}
-
-	public function formatResult()
-	{
-		parent::formatResult();
-
-		foreach($this->arResult['PATH'] as &$node)
-		{
-			unset($node['LEFT_MARGIN']);
-			unset($node['RIGHT_MARGIN']);
-		}
-
-		unset($this->arResult['LOCATION']['LEFT_MARGIN']);
-		unset($this->arResult['LOCATION']['RIGHT_MARGIN']);
-	}
-
-	protected static function getClassName()
-	{
-		return __CLASS__;
 	}
 }

@@ -202,14 +202,13 @@ else
 			}
 		}
 		elseif ( //usual template
-			strlen($_FILES["PERSONAL_PHOTO"]["name"]) > 0 
-			|| isset($_POST["PERSONAL_PHOTO_del"])
+			strlen($_FILES["PERSONAL_PHOTO"]["name"]) > 0
 		)
 		{
 			$arPICTURE = $_FILES["PERSONAL_PHOTO"]; 
 		}
 
-		if (sizeof($arPICTURE) != 0)
+		if (sizeof($arPICTURE) != 0 || isset($_POST["PERSONAL_PHOTO_del"]))
 		{
 			$arPICTURE["old_file"] = $arResult["User"]["PERSONAL_PHOTO"];
 			$arPICTURE["del"] = $_POST["PERSONAL_PHOTO_del"];
@@ -271,7 +270,7 @@ else
 			}
 			elseif ('GROUP_ID' == $key)
 			{
-				if (is_array($arGroupsCanEditID) && is_array($_POST[$key]) && !(IsModuleInstalled("bitrix24") && $SONET_USER_ID == "1"))
+				if (is_array($arGroupsCanEditID) && is_array($_POST[$key]))
 					$arFieldsValue[$key] = array_intersect($_POST[$key], $arGroupsCanEditID);
 			}
 			elseif ($_POST[$key] !== $arResult['User'][$key])
@@ -284,7 +283,10 @@ else
 			$arFieldsValue['TIME_ZONE'] = $_POST['TIME_ZONE'];
 
 		if (strlen($arFieldsValue['PASSWORD']) <= 0)
-			unset($arFieldsValue['PASSWORD']); unset($arFieldsValue['CONFIRM_PASSWORD']);
+		{
+			unset($arFieldsValue['PASSWORD']);
+			unset($arFieldsValue['CONFIRM_PASSWORD']);
+		}
 
 		$GLOBALS["USER_FIELD_MANAGER"]->EditFormAddFields("USER", $arFieldsValue);
 

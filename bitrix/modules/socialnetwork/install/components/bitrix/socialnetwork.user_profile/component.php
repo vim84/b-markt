@@ -580,7 +580,7 @@ else
 								if (StrLen($val) > 0)
 								{
 									$valLink = $val;
-									if (StrToLower(SubStr($val, 0, StrLen("http://"))) != "http://")
+									if(strpos($val, "http") === false)
 										$valLink = "http://".$val;
 									$val = '<noindex><a href="'.$valLink.'" target="_blank" rel="nofollow">'.$val.'</a></noindex>';
 								}
@@ -946,20 +946,26 @@ else
 					$arResult["RatingMultiple"][$rating_id]["VALUE"] = $arResult["User"]["RATING_".$rating_id."_CURRENT_VALUE"];
 
 		//otp
-		if (CModule::IncludeModule("security"))
+		if (CModule::IncludeModule("security") && Bitrix\Security\Mfa\Otp::isOtpEnabled())
 		{
-			$arResult["User"]["OTP"]["IS_MANDATORY"] = CSecurityUser::IsOtpMandatory();
+			$arResult["User"]["OTP"]["IS_ENABLED"] = "Y";
+			$arResult["User"]["OTP"]["IS_MANDATORY"] = !CSecurityUser::IsUserSkipMandatoryRights($arResult["User"]["ID"]);
 			$arResult["User"]["OTP"]["IS_ACTIVE"] = CSecurityUser::IsUserOtpActive($arResult["User"]["ID"]);
 			$arResult["User"]["OTP"]["IS_EXIST"] = CSecurityUser::IsUserOtpExist($arResult["User"]["ID"]);
 			$arResult["User"]["OTP"]["ARE_RECOVERY_CODES_ENABLED"] = Bitrix\Security\Mfa\Otp::isRecoveryCodesEnabled();
 
 			$dateDeactivate = CSecurityUser::GetDeactivateUntil($arResult["User"]["ID"]);
-			$arResult["User"]["OTP"]["NUM_LEFT_DAYS"] = ($dateDeactivate) ? FormatDate("ddiff", time()-60*60*24,  MakeTimeStamp($dateDeactivate)) : "";
+			$arResult["User"]["OTP"]["NUM_LEFT_DAYS"] = ($dateDeactivate) ? FormatDate("ddiff", time()-60*60*24,  MakeTimeStamp($dateDeactivate) - 1) : "";
+		}
+		else
+		{
+			$arResult["User"]["OTP"]["IS_ENABLED"] = "N";
 		}
 	}
 }
 $this->IncludeComponentTemplate();
 
 return array(
+	"ID" => (isset($arResult["User"]) && isset($arResult["User"]["ID"]) ? intval($arResult["User"]["ID"]) : false),
 	"NAME" => $arResult["User"]["NAME_FORMATTED"],
 );

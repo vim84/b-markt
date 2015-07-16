@@ -2,7 +2,7 @@
 $MESS["BPAA_PD_TYPE_ALL"] = "All Persons";
 $MESS["BPAA_PD_TYPE_ANY"] = "Any Person";
 $MESS["BPAA_PD_APPROVERS"] = "Approving voters";
-$MESS["BPAA_PD_PERCENT"] = "Minimum percentage of participating users required for acceptance																										";
+$MESS["BPAA_PD_PERCENT"] = "Minimum percentage of participating users required for acceptance";
 $MESS["BPAA_PD_DESCR"] = "Assignment description";
 $MESS["BPAA_PD_NAME"] = "Assignment name";
 $MESS["BPAA_PD_TYPE"] = "Approval type";
@@ -24,4 +24,5 @@ $MESS["BPAR_PD_SHOW_COMMENT"] = "Show comment input field";
 $MESS["BPAR_PD_COMMENT_LABEL_MESSAGE"] = "Comment input field label";
 $MESS["BPAR_PD_TASK_BUTTON1_MESSAGE"] = "Accept button text";
 $MESS["BPAR_PD_TASK_BUTTON2_MESSAGE"] = "Reject button text";
+$MESS["BPAR_PD_ACCESS_CONTROL"] = "Show assignment description only to responsible persons";
 ?>

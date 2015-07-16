@@ -21,4 +21,13 @@ $MESS["SUP_NO_LIMITS"] = "< не ограничено >";
 $MESS["SUP_SITE"] = "Сайт";
 $MESS["SUP_RESPONSIBLE"] = "Ответственный";
 $MESS["SUP_SHEDULE_S"] = "Расписание";
+$MESS["MAIN_ADMIN_MENU_EDIT"] = "Изменить";
+$MESS["SUP_EDIT"] = "Изменить";
+$MESS["MAIN_ADMIN_LIST_SELECTED"] = "Выбрано:";
+$MESS["SUP_DELETE"] = "Удалить";
+$MESS["MAIN_ADMIN_LIST_CHECKED"] = "Отмечено:";
+$MESS["MAIN_ADMIN_LIST_DELETE"] = "удалить";
+$MESS["SUP_ADD"] = "Добавить";
+$MESS["SUP_EXACT_MATCH"] = "Искать точное совпадение при фильтрации";
+$MESS["SUP_ALL"] = "(все)";
 ?>

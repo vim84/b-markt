@@ -54,11 +54,18 @@ Class lists extends CModule
 			RegisterModule("lists");
 			CModule::IncludeModule("lists");
 			RegisterModuleDependences("iblock", "OnIBlockDelete", "lists", "CLists", "OnIBlockDelete");
+			RegisterModuleDependences("iblock", "OnAfterIBlockDelete", "lists", "CLists", "OnAfterIBlockDelete");
 			RegisterModuleDependences("iblock", "CIBlockDocument_OnGetDocumentAdminPage", "lists", "CList", "OnGetDocumentAdminPage");
 			RegisterModuleDependences("intranet", "OnSharepointCreateProperty", "lists", "CLists", "OnSharepointCreateProperty");
 			RegisterModuleDependences("intranet", "OnSharepointCheckAccess", "lists", "CLists", "OnSharepointCheckAccess");
 			RegisterModuleDependences("perfmon", "OnGetTableSchema", "lists", "lists", "OnGetTableSchema");
 			RegisterModuleDependences("search", "OnSearchGetURL", "lists", "CList", "OnSearchGetURL", 50);
+			RegisterModuleDependences('socialnetwork', 'OnFillSocNetLogEvents', 'lists', 'CListsLiveFeed', 'onFillSocNetLogEvents');
+			RegisterModuleDependences("socialnetwork", "OnFillSocNetAllowedSubscribeEntityTypes", "lists", "CListsLiveFeed", "onFillSocNetAllowedSubscribeEntityTypes");
+			RegisterModuleDependences('socialnetwork', 'BeforeIndexSocNet', 'lists', 'CListsLiveFeed', 'BeforeIndexSocNet');
+			RegisterModuleDependences('socialnetwork', 'OnAfterSonetLogEntryAddComment', 'lists', 'CListsLiveFeed', 'OnAfterSonetLogEntryAddComment');
+			RegisterModuleDependences('socialnetwork', 'OnForumCommentIMNotify', 'lists', 'CListsLiveFeed', 'OnForumCommentIMNotify');
+			RegisterModuleDependences("iblock", "OnAfterIBlockElementDelete", "lists", "BizprocDocument", "OnAfterIBlockElementDelete");
 			if (isset($arParams["INSTALL_DEMO_DATA"]) && $arParams["INSTALL_DEMO_DATA"] == "Y")
 			{
 				$this->installDemoData();
@@ -84,6 +91,13 @@ Class lists extends CModule
 				"SECTIONS" => "Y",
 				"IN_RSS" => "N",
 				"SORT" => 80,
+				"LANG" => array(),
+			);
+			$arTypes[] = array(
+				"ID" => "bitrix_processes",
+				"SECTIONS" => "Y",
+				"IN_RSS" => "N",
+				"SORT" => 90,
 				"LANG" => array(),
 			);
 		}
@@ -131,6 +145,23 @@ Class lists extends CModule
 		if (empty($currentPermissions))
 		{
 			CLists::SetPermission('lists', array(1));
+			CLists::SetPermission('bitrix_processes', array(1));
+		}
+
+		$defaultSiteId = CSite::GetDefSite();
+		$siteObject = CSite::GetByID($defaultSiteId);
+		$site = $siteObject->fetch();
+		$defaultLang = $site? $site['LANGUAGE_ID'] : 'en';
+		if($defaultLang == 'ua')
+			$defaultLang = 'ru';
+		\Bitrix\Lists\Importer::installProcesses($defaultLang);
+		if (IsModuleInstalled("bitrix24"))
+		{
+			\Bitrix\Main\Config\Option::set("lists", "livefeed_url", "/company/processes/");
+		}
+		else
+		{
+			\Bitrix\Main\Config\Option::set("lists", "livefeed_url", "/services/processes/");
 		}
 
 		if ($isSocnetInstalled && strlen($socnet_iblock_type_id) <= 0)
@@ -155,11 +186,18 @@ Class lists extends CModule
 		}
 
 		UnRegisterModuleDependences("iblock", "OnIBlockDelete", "lists", "CLists", "OnIBlockDelete");
+		UnRegisterModuleDependences("iblock", "OnAfterIBlockDelete", "lists", "CLists", "OnAfterIBlockDelete");
 		UnRegisterModuleDependences("iblock", "CIBlockDocument_OnGetDocumentAdminPage", "lists", "CList", "OnGetDocumentAdminPage");
 		UnRegisterModuleDependences("intranet", "OnSharepointCreateProperty", "lists", "CLists", "OnSharepointCreateProperty");
 		UnRegisterModuleDependences("intranet", "OnSharepointCheckAccess", "lists", "CLists", "OnSharepointCheckAccess");
 		UnRegisterModuleDependences("search", "OnSearchGetURL", "lists", "CList", "OnSearchGetURL");
 		UnRegisterModuleDependences("perfmon", "OnGetTableSchema", "lists", "lists", "OnGetTableSchema");
+		UnRegisterModuleDependences('socialnetwork', 'OnFillSocNetLogEvents', 'lists', 'CListsLiveFeed', 'onFillSocNetLogEvents');
+		UnRegisterModuleDependences("socialnetwork", "OnFillSocNetAllowedSubscribeEntityTypes", "lists", "CListsLiveFeed", "onFillSocNetAllowedSubscribeEntityTypes");
+		UnRegisterModuleDependences('socialnetwork', 'BeforeIndexSocNet', 'lists', 'CListsLiveFeed', 'BeforeIndexSocNet');
+		UnRegisterModuleDependences('socialnetwork', 'OnAfterSonetLogEntryAddComment', 'lists', 'CListsLiveFeed', 'OnAfterSonetLogEntryAddComment');
+		UnRegisterModuleDependences('socialnetwork', 'OnForumCommentIMNotify', 'lists', 'CListsLiveFeed', 'OnForumCommentIMNotify');
+		UnRegisterModuleDependences("iblock", "OnAfterIBlockElementDelete", "lists", "BizprocDocument", "OnAfterIBlockElementDelete");
 		UnRegisterModule("lists");
 
 		if($this->errors !== false)
@@ -185,6 +223,7 @@ Class lists extends CModule
 	{
 		if($_ENV["COMPUTERNAME"]!='BX')
 		{
+			CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/lists/install/admin", $_SERVER["DOCUMENT_ROOT"]."/bitrix/admin", true);
 			CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/lists/install/components", $_SERVER["DOCUMENT_ROOT"]."/bitrix/components", True, True);
 			CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/lists/install/images", $_SERVER["DOCUMENT_ROOT"]."/bitrix/images/lists", True, True);
 		}

@@ -502,8 +502,6 @@ $tabControl->Begin();
 						?>
 							<option value="<?=$id?>"<?if($id == $inh_taskId) echo" selected";?>>
 							<?echo htmlspecialcharsbx($ar['title'])?>
-							<?if($id=="NOT_REF")
-								echo "[".$arPermTypes[$pr_taskId]['title']."]";?>
 							</option>
 						<?endforeach;?>
 						</select>

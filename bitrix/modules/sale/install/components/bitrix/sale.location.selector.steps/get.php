@@ -19,7 +19,12 @@ $data = array();
 try
 {
 	CUtil::JSPostUnescape();
-	$data = CBitrixLocationSelectorStepsComponent::processSearchRequest();
+
+	$request = Main\Context::getCurrent()->getRequest()->getPostList();
+	if($request['version'] == '2')
+		$data = CBitrixLocationSelectorStepsComponent::processSearchRequestV2($_REQUEST);
+	else
+		$data = CBitrixLocationSelectorStepsComponent::processSearchRequest();
 }
 catch(Main\SystemException $e)
 {

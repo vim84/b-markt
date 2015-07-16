@@ -28,9 +28,24 @@ CJSCore::Init(array('im_desktop'));
 <?
 $APPLICATION->IncludeComponent("bitrix:im.messenger", "", Array("DESKTOP" => "Y"), false, Array("HIDE_ICONS" => "Y"));
 
-if (IsModuleInstalled('webdav'))
+$diskEnabled = false;
+if(IsModuleInstalled('disk'))
 {
-	$APPLICATION->IncludeComponent('bitrix:webdav.disk', '', array('AJAX_PATH' => '/desktop_app/disk.ajax.php'));
+	$diskEnabled =
+		\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false) &&
+		CModule::includeModule('disk');
+	if($diskEnabled && \Bitrix\Disk\Configuration::REVISION_API >= 5)
+	{
+		$APPLICATION->IncludeComponent('bitrix:disk.bitrix24disk', '', array('AJAX_PATH' => '/desktop_app/disk.ajax.new.php'), false, Array("HIDE_ICONS" => "Y"));
+	}
+	else
+	{
+		$diskEnabled = false;
+	}
+}
+if(!$diskEnabled && IsModuleInstalled('webdav'))
+{
+	$APPLICATION->IncludeComponent('bitrix:webdav.disk', '', array('AJAX_PATH' => '/desktop_app/disk.ajax.php'), false, Array("HIDE_ICONS" => "Y"));
 }
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");
 ?>

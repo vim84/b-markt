@@ -118,8 +118,20 @@ class CIBlockDocument
 				$fieldValueTmp2 = CBPHelper::StripUserPrefix($fieldValueTmp2);
 
 			foreach ($fieldValueTmp2 as &$fld)
-				$fld = array("VALUE" => $fld);
+				if (!isset($fld['VALUE']))
+					$fld = array("VALUE" => $fld);
 
+			if ($arFieldType["Type"] == "E:EList")
+			{
+				static $fl = true;
+				if ($fl)
+				{
+					if (!empty($_SERVER['HTTP_BX_AJAX']))
+						$GLOBALS["APPLICATION"]->ShowAjaxHead();
+					$GLOBALS["APPLICATION"]->AddHeadScript('/bitrix/js/iblock/iblock_edit.js');
+				}
+				$fl = false;
+			}
 			echo call_user_func_array(
 				$customMethodNameMulty,
 				array(
@@ -212,6 +224,9 @@ class CIBlockDocument
 				echo '<table width="100%" border="0" cellpadding="2" cellspacing="2" id="CBPVirtualDocument_'.htmlspecialcharsbx($arFieldName["Field"]).'_Table">';
 
 			$fieldValueTmp = $fieldValue;
+
+			if (sizeof($fieldValue) == 0)
+				$fieldValue[] = null;
 
 			$ind = -1;
 			foreach ($fieldValue as $key => $value)
@@ -596,6 +611,8 @@ class CIBlockDocument
 									);
 							}
 						}
+						elseif (!array_key_exists("GetLength", $arCustomType) && $value === '')
+							$value = null;
 
 						if (($value !== null)
 							&& ($arFieldType["Type"] == "S:employee")
@@ -772,10 +789,8 @@ class CIBlockDocument
 	}
 
 	/**
-	* Метод по коду документа возвращает ссылку на страницу документа в административной части.
-	*
-	* @param string $documentId - код документа.
-	* @return string - ссылка на страницу документа в административной части.
+	* @param string $documentId - document id.
+	* @return string - document admin page url.
 	*/
 	public function GetDocumentAdminPage($documentId)
 	{
@@ -805,10 +820,35 @@ class CIBlockDocument
 	}
 
 	/**
-	* Метод возвращает свойства (поля) документа в виде ассоциативного массива вида array(код_свойства => значение, ...). Определены все свойства, которые возвращает метод GetDocumentFields.
-	*
-	* @param string $documentId - код документа.
-	* @return array - массив свойств документа.
+	 * @param $documentId
+	 * @return null|string
+	 * @throws CBPArgumentNullException
+	 */
+
+	public function getDocumentName($documentId)
+	{
+		$documentId = intval($documentId);
+		if ($documentId <= 0)
+			throw new CBPArgumentNullException("documentId");
+
+		$db = CIBlockElement::GetList(
+			array(),
+			array("ID" => $documentId, "SHOW_NEW"=>"Y", "SHOW_HISTORY" => "Y"),
+			false,
+			false,
+			array("ID", "NAME")
+		);
+		if ($ar = $db->fetch())
+		{
+			return $ar["NAME"];
+		}
+
+		return null;
+	}
+
+	/**
+	* @param string $documentId - document id.
+	* @return array - document fields array.
 	*/
 	public function GetDocument($documentId)
 	{
@@ -1123,7 +1163,7 @@ class CIBlockDocument
 
 		$dbProperties = CIBlockProperty::GetList(
 			array("sort" => "asc", "name" => "asc"),
-			array("IBLOCK_ID" => $iblockId)
+			array("IBLOCK_ID" => $iblockId, 'ACTIVE' => 'Y')
 		);
 		while ($arProperty = $dbProperties->Fetch())
 		{
@@ -1158,6 +1198,10 @@ class CIBlockDocument
 				elseif ($arProperty["USER_TYPE"] == "DateTime")
 				{
 					$arResult[$key]["Type"] = "datetime";
+				}
+				elseif ($arProperty["USER_TYPE"] == "Date")
+				{
+					$arResult[$key]["Type"] = "date";
 				}
 				elseif ($arProperty["USER_TYPE"] == "EList")
 				{
@@ -1242,7 +1286,7 @@ class CIBlockDocument
 			$t = $ar["PROPERTY_TYPE"].":".$ar["USER_TYPE"];
 
 			if (COption::GetOptionString("bizproc", "SkipNonPublicCustomTypes", "N") == "Y"
-				&& !array_key_exists("GetPublicEditHTML", $ar) || $t == "S:UserID" || $t == "S:DateTime")
+				&& !array_key_exists("GetPublicEditHTML", $ar) || $t == "S:UserID" || $t == "S:DateTime" || $t == "S:Date")
 				continue;
 
 			$arResult[$t] = array("Name" => $ar["DESCRIPTION"], "BaseType" => "string");
@@ -1252,6 +1296,8 @@ class CIBlockDocument
 				$arResult[$t]["BaseType"] = "user";
 			elseif ($t == "S:DateTime")
 				$arResult[$t]["BaseType"] = "datetime";
+			elseif ($t == "S:Date")
+				$arResult[$t]["BaseType"] = "date";
 			elseif ($t == "E:EList")
 			{
 				$arResult[$t]["BaseType"] = "string";
@@ -1278,8 +1324,8 @@ class CIBlockDocument
 			"ACTIVE" => "Y",
 			"SORT" => 150,
 			"CODE" => $arFields["code"],
-			"MULTIPLE" => $arFields["multiple"],
-			"IS_REQUIRED" => $arFields["required"],
+			'MULTIPLE' => $arFields['multiple'] == 'Y' || (string)$arFields['multiple'] === '1' ? 'Y' : 'N',
+			'IS_REQUIRED' => $arFields['required'] == 'Y' || (string)$arFields['required'] === '1' ? 'Y' : 'N',
 			"IBLOCK_ID" => $iblockId,
 			"FILTRABLE" => "Y",
 		);
@@ -1301,7 +1347,12 @@ class CIBlockDocument
 			$arFieldsTmp["PROPERTY_TYPE"] = "S";
 			$arFieldsTmp["USER_TYPE"]= "UserID";
 		}
-		elseif ($arFields["type"] == "date" || $arFields["type"] == "datetime")
+		elseif ($arFields["type"] == "date")
+		{
+			$arFieldsTmp["PROPERTY_TYPE"] = "S";
+			$arFieldsTmp["USER_TYPE"]= "Date";
+		}
+		elseif ($arFields["type"] == "datetime")
 		{
 			$arFieldsTmp["PROPERTY_TYPE"] = "S";
 			$arFieldsTmp["USER_TYPE"]= "DateTime";
@@ -1322,6 +1373,25 @@ class CIBlockDocument
 				foreach ($arFields["options"] as $k => $v)
 				{
 					$arFieldsTmp["VALUES"][] = array("XML_ID" => $k, "VALUE" => $v, "DEF" => "N", "SORT" => $i);
+					$i = $i + 10;
+				}
+			}
+			elseif (is_string($arFields["options"]) && (strlen($arFields["options"]) > 0))
+			{
+				$a = explode("\n", $arFields["options"]);
+				$i = 10;
+				foreach ($a as $v)
+				{
+					$v = trim(trim($v), "\r\n");
+					if (!$v)
+						continue;
+					$v1 = $v2 = $v;
+					if (substr($v, 0, 1) == "[" && strpos($v, "]") !== false)
+					{
+						$v1 = substr($v, 1, strpos($v, "]") - 1);
+						$v2 = trim(substr($v, strpos($v, "]") + 1));
+					}
+					$arFieldsTmp["VALUES"][] = array("XML_ID" => $v1, "VALUE" => $v2, "DEF" => "N", "SORT" => $i);
 					$i = $i + 10;
 				}
 			}
@@ -1614,7 +1684,8 @@ class CIBlockDocument
 				$arAllowableOperations = CBPDocument::GetAllowableOperations(
 					$userId,
 					$arParameters["AllUserGroups"],
-					$arParameters["DocumentStates"]
+					$arParameters["DocumentStates"],
+					true
 				);
 
 				if (!is_array($arAllowableOperations))
@@ -1729,6 +1800,7 @@ class CIBlockDocument
 			return false;
 
 		$arParameters["IBlockId"] = intval(substr($documentType, strlen("iblock_")));
+		$arParameters['sectionId'] = !empty($arParameters['sectionId']) ? (int)$arParameters['sectionId'] : 0;
 
 		if (!array_key_exists("IBlockRightsMode", $arParameters))
 			$arParameters["IBlockRightsMode"] = CIBlock::GetArrayByID($arParameters["IBlockId"], "RIGHTS_MODE");
@@ -1738,7 +1810,7 @@ class CIBlockDocument
 			if ($operation === CBPCanUserOperateOperation::CreateWorkflow)
 				return CIBlockRights::UserHasRightTo($arParameters["IBlockId"], $arParameters["IBlockId"], "iblock_rights_edit");
 			elseif ($operation === CBPCanUserOperateOperation::WriteDocument)
-				return CIBlockRights::UserHasRightTo($arParameters["IBlockId"], $arParameters["IBlockId"], "section_element_bind");
+				return CIBlockSectionRights::UserHasRightTo($arParameters["IBlockId"], $arParameters["sectionId"], "section_element_bind");
 			elseif ($operation === CBPCanUserOperateOperation::ViewWorkflow
 				|| $operation === CBPCanUserOperateOperation::StartWorkflow)
 			{
@@ -1782,7 +1854,8 @@ class CIBlockDocument
 				$arAllowableOperations = CBPDocument::GetAllowableOperations(
 					$userId,
 					$arParameters["AllUserGroups"],
-					$arParameters["DocumentStates"]
+					$arParameters["DocumentStates"],
+					true
 				);
 
 				if (!is_array($arAllowableOperations))
@@ -2423,7 +2496,6 @@ class CIBlockDocument
 			foreach($obRights->GetGroups(/*"element_bizproc_start"*/) as $GROUP_CODE)
 				if(preg_match("/^G(\\d+)\$/", $GROUP_CODE, $match))
 					$arRes[] = $match[1];
-
 		}
 		else
 		{
@@ -2443,33 +2515,32 @@ class CIBlockDocument
 
 	public function GetUsersFromUserGroup($group, $documentId)
 	{
-		if (strtolower($group) == "author")
+		$group = strtolower($group);
+		if ($group == 'author')
 		{
-			$documentId = intval($documentId);
+			$documentId = (int)$documentId;
 			if ($documentId <= 0)
 				return array();
 
-			$db = CIBlockElement::GetList(array(), array("ID" => $documentId, "SHOW_NEW"=>"Y", "SHOW_HISTORY" => "Y"), false, false, array("ID", "IBLOCK_ID", "CREATED_BY"));
+			$db = CIBlockElement::GetList(array(), array("ID" => $documentId, "SHOW_NEW" => "Y", "SHOW_HISTORY" => "Y"), false, false, array("ID", "IBLOCK_ID", "CREATED_BY"));
 			if ($ar = $db->Fetch())
 				return array($ar["CREATED_BY"]);
-
 			return array();
 		}
 
-		$group = intval($group);
+		$group = (int)$group;
 		if ($group <= 0)
 			return array();
 
 		$arResult = array();
 
 		$arFilter = array("ACTIVE" => "Y");
-		if($group != 2)
+		if ($group != 2)
 			$arFilter["GROUPS_ID"] = $group;
 
 		$dbUsersList = CUser::GetList(($b = "ID"), ($o = "ASC"), $arFilter);
 		while ($arUser = $dbUsersList->Fetch())
 			$arResult[] = $arUser["ID"];
-
 		return $arResult;
 	}
 
@@ -2488,14 +2559,37 @@ class CIBlockDocument
 			return;
 
 		$ob = new CIBlockElementRights($iblockId, $documentId);
-		$ar = $ob->GetRights();
+		$documentRights = $ob->GetRights();
 
-		if ($bRewrite)
+		$mode = 'Hold';
+		$scope = 'ScopeWorkflow';
+
+		if (is_array($bRewrite) && class_exists('CBPSetPermissionsMode'))
 		{
-			foreach ($ar as $i => $arRight)
+			if (isset($bRewrite['setMode']))
+				$mode = CBPSetPermissionsMode::outMode($bRewrite['setMode']);
+			if (isset($bRewrite['setScope']))
+				$scope = CBPSetPermissionsMode::outScope($bRewrite['setScope']);
+		}
+		elseif ($bRewrite == true)
+		{
+			$mode = 'Clear';
+		}
+
+		$overrideCodes = array();
+		if ($mode == 'Clear' || $mode == 'Rewrite')
+		{
+			foreach ($documentRights as $i => $arRight)
 			{
-				if ($arRight["XML_ID"] == $workflowId)
-					unset($ar[$i]);
+				if ($scope == 'ScopeDocument' || $scope == 'ScopeWorkflow' && $arRight["XML_ID"] == $workflowId)
+				{
+					if ($mode == 'Clear')
+						unset($documentRights[$i]);
+
+					if ($mode == 'Rewrite')
+						$overrideCodes[$arRight["GROUP_CODE"]] = $i;
+				}
+
 			}
 		}
 
@@ -2505,6 +2599,8 @@ class CIBlockDocument
 		{
 			foreach ($arUsers as $user)
 			{
+				if (!$user)
+					continue;
 				$gc = null;
 				if ($user == 'author')
 				{
@@ -2512,26 +2608,33 @@ class CIBlockDocument
 					foreach ($u as $u1)
 						$gc = "U".$u1;
 				}
+				elseif (strpos($user, 'group_') === 0)
+				{
+					$gc = strtoupper(substr($user, strlen('group_')));
+				}
 				else
 				{
 					$gc = ((substr($user, 0, $l) == "user_") ? "U".substr($user, $l) : "G".$user);
 				}
 				if ($gc != null)
 				{
-					$ar["n".$i] = array("GROUP_CODE" => $gc, "TASK_ID" => $taskId, "XML_ID" => $workflowId);
+					$documentRights["n".$i] = array("GROUP_CODE" => $gc, "TASK_ID" => $taskId, "XML_ID" => $workflowId);
 					$i++;
+
+					if (isset($overrideCodes[$gc]))
+						unset($documentRights[$overrideCodes[$gc]]);
 				}
 			}
 		}
 
-		$ob->SetRights($ar);
+		$ob->SetRights($documentRights);
 	}
 
 	/**
-	* Метод возвращает массив произвольной структуры, содержащий всю информацию о документе. По этому массиву документ восстановливается методом RecoverDocumentFromHistory.
+	* Method return array with all information about document. Array used for method RecoverDocumentFromHistory.
 	*
-	* @param string $documentId - код документа.
-	* @return array - массив документа.
+	* @param string $documentId - document id.
+	* @return array - document information array.
 	*/
 	public function GetDocumentForHistory($documentId, $historyIndex)
 	{
@@ -2611,10 +2714,10 @@ class CIBlockDocument
 	}
 
 	/**
-	* Метод восстанавливает указанный документ из массива. Массив создается методом RecoverDocumentFromHistory.
+	* Method recover document from array. Array must be created by method RecoverDocumentFromHistory.
 	*
-	* @param string $documentId - код документа.
-	* @param array $arDocument - массив.
+	* @param string $documentId - document id.
+	* @param array $arDocument - array.
 	*/
 	public function RecoverDocumentFromHistory($documentId, $arDocument)
 	{
@@ -2715,6 +2818,15 @@ class CIBlockDocument
 			throw new Exception($iblockElement->LAST_ERROR);
 
 		return true;
+	}
+
+	public static function isExtendedPermsSupported($documentType)
+	{
+		$iblockId = (int)substr($documentType, strlen("iblock_"));
+		if ($iblockId <= 0)
+			throw new CBPArgumentOutOfRangeException("documentType", $documentType);
+
+		return CIBlock::GetArrayByID($iblockId, "RIGHTS_MODE");
 	}
 }
 ?>

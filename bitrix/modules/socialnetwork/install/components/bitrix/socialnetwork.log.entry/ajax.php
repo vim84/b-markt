@@ -226,7 +226,9 @@ if(CModule::IncludeModule("socialnetwork"))
 									&& array_key_exists("FORUM_ID", $arLogParams)
 									&& intval($arLogParams["FORUM_ID"]) > 0
 								)
+								{
 									$photo_forum_id = $arLogParams["FORUM_ID"];
+								}
 							}
 							$arSearchParams["PHOTO_FORUM_ID"] = $photo_forum_id;
 							$arSearchParams["PATH_TO_GROUP_PHOTO_ELEMENT"] = (
@@ -243,6 +245,47 @@ if(CModule::IncludeModule("socialnetwork"))
 									? $arLog["URL"]
 									: ""
 							);
+						}
+						elseif($arCommentEvent["EVENT_ID"] == "wiki_comment")
+						{
+							$arSearchParams["PATH_TO_GROUP_WIKI_POST_COMMENT"] = (
+								$arLog["ENTITY_TYPE"] == SONET_SUBSCRIBE_ENTITY_GROUP 
+									? COption::GetOptionString("socialnetwork", "workgroups_page", false, $site_id)."group/#group_id#/wiki/#wiki_name#/?MID=#message_id##message#message_id#"
+									: ""
+							);
+						}
+						elseif($arCommentEvent["EVENT_ID"] == "tasks_comment")
+						{
+							if (CModule::IncludeModule('tasks'))
+							{
+								$tasksForumId = intval(CTasksTools::getForumIdForIntranet());
+								if ($tasksForumId > 0)
+								{
+									$arSearchParams["TASK_FORUM_ID"] = $tasksForumId;
+									$arSearchParams["PATH_TO_GROUP_TASK_ELEMENT"] = (
+										$arLog["ENTITY_TYPE"] == SONET_SUBSCRIBE_ENTITY_GROUP 
+											? COption::GetOptionString("socialnetwork", "workgroups_page", false, $site_id)."group/#group_id#/tasks/task/view/#task_id#/"
+											: ""
+									);
+									$arSearchParams["PATH_TO_USER_TASK_ELEMENT"] = (
+										$arLog["ENTITY_TYPE"] == SONET_SUBSCRIBE_ENTITY_USER 
+											? COption::GetOptionString("socialnetwork", "user_page", false, $site_id)."user/#user_id#/tasks/task/view/#task_id#/"
+											: ""
+									);
+								}
+							}
+						}
+						elseif($arCommentEvent["EVENT_ID"] == "calendar_comment")
+						{
+							$arSearchParams["PATH_TO_GROUP_CALENDAR_ELEMENT"] = (
+								$arLog["ENTITY_TYPE"] == SONET_SUBSCRIBE_ENTITY_GROUP 
+									? COption::GetOptionString("socialnetwork", "workgroups_page", false, $site_id)."group/#group_id#/calendar/?EVENT_ID=#element_id#"
+									: ""
+							);
+						}
+						elseif($arCommentEvent["EVENT_ID"] == "lists_new_element_comment")
+						{
+							$arSearchParams["PATH_TO_WORKFLOW"] = "/services/processes/#list_id#/bp_log/#workflow_id#/";
 						}
 
 						global $bxSocNetSearch;

@@ -80,6 +80,12 @@ if ($arParams["INIT"] == 'Y')
 		$CIMContactList = new CIMContactList();
 		$arResult['CONTACT_LIST'] = $CIMContactList->GetList();
 
+		foreach ($arResult['CONTACT_LIST']['chats'] as $key => $value)
+		{
+			$value['fake'] = true;
+			$arResult['CHAT']['chat'][$key] = $value;
+		}
+
 		$arRecent = CIMContactList::GetRecentList(Array(
 			'LOAD_LAST_MESSAGE' => 'Y',
 			'USE_TIME_ZONE' => 'N',
@@ -91,6 +97,7 @@ if ($arParams["INIT"] == 'Y')
 		$arResult['PATH_TO_IM'] = '/desktop_app/im.ajax.php';
 		$arResult['PATH_TO_CALL'] = '/desktop_app/call.ajax.php';
 		$arResult['PATH_TO_FILE'] = '/desktop_app/file.ajax.php';
+
 		$arResult['SMILE'] = $arSmile['SMILE'];
 		$arResult['SMILE_SET'] = $arSmile['SMILE_SET'];
 		$arResult['SETTINGS_NOTIFY_BLOCKED'] = CIMSettings::GetSimpleNotifyBlocked();

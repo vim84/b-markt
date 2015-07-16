@@ -1,30 +1,35 @@
 <?
-if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
+if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
 	die();
+
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+	$typeTranslation = '_PROCESS';
+else
+	$typeTranslation = '';
 
 $APPLICATION->IncludeComponent(
 	"bitrix:main.interface.toolbar",
 	"",
 	array(
-		"BUTTONS" => array(
+		"BUTTONS"=>array(
 			array(
-				"TEXT"  => GetMessage("CT_BLF_TOOLBAR_ADD"),
-				"TITLE" => GetMessage("CT_BLF_TOOLBAR_ADD_TITLE"),
-				"LINK"  => $arResult["LIST_FIELD_EDIT_URL"],
-				"ICON"  => "btn-add-field",
+				"TEXT"=>GetMessage("CT_BLF_TOOLBAR_ADD"),
+				"TITLE"=>GetMessage("CT_BLF_TOOLBAR_ADD_TITLE"),
+				"LINK"=>$arResult["LIST_FIELD_EDIT_URL"],
+				"ICON"=>"btn-add-field",
 			),
-			array("SEPARATOR" => true),
+			array("SEPARATOR"=>true),
 			array(
-				"TEXT"  => GetMessage("CT_BLF_TOOLBAR_LIST_EDIT"),
-				"TITLE" => GetMessage("CT_BLF_TOOLBAR_LIST_TITLE"),
-				"LINK"  => $arResult["LIST_EDIT_URL"],
-				"ICON"  => "btn-edit-list",
+				"TEXT"=>GetMessage("CT_BLF_TOOLBAR_LIST_EDIT".$typeTranslation),
+				"TITLE"=>GetMessage("CT_BLF_TOOLBAR_LIST_TITLE".$typeTranslation),
+				"LINK"=>$arResult["LIST_EDIT_URL"],
+				"ICON"=>"btn-edit-list",
 			),
 			array(
-				"TEXT"  => $arResult["IBLOCK"]["ELEMENTS_NAME"],
-				"TITLE" => GetMessage("CT_BLF_TOOLBAR_ELEMENTS_TITLE"),
-				"LINK"  => $arResult["LIST_URL"],
-				"ICON"  => "btn-view-elements",
+				"TEXT"=>$arResult["IBLOCK"]["ELEMENTS_NAME"],
+				"TITLE"=>GetMessage("CT_BLF_TOOLBAR_ELEMENTS_TITLE"),
+				"LINK"=>$arResult["LIST_URL"],
+				"ICON"=>"btn-view-elements",
 			),
 		),
 	),
@@ -35,8 +40,8 @@ $APPLICATION->IncludeComponent(
 	"bitrix:main.interface.grid",
 	"",
 	array(
-		"GRID_ID"            => $arResult["GRID_ID"],
-		"HEADERS"            => array(
+		"GRID_ID"=>$arResult["GRID_ID"],
+		"HEADERS"=>array(
 			array(
 				"id" => "SORT",
 				"name" => GetMessage("CT_BLF_LIST_SORT"),
@@ -70,12 +75,12 @@ $APPLICATION->IncludeComponent(
 				"editable" => true,
 			),
 		),
-		"ROWS"               => $arResult["ROWS"],
-		"ACTIONS"            => array("delete" => true),
-		"ACTION_ALL_ROWS"    => true,
-		"AJAX_MODE"          => "Y",
-		"AJAX_OPTION_SHADOW" => "Y",
-		"AJAX_OPTION_JUMP"   => "N",
+		"ROWS"=>$arResult["ROWS"],
+		"ACTIONS"=>array("delete"=>true),
+		"ACTION_ALL_ROWS"=>true,
+		"AJAX_MODE"=>"Y",
+		"AJAX_OPTION_SHADOW"=>"Y",
+		"AJAX_OPTION_JUMP" => "N",
 	),
 	$component, array("HIDE_ICONS" => "Y")
 );?>

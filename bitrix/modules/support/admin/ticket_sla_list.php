@@ -160,7 +160,8 @@ $slaResponsibles = array();
 while($arRes = $rsData->NavNext())
 {
 	$fetchedRows[] = $arRes;
-	$slaResponsibles[] = $arRes['RESPONSIBLE_USER_ID'];
+	if ($arRes['RESPONSIBLE_USER_ID'])
+		$slaResponsibles[] = $arRes['RESPONSIBLE_USER_ID'];
 }
 
 // get co-result data

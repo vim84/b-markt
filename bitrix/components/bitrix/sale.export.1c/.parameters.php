@@ -59,6 +59,12 @@ $arComponentParameters = array(
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "Y",
 		),
+		"CHANGE_STATUS_FROM_1C" => array(
+			"PARENT" => "BASE",
+			"NAME" => GetMessage("CP_BCI1_CHANGE_STATUS_FROM_1C"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
 		"EXPORT_FINAL_ORDERS" => array(
 			"PARENT" => "BASE",
 			"NAME" => GetMessage("CP_BCI1_EXPORT_FINAL_ORDERS"),

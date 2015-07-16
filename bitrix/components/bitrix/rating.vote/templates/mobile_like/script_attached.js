@@ -1,25 +1,30 @@
 if (!BXRL)
 {
 	var BXRL = {};
-	var BXRLW = null;
+
+	BX.addCustomEvent("onPull-main", function(data) {
+		if (data.command == 'rating_vote')
+		{
+			RatingLike.LiveUpdate(data.params);
+		}
+	});
 }
 
 RatingLike = function(likeId, entityTypeId, entityId, available)
 {	
 	this.enabled = true;
-	this.likeId = likeId;
 	this.entityTypeId = entityTypeId;
 	this.entityId = entityId;
 	this.available = available == 'Y'? true: false;
 
-	this.box = BX('bx-ilike-box-'+likeId);
+	this.box = BX('bx-ilike-box-' + likeId);
 	if (this.box === null)
 	{
 		this.enabled = false;
 		return false;
 	}
 
-	this.button = BX('bx-ilike-button-'+likeId);
+	this.button = BX('bx-ilike-button-' + likeId);
 	if (!this.button)
 	{
 		this.button = BX('rating_button');
@@ -50,38 +55,21 @@ RatingLike.Init = function(likeId)
 		BX.bind(BXRL[likeId].button, 'click', function(e) 
 		{
 			clearTimeout(BXRL[likeId].likeTimeout);
+			var newValue = null;
+			var action = null;
+			var ratingFooter = null;
 
 			if (BX.hasClass(BXRL[likeId].button, 'post-item-inform-likes-active'))
 			{
-				var newValue = parseInt(BXRL[likeId].countText.innerHTML) - 1;
+				newValue = parseInt(BXRL[likeId].countText.innerHTML) - 1;
+				action = 'cancel';
+
 				BXRL[likeId].countText.innerHTML = newValue;
 				if (BXRL[likeId].buttonCountText)
 				{
 					BXRL[likeId].buttonCountText.innerHTML = newValue;
 				}
 				BX.removeClass(BXRL[likeId].button, 'post-item-inform-likes-active');
-
-				if (parseInt(newValue) <= 0)
-				{
-					if (
-						BX('rating-footer-wrap')
-						&& !BX('lenta_notifier') // not in lenta
-					)
-					{
-						BX('rating-footer-wrap').style.display = 'none';
-					}
-				}
-				else
-				{
-					if (BX('bx-ilike-list-others'))
-					{
-						BX('bx-ilike-list-others').style.display = "block";
-					}
-					if (BX('bx-ilike-list-youothers'))
-					{
-						BX('bx-ilike-list-youothers').style.display = "none";
-					}
-				}
 
 				BXRL[likeId].likeTimeout = setTimeout(function(){
 					if (BXRL[likeId].lastVote != 'cancel')
@@ -90,35 +78,15 @@ RatingLike.Init = function(likeId)
 			}
 			else
 			{
-				var newValue = parseInt(BXRL[likeId].countText.innerHTML) + 1;
+				newValue = parseInt(BXRL[likeId].countText.innerHTML) + 1;
+				action = 'plus';
+
 				BXRL[likeId].countText.innerHTML = newValue;
 				if (BXRL[likeId].buttonCountText)
 				{
 					BXRL[likeId].buttonCountText.innerHTML = newValue;
 				}
 				BX.addClass(BXRL[likeId].button, 'post-item-inform-likes-active');
-
-				var blockCounter = false;
-
-				if (
-					BX('rating-footer-wrap')
-					&& !BX('lenta_notifier') // not in lenta
-				)
-				{
-					BX('rating-footer-wrap').style.display = 'block';
-				}
-
-				if (parseInt(newValue) != 1)
-				{
-					if (BX('bx-ilike-list-others'))
-					{
-						BX('bx-ilike-list-others').style.display = "none";
-					}
-					if (BX('bx-ilike-list-youothers'))
-					{
-						BX('bx-ilike-list-youothers').style.display = "block";
-					}
-				}
 
 				BXRL[likeId].likeTimeout = setTimeout(function(){
 					if (BXRL[likeId].lastVote != 'plus')
@@ -127,6 +95,37 @@ RatingLike.Init = function(likeId)
 					}
 				}, 1000);
 			}
+
+			ratingFooter = BX('rating-footer');
+
+			if (
+				!ratingFooter
+				&& typeof BXRL[likeId].button.parentNode.id != 'undefined'
+			)
+			{
+				var arMatch = BXRL[likeId].button.parentNode.id.match(/^rating_button_([\d]+)$/i);
+				if (arMatch != null)
+				{
+					ratingFooter = BX('rating-footer_' + arMatch[1]);
+				}
+			}
+
+			if (ratingFooter)
+			{
+				var youNode = BX.findChild(ratingFooter, {className: 'rating-footer-you'}, true, false);
+				var youAndOthersNode = BX.findChild(ratingFooter, {className: 'rating-footer-youothers'}, true, false);
+				var othersNode = BX.findChild(ratingFooter, {className: 'rating-footer-others'}, true, false);
+
+				oMSL.recalcRatingFooter({
+					obYouNode: youNode,
+					obYouAndOthersNode: youAndOthersNode,
+					obOthersNode: othersNode,
+					bSelf: true,
+					voteAction: action,
+					val: newValue
+				});
+			}
+
 			BX.PreventDefault(e);
 		});
 		
@@ -135,6 +134,7 @@ RatingLike.Init = function(likeId)
 
 RatingLike.Vote = function(likeId, voteAction)
 {
+	var BMAjaxWrapper = new MobileAjaxWrapper;
 	BMAjaxWrapper.Wrap({
 		'type': 'json',
 		'method': 'POST',
@@ -161,11 +161,22 @@ RatingLike.Vote = function(likeId, voteAction)
 					BXRL[likeId].buttonCountText.innerHTML = data.items_all;
 				}
 
-				var oldValue = BXRL[likeId].box.parentNode.getAttribute('data-counter');
+				var counterNode = BXRL[likeId].box.parentNode;
+				var oldValue = counterNode.getAttribute('data-counter');
+
+				if (oldValue === null)
+				{
+					counterNode = BX('rating_button_cont');
+					if (counterNode)
+					{
+						oldValue = counterNode.getAttribute('data-counter');
+					}
+				}
+
 				if (oldValue !== null)
 				{
 					oldValue = parseInt(oldValue);
-					BXRL[likeId].box.parentNode.setAttribute('data-counter', ((voteAction == 'plus') ? (oldValue + 1) : (oldValue - 1)));
+					counterNode.setAttribute('data-counter', ((voteAction == 'plus') ? (oldValue + 1) : (oldValue - 1)));
 				}
 
 				if (
@@ -241,4 +252,29 @@ RatingLike.List = function(likeId)
 	}
 
 	return false;
+}
+
+RatingLike.LiveUpdate = function(params)
+{
+	if (params.USER_ID == BX.message('USER_ID'))
+	{
+		return false;
+	}
+
+	for(var i in BXRL)
+	{
+		if (
+			BXRL[i].entityTypeId == params.ENTITY_TYPE_ID
+			&& BXRL[i].entityId == params.ENTITY_ID
+		)
+		{
+			oMSL.onLogEntryRatingLike({
+				ratingId: i,
+				voteAction: (params.TYPE == 'ADD' ? 'plus' : 'cancel'),
+				logId: 0,
+				userId: params.USER_ID
+			});
+		}
+	}
+
 }

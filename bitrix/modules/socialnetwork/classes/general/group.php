@@ -366,15 +366,21 @@ class CAllSocNetGroup
 		global $DB, $USER;
 
 		if (!CSocNetGroup::__ValidateID($ID))
+		{
 			return false;
+		}
 
 		$ID = IntVal($ID);
+		$cacheArrayKey = ($bCheckPermissions ? "Y" : "N");
 
 		if (
 			is_array($GLOBALS["SONET_GROUP_CACHE"])
 			&& is_array($GLOBALS["SONET_GROUP_CACHE"][$ID])
+			&& is_array($GLOBALS["SONET_GROUP_CACHE"][$cacheArrayKey])
 		)
-			return $GLOBALS["SONET_GROUP_CACHE"][$ID];
+		{
+			return $GLOBALS["SONET_GROUP_CACHE"][$ID][$cacheArrayKey];
+		}
 		else
 		{
 			if (!$bCheckPermissions)
@@ -396,16 +402,26 @@ class CAllSocNetGroup
 			else
 			{
 				if (is_object($cache))
+				{
 					$cache->StartDataCache($cache_time, $cache_id, $cache_path);
+				}
 
 				$arFilter = array("ID" => $ID);
 				if (
 					$bCheckPermissions 
 					&& ($USER->GetID() > 0)
 				)
+				{
 					$arFilter["CHECK_PERMISSIONS"] = $USER->GetID();
+				}
 
-				$dbResult = CSocNetGroup::GetList(Array(), $arFilter, false, false, array("ID", "SITE_ID", "NAME", "DESCRIPTION", "DATE_CREATE", "DATE_UPDATE", "ACTIVE", "VISIBLE", "OPENED", "CLOSED", "SUBJECT_ID", "OWNER_ID", "KEYWORDS", "IMAGE_ID", "NUMBER_OF_MEMBERS", "NUMBER_OF_MODERATORS", "INITIATE_PERMS", "SPAM_PERMS", "DATE_ACTIVITY", "SUBJECT_NAME", "UF_*"));
+				$dbResult = CSocNetGroup::GetList(
+					Array(), 
+					$arFilter, 
+					false, 
+					false, 
+					array("ID", "SITE_ID", "NAME", "DESCRIPTION", "DATE_CREATE", "DATE_UPDATE", "ACTIVE", "VISIBLE", "OPENED", "CLOSED", "SUBJECT_ID", "OWNER_ID", "KEYWORDS", "IMAGE_ID", "NUMBER_OF_MEMBERS", "NUMBER_OF_MODERATORS", "INITIATE_PERMS", "SPAM_PERMS", "DATE_ACTIVITY", "SUBJECT_NAME", "UF_*")
+				);
 				if ($arResult = $dbResult->GetNext())
 				{
 					if (defined("BX_COMP_MANAGED_CACHE"))
@@ -418,7 +434,9 @@ class CAllSocNetGroup
 					$arResult["NAME_FORMATTED"] = $arResult["NAME"];
 				}
 				else
+				{
 					$arResult = false;
+				}
 
 				if (is_object($cache))
 				{
@@ -426,15 +444,30 @@ class CAllSocNetGroup
 						"FIELDS" => $arResult
 					);
 					$cache->EndDataCache($arCacheData);
-					if(defined("BX_COMP_MANAGED_CACHE"))
+					if (defined("BX_COMP_MANAGED_CACHE"))
+					{
 						$GLOBALS["CACHE_MANAGER"]->EndTagCache();
+					}
 				}
 			}
 
-			if (!array_key_exists("SONET_GROUP_CACHE", $GLOBALS) || !is_array($GLOBALS["SONET_GROUP_CACHE"]))
+			if (
+				!array_key_exists("SONET_GROUP_CACHE", $GLOBALS)
+				|| !is_array($GLOBALS["SONET_GROUP_CACHE"])
+			)
+			{
 				$GLOBALS["SONET_GROUP_CACHE"] = array();
+			}
 
-			$GLOBALS["SONET_GROUP_CACHE"][$ID] = $arResult;
+			if (
+				!array_key_exists($ID, $GLOBALS["SONET_GROUP_CACHE"])
+				|| !is_array($GLOBALS["SONET_GROUP_CACHE"][$cacheArrayKey])
+			)
+			{
+				$GLOBALS["SONET_GROUP_CACHE"][$ID] = array();
+			}
+
+			$GLOBALS["SONET_GROUP_CACHE"][$ID][$cacheArrayKey] = $arResult;
 
 			return $arResult;
 		}
@@ -960,6 +993,31 @@ class CAllSocNetGroup
 		global $DB;
 		$strSql = "SELECT L.*, SGS.* FROM b_sonet_group_site SGS, b_lang L WHERE L.LID=SGS.SITE_ID AND SGS.GROUP_ID=".IntVal($group_id);
 		return $DB->Query($strSql);
+	}
+
+	function GetDefaultSiteId($groupId, $siteId = false)
+	{
+		$groupSiteId = ($siteId ? $siteId : SITE_ID);
+
+		if (CModule::IncludeModule("extranet"))
+		{
+			$extranetSiteId = CExtranet::GetExtranetSiteID();
+
+			$rsGroupSite = CSocNetGroup::GetSite($groupId);
+			while ($arGroupSite = $rsGroupSite->Fetch())
+			{
+				if (
+					!$extranetSiteId 
+					|| $arGroupSite["LID"] != $extranetSiteId
+				)
+				{
+					$groupSiteId = $arGroupSite["LID"];
+					break;
+				}
+			}
+		}
+
+		return $groupSiteId;
 	}
 
 	function OnBeforeLangDelete($lang)

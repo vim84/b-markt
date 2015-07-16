@@ -13,16 +13,14 @@ if ($saleModulePermissions == "D")
 
 if(!CBXFeatures::IsFeatureEnabled('SaleAccounts'))
 {
-	require($DOCUMENT_ROOT."/bitrix/modules/main/include/prolog_admin_after.php");
-
+	require($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/prolog_admin_after.php');
 	ShowError(GetMessage("SALE_FEATURE_NOT_ALLOW"));
-
 	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
 	die();
 }
 
 ClearVars();
-$ID = intval(array_key_exists('id', $_REQUEST) ? $_REQUEST["id"] : 0);
+$ID = (isset($_REQUEST['id']) ? (int)$_REQUEST['id'] : 0);
 
 $USER_ID = 0;
 $PERSON_TYPE = 0;
@@ -40,7 +38,7 @@ else
 /*****************************************************************************/
 /**************************** SAVE PROFILE ***********************************/
 /*****************************************************************************/
-if ($REQUEST_METHOD == "POST" && $saleModulePermissions >= "U" && check_bitrix_sessid() && !empty($arProfile))
+if ($_SERVER['REQUEST_METHOD'] == "POST" && $saleModulePermissions >= "U" && check_bitrix_sessid() && !empty($arProfile))
 {
 	$CODE_PROFILE_NAME = trim($_REQUEST["CODE_PROFILE_NAME"]);
 	if (strlen($CODE_PROFILE_NAME) > 0)
@@ -368,9 +366,9 @@ if(!empty($arProfile) && !empty($arUser))
 							"PUBLIC" => "N",
 						),
 						array(
-							"ID" => "",
-							"CODE" => $fieldValue,
-							"PROVIDE_LINK_BY" => "code",
+							"ID" => $fieldValue,
+							"CODE" => "",
+							"PROVIDE_LINK_BY" => "id",
 						)
 					);
 					?>
@@ -385,5 +383,4 @@ if(!empty($arProfile) && !empty($arUser))
 	$tabControl->Show();
 }
 
-require($DOCUMENT_ROOT."/bitrix/modules/main/include/epilog_admin.php");
-?>
+require($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/epilog_admin.php');

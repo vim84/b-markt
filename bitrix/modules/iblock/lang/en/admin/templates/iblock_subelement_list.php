@@ -16,4 +16,5 @@ $MESS["IBSEL_A_ACTIVATE"] = "Activate";
 $MESS["IBSEL_A_CLEAR_COUNTER"] = "Reset views counter";
 $MESS["IBSEL_A_CLEAR_COUNTER_TITLE"] = "Reset views counter and first view date";
 $MESS["IBEL_CATALOG_TYPE_MESS_OFFER"] = "offer";
+$MESS["IBSEL_A_CLEAR_COUNTER_CONFIRM"] = "Are you sure you want to reset counter and first viewed date?";
 ?>

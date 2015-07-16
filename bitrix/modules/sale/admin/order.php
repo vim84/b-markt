@@ -70,6 +70,7 @@ $arFilterFields = array(
 	"filter_price_to",
 	"filter_status",
 	"filter_date_status_from",
+	"filter_by_recommendation",
 	"filter_date_status_to",
 	"filter_payed_from",
 	"filter_payed_to",
@@ -213,6 +214,7 @@ if (isset($filter_status) && is_array($filter_status) && count($filter_status) >
 	}
 }
 if (strlen($filter_date_status_from)>0) $arFilter["DATE_STATUS_FROM"] = Trim($filter_date_status_from);
+if (strlen($filter_by_recommendation)>0) $arFilter["BY_RECOMMENDATION"] = Trim($filter_by_recommendation);
 if (strlen($filter_date_status_to)>0)
 {
 	if ($arDate = ParseDateTime($filter_date_status_to, CSite::GetDateFormat("FULL", SITE_ID)))
@@ -632,7 +634,21 @@ if (($arID = $lAdmin->GroupAction()) && $saleModulePermissions >= "U")
 							$ORDER_ID = $ID;
 							CSalePaySystemAction::InitParamArrays(array(), $ID);
 
-							if (include($psResultFile))
+							try
+							{
+								$inclRes = include $psResultFile;
+							}
+							catch(\Bitrix\Main\SystemException $e)
+							{
+								if($e->getCode() == CSalePaySystemAction::GET_PARAM_VALUE)
+									$lAdmin->AddGroupError(GetMessage("SOA_ERROR_PS"));
+								else
+									$lAdmin->AddGroupError($e->getMessage());
+
+								$inclRes = false;
+							}
+
+							if ($inclRes)
 							{
 								$ORDER_ID = IntVal($ORDER_ID);
 								$arOrder = CSaleOrder::GetByID($ORDER_ID);
@@ -1744,19 +1760,38 @@ while ($arOrder = $dbOrderList->NavNext(true, "f_"))
 
 			if ($bNeedLine && !CSaleBasketHelper::isSetItem($arItem))
 			{
-				$fieldName .= "<hr size=\"1\" width=\"90%\">";
-				$fieldQuantity .= "<hr size=\"1\" width=\"90%\">";
-				$fieldProductID .= "<hr size=\"1\" width=\"90%\">";
-				$fieldPrice .= "<hr size=\"1\" width=\"90%\">";
-				$fieldWeight .= "<hr size=\"1\" width=\"90%\">";
-				$fieldNotes .= "<hr size=\"1\" width=\"90%\">";
-				$fieldDiscountPrice .= "<hr size=\"1\" width=\"90%\">";
-				$fieldCatalogXML .= "<hr size=\"1\" width=\"90%\">";
-				$fieldProductXML .= "<hr size=\"1\" width=\"90%\">";
-				$fieldDiscountName  .= "<hr size=\"1\" width=\"90%\">";
-				$fieldDiscountValue  .= "<hr size=\"1\" width=\"90%\">";
-				$fieldDiscountCoupon .= "<hr size=\"1\" width=\"90%\">";
-				$fieldVatRate  .= "<hr size=\"1\" width=\"90%\">";
+				if($bExport)
+				{
+					$fieldName .= "<br />";
+					$fieldQuantity .= "<br />";
+					$fieldProductID .= "<br />";
+					$fieldPrice .= "<br />";
+					$fieldWeight .= "<br />";
+					$fieldNotes .= "<br />";
+					$fieldDiscountPrice .= "<br />";
+					$fieldCatalogXML .= "<br />";
+					$fieldProductXML .= "<br />";
+					$fieldDiscountName  .= "<br />";
+					$fieldDiscountValue  .= "<br />";
+					$fieldDiscountCoupon .= "<br />";
+					$fieldVatRate  .= "<br />";
+				}
+				else
+				{
+					$fieldName .= "<hr size=\"1\" width=\"90%\">";
+					$fieldQuantity .= "<hr size=\"1\" width=\"90%\">";
+					$fieldProductID .= "<hr size=\"1\" width=\"90%\">";
+					$fieldPrice .= "<hr size=\"1\" width=\"90%\">";
+					$fieldWeight .= "<hr size=\"1\" width=\"90%\">";
+					$fieldNotes .= "<hr size=\"1\" width=\"90%\">";
+					$fieldDiscountPrice .= "<hr size=\"1\" width=\"90%\">";
+					$fieldCatalogXML .= "<hr size=\"1\" width=\"90%\">";
+					$fieldProductXML .= "<hr size=\"1\" width=\"90%\">";
+					$fieldDiscountName  .= "<hr size=\"1\" width=\"90%\">";
+					$fieldDiscountValue  .= "<hr size=\"1\" width=\"90%\">";
+					$fieldDiscountCoupon .= "<hr size=\"1\" width=\"90%\">";
+					$fieldVatRate  .= "<hr size=\"1\" width=\"90%\">";
+				}
 			}
 			$bNeedLine = True;
 
@@ -1809,7 +1844,12 @@ while ($arOrder = $dbOrderList->NavNext(true, "f_"))
 			endif;
 
 			if ($bNeedLine)
-				$fieldValue .= "<hr size=\"1\" width=\"90%\">";
+			{
+				if($bExport)
+					$fieldValue .= "<br />";
+				else
+					$fieldValue .= "<hr size=\"1\" width=\"90%\">";
+			}
 
 			$fieldValue .= "</div>";
 
@@ -1824,19 +1864,19 @@ while ($arOrder = $dbOrderList->NavNext(true, "f_"))
 				$fieldName .= "</nobr>";
 			}
 			else
-				$fieldName .= "<br />";
+				$fieldName .= "&nbsp;";
 			if(strlen($arItem["QUANTITY"]) > 0)
 				$fieldQuantity .= $arItem["QUANTITY"]." ".$measure;
 			else
-				$fieldQuantity .= "<br />";
+				$fieldQuantity .= "&nbsp;";
 			if(strlen($arItem["PRODUCT_ID"]) > 0)
 				$fieldProductID .= $arItem["PRODUCT_ID"];
 			else
-				$fieldProductID .= "<br />";
+				$fieldProductID .= "&nbsp;";
 			if(strlen($arItem["PRICE"]) > 0)
 				$fieldPrice .= "<nobr>".htmlspecialcharsex(SaleFormatCurrency($arItem["PRICE"], $arItem["CURRENCY"]))."</nobr>";
 			else
-				$fieldPrice .= "<br />";
+				$fieldPrice .= "&nbsp;";
 			if(strlen($arItem["WEIGHT"]) > 0)
 			{
 				if((float)$WEIGHT_KOEF[$arOrder["LID"]] > 0)
@@ -1850,27 +1890,27 @@ while ($arOrder = $dbOrderList->NavNext(true, "f_"))
 				$fieldWeight .= roundEx($fieldWeightCalc, SALE_WEIGHT_PRECISION).' '.$WEIGHT_UNIT[$arOrder["LID"]];
 			}
 			else
-				$fieldWeight .= "<br />";
+				$fieldWeight .= "&nbsp;";
 			if(strlen($arItem["NOTES"]) > 0)
 				$fieldNotes .= $arItem["NOTES"];
 			else
-				$fieldNotes .= "<br />";
+				$fieldNotes .= "&nbsp;";
 			if(strlen($arItem["DISCOUNT_PRICE"]) > 0)
 				$fieldDiscountPrice .= "<nobr>".htmlspecialcharsex(SaleFormatCurrency($arItem["DISCOUNT_PRICE"], $arItem["CURRENCY"]))."</nobr>";
 			else
-				$fieldDiscountPrice .= "<br />";
+				$fieldDiscountPrice .= "&nbsp;";
 			if(strlen($arItem["CATALOG_XML_ID"]) > 0)
 				$fieldCatalogXML .= $arItem["CATALOG_XML_ID"];
 			else
-				$fieldCatalogXML .= "<br />";
+				$fieldCatalogXML .= "&nbsp;";
 			if(strlen($arItem["PRODUCT_XML_ID"]) > 0)
 				$fieldProductXML .= $arItem["PRODUCT_XML_ID"];
 			else
-				$fieldProductXML .= "<br />";
+				$fieldProductXML .= "&nbsp;";
 			if(strlen($arItem["DISCOUNT_NAME"]) > 0)
 				$fieldDiscountName .= $arItem["DISCOUNT_NAME"];
 			else
-				$fieldDiscountName .= "<br />";
+				$fieldDiscountName .= "&nbsp;";
 			if(strlen($arItem["DISCOUNT_VALUE"]) > 0)
 			{
 				$fieldDiscountValue .= roundEx($arItem["DISCOUNT_VALUE"], 2);
@@ -1878,15 +1918,15 @@ while ($arOrder = $dbOrderList->NavNext(true, "f_"))
 					$fieldDiscountValue .= "%";
 			}
 			else
-				$fieldDiscountValue .= "<br />";
+				$fieldDiscountValue .= "&nbsp;";
 			if(strlen($arItem["DISCOUNT_COUPON"]) > 0)
 				$fieldDiscountCoupon .= $arItem["DISCOUNT_COUPON"];
 			else
-				$fieldDiscountCoupon .= "<br />";
+				$fieldDiscountCoupon .= "&nbsp;";
 			if(strlen($arItem["VAT_RATE"]) > 0)
 				$fieldVatRate .= $arItem["VAT_RATE"];
 			else
-				$fieldVatRate .= "<br />";
+				$fieldVatRate .= "&nbsp;";
 		}
 		unset($arItem);
 	}
@@ -1922,7 +1962,12 @@ while ($arOrder = $dbOrderList->NavNext(true, "f_"))
 						foreach ($curVal as $val)
 						{
 							if ($bNeedLine)
-								$valMulti .= "<hr size=\"1\" width=\"90%\">";
+							{
+								if($bExport)
+									$valMulti .= "<br />";
+								else
+									$valMulti .= "<hr size=\"1\" width=\"90%\">";
+							}
 							$arPropVariant = CSaleOrderPropsVariant::GetByValue($arProps["ORDER_PROPS_ID"], $val);
 							$valMulti .= "[".htmlspecialcharsEx($val)."] ".htmlspecialcharsEx($arPropVariant["NAME"])."<br />";
 							$bNeedLine = true;
@@ -1956,7 +2001,11 @@ while ($arOrder = $dbOrderList->NavNext(true, "f_"))
 				{
 					if(CSaleLocation::isLocationProEnabled())
 					{
-						$path = htmlspecialcharsEx(Helper::getLocationPathDisplay($arProps["VALUE"]));
+						$path = Helper::getLocationStringById($arProps["VALUE"]);
+						if(!strlen($path))
+							$path = $arProps["VALUE"];
+
+						$path = htmlspecialcharsEx($path);
 
 						if(strlen($arProps["CODE"]) > 0)
 							$row->AddField("PROP_".$arProps["CODE"], $path);
@@ -2091,7 +2140,7 @@ if ($saleModulePermissions == "W")
 		$rcmValue[] = SaleFormatCurrency($arOrderList['BASKET_PRICE_TOTAL'], $arOrderList["BASKET_CURRENCY"]);
 	}
 }
-elseif (($saleModulePermissions < "W") && (COption::GetOptionString("sale", "show_order_sum", "N")=="Y"))
+elseif ($saleModulePermissions < "W")
 {
 	// also count recommendation stats
 	$rcmValue = array();
@@ -2099,6 +2148,11 @@ elseif (($saleModulePermissions < "W") && (COption::GetOptionString("sale", "sho
 	$rcmCount = 0;
 
 	$arOrdersSum = array();
+
+	$arGroupByTmp[] = 'BASKET_RECOMMENDATION';
+	$arGroupByTmp[] = 'BASKET_PRICE_TOTAL';
+	$arGroupByTmp[] = 'BASKET_CURRENCY';
+
 	$dbOrderList = CSaleOrder::GetList(
 		array('ID' => 'asc'),
 		$arFilterTmp,
@@ -2133,12 +2187,16 @@ elseif (($saleModulePermissions < "W") && (COption::GetOptionString("sale", "sho
 		}
 	}
 
-	foreach ($arOrdersSum as $key => $value)
+	// show summary
+	if (COption::GetOptionString("sale", "show_order_sum", "N")=="Y")
 	{
-		$arFooterArray[] = array(
-			"title" => GetMessage("SOAN_ITOG")." ".$key.":",
-			"value" => $value
-		);
+		foreach ($arOrdersSum as $key => $value)
+		{
+			$arFooterArray[] = array(
+				"title" => GetMessage("SOAN_ITOG")." ".$key.":",
+				"value" => $value
+			);
+		}
 	}
 
 	// recommendation stats
@@ -2153,8 +2211,10 @@ foreach($arFooterArray as $val)
 	$order_sum .= $val["title"]." ".$val["value"]."<br />";
 }
 
-$arResult['RECOMMENDATION_ORDERS_COUNT'] = $rcmCount;
-$arResult['RECOMMENDATION_ORDERS_VALUE'] = htmlspecialcharsex(join(' / ', $rcmValue));
+$arResult = array(
+	'RECOMMENDATION_ORDERS_COUNT' => $rcmCount,
+	'RECOMMENDATION_ORDERS_VALUE' => htmlspecialcharsex(join(' / ', $rcmValue))
+);
 
 // prepare recommendation widget
 ob_start();
@@ -2170,7 +2230,7 @@ ob_start();
 		</div>
 		<div class="adm-c-bigdatabar-content">
 			<div class="adm-c-bigdatabar-line">
-				<strong><?=GetMessage('SALE_BIGDATA_SALES_TITLE')?></strong> <?=GetMessage('SALE_BIGDATA_SALES_COUNT')?> - <?=$arResult['RECOMMENDATION_ORDERS_COUNT']?>
+				<strong><?=GetMessage('SALE_BIGDATA_SALES_TITLE')?></strong> <?=GetMessage('SALE_BIGDATA_SALES_COUNT')?> <?=$arResult['RECOMMENDATION_ORDERS_COUNT']?>
 			</div>
 			<div class="adm-c-bigdatabar-line">
 				<? $installed = (time()-Bitrix\Main\Config\Option::get('main', 'rcm_component_usage', 0)<3600*24);?>
@@ -2431,6 +2491,7 @@ $arFilterFieldsTmp = array(
 	"filter_price" => GetMessage("SOA_F_PRICE"),
 	"filter_status" => GetMessage("SALE_F_STATUS"),
 	"filter_date_status_from" => GetMessage("SALE_F_DATE_STATUS"),
+	"filter_by_recommendation" => GetMessage("SALE_F_BY_RECOMMENDATION"),
 	"filter_payed" => GetMessage("SALE_F_PAYED"),
 	"filter_payed_from" => GetMessage("SALE_F_DATE_PAYED"),
 	"filter_allow_delivery" => GetMessage("SALE_F_ALLOW_DELIVERY"),
@@ -2577,7 +2638,9 @@ $oFilter->Begin();
 			<select name="filter_lang">
 				<option value=""><?= htmlspecialcharsex(GetMessage("SALE_F_ALL")) ?></option>
 				<?
-				$dbSitesList = CLang::GetList(($b1="sort"), ($o1="asc"));
+				$b1 = "SORT";
+				$o1 = "ASC";
+				$dbSitesList = CLang::GetList($b1, $o1);
 				while ($arSitesList = $dbSitesList->Fetch())
 				{
 					if (!in_array($arSitesList["LID"], $arAccessibleSites)
@@ -2626,6 +2689,16 @@ $oFilter->Begin();
 		<td><?echo GetMessage("SALE_F_DATE_STATUS");?>:</td>
 		<td>
 			<?echo CalendarPeriod("filter_date_status_from", $filter_date_status_from, "filter_date_status_to", $filter_date_status_to, "find_form", "Y")?>
+		</td>
+	</tr>
+	<tr>
+		<td><?echo GetMessage("SALE_F_BY_RECOMMENDATION")?>:</td>
+		<td>
+			<select name="filter_by_recommendation">
+				<option value=""><?echo GetMessage("SALE_F_ALL")?></option>
+				<option value="Y"<?if ($filter_payed=="Y") echo " selected"?>><?echo GetMessage("SALE_YES")?></option>
+				<option value="N"<?if ($filter_payed=="N") echo " selected"?>><?echo GetMessage("SALE_NO")?></option>
+			</select>
 		</td>
 	</tr>
 	<tr>
@@ -2944,18 +3017,54 @@ $oFilter->Begin();
 					}
 					elseif ($value["TYPE"]=="LOCATION")
 					{
-						?>
-						<select name="filter_prop_<?= $key ?>">
-							<option value=""><?echo GetMessage("SALE_F_ALL")?></option>
-							<?
-							$db_vars = CSaleLocation::GetList(Array("SORT"=>"ASC", "COUNTRY_NAME_LANG"=>"ASC", "CITY_NAME_LANG"=>"ASC"), array(), LANG);
-							while ($vars = $db_vars->Fetch())
-							{
-								?><option value="<?echo $vars["ID"]?>"<?if (IntVal($vars["ID"])==IntVal($curVal)) echo " selected"?>><?echo htmlspecialcharsbx($vars["COUNTRY_NAME"]." - ".$vars["CITY_NAME"])?></option><?
-							}
+
+						if(CSaleLocation::isLocationProEnabled())
+						{
 							?>
-						</select>
-						<?
+
+							<div style="width: 100%; margin-left: 12px">
+
+								<?$APPLICATION->IncludeComponent("bitrix:sale.location.selector.search", "", array(
+									"ID" => $curVal,
+									"CODE" => "",
+									"INPUT_NAME" => 'filter_prop_'.$key,
+									"PROVIDE_LINK_BY" => "id",
+									"SHOW_ADMIN_CONTROLS" => 'N',
+									"SELECT_WHEN_SINGLE" => 'N',
+									"FILTER_BY_SITE" => 'N',
+									"SHOW_DEFAULT_LOCATIONS" => 'N',
+									"SEARCH_BY_PRIMARY" => 'Y',
+									"INITIALIZE_BY_GLOBAL_EVENT" => 'onAdminFilterInited', // this allows js logic to be initialized after admin filter
+									"GLOBAL_EVENT_SCOPE" => 'window'
+									),
+									false
+								);?>
+
+							</div>
+
+							<style>
+								.adm-filter-item-center,
+								.adm-filter-content {
+									overflow: visible !important;
+								}
+							</style>
+							<?
+						}
+						else
+						{
+							?>
+							<select name="filter_prop_<?= $key ?>">
+								<option value=""><?echo GetMessage("SALE_F_ALL")?></option>
+								<?
+								$db_vars = CSaleLocation::GetList(Array("SORT"=>"ASC", "COUNTRY_NAME_LANG"=>"ASC", "CITY_NAME_LANG"=>"ASC"), array(), LANG);
+								while ($vars = $db_vars->Fetch())
+								{
+									?><option value="<?echo $vars["ID"]?>"<?if (IntVal($vars["ID"])==IntVal($curVal)) echo " selected"?>><?echo htmlspecialcharsbx($vars["COUNTRY_NAME"]." - ".$vars["CITY_NAME"])?></option><?
+								}
+								?>
+							</select>
+							<?
+						}
 					}
 					elseif ($value["TYPE"]=="RADIO")
 					{
@@ -3008,18 +3117,53 @@ $oFilter->Begin();
 					}
 					elseif ($value["TYPE"]=="LOCATION")
 					{
-						?>
-						<select name="filter_prop_<?= $key ?>">
-							<option value=""><?echo GetMessage("SALE_F_ALL")?></option>
-							<?
-							$db_vars = CSaleLocation::GetList(Array("SORT"=>"ASC", "COUNTRY_NAME_LANG"=>"ASC", "CITY_NAME_LANG"=>"ASC"), array(), LANG);
-							while ($vars = $db_vars->Fetch())
-							{
-								?><option value="<?echo $vars["ID"]?>"<?if (IntVal($vars["ID"])==IntVal($curVal)) echo " selected"?>><?echo htmlspecialcharsbx($vars["COUNTRY_NAME"]." - ".$vars["CITY_NAME"])?></option><?
-							}
+						if(CSaleLocation::isLocationProEnabled())
+						{
 							?>
-						</select>
-						<?
+
+							<div style="width: 100%; margin-left: 12px">
+
+								<?$APPLICATION->IncludeComponent("bitrix:sale.location.selector.search", "", array(
+									"ID" => $curVal,
+									"CODE" => "",
+									"INPUT_NAME" => 'filter_prop_'.$key,
+									"PROVIDE_LINK_BY" => "id",
+									"SHOW_ADMIN_CONTROLS" => 'N',
+									"SELECT_WHEN_SINGLE" => 'N',
+									"FILTER_BY_SITE" => 'N',
+									"SHOW_DEFAULT_LOCATIONS" => 'N',
+									"SEARCH_BY_PRIMARY" => 'Y',
+									"INITIALIZE_BY_GLOBAL_EVENT" => 'onAdminFilterInited', // this allows js logic to be initialized after admin filter
+									"GLOBAL_EVENT_SCOPE" => 'window'
+									),
+									false
+								);?>
+
+							</div>
+
+							<style>
+								.adm-filter-item-center,
+								.adm-filter-content {
+									overflow: visible !important;
+								}
+							</style>
+							<?
+						}
+						else
+						{
+							?>
+							<select name="filter_prop_<?= $key ?>">
+								<option value=""><?echo GetMessage("SALE_F_ALL")?></option>
+								<?
+								$db_vars = CSaleLocation::GetList(Array("SORT"=>"ASC", "COUNTRY_NAME_LANG"=>"ASC", "CITY_NAME_LANG"=>"ASC"), array(), LANG);
+								while ($vars = $db_vars->Fetch())
+								{
+									?><option value="<?echo $vars["ID"]?>"<?if (IntVal($vars["ID"])==IntVal($curVal)) echo " selected"?>><?echo htmlspecialcharsbx($vars["COUNTRY_NAME"]." - ".$vars["CITY_NAME"])?></option><?
+								}
+								?>
+							</select>
+							<?
+						}
 					}
 					elseif ($value["TYPE"]=="RADIO")
 					{

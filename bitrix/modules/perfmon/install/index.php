@@ -47,6 +47,7 @@ Class perfmon extends CModule
 		{
 			RegisterModule("perfmon");
 			CModule::IncludeModule("perfmon");
+			RegisterModuleDependences("perfmon", "OnGetTableSchema", "perfmon", "perfmon", "OnGetTableSchema");
 			return true;
 		}
 	}
@@ -61,6 +62,7 @@ Class perfmon extends CModule
 		UnRegisterModuleDependences("main", "OnAfterEpilog", "perfmon", "CPerfomanceKeeper", "OnBeforeAfterEpilog");
 		UnRegisterModuleDependences("main", "OnAfterEpilog", "perfmon", "CPerfomanceKeeper", "OnAfterAfterEpilog");
 		UnRegisterModuleDependences("main", "OnLocalRedirect", "perfmon", "CPerfomanceKeeper", "OnAfterAfterEpilog");
+		UnRegisterModuleDependences("perfmon", "OnGetTableSchema", "perfmon", "perfmon", "OnGetTableSchema");
 
 		if(!array_key_exists("savedata", $arParams) || $arParams["savedata"] != "Y")
 		{
@@ -164,6 +166,46 @@ Class perfmon extends CModule
 				"[W] ".GetMessage("PERF_ADMIN"))
 			);
 		return $arr;
+	}
+
+	function OnGetTableSchema()
+	{
+		return array(
+			"perfmon" => array(
+				"b_perf_hit" => array(
+					"ID" => array(
+						"b_perf_component" => "HIT_ID",
+						"b_perf_sql" => "HIT_ID",
+						"b_perf_cache" => "HIT_ID",
+						"b_perf_error" => "HIT_ID",
+					)
+				),
+				"b_perf_component" => array(
+					"ID" => array(
+						"b_perf_sql" => "COMPONENT_ID",
+						"b_perf_cache" => "COMPONENT_ID",
+					),
+				),
+				"b_perf_sql" => array(
+					"ID" => array(
+						"b_perf_sql_backtrace" => "SQL_ID",
+						"b_perf_index_suggest_sql" => "SQL_ID",
+					),
+				),
+				"b_perf_index_suggest" => array(
+					"ID" => array(
+						"b_perf_index_suggest_sql" => "SUGGEST_ID",
+					),
+				),
+			),
+			"cluster" => array(
+				"b_cluster_dbnode" => array(
+					"ID" => array(
+						"b_perf_sql" => "NODE_ID",
+					)
+				),
+			),
+		);
 	}
 }
 ?>

@@ -2,6 +2,7 @@
 	if (BX.Forum && BX.Forum.transliterate)
 		return;
 	BX.Forum = (BX.Forum ? BX.Forum : {});
+	var repo = {};
 
 	BX.Forum.transliterate = function(node)
 	{
@@ -247,9 +248,6 @@
 			if (editor)
 			{
 				editor.CheckAndReInit('');
-				if (editor.fAutosave)
-					BX.bind(editor.pEditorDocument, 'keydown',
-						BX.proxy(editor.fAutosave.Init, editor.fAutosave));
 				for (var i in handler.arFiles)
 				{
 					if (handler.arFiles.hasOwnProperty(i))
@@ -607,9 +605,6 @@
 
 				editor.action.actions.quote.setExternalSelection(selection);
 				editor.action.Exec('quote');
-
-				if (editor.fAutosave)
-					BX.bind(editor.pEditorDocument, 'keydown', BX.proxy(editor.fAutosave.Init, editor.fAutosave));
 			}
 		}
 		return false;
@@ -647,109 +642,116 @@
 		}
 		return false;
 	};
-	BX.Forum.Init = function(params)
+	BX.addCustomEvent(window, 'OnEditorInitedBefore', function(editor)
 	{
-		if (!params || typeof params != "object")
-			return;
-		if (BX.message('LANGUAGE_ID') == 'ru')
-		{
-			BX.addCustomEvent(window, 'OnEditorInitedBefore', function(editor)
+		if (editor.id !== "POST_MESSAGE" || BX.message('LANGUAGE_ID') !== 'ru')
+			return
+		editor.AddButton({
+			id : 'translit',
+			name : 'Translit',
+			iconClassName : 'bxhtmled-button-translit',
+			disabledForTextarea : false,
+			toolbarSort : 205,
+			handler : function()
 			{
-				editor.AddButton({
-					id : 'translit',
-					name : 'Translit',
-					iconClassName : 'bxhtmled-button-translit',
-					disabledForTextarea : false,
-					toolbarSort : 205,
-					handler : function()
+				var translit = function(textbody)
 					{
-						var translit = function(textbody)
-							{
-								if (typeof editor.bTranslited == 'undefined')
-									editor.bTranslited = false;
+						if (typeof editor.bTranslited == 'undefined')
+							editor.bTranslited = false;
 
-								var arStack = [], i = 0;
+						var arStack = [], i = 0;
 
-								function bPushTag(str, p1/*, offset, s*/)
-								{
-									arStack.push(p1);
-									return "\001";
-								}
-
-								function bPopTag(/*str, p1, offset, s*/)
-								{
-									return arStack.shift();
-								}
-
-
-								var r = new RegExp("(\\[[^\\]]*\\])", 'gi');
-								textbody = textbody.replace(r, bPushTag);
-
-								if ( editor.bTranslited == false)
-								{
-									for (i=0; i<capitEngLettersReg.length; i++) textbody = textbody.replace(capitEngLettersReg[i], capitRusLetters[i]);
-									for (i=0; i<smallEngLettersReg.length; i++) textbody = textbody.replace(smallEngLettersReg[i], smallRusLetters[i]);
-									editor.bTranslited = true;
-								}
-								else
-								{
-									for (i=0; i<capitRusLetters.length; i++) textbody = textbody.replace(capitRusLettersReg[i], capitEngLetters[i]);
-									for (i=0; i<smallRusLetters.length; i++) textbody = textbody.replace(smallRusLettersReg[i], smallEngLetters[i]);
-									editor.bTranslited = false;
-								}
-
-								textbody = textbody.replace(new RegExp("\001", "g"), bPopTag);
-
-								return textbody;
-							};
-
-						editor.SaveContent();
-						var content = translit(editor.GetContent());
-						BX.defer(function()
+						function bPushTag(str, p1/*, offset, s*/)
 						{
-							editor.SetContent(content);
-						})();
-					}
-				});
-			});
-		}
-		BX.addCustomEvent(window, 'OnEditorInitedAfter', function(editor)
-		{
-			editor.insertImageAfterUpload = true;
-			BX.bind(BX('post_message_hidden'), "focus", function(){ editor.Focus();} );
-			var formID = params["formID"],
-				form = document.forms[formID],
-				__ctrl_enter = function(e, bNeedSubmit)
-				{
-					if (!BX.Forum.ValidateForm(form, params['ajaxPost']))
-					{
-						if (e) BX.PreventDefault(e);
-						return false;
-					}
-					if (bNeedSubmit !== false)
-						BX.submit(form);
-					return true;
-				};
-			BX.bind(form, "submit", function(e){__ctrl_enter(e, false);});
-			BX.addCustomEvent(editor, 'OnCtrlEnter', __ctrl_enter);
-			if (params["captcha"] == "Y")
-			{
-				var captchaParams = {
-					'image' : null,
-					'hidden' : BX.findChild(form, {attr : {'name': 'captcha_code'}}, true),
-					'input' : BX.findChild(form, {attr: {'name':'captcha_word'}}, true),
-					'div' : BX.findChild(form, {'className':'forum-reply-field-captcha'}, true)
-				};
-				if (captchaParams.div)
-					captchaParams.image = BX.findChild(captchaParams.div, {'tag':'img'}, true);
-				var oCaptcha = new Captcha(captchaParams);
-				setTimeout(function() {
-					BX.bind(BX('forum-refresh-captcha'), 'click', BX.proxy(oCaptcha.Update, oCaptcha));
-				}, 200);
-			}
+							arStack.push(p1);
+							return "\001";
+						}
 
+						function bPopTag(/*str, p1, offset, s*/)
+						{
+							return arStack.shift();
+						}
+
+						var r = new RegExp("(\\[[^\\]]*\\])", 'gi');
+						textbody = textbody.replace(r, bPushTag);
+
+						if ( editor.bTranslited == false)
+						{
+							for (i=0; i<capitEngLettersReg.length; i++) textbody = textbody.replace(capitEngLettersReg[i], capitRusLetters[i]);
+							for (i=0; i<smallEngLettersReg.length; i++) textbody = textbody.replace(smallEngLettersReg[i], smallRusLetters[i]);
+							editor.bTranslited = true;
+						}
+						else
+						{
+							for (i=0; i<capitRusLetters.length; i++) textbody = textbody.replace(capitRusLettersReg[i], capitEngLetters[i]);
+							for (i=0; i<smallRusLetters.length; i++) textbody = textbody.replace(smallRusLettersReg[i], smallEngLetters[i]);
+							editor.bTranslited = false;
+						}
+
+						textbody = textbody.replace(new RegExp("\001", "g"), bPopTag);
+
+						return textbody;
+					};
+
+				editor.SaveContent();
+				var content = translit(editor.GetContent());
+				BX.defer(function()
+				{
+					editor.SetContent(content);
+				})();
+			}
 		});
+	});
+	BX.addCustomEvent(window, 'OnEditorInitedAfter', function(editor)
+	{
+		if (!repo[editor.id])
+			return;
+		var params = repo[editor.id];
+
+		editor.insertImageAfterUpload = true;
+
+		BX.bind(BX('post_message_hidden'), "focus", function(){ editor.Focus();} );
+		var formID = params["formID"],
+			form = document.forms[formID],
+			__ctrl_enter = function(e, bNeedSubmit)
+			{
+				if (!BX.Forum.ValidateForm(form, params['ajaxPost']))
+				{
+					if (e) BX.PreventDefault(e);
+					return false;
+				}
+				if (bNeedSubmit !== false)
+					BX.submit(form);
+				return true;
+			};
+		BX.bind(form, "submit", function(e){__ctrl_enter(e, false);});
+		BX.addCustomEvent(editor, 'OnCtrlEnter', __ctrl_enter);
+		if (params["captcha"] == "Y")
+		{
+			var captchaParams = {
+				'image' : null,
+				'hidden' : BX.findChild(form, {attr : {'name': 'captcha_code'}}, true),
+				'input' : BX.findChild(form, {attr: {'name':'captcha_word'}}, true),
+				'div' : BX.findChild(form, {'className':'forum-reply-field-captcha'}, true)
+			};
+			if (captchaParams.div)
+				captchaParams.image = BX.findChild(captchaParams.div, {'tag':'img'}, true);
+			var oCaptcha = new Captcha(captchaParams);
+			setTimeout(function() {
+				BX.bind(BX('forum-refresh-captcha'), 'click', BX.proxy(oCaptcha.Update, oCaptcha));
+			}, 200);
+			if (params["bVarsFromForm"] == "Y")
+				oCaptcha.Show();
+		}
+		if (params["autosave"] == "Y")
+			new AutoSave(params);
+	});
+	BX.Forum.Init = function(editorId, params)
+	{
+		if (params)
+			repo[editorId] = params;
 	};
+
 	/**
 	 * @return boolean
 	 */
@@ -816,6 +818,117 @@
 		{
 			BX.ajax.getCaptcha(BX.proxy(this.UpdateControls, this));
 		}
-	}
+	};
+	var AutoSave = function (params)
+	{
+		this.form = BX(params['formID']);
+		if (!this.form)
+			return;
+		var form = this.form,
+			recoverNotify = null,
+			auto_lnk = BX.create('A', {
+				'attrs': {'href': 'javascript:void(0)'},
+				'props': {
+					'className': 'postFormAutosave bx-core-autosave bx-core-autosave-ready',
+					'title': BX.message('AUTOSAVE_T')
+				}
+			}),
+			formHeaders = BX.findChild(form, {'className': /forum-reply-header|reviews-reply-header|comments-reply-header/ }, true, true);
+		if (typeof formHeaders == 'undefined' || formHeaders === null || formHeaders.length < 1)
+			return;
+		var formHeader = (formHeaders[formHeaders.length-1] || form);
+		formHeader.insertBefore(auto_lnk, formHeader.children[0]);
 
+		var bindLHEEvents = function(_ob)
+		{
+			if (BX('TITLE'))
+				BX.bind(BX('TITLE'), 'keydown', BX.proxy(_ob.Init, _ob));
+			if (BX('DESCRIPTION'))
+				BX.bind(BX('DESCRIPTION'), 'keydown', BX.proxy(_ob.Init, _ob));
+		};
+
+		BX.addCustomEvent(form, 'onAutoSavePrepare', function (ob, h) {
+			ob.DISABLE_STANDARD_NOTIFY = true;
+			BX.bind(auto_lnk, 'click', BX.proxy(ob.Save, ob));
+			_ob=ob;
+			setTimeout(function() { bindLHEEvents(_ob) },1500);
+		});
+
+		BX.addCustomEvent(form, 'onAutoSave', function() {
+			BX.removeClass(auto_lnk,'bx-core-autosave-edited');
+			BX.removeClass(auto_lnk,'bx-core-autosave-ready');
+			BX.addClass(auto_lnk,'bx-core-autosave-saving');
+		});
+
+		BX.addCustomEvent(form, 'onAutoSaveFinished', function(ob, t) {
+			t = parseInt(t);
+			if (!isNaN(t))
+			{
+				setTimeout(function() {
+					BX.removeClass(auto_lnk,'bx-core-autosave-saving');
+					BX.addClass(auto_lnk,'bx-core-autosave-ready');
+				}, 1000);
+				auto_lnk.title = BX.message('AUTOSAVE_L').replace('#DATE#', BX.formatDate(new Date(t * 1000)));
+			}
+		});
+
+		BX.addCustomEvent(form, 'onAutoSaveInit', function() {
+			BX.removeClass(auto_lnk,'bx-core-autosave-ready');
+			BX.addClass(auto_lnk,'bx-core-autosave-edited');
+		});
+
+		BX.addCustomEvent(form, 'onAutoSaveRestoreFound', function(ob, data)
+		{
+			if (form.children[1].className == "forum-notify-bar") return;
+
+			_ob = ob;
+
+			recoverNotify = BX.create('DIV', {
+				'props': {
+					'className': 'forum-notify-bar'
+				},
+				'children': [
+					BX.create('DIV', {
+						'props': { 'className': 'forum-notify-close' },
+						'children': [
+							BX.create('A', {
+								'events':{
+									'click': function() {
+										if (!! recoverNotify)
+											BX.remove(recoverNotify);
+										return false;
+									}
+								}
+							})
+						]
+					}),
+					BX.create('DIV', {
+						'props': { 'className': 'forum-notify-text' },
+						'children': [
+							BX.create('SPAN', { 'text': BX.message('recover_message') }),
+							BX.create('A', {
+								'attrs': {'href': 'javascript:void(0)'},
+								'props': {'className': "postFormAutorestore"},
+								'text': BX.message('AUTOSAVE_R'),
+								'events':{
+									'click': function() { _ob.Restore(); return false;}
+								}
+							})
+						]
+					})
+				]
+			});
+
+			form.insertBefore(recoverNotify, form.children[1]);
+		});
+
+		BX.addCustomEvent(form, 'onAutoSaveRestore', function(ob, data) {
+			bindLHEEvents(ob);
+		});
+
+		BX.addCustomEvent(form, 'onAutoSaveRestoreFinished', function(ob, data) {
+			if (!! recoverNotify)
+				BX.remove(recoverNotify);
+		});
+	};
 })();

@@ -14,6 +14,7 @@
 	}
 
 	var BX = window.BX,
+	_revision = 12, // api revision - check include.php
 	_updateStateVeryFastCount = 0,
 	_updateStateFastCount = 0,
 	_updateStateStep = 60,
@@ -24,12 +25,14 @@
 	_pullTryConnect = false,
 	_pullPath = null,
 	_pullMethod = 'PULL',
+	_pullWithHeaders = true,
 	_pullTimeConfig = 0,
 	_pullTimeConfigShared = 0,
 	_pullTimeConst = (new Date(2022, 2, 19)).toUTCString(),
 	_pullTime = _pullTimeConst,
 	_pullTag = 1,
 	_pullTimeout = 60,
+	_pullMid = null,
 	_watchTag = {},
 	_watchTimeout = null,
 	_channelID = null,
@@ -47,13 +50,12 @@
 	_lsSupport = false,
 	_escStatus = false,
 	_sendAjaxTry = 0,
-	_revision = 10,
-	_confirm = null;
-	_pathToAjax = '/bitrix/components/bitrix/pull.request/ajax.php?';
+	_confirm = null,
+	_pathToAjax = '/bitrix/components/bitrix/pull.request/ajax.php?',
 
 	_onBeforeUnload = BX.proxy(function(){
 		_pullTryConnect = false;
-		if (_WS) _WS.close();
+		if (_WS) _WS.close(1000, "onbeforeunload");
 
 		if (BX.PULL.returnPrivateVar('_pullTryAfterBxLink'))
 		{
@@ -81,6 +83,9 @@
 		if (params.LOCAL_STORAGE == 'N')
 			_lsSupport = false;
 
+		if (params.HEADERS == 'N')
+			_pullWithHeaders = false;
+
 		if (_lsSupport && BX.localStorage.get('prs') !== null)
 		{
 			_pullTryConnect = false;
@@ -92,7 +97,7 @@
 
 		BX.bind(window, "offline", function(){
 			_pullTryConnect = false;
-			if (_WS) _WS.close();
+			if (_WS) _WS.close(1000, "offline");
 		});
 
 		BX.bind(window, "online", function(){
@@ -119,7 +124,7 @@
 		if (params.CHANNEL_ID)
 		{
 			_channelID = params.CHANNEL_ID;
-			_pullPath = params.PATH;
+			_pullPath = BX.PULL.getModernPath(params);
 			_wsPath = params.PATH_WS;
 			_pullMethod = params.METHOD;
 
@@ -149,21 +154,18 @@
 		BX.addCustomEvent("onPullError", BX.delegate(function(error) {
 			if (error == 'AUTHORIZE_ERROR')
 			{
-				if (typeof(BXIM) == 'undefined' || !BXIM.desktop.ready())
-				{
-					_pullTryConnect = false;
-				}
+				_pullTryConnect = false;
 			}
 		}, this));
 
 		if (BX.desktop)
 		{
 			BX.desktop.addCustomEvent("BXLoginSuccess", function (){
-				if (_WS) _WS.close();
+				if (_WS) _WS.close(1000, "desktop_login_success");
 			});
 		}
 
-		BX.PULL.initBeforeUnload()
+		BX.PULL.initBeforeUnload();
 
 		BX.onCustomEvent(window, 'onPullInit', []);
 
@@ -230,13 +232,13 @@
 		{
 			_channelClearReason = 1;
 			_channelID = null;
-			if (_WS) _WS.close();
+			if (_WS) _WS.close(1000, "expire_config_1");
 		}
 		else if (_channelID && _pullMethod!='PULL' && _pullTimeConfigShared+43200+((Math.floor(Math.random() * (61)) + 10)*1000) < Math.round(+(new Date)/1000)+parseInt(BX.message('SERVER_TZ_OFFSET'))+parseInt(BX.message('USER_TZ_OFFSET')))
 		{
 			_channelClearReason = 1;
 			_channelID = null;
-			if (_WS) _WS.close();
+			if (_WS) _WS.close(1000, "expire_config_2");
 		}
 	}
 
@@ -263,6 +265,7 @@
 		BX.ajax({
 			url: _pathToAjax+'GET_CHANNEL&V='+_revision+'&CR='+_channelClearReason+'&CODE='+code.toUpperCase()+(_mobileMode? '&MOBILE':''),
 			method: 'POST',
+			skipAuthCheck: true,
 			dataType: 'json',
 			lsId: 'PULL_GET_CHANNEL',
 			lsTimeout: 1,
@@ -280,7 +283,7 @@
 						return false;
 
 					_channelID = data.CHANNEL_ID;
-					_pullPath = data.PATH;
+					_pullPath = BX.PULL.getModernPath(data);
 					_wsPath = data.PATH_WS;
 					_pullMethod = data.METHOD;
 
@@ -314,15 +317,6 @@
 					}
 					else if (typeof(data) == 'object' && data.ERROR == 'AUTHORIZE_ERROR')
 					{
-						var setNextCheck = false;
-						if (typeof(BXIM) != 'undefined' && BXIM.desktop.ready())
-							setNextCheck = true;
-
-						if (setNextCheck)
-						{
-							clearTimeout(_updateStateTimeout);
-							_updateStateTimeout = setTimeout(function(){BX.PULL.updateState('13', true)}, BX.PULL.tryConnectTimeout());
-						}
 						BX.onCustomEvent(window, 'onPullError', [data.ERROR]);
 					}
 					else
@@ -359,6 +353,10 @@
 				}
 				else
 				{
+					if (typeof(data) == 'object' && data.ERROR == 'auth')
+					{
+						BX.onCustomEvent(window, 'onPullError', ['AUTHORIZE_ERROR']);
+					}
 					if (typeof(console) == 'object')
 					{
 						var text = "\n========= PULL ERROR ===========\n"+
@@ -409,7 +407,7 @@
 		_updateStateSend = true;
 
 		var wsPath = _wsPath.replace('#DOMAIN#', location.hostname);
-		var _wsServer = wsPath+(_pullTag != null? "&tag="+_pullTag:"")+(_pullTime != null? "&time="+_pullTime:"");
+		var _wsServer = wsPath+(_pullTag != null? "&tag="+_pullTag:"")+(_pullTime != null? "&time="+_pullTime:"")+(_pullMid !== null ? "&mid="+_pullMid : "");
 		try
 		{
 			_WS = new WebSocket(_wsServer);
@@ -433,7 +431,17 @@
 		_WS.onclose = function(data)
 		{
 			var code = typeof(data.code) != 'undefined'? data.code: 'NA';
-			var reason = data.reason? JSON.parse(data.reason): "";
+			var reason = "";
+			if (data.reason)
+			{
+				try
+				{
+					reason = JSON.parse(data.reason);
+				}
+				catch(e)
+				{
+				}
+			}
 
 			var neverConnect = false;
 			_updateStateSend = false;
@@ -448,7 +456,7 @@
 				{
 					BX.PULL.updateState('ws-'+code+'-1');
 				}
-				else if (_wsTryReconnect < 3)
+				else if (_wsTryReconnect <= 3)
 				{
 					clearTimeout(_updateStateTimeout);
 					_updateStateTimeout = setTimeout(function(){
@@ -480,17 +488,7 @@
 			else
 			{
 				_wsConnected = false;
-
-				// if user press ESC button (FF bug)
-				if (data.wasClean && (_escStatus || code == 1005))
-				{
-					BX.PULL.updateState('ws-'+code+'-4');
-				}
-				else if (!data.wasClean)
-				{
-					BX.PULL.updateState('ws-'+code+'-5');
-				}
-				else if (data.wasClean && code == 1008 && reason && reason.http_status == 403)
+				if (data.wasClean && reason && reason.http_status == 403)
 				{
 					_sendAjaxTry++;
 					_channelID = null;
@@ -510,7 +508,10 @@
 				}
 				else
 				{
-					sendConnectRequest = false;
+					clearTimeout(_updateStateTimeout);
+					_updateStateTimeout = setTimeout(function(){
+						BX.PULL.updateState('ws-'+code+'-5-'+data.wasClean);
+					}, (_sendAjaxTry < 2 && data.wasClean === true ? 1000: BX.PULL.tryConnectTimeout()));
 				}
 			}
 
@@ -519,6 +520,7 @@
 			if (typeof(console) == 'object')
 			{
 				var text = "\n========= PULL INFO ===========\n"+
+							"time: " + new Date() + "\n"+
 							"type: websocket close\n"+
 							"code: "+code+"\n"+
 							"clean: "+(data.wasClean?'Y':'N')+"\n"+
@@ -592,12 +594,14 @@
 						_pullTag = message.tag;
 					if (message.time)
 						_pullTime = message.time;
+					if (message.mid)
+						_pullMid = message.mid;
 					messageCount++;
 				}
 			}
 			if (_channelID == null)
 			{
-				if (_WS) _WS.close();
+				if (_WS) _WS.close(1000, "onmessage");
 			}
 		};
 		_WS.onerror = function() {
@@ -628,24 +632,30 @@
 
 			_updateStateSend = true;
 
+			var headersForRequest = [];
+			if (_pullWithHeaders)
+			{
+				headersForRequest = [
+					{'name':'If-Modified-Since', 'value': _pullTime},
+					{'name':'If-None-Match', 'value': _pullTag}
+				];
+			}
+
 			var pullPath = _pullPath.replace('#DOMAIN#', location.hostname);
 			var _ajax = BX.ajax({
-				url: _pullMethod=='PULL'? pullPath: (pullPath+(_pullTag != null? "&tag="+_pullTag:"")+"&rnd="+(+new Date)),
-				skipAuthCheck: _pullMethod=='PULL'? false: true,
+				url: _pullMethod=='PULL'? pullPath: (pullPath+(_pullTag != null? "&tag="+_pullTag:"")+(_pullTime != null? "&time="+_pullTime:"")+(_pullMid !== null ? "&mid="+_pullMid : ""))+"&rnd="+(+new Date),
+				skipAuthCheck: true,
 				skipBxHeader: _pullMethod=='PULL'? false: true,
 				method: _pullMethod=='PULL'?'POST':'GET',
 				dataType: _pullMethod=='PULL'?'json':'html',
 				timeout: _pullTimeout,
-				headers: [
-					{'name':'If-Modified-Since', 'value':_pullTime},
-					{'name':'If-None-Match', 'value':'0'}
-				],
+				headers: headersForRequest,
 				data: _pullMethod=='PULL'? {'PULL_UPDATE_STATE' : 'Y', 'CHANNEL_ID': _channelID, 'CHANNEL_LAST_ID': _channelLastID, 'SITE_ID': (BX.message.SITE_ID? BX.message('SITE_ID'): ''), 'PULL_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()}: {},
 				onsuccess: function(data)
 				{
 					clearTimeout(_updateStateStatusTimeout);
 					_updateStateSend = false;
-					if (_WS) _WS.close();
+					if (_WS) _WS.close(1000, "ajax_onsuccess");
 
 					if (_pullMethod=='PULL' && typeof(data) == "object")
 					{
@@ -688,7 +698,7 @@
 							_channelID = null;
 						}
 						if (_channelID != null && _lsSupport)
-							BX.localStorage.set('pset', {'CHANNEL_ID': _channelID, 'LAST_ID': _channelLastID, 'PATH': _pullPath, 'PATH_WS': _wsPath, 'TAG': _pullTag, 'TIME': _pullTime, 'TIME_LAST_GET': _pullTimeConfig, 'TIME_LAST_GET_SHARED': _pullTimeConfigShared, 'METHOD': _pullMethod}, 600);
+							BX.localStorage.set('pset', {'CHANNEL_ID': _channelID, 'LAST_ID': _channelLastID, 'PATH': _pullPath, 'PATH_WS': _wsPath, 'TAG': _pullTag, 'MID': _pullMid, 'TIME': _pullTime, 'TIME_LAST_GET': _pullTimeConfig, 'TIME_LAST_GET_SHARED': _pullTimeConfigShared, 'METHOD': _pullMethod}, 600);
 
 						BX.PULL.setUpdateStateStep();
 					}
@@ -775,6 +785,8 @@
 										_pullTag = message.tag;
 									if (message.time)
 										_pullTime = message.time;
+									if (message.mid)
+										_pullMid = message.mid;
 									messageCount++;
 								}
 							}
@@ -829,6 +841,21 @@
 								}
 								else
 								{
+									try {
+										var expires = _ajax.getResponseHeader("Expires");
+										if (expires === "Thu, 01 Jan 1973 11:11:01 GMT")
+										{
+											var lastMessageId = _ajax.getResponseHeader("Last-Message-Id");
+											if (_pullMid === null && lastMessageId && lastMessageId.length > 0)
+											{
+												_pullMid = lastMessageId;
+											}
+										}
+									}
+									catch(event) {
+
+									}
+
 									BX.PULL.updateState('22-1');
 								}
 							}
@@ -868,7 +895,7 @@
 					BX.onCustomEvent(window, 'onPullStatus', ['offline']);
 					_updateStateSend = false;
 					_sendAjaxTry++;
-					if (_WS) _WS.close();
+					if (_WS) _WS.close(1000, "ajax_onfailure");
 					if (data == "timeout")
 					{
 						if (_pullMethod=='PULL')
@@ -1015,7 +1042,7 @@
 							'CHANNEL_ID': _channelID,
 							'CHANNEL_DT': _pullTimeConfig+'/'+message[i].params.replace.CHANNEL_DIE,
 							'PATH': _pullPath.replace(message[i].params.replace.PREV_CHANNEL_ID, message[i].params.replace.CHANNEL_ID),
-							'PATH_WS': _wsPath? _wsPath: _wsPath.replace(message[i].params.replace.PREV_CHANNEL_ID, message[i].params.replace.CHANNEL_ID)
+							'PATH_WS': _wsPath? _wsPath.replace(message[i].params.replace.PREV_CHANNEL_ID, message[i].params.replace.CHANNEL_ID): _wsPath
 						});
 					}
 					else if (message[i].command == 'channel_die' || message[i].command == 'config_die')
@@ -1024,13 +1051,13 @@
 						_channelID = null;
 						_pullPath = null;
 						if (_wsPath) _wsPath = null;
-						if (_WS) _WS.close();
+						if (_WS) _WS.close(1000, "config_die");
 					}
 					else if (message[i].command == 'server_restart')
 					{
 						BX.PULL.tryConnectSet(0, false);
-						BX.localStorage.set('prs', true, 600)
-						if (_WS) _WS.close();
+						BX.localStorage.set('prs', true, 600);
+						if (_WS) _WS.close(1000, "server_restart");
 						setTimeout(function(){
 							BX.PULL.tryConnect();
 						}, ((Math.floor(Math.random() * (61)) + 60)*1000)+600000)
@@ -1133,6 +1160,8 @@
 				_pullTime = params.value.TIME;
 			if (params.value.TAG)
 				_pullTag = params.value.TAG;
+			if (params.value.MID)
+				_pullMid = params.value.MID;
 			if (params.value.TIME_LAST_GET)
 				_pullTimeConfig = params.value.TIME_LAST_GET;
 			if (params.value.TIME_LAST_GET_SHARED)
@@ -1164,7 +1193,7 @@
 		var method = params.METHOD;
 		var channelID = params.CHANNEL_ID;
 
-		var pullPath = params.PATH;
+		var pullPath = BX.PULL.getModernPath(params);
 		var lastId = params.LAST_ID;
 		var wsPath = params.PATH_WS;
 
@@ -1189,9 +1218,9 @@
 			_pullMethod = method;
 
 		if (_lsSupport)
-			BX.localStorage.set('pset', {'CHANNEL_ID': _channelID, 'LAST_ID': _channelLastID, 'PATH': _pullPath, 'PATH_WS': _wsPath, 'TAG': _pullTag, 'TIME': _pullTime, 'TIME_LAST_GET': _pullTimeConfig, 'TIME_LAST_GET_SHARED': _pullTimeConfigShared, 'METHOD': _pullMethod}, 600);
+			BX.localStorage.set('pset', {'CHANNEL_ID': _channelID, 'LAST_ID': _channelLastID, 'PATH': _pullPath, 'PATH_WS': _wsPath, 'TAG': _pullTag,'MID': _pullMid, 'TIME': _pullTime, 'TIME_LAST_GET': _pullTimeConfig, 'TIME_LAST_GET_SHARED': _pullTimeConfigShared, 'METHOD': _pullMethod}, 600);
 
-		if (_WS) _WS.close();
+		if (_WS) _WS.close(1000, "channel_die");
 
 		return true;
 	}
@@ -1274,7 +1303,7 @@
 		_pullPath = null;
 
 		if (_wsPath) _wsPath = null;
-		if (_WS) _WS.close();
+		if (_WS) _WS.close(1000, "clear_channel_id");
 
 		_updateStateSend = false;
 		clearTimeout(_updateStateTimeout);
@@ -1286,7 +1315,7 @@
 	BX.PULL.supportWebSocket = function()
 	{
 		var result = false;
-		if (typeof(WebSocket) == 'function' && !BX.localStorage.get('pbws'))
+		if (typeof(WebSocket) != 'undefined' && !BX.localStorage.get('pbws'))
 		{
 			if (BX.browser.IsFirefox() || BX.browser.IsChrome() || BX.browser.IsOpera() || BX.browser.IsSafari())
 			{
@@ -1306,27 +1335,56 @@
 		return result;
 	}
 
+	BX.PULL.getModernPath = function(params)
+	{
+		if (typeof(params) != 'object')
+			return '';
+
+		var result = '';
+		if (typeof(params.PATH) != 'undefined' && typeof(params.PATH_MOD) != 'undefined' && params.PATH_MOD != '')
+		{
+			if (BX.browser.IsIE() || BX.browser.IsOpera())
+			{
+				result = params.PATH;
+			}
+			else
+			{
+				result = params.PATH_MOD;
+			}
+		}
+		else if (typeof(params.PATH) != 'undefined')
+		{
+			return params.PATH;
+		}
+		return result;
+	}
+
 	BX.PULL.getRevision = function()
 	{
 		return _revision;
 	}
+
+	BX.PULL.getDebugInfoArray = function()
+	{
+		return {
+			connected: _updateStateSend,
+			websocket: _wsConnected,
+			path: _pullPath
+		};
+	};
 
 	BX.PULL.checkRevision = function(revision)
 	{
 		revision = parseInt(revision);
 		if (typeof(revision) == "number" && _revision < revision)
 		{
-			if (BXIM && BXIM.desktop.run())
-			{
-				console.log('NOTICE: Window reload, becouse PULL REVISION UP ('+this.revision+' -> '+revision+')');
-				location.reload();
-			}
-			else
-			{
-				BX.PULL.openConfirm(BX.message('PULL_OLD_REVISION'));
-				_pullTryConnect = false;
-				if (_WS) _WS.close();
-			}
+			BX.PULL.openConfirm(BX.message('PULL_OLD_REVISION'));
+
+			_pullTryConnect = false;
+			if (_WS) _WS.close(1000, "check_revision");
+
+			BX.onCustomEvent(window, 'onPullRevisionUp', [revision, this.revision]);
+
 			return false;
 		}
 		return true;
@@ -1366,9 +1424,26 @@
 			content : BX.create("div", { props : { className : (buttons === false? " bx-messenger-confirm-without-buttons": "bx-messenger-confirm") }, html: text})
 		});
 		_confirm.show();
-		BX.bind(_confirm.popupContainer, "click", BX.IM.preventDefault);
+		BX.bind(_confirm.popupContainer, "click", BX.PULL.preventDefault);
 		BX.bind(_confirm.contentContainer, "click", BX.PreventDefault);
 		BX.bind(_confirm.overlay.element, "click", BX.PreventDefault);
 	};
+
+	BX.PULL.closeConfirm = function()
+	{
+		if (_confirm != null)
+			_confirm.destroy();
+	};
+
+	BX.PULL.preventDefault = function(event)
+	{
+		event = event||window.event;
+
+		if (event.stopPropagation)
+			event.stopPropagation();
+		else
+			event.cancelBubble = true;
+	};
+
 	BX.PULL();
 })(window);

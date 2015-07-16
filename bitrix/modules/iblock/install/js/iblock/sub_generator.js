@@ -151,7 +151,7 @@ JCIBlockGenerator.prototype.addPropertyTable = function(id)
                                         props : {
                                             type : "checkbox",
                                             id : "checked_all_"+id,
-                                            checked : true,
+                                            checked : false,
                                             className : "adm-designed-checkbox"
                                         },
                                         events : {
@@ -230,7 +230,7 @@ JCIBlockGenerator.prototype.addPropertyTable = function(id)
                                 props : {
                                     type : "checkbox",
                                     id : "PROPERTY_CHECK_"+this.AR_ALL_PROPERTIES[id]["VALUE"][i]['PROPERTY_ID']+"_"+i,
-                                    checked : true,
+                                    checked : false,
                                     name : "PROPERTY_CHECK["+this.AR_ALL_PROPERTIES[id]["VALUE"][i]['PROPERTY_ID']+"]["+this.AR_ALL_PROPERTIES[id]["VALUE"][i]['ID']+"]",
                                     className : "adm-designed-checkbox property_value_checkbox"+id
                                 },

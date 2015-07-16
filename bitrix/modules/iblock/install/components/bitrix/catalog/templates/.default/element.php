@@ -32,6 +32,7 @@ else
 		"META_KEYWORDS" => $arParams["DETAIL_META_KEYWORDS"],
 		"META_DESCRIPTION" => $arParams["DETAIL_META_DESCRIPTION"],
 		"BROWSER_TITLE" => $arParams["DETAIL_BROWSER_TITLE"],
+		"SET_CANONICAL_URL" => $arParams["DETAIL_SET_CANONICAL_URL"],
 		"BASKET_URL" => $arParams["BASKET_URL"],
 		"ACTION_VARIABLE" => $arParams["ACTION_VARIABLE"],
 		"PRODUCT_ID_VARIABLE" => $arParams["PRODUCT_ID_VARIABLE"],
@@ -76,6 +77,7 @@ else
 		'CURRENCY_ID' => $arParams['CURRENCY_ID'],
 		'HIDE_NOT_AVAILABLE' => $arParams["HIDE_NOT_AVAILABLE"],
 		'USE_ELEMENT_COUNTER' => $arParams['USE_ELEMENT_COUNTER'],
+		'SHOW_DEACTIVATED' => $arParams['SHOW_DEACTIVATED'],
 
 		'ADD_PICT_PROP' => $arParams['ADD_PICT_PROP'],
 		'LABEL_PROP' => $arParams['LABEL_PROP'],
@@ -243,8 +245,6 @@ if ($ElementID > 0)
 				"CACHE_TIME" => $arParams["CACHE_TIME"],
 				"CACHE_GROUPS" => $arParams["CACHE_GROUPS"],
 				"SHOW_PRODUCTS_".$arParams["IBLOCK_ID"] => "Y",
-				"ADDITIONAL_PICT_PROP_".$arParams["IBLOCK_ID"] => $arParams['ADD_PICT_PROP'],
-				"LABEL_PROP_".$arParams["IBLOCK_ID"] => "-",
 				"HIDE_NOT_AVAILABLE" => $arParams["HIDE_NOT_AVAILABLE"],
 				"CONVERT_CURRENCY" => $arParams["CONVERT_CURRENCY"],
 				"CURRENCY_ID" => $arParams["CURRENCY_ID"],
@@ -253,11 +253,15 @@ if ($ElementID > 0)
 				"SECTION_ELEMENT_ID" => $arResult["VARIABLES"]["SECTION_ID"],
 				"SECTION_ELEMENT_CODE" => $arResult["VARIABLES"]["SECTION_CODE"],
 				"ID" => $ElementID,
+				"LABEL_PROP_".$arParams["IBLOCK_ID"] => $arParams['LABEL_PROP'],
 				"PROPERTY_CODE_".$arParams["IBLOCK_ID"] => $arParams["LIST_PROPERTY_CODE"],
+				"PROPERTY_CODE_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams["LIST_OFFERS_PROPERTY_CODE"],
 				"CART_PROPERTIES_".$arParams["IBLOCK_ID"] => $arParams["PRODUCT_PROPERTIES"],
-				"RCM_TYPE" => (isset($arParams['BIG_DATA_RCM_TYPE']) ? $arParams['BIG_DATA_RCM_TYPE'] : ''),
+				"CART_PROPERTIES_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams["OFFERS_CART_PROPERTIES"],
+				"ADDITIONAL_PICT_PROP_".$arParams["IBLOCK_ID"] => $arParams['ADD_PICT_PROP'],
+				"ADDITIONAL_PICT_PROP_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams['OFFER_ADD_PICT_PROP'],
 				"OFFER_TREE_PROPS_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams["OFFER_TREE_PROPS"],
-				"ADDITIONAL_PICT_PROP_".$arRecomData['OFFER_IBLOCK_ID'] => $arParams['OFFER_ADD_PICT_PROP']
+				"RCM_TYPE" => (isset($arParams['BIG_DATA_RCM_TYPE']) ? $arParams['BIG_DATA_RCM_TYPE'] : '')
 			),
 			$component,
 			array("HIDE_ICONS" => "Y")

@@ -2,6 +2,7 @@
 
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Catalog;
 
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
 
@@ -149,6 +150,30 @@ class ProductSearchComponent extends \CBitrixComponent
 		return $params;
 	}
 
+	public function executeComponent()
+	{
+		$this->checkAccess();
+		$this->loadModules();
+		$this->checkIblockAccess();
+
+		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == 'open_section')
+		{
+			$this->arResult = array(
+				'SECTIONS' => $this->getSectionsTree($this->getIblockId(), $_REQUEST['section_id'],$_REQUEST['active_id']),
+				'LEVEL' => (int)$_REQUEST['level'],
+				'TABLE_ID' => $this->getTableId(),
+				'OPEN_SECTION_MODE' => true,
+				'IS_ADMIN_SECTION' => $this->isAdminSection()
+			);
+		}
+		else
+		{
+			$this->prepareComponentResult();
+			$this->saveState();
+		}
+		$this->includeComponentTemplate();
+	}
+
 	protected function isAdminSection()
 	{
 		return \Bitrix\Main\Application::getInstance()->getContext()->getRequest()->isAdminSection();
@@ -197,7 +222,7 @@ class ProductSearchComponent extends \CBitrixComponent
 		Loc::loadMessages(__FILE__);
 	}
 
-	protected function getMixedList($arOrder = Array("SORT" => "ASC"), $arFilter = Array(), $bIncCnt = false, $arSelectedFields = false)
+	protected function getMixedList($arOrder = array("SORT" => "ASC"), $arFilter = array(), $bIncCnt = false, $arSelectedFields = false)
 	{
 		$arResult = array();
 		$notFound = false;
@@ -473,7 +498,7 @@ class ProductSearchComponent extends \CBitrixComponent
 			$offersExistsIds =  \CCatalogSKU::getExistOffers($arProductIds, $this->getIblockId());
 			$noOffersIds = array();
 
-			if ($offersExistsIds===false)
+			if (empty($offersExistsIds))
 			{
 				$noOffersIds = $arProductIds;
 			}
@@ -733,45 +758,6 @@ class ProductSearchComponent extends \CBitrixComponent
 		return $this->offersCatalog;
 	}
 
-	private function getPropsList($iblockId,$skuPropertyId=0)
-	{
-		$arResult = array();
-		$dbrFProps = \CIBlockProperty::GetList(
-			array(
-				"SORT" => "ASC",
-				"NAME" => "ASC"
-			),
-			array(
-				"IBLOCK_ID" => $iblockId,
-				"ACTIVE" => "Y",
-				"!XML_ID" => "CML2_LINK",
-				"CHECK_PERMISSIONS" => "N",
-			)
-		);
-		while ($arProp = $dbrFProps->GetNext())
-		{
-			if ($skuPropertyId == $arProp['ID'])
-				continue;
-			$arProp["PROPERTY_USER_TYPE"] = (!empty($arProp["USER_TYPE"]) ? \CIBlockProperty::GetUserType($arProp["USER_TYPE"]) : array());
-			$arResult[] = $arProp;
-		}
-		return $arResult;
-	}
-
-	private function filterProps(&$props)
-	{
-		$result = array();
-		if ($props)
-		{
-			foreach ($props AS $prop)
-			{
-				if ($prop['FILTRABLE'] == 'Y' && $prop['PROPERTY_TYPE'] != 'F')
-					$result[] = $prop;
-			}
-		}
-		return $result;
-	}
-
 	protected function getProps($flagAll = false)
 	{
 		if ($this->arProps === null)
@@ -797,11 +783,17 @@ class ProductSearchComponent extends \CBitrixComponent
 		if ($this->arPrices === null)
 		{
 			$this->arPrices = array();
-			$rsPrice = \CCatalogGroup::GetListEx(array("SORT" => "ASC"), array(), false, false, array("ID", "NAME", "NAME_LANG", "BASE"));
-			while ($price = $rsPrice->Fetch())
+			$priceTypeIterator = Catalog\GroupTable::getList(array(
+				'select' => array('ID', 'BASE', 'NAME', 'NAME_LANG' => 'CURRENT_LANG.NAME'),
+				'order' => array('SORT' => 'ASC', 'ID' => 'ASC')
+			));
+			while ($priceType = $priceTypeIterator->fetch())
 			{
-				$this->arPrices[] = $price;
+				$priceType['ID'] = (int)$priceType['ID'];
+				$priceType['NAME_LANG'] = (string)$priceType['NAME_LANG'];
+				$this->arPrices[] = $priceType;
 			}
+			unset($priceType, $priceTypeIterator);
 		}
 		return $this->arPrices;
 	}
@@ -812,19 +804,21 @@ class ProductSearchComponent extends \CBitrixComponent
 		{
 			$balanceTitle = Loc::getMessage($this->getStoreId() > 0 ? "SOPS_BALANCE" : "SOPS_BALANCE2");
 			$this->arHeaders = array(
-				array("id" => "ID", "content" => "ID", "sort" => "id", "default" => true),
+				array("id" => "ID", "content" => "ID", "sort" => "ID", "default" => true),
 				array("id" => "ACTIVE", "content" => Loc::getMessage("SOPS_ACTIVE"), "sort" => "ACTIVE", "default" => true),
 				array("id" => "DETAIL_PICTURE", "default" => true, "content" => Loc::getMessage("SPS_FIELD_DETAIL_PICTURE"), "align" => "center"),
-				array("id" => "NAME", "content" => Loc::getMessage("SPS_NAME"), "sort" => "name", "default" => true),
+				array("id" => "NAME", "content" => Loc::getMessage("SPS_NAME"), "sort" => "NAME", "default" => true),
 				array("id" => "BALANCE", "content" => $balanceTitle, "sort" => "", "default" => true, "align" => "right"),
-				array("id" => "CODE", "content" => Loc::getMessage("SPS_FIELD_CODE"), "sort" => "code"),
-				array("id" => "EXTERNAL_ID", "content" => Loc::getMessage("SPS_FIELD_XML_ID"), "sort" => "external_id"),
-				array("id" => "SHOW_COUNTER", "content" => Loc::getMessage("SPS_FIELD_SHOW_COUNTER"), "sort" => "show_counter", "align" => "right"),
-				array("id" => "SHOW_COUNTER_START", "content" => Loc::getMessage("SPS_FIELD_SHOW_COUNTER_START"), "sort" => "show_counter_start", "align" => "right"),
+				array("id" => "CODE", "content" => Loc::getMessage("SPS_FIELD_CODE"), "sort" => "CODE"),
+				array("id" => "EXTERNAL_ID", "content" => Loc::getMessage("SPS_FIELD_XML_ID"), "sort" => "EXTERNAL_ID"),
+				array("id" => "SHOW_COUNTER", "content" => Loc::getMessage("SPS_FIELD_SHOW_COUNTER"), "sort" => "SHOW_COUNTER", "align" => "right"),
+				array("id" => "SHOW_COUNTER_START", "content" => Loc::getMessage("SPS_FIELD_SHOW_COUNTER_START"), "sort" => "SHOW_COUNTER_START", "align" => "right"),
 				array("id" => "PREVIEW_PICTURE", "content" => Loc::getMessage("SPS_FIELD_PREVIEW_PICTURE"), "align" => "right"),
 				array("id" => "PREVIEW_TEXT", "content" => Loc::getMessage("SPS_FIELD_PREVIEW_TEXT")),
 				array("id" => "DETAIL_TEXT", "content" => Loc::getMessage("SPS_FIELD_DETAIL_TEXT")),
-				array("id" => "EXPAND", "content" => Loc::getMessage("SPS_EXPAND"), "sort" => "", "default" => true)
+				array("id" => "EXPAND", "content" => Loc::getMessage("SPS_EXPAND"), "sort" => "", "default" => true),
+				array("id" => "QUANTITY", "content" =>  Loc::getMessage("SPS_QUANTITY")),
+				array("id" => "ACTION", "content" =>  Loc::getMessage("SPS_FIELD_ACTION"),  "default" => true),
 			);
 			$arProps = $this->getProps(true);
 			foreach ($arProps as $prop)
@@ -1010,7 +1004,7 @@ class ProductSearchComponent extends \CBitrixComponent
 			if (preg_match('#^[0-9\s]+$#', $_REQUEST['QUERY']))
 			{
 				$barcode = preg_replace('#[^0-9]#', '', $_REQUEST['QUERY']);
-				if (strlen($barcode) > 0)
+				if (strlen($barcode) > 8)
 				{
 					$rsBarCode = \CCatalogStoreBarCode::getList(array(), array("BARCODE" => $barcode), false, false, array('PRODUCT_ID'));
 					while ($res = $rsBarCode->Fetch())
@@ -1020,7 +1014,7 @@ class ProductSearchComponent extends \CBitrixComponent
 					}
 				}
 			}
-			elseif ($this->isAdvancedSearchAvailable())
+			if ($this->isAdvancedSearchAvailable())
 			{
 				$arFilter['PARAM2'] = $this->getIblockId();
 				if (!empty($arFilter['SECTION_ID']))
@@ -1162,36 +1156,34 @@ class ProductSearchComponent extends \CBitrixComponent
 			$ids = array();
 			$filter = array();
 			if ($this->getSubscription())
-				$filter['SUBSCRIPTION'] = 'Y';
+				$filter['=SUBSCRIPTION'] = 'Y';
 
 			$showOffersIBlock = \Bitrix\Main\Config\Option::get('catalog', 'product_form_show_offers_iblock');
 
-			$dbItem = \CCatalog::GetList(
-				array(),
-				$filter,
-				false,
-				false,
-				array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SUBSCRIPTION')
-			);
-			while ($arItems = $dbItem->Fetch())
+			$catalogIterator = Catalog\CatalogIblockTable::getList(array(
+				'select' => array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID', 'SUBSCRIPTION'),
+				'filter' => $filter
+			));
+			while ($catalog = $catalogIterator->fetch())
 			{
-				$arItems['IBLOCK_ID'] = (int)$arItems['IBLOCK_ID'];
-				$arItems['PRODUCT_IBLOCK_ID'] = (int)$arItems['PRODUCT_IBLOCK_ID'];
-
-				if ('N' == $arItems['SUBSCRIPTION'] && 0 < $arItems['PRODUCT_IBLOCK_ID'])
+				$catalog['IBLOCK_ID'] = (int)$catalog['IBLOCK_ID'];
+				$catalog['PRODUCT_IBLOCK_ID'] = (int)$catalog['PRODUCT_IBLOCK_ID'];
+				$catalog['SKU_PROPERTY_ID'] = (int)$catalog['SKU_PROPERTY_ID'];
+				if ($catalog['SUBSCRIPTION'] == 'N' && $catalog['PRODUCT_IBLOCK_ID'] > 0)
 				{
-					$ids[] = $arItems['PRODUCT_IBLOCK_ID'];
-					if ('Y' == $showOffersIBlock)
+					$ids[$catalog['PRODUCT_IBLOCK_ID']] = $catalog['PRODUCT_IBLOCK_ID'];
+					if ($showOffersIBlock == 'Y')
 					{
-						$ids[] = $arItems['IBLOCK_ID'];
+						$ids[$catalog['IBLOCK_ID']] = $catalog['IBLOCK_ID'];
 					}
 				}
 				else
 				{
-					$ids[] = $arItems['IBLOCK_ID'];
+					$ids[$catalog['IBLOCK_ID']] = $catalog['IBLOCK_ID'];
 				}
 			}
-			$ids = array_unique($ids);
+			unset($catalog, $catalogIterator);
+
 			if ($ids)
 			{
 				$filter = array("ID" => $ids, 'ACTIVE' => 'Y');
@@ -1257,34 +1249,10 @@ class ProductSearchComponent extends \CBitrixComponent
 		return $sort;
 	}
 
-	public function executeComponent()
-	{
-		$this->checkAccess();
-		$this->loadModules();
-		$this->checkIblockAccess();
-
-		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == 'open_section')
-		{
-			$this->arResult = array(
-				'SECTIONS' => $this->getSectionsTree($this->getIblockId(), $_REQUEST['section_id'],$_REQUEST['active_id']),
-				'LEVEL' => (int)$_REQUEST['level'],
-				'TABLE_ID' => $this->getTableId(),
-				'OPEN_SECTION_MODE' => true,
-				'IS_ADMIN_SECTION' => $this->isAdminSection()
-			);
-		}
-		else
-		{
-			$this->prepareComponentResult();
-			$this->saveState();
-		}
-		$this->includeComponentTemplate();
-	}
-
 	protected function prepareComponentResult()
 	{
 		$filter = $this->getFilter();
-		$dbResultList = $this->getMixedList($this->getListSort(),	$filter);
+		$dbResultList = $this->getMixedList($this->getListSort(), $filter);
 		$this->arResult = array(
 			'DB_RESULT_LIST' => $dbResultList,
 			'PRODUCTS' => $this->makeItemsFromDbResult($dbResultList),
@@ -1329,5 +1297,44 @@ class ProductSearchComponent extends \CBitrixComponent
 				),
 				false, $this->getUserId());
 		}
+	}
+
+	private function getPropsList($iblockId,$skuPropertyId=0)
+	{
+		$arResult = array();
+		$dbrFProps = \CIBlockProperty::GetList(
+			array(
+				"SORT" => "ASC",
+				"NAME" => "ASC"
+			),
+			array(
+				"IBLOCK_ID" => $iblockId,
+				"ACTIVE" => "Y",
+				"!XML_ID" => "CML2_LINK",
+				"CHECK_PERMISSIONS" => "N",
+			)
+		);
+		while ($arProp = $dbrFProps->GetNext())
+		{
+			if ($skuPropertyId == $arProp['ID'])
+				continue;
+			$arProp["PROPERTY_USER_TYPE"] = (!empty($arProp["USER_TYPE"]) ? \CIBlockProperty::GetUserType($arProp["USER_TYPE"]) : array());
+			$arResult[] = $arProp;
+		}
+		return $arResult;
+	}
+
+	private function filterProps(&$props)
+	{
+		$result = array();
+		if ($props)
+		{
+			foreach ($props AS $prop)
+			{
+				if ($prop['FILTRABLE'] == 'Y' && $prop['PROPERTY_TYPE'] != 'F')
+					$result[] = $prop;
+			}
+		}
+		return $result;
 	}
 }

@@ -1,4 +1,4 @@
-BX.saleOrderAjax = {
+BX.saleOrderAjax = { // bad solution, actually, a singleton at the page
 
 	BXCallAllowed: false,
 
@@ -48,14 +48,18 @@ BX.saleOrderAjax = {
 
 	cleanUp: function(){
 
-		for(var k in this.properties){
-			if(typeof this.properties[k].input != 'undefined'){
-				BX.unbindAll(this.properties[k].input);
-				this.properties[k].input = null;
-			}
+		for(var k in this.properties)
+		{
+			if (this.properties.hasOwnProperty(k))
+			{
+				if(typeof this.properties[k].input != 'undefined')
+				{
+					BX.unbindAll(this.properties[k].input);
+					this.properties[k].input = null;
+				}
 
-			if(typeof this.properties[k].control != 'undefined'){
-				BX.unbindAll(this.properties[k].control);
+				if(typeof this.properties[k].control != 'undefined')
+					BX.unbindAll(this.properties[k].control);
 			}
 		}
 
@@ -70,14 +74,23 @@ BX.saleOrderAjax = {
 	// called each time form refreshes
 	initDeferredControl: function()
 	{
-		var ctx = this;
+		var ctx = this,
+			k,
+			row,
+			input,
+			locPropId,
+			m,
+			control,
+			code,
+			townInputFlag,
+			adapter;
 
 		// first, init all controls
 		if(typeof window.BX.locationsDeferred != 'undefined'){
 
 			this.BXCallAllowed = false;
 
-			for(var k in window.BX.locationsDeferred){
+			for(k in window.BX.locationsDeferred){
 
 				window.BX.locationsDeferred[k].call(this);
 				window.BX.locationsDeferred[k] = null;
@@ -88,20 +101,20 @@ BX.saleOrderAjax = {
 			}
 		}
 
-		for(var k in this.properties){
+		for(k in this.properties){
 
 			// zip input handling
 			if(this.properties[k].isZip){
-				var row = this.controls.scope.querySelector('[data-property-id-row="'+k+'"]');
+				row = this.controls.scope.querySelector('[data-property-id-row="'+k+'"]');
 				if(BX.type.isElementNode(row)){
 
-					var input = row.querySelector('input[type="text"]');
+					input = row.querySelector('input[type="text"]');
 					if(BX.type.isElementNode(input)){
 						this.properties[k].input = input;
 
 						// set value for the first "location" property met
-						var locPropId = false;
-						for(var m in this.properties){
+						locPropId = false;
+						for(m in this.properties){
 							if(this.properties[m].type == 'LOCATION'){
 								locPropId = m;
 								break;
@@ -114,10 +127,10 @@ BX.saleOrderAjax = {
 								input = null;
 								row = null;
 
-								if(/^\s*\d{6}\s*$/.test(value)){
+								if(BX.type.isNotEmptyString(value) && /^\s*\d+\s*$/.test(value) && value.length > 3){
 
 									ctx.getLocationByZip(value, function(locationId){
-										ctx.properties[locPropId].control.setValueById(locationId);
+										ctx.properties[locPropId].control.setValueByLocationId(locationId);
 									}, function(){
 										try{
 											ctx.properties[locPropId].control.clearSelected(locationId);
@@ -130,88 +143,94 @@ BX.saleOrderAjax = {
 				}
 			}
 
-			if(this.checkAbility(k, 'canHaveAltLocation')){
+			// location handling, town property, etc...
+			if(this.properties[k].type == 'LOCATION')
+			{
 
-				//this.checkMode(k, 'altLocationChoosen');
+				if(typeof this.properties[k].control != 'undefined'){
 
-				var control = this.properties[k].control;
+					control = this.properties[k].control; // reference to sale.location.selector.*
+					code = control.getSysCode();
 
-				// control can have "select other location" option
-				control.setOption('pseudoValues', ['other']);
+					// we have town property (alternative location)
+					if(typeof this.properties[k].altLocationPropId != 'undefined')
+					{
+						if(code == 'sls') // for sale.location.selector.search
+						{
+							// replace default boring "nothing found" label for popup with "-bx-popup-set-mode-add-loc" inside
+							control.replaceTemplate('nothing-found', this.options.messages.notFoundPrompt);
+						}
 
-				// when control tries to search for items
-				control.bindEvent('before-control-item-discover-done', function(knownItems, adapter){
+						if(code == 'slst')  // for sale.location.selector.steps
+						{
+							(function(k, control){
 
-					control = null;
+								// control can have "select other location" option
+								control.setOption('pseudoValues', ['other']);
 
-					var parentValue = adapter.getParentValue();
+								// insert "other location" option to popup
+								control.bindEvent('control-before-display-page', function(adapter){
 
-					// you can choose "other" location only if parentNode is not root and is selectable
-					if(parentValue == this.getOption('rootNodeValue') || !this.checkCanSelectItem(parentValue))
-						return;
+									control = null;
 
-					knownItems.unshift({DISPLAY: ctx.options.messages.otherLocation, VALUE: 'other', CODE: 'other', IS_PARENT: false});
-				});
+									var parentValue = adapter.getParentValue();
 
-				// currently wont work for initially created controls, so commented out
-				/*
-				// when control is being created with knownItems
-				control.bindEvent('before-control-placed', function(adapter){
-					if(typeof adapter.opts.knownItems != 'undefined')
-						adapter.opts.knownItems.unshift({DISPLAY: so.messages.otherLocation, VALUE: 'other', CODE: 'other', IS_PARENT: false});
+									// you can choose "other" location only if parentNode is not root and is selectable
+									if(parentValue == this.getOption('rootNodeValue') || !this.checkCanSelectItem(parentValue))
+										return;
 
-				});
-				*/
+									var controlInApater = adapter.getControl();
 
-				// add special value "other", if there is "city" input
-				if(this.checkMode(k, 'altLocationChoosen')){
-					
-					var altLocProp = this.getAltLocPropByRealLocProp(k);
-					this.toggleProperty(altLocProp.id, true);
+									if(typeof controlInApater.vars.cache.nodes['other'] == 'undefined')
+									{
+										controlInApater.fillCache([{
+											CODE:		'other', 
+											DISPLAY:	ctx.options.messages.otherLocation, 
+											IS_PARENT:	false,
+											VALUE:		'other'
+										}], {
+											modifyOrigin:			true,
+											modifyOriginPosition:	'prepend'
+										});
+									}
+								});
 
-					var adapter = control.getAdapterAtPosition(control.getStackSize() - 1);
+								townInputFlag = BX('LOCATION_ALT_PROP_DISPLAY_MANUAL['+parseInt(k)+']');
 
-					// also restore "other location" label on the last control
-					if(typeof adapter != 'undefined' && adapter !== null)
-						adapter.setValuePair('other', ctx.options.messages.otherLocation); // a little hack
-				}else{
+								control.bindEvent('after-select-real-value', function(){
 
-					var altLocProp = this.getAltLocPropByRealLocProp(k);
-					this.toggleProperty(altLocProp.id, false);
+									// some location chosen
+									if(BX.type.isDomNode(townInputFlag))
+										townInputFlag.value = '0';
+								});
+								control.bindEvent('after-select-pseudo-value', function(){
 
-				}
-			}else{
+									// option "other location" chosen
+									if(BX.type.isDomNode(townInputFlag))
+										townInputFlag.value = '1';
+								});
 
-				var altLocProp = this.getAltLocPropByRealLocProp(k);
-				if(altLocProp !== false){
+								// when user click at default location or call .setValueByLocation*()
+								control.bindEvent('before-set-value', function(){
+									if(BX.type.isDomNode(townInputFlag))
+										townInputFlag.value = '0';
+								});
 
-					// replace default boring "nothing found" label for popup with "-bx-popup-set-mode-add-loc" inside
-					if(this.properties[k].type == 'LOCATION' && typeof this.properties[k].control != 'undefined' && this.properties[k].control.getSysCode() == 'sls')
-						this.properties[k].control.replaceTemplate('nothing-found', this.options.messages.notFoundPrompt);
+								// restore "other location" label on the last control
+								if(BX.type.isDomNode(townInputFlag) && townInputFlag.value == '1'){
 
-					this.toggleProperty(altLocProp.id, false);
-				}
-			}
+									// a little hack: set "other location" text display
+									adapter = control.getAdapterAtPosition(control.getStackSize() - 1);
 
-			if(typeof this.properties[k].control != 'undefined' && this.properties[k].control.getSysCode() == 'slst'){
+									if(typeof adapter != 'undefined' && adapter !== null)
+										adapter.setValuePair('other', ctx.options.messages.otherLocation);
+								}
 
-				var control = this.properties[k].control;
-
-				// if a children of CITY is shown, we must replace label for 'not selected' variant
-				var adapter = control.getAdapterAtPosition(control.getStackSize() - 1);
-				var node = this.getPreviousAdapterSelectedNode(control, adapter);
-
-				if(node !== false && node.TYPE_ID == ctx.options.cityTypeId){
-
-					var selectBox = adapter.getControl();
-					if(selectBox.getValue() == false){
-
-						adapter.getControl().replaceMessage('notSelected', ctx.options.messages.moreInfoLocation);
-						adapter.setValuePair('', ctx.options.messages.moreInfoLocation);
+							})(k, control);
+						}
 					}
 				}
 			}
-
 		}
 
 		this.BXCallAllowed = true;
@@ -346,56 +365,16 @@ BX.saleOrderAjax = {
 			}
 		}
 
+		// turning LOCATION_ALT_PROP_DISPLAY_MANUAL on\off
+
 		if(item != 'other'){
 
 			if(this.BXCallAllowed){
-
-				// drop mode "other"
-				if(propId != false){
-					if(this.checkAbility(propId, 'canHaveAltLocation')){
-
-						if(typeof this.modes[propId] == 'undefined')
-							this.modes[propId] = {};
-
-						this.modes[propId]['altLocationChoosen'] = false;
-
-						var altLocProp = this.getAltLocPropByRealLocProp(propId);
-						if(altLocProp !== false){
-
-							this.toggleProperty(altLocProp.id, false);
-						}
-					}
-				}
 
 				this.BXCallAllowed = false;
 				submitForm();
 			}
 
-		}else{ // only for sale.location.selector.steps
-
-			if(this.checkAbility(propId, 'canHaveAltLocation')){
-
-				var adapter = control.getAdapterAtPosition(control.getStackSize() - 2);
-				if(adapter !== null){
-					var value = adapter.getValue();
-					control.setTargetInputValue(value);
-
-					// set mode "other"
-					if(typeof this.modes[propId] == 'undefined')
-						this.modes[propId] = {};
-						
-					this.modes[propId]['altLocationChoosen'] = true;
-
-					var altLocProp = this.getAltLocPropByRealLocProp(propId);
-					if(altLocProp !== false){
-
-						this.toggleProperty(altLocProp.id, true, true);
-					}
-
-					this.BXCallAllowed = false;
-					submitForm();
-				}
-			}
 		}
 	},
 
@@ -444,8 +423,6 @@ BX.saleOrderAjax = {
 			//cache: true,
 			onsuccess: function(result){
 
-				//try{
-
 				CloseWaitWindow();
 				if(result.result){
 
@@ -455,8 +432,6 @@ BX.saleOrderAjax = {
 
 				}else
 					notFoundCallback.call(ctx);
-
-				//}catch(e){console.dir(e);}
 
 			},
 			onfailure: function(type, e){

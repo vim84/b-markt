@@ -211,6 +211,8 @@ class CComponentEngine
 	{
 		/** @global CMain $APPLICATION */
 		global $APPLICATION;
+		static $aSearch = array("%5C", "%2B");
+		static $aReplace = array("\\", "+");
 
 		if (!isset($arVariables) || !is_array($arVariables))
 			$arVariables = array();
@@ -227,6 +229,9 @@ class CComponentEngine
 			return false;
 
 		$currentPageUrl = substr($requestURL, strlen($folder404));
+		//To fix GetPagePath security hack
+		$currentPageUrl = str_replace($aSearch, $aReplace, $currentPageUrl);
+
 		$pageCandidates = array();
 		$arUrlTemplates = $this->sortUrlTemplates($arUrlTemplates, $bHasGreedyPartsInTemplates);
 		if (

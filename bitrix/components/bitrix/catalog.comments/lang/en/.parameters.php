@@ -39,4 +39,5 @@ $MESS["RATING_TYPE_STANDART_GRAPHIC"] = "I like it/I don't like it (image)";
 $MESS["RATING_TYPE_LIKE_TEXT"] = "I like it (text)";
 $MESS["RATING_TYPE_LIKE_GRAPHIC"] = "I like it (image)";
 $MESS["CATALOG_SC_IBLOCK_TYPE"] = "Information block type";
+$MESS["CATALOG_SC_SHOW_DEACTIVATED"] = "Show comments for deactivated products";
 ?>

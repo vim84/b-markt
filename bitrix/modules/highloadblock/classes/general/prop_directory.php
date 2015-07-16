@@ -1,12 +1,16 @@
 <?
+use Bitrix\Main\Localization\Loc;
 use Bitrix\Highloadblock as HL;
-IncludeModuleLangFile(__FILE__);
+
+Loc::loadMessages(__FILE__);
 
 /**
  * Class CIBlockPropertyDirectory
  */
 class CIBlockPropertyDirectory
 {
+	const TABLE_PREFIX = 'b_hlbd_';
+
 	protected static $arFullCache = array();
 	protected static $arItemCache = array();
 	protected static $directoryMap = array();
@@ -21,7 +25,7 @@ class CIBlockPropertyDirectory
 		return array(
 			'PROPERTY_TYPE' => 'S',
 			'USER_TYPE' => 'directory',
-			'DESCRIPTION' => GetMessage('HIBLOCK_PROP_DIRECTORY_DESCRIPTION'),
+			'DESCRIPTION' => Loc::getMessage('HIBLOCK_PROP_DIRECTORY_DESCRIPTION'),
 			'GetSettingsHTML' => array(__CLASS__, 'GetSettingsHTML'),
 			'GetPropertyFieldHtml' => array(__CLASS__, 'GetPropertyFieldHtml'),
 			'GetPropertyFieldHtmlMulty' => array(__CLASS__, 'GetPropertyFieldHtmlMulty'),
@@ -30,6 +34,7 @@ class CIBlockPropertyDirectory
 			'GetPublicViewHTML' => array(__CLASS__, 'GetPublicViewHTML'),
 			'GetAdminFilterHTML' => array(__CLASS__, 'GetAdminFilterHTML'),
 			'GetExtendedValue' => array(__CLASS__, 'GetExtendedValue'),
+			'GetSearchContent' => array(__CLASS__, 'GetSearchContent')
 		);
 	}
 
@@ -100,7 +105,7 @@ class CIBlockPropertyDirectory
 			"HIDE" => array("ROW_COUNT", "COL_COUNT", "MULTIPLE_CNT", "DEFAULT_VALUE", "WITH_DESCRIPTION"),
 		);
 
-		$cellOption = '<option value="-1"'.('' == $settings["TABLE_NAME"] ? ' selected' : '').'>'.GetMessage('HIBLOCK_PROP_DIRECTORY_NEW_DIRECTORY').'</option>';
+		$cellOption = '<option value="-1"'.('' == $settings["TABLE_NAME"] ? ' selected' : '').'>'.Loc::getMessage('HIBLOCK_PROP_DIRECTORY_NEW_DIRECTORY').'</option>';
 
 		$rsData = HL\HighloadBlockTable::getList(array(
 			'select' => array('TABLE_NAME', 'NAME')
@@ -111,18 +116,18 @@ class CIBlockPropertyDirectory
 			$cellOption .= '<option '.$selected.' value="'.htmlspecialcharsbx($arData["TABLE_NAME"]).'">'.htmlspecialcharsex($arData["NAME"].' ('.$arData["TABLE_NAME"].')').'</option>';
 		}
 
-
-		$selectDir = GetMessage("HIBLOCK_PROP_DIRECTORY_SELECT_DIR");
-		$headingXmlId = GetMessage("HIBLOCK_PROP_DIRECTORY_XML_ID");
-		$headingName = GetMessage("HIBLOCK_PROP_DIRECTORY_NAME");
-		$headingSort = GetMessage("HIBLOCK_PROP_DIRECTORY_SORT");
-		$headingDef = GetMessage("HIBLOCK_PROP_DIRECTORY_DEF");
-		$headingLink = GetMessage("HIBLOCK_PROP_DIRECTORY_LINK");
-		$headingFile = GetMessage("HIBLOCK_PROP_DIRECTORY_FILE");
-		$headingDescription = GetMessage("HIBLOCK_PROP_DIRECTORY_DECSRIPTION");
-		$headingFullDescription = GetMessage("HIBLOCK_PROP_DIRECTORY_FULL_DESCRIPTION");
-		$directoryName = GetMessage("HIBLOCK_PROP_DIRECTORY_NEW_NAME");
-		$directoryMore = GetMessage("HIBLOCK_PROP_DIRECTORY_MORE");
+		$tablePrefix = self::TABLE_PREFIX;
+		$selectDir = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_SELECT_DIR");
+		$headingXmlId = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_XML_ID");
+		$headingName = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_NAME");
+		$headingSort = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_SORT");
+		$headingDef = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_DEF");
+		$headingLink = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_LINK");
+		$headingFile = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_FILE");
+		$headingDescription = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_DECSRIPTION");
+		$headingFullDescription = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_FULL_DESCRIPTION");
+		$directoryName = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_NEW_NAME");
+		$directoryMore = Loc::getMessage("HIBLOCK_PROP_DIRECTORY_MORE");
 		return <<<"HIBSELECT"
 <script type="text/javascript">
 function getTableHead()
@@ -240,7 +245,8 @@ function getDirectoryTableHead(e)
 		if (-1 < obSelectHLBlock.selectedIndex && '-1' == obSelectHLBlock.options[obSelectHLBlock.selectedIndex].value)
 		{
 			BX('hlb_directory_table_id_hidden').disabled = false;
-			BX('hlb_directory_table_id_hidden').value = 'b_'+BX('hlb_directory_table_name').value;
+			BX('hlb_directory_table_id_hidden').value = '{$tablePrefix}'+BX('hlb_directory_table_name').value;
+			BX('hlb_directory_table_id_hidden').value = BX('hlb_directory_table_id_hidden').value.substr(0, 30);
 		}
 	}
 }
@@ -367,7 +373,7 @@ HIBSELECT;
 			}
 			$html .= '</table>';
 
-			$html .= '<input type="button" value="'.GetMessage("HIBLOCK_PROP_DIRECTORY_MORE").'" onclick="if(window.addNewRow){addNewRow(\'tb'.md5($name).'\', -1)}else{addNewTableRow(\'tb'.md5($name).'\', 1, /\[(n)([0-9]*)\]/g, 2)}">';
+			$html .= '<input type="button" value="'.Loc::getMessage("HIBLOCK_PROP_DIRECTORY_MORE").'" onclick="if(window.addNewRow){addNewRow(\'tb'.md5($name).'\', -1)}else{addNewTableRow(\'tb'.md5($name).'\', 1, /\[(n)([0-9]*)\]/g, 2)}">';
 		}
 		return  $html;
 	}
@@ -406,11 +412,11 @@ HIBSELECT;
 				}
 				$cellOption .= '<option '.$options.' value="'.htmlspecialcharsbx($data['UF_XML_ID']).'">'.htmlspecialcharsex($data["UF_NAME"].' ['.$data["ID"]).']</option>';
 			}
-			$defaultOption = '<option value=""'.($selectedValue ? '' : ' selected').'>'.GetMessage('HIBLOCK_PROP_DIRECTORY_EMPTY_VALUE').'</option>';
+			$defaultOption = '<option value=""'.($selectedValue ? '' : ' selected').'>'.Loc::getMessage('HIBLOCK_PROP_DIRECTORY_EMPTY_VALUE').'</option>';
 		}
 		else
 		{
-			$cellOption = '<option value="" selected>'.GetMessage('HIBLOCK_PROP_DIRECTORY_EMPTY_VALUE').'</option>';
+			$cellOption = '<option value="" selected>'.Loc::getMessage('HIBLOCK_PROP_DIRECTORY_EMPTY_VALUE').'</option>';
 		}
 		return $defaultOption.$cellOption;
 	}
@@ -426,7 +432,7 @@ HIBSELECT;
 	{
 		if (!isset($value['VALUE']))
 			return false;
-		if (!isset($arProperty['USER_TYPE_SETTINGS']['TABLE_NAME']) || empty($arProperty['USER_TYPE_SETTINGS']['TABLE_NAME']))
+		if (empty($arProperty['USER_TYPE_SETTINGS']['TABLE_NAME']))
 			return false;
 
 		$tableName = $arProperty['USER_TYPE_SETTINGS']['TABLE_NAME'];
@@ -439,7 +445,7 @@ HIBSELECT;
 				$arProperty['USER_TYPE_SETTINGS']['TABLE_NAME'],
 				array(
 					'select' => array('UF_XML_ID', 'UF_NAME'),
-					'filter' => array('UF_XML_ID' => $value['VALUE'])
+					'filter' => array('=UF_XML_ID' => $value['VALUE'])
 				)
 			);
 			if (!empty($arData))
@@ -533,6 +539,35 @@ HIBSELECT;
 	}
 
 	/**
+	 * Return property value for search.
+	 *
+	 * @param array $arProperty				Property description.
+	 * @param array $value					Current value.
+	 * @param array $strHTMLControlName		Control description.
+	 * @return string
+	 */
+	public static function GetSearchContent($arProperty, $value, $strHTMLControlName)
+	{
+		$dataValue = self::GetExtendedValue($arProperty, $value);
+		if ($dataValue)
+		{
+			if (isset($dataValue['UF_NAME']))
+				return $dataValue['UF_NAME'];
+			else
+				return $dataValue['UF_XML_ID'];
+		}
+		return '';
+	}
+
+	public static function createHighloadTableName($name)
+	{
+		$name = trim((string)$name);
+		if ($name == '')
+			return false;
+		$name = substr(self::TABLE_PREFIX.$name, 0, 30);
+		return $name;
+	}
+	/**
 	 * Returns entity data.
 	 *
 	 * @param string $tableName				HL table name.
@@ -600,4 +635,3 @@ HIBSELECT;
 		return $arResult;
 	}
 }
-?>

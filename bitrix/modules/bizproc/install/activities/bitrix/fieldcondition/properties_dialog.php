@@ -12,6 +12,7 @@ $arC = array(
 	"<=" => GetMessage("BPFC_PD_LE"),
 	"!=" => GetMessage("BPFC_PD_NE"),
 	"in" => GetMessage("BPFC_PD_IN"),
+	"contain" => GetMessage("BPFC_PD_CONTAIN")
 );
 
 $arFieldConditionCount = array(1);

@@ -21,4 +21,5 @@ $MESS["BIZPROC_IMPORT_BUTTON"] = "Импортировать";
 $MESS["BIZPROC_IMPORT_TITLE"] = "Импорт шаблона";
 $MESS["BIZPROC_IMPORT_FILE"] = "Файл";
 $MESS["BIZPROC_WFEDIT_MENU_IMPORT_PROMT"] = "Текущий шаблон бизнес-процесса будет заменен импортируемым. Продолжить?";
+$MESS['BIZPROC_EMPTY_EXPORT'] = 'Необходимо сохранить шаблон перед экспортом';
 ?>

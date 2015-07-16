@@ -7,9 +7,6 @@ class CSaleLocation extends CAllSaleLocation
 {
 	function GetList($arOrder = array("SORT"=>"ASC", "COUNTRY_NAME_LANG"=>"ASC", "CITY_NAME_LANG"=>"ASC"), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
-		if(self::isLocationProMigrated())
-			return parent::GetList($arOrder, $arFilter, $arGroupBy, $arNavStartParams, $arSelectFields);
-
 		global $DB;
 
 		if (is_string($arGroupBy) && strlen($arGroupBy) == 2)
@@ -23,51 +20,18 @@ class CSaleLocation extends CAllSaleLocation
 		if (count($arSelectFields) <= 0)
 			$arSelectFields = array("ID", "COUNTRY_ID", "REGION_ID", "CITY_ID", "SORT", "COUNTRY_NAME_ORIG", "COUNTRY_SHORT_NAME", "REGION_NAME_ORIG", "CITY_NAME_ORIG", "REGION_SHORT_NAME", "CITY_SHORT_NAME", "COUNTRY_LID", "COUNTRY_NAME", "REGION_LID", "CITY_LID", "REGION_NAME", "CITY_NAME", "LOC_DEFAULT");
 
-		$additionalFilter = "";
-		if (isset($arFilter["LID"]) || strlen($arFilter["LID"]) > 0)
+		if(!is_array($arOrder))
+			$arOrder = array();
+
+		foreach ($arOrder as $key => $dir)
 		{
-			$additionalFilterLCL = " AND LCL.LID = '".$DB->ForSql($arFilter["LID"], 2)."'";
-			$additionalFilterLRL = " AND LRL.LID = '".$DB->ForSql($arFilter["LID"], 2)."'";
-			$additionalFilterLGL = " AND LGL.LID = '".$DB->ForSql($arFilter["LID"], 2)."'";
+			if (!in_array($key, $arSelectFields))
+				$arSelectFields[] = $key;
 		}
 
-		// FIELDS -->
-		$arFields = array(
-				"ID" => array("FIELD" => "L.ID", "TYPE" => "int"),
-				"LOC_DEFAULT" => array("FIELD" => "L.LOC_DEFAULT", "TYPE" => "string"),
-				"COUNTRY_ID" => array("FIELD" => "L.COUNTRY_ID", "TYPE" => "int"),
-				"CITY_ID" => array("FIELD" => "L.CITY_ID", "TYPE" => "int"),
-				"REGION_ID" => array("FIELD" => "L.REGION_ID", "TYPE" => "int"),
-				"SORT" => array("FIELD" => "L.SORT", "TYPE" => "int"),
+		$arFilter = self::getFilterForGetList($arFilter);
+		$arFields = self::getFieldMapForGetList($arFilter);
 
-				"COUNTRY_NAME_ORIG" => array("FIELD" => "LC.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country LC ON (L.COUNTRY_ID = LC.ID)"),
-				"COUNTRY_SHORT_NAME" => array("FIELD" => "LC.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country LC ON (L.COUNTRY_ID = LC.ID)"),
-
-				"CITY_NAME_ORIG" => array("FIELD" => "LG.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city LG ON (L.CITY_ID = LG.ID)"),
-				"CITY_SHORT_NAME" => array("FIELD" => "LG.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city LG ON (L.CITY_ID = LG.ID)"),
-			
-				"REGION_NAME_ORIG" => array("FIELD" => "LR.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region LR ON (L.REGION_ID = LR.ID)"),
-				"REGION_SHORT_NAME" => array("FIELD" => "LR.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region LR ON (L.REGION_ID = LR.ID)"),
-			
-				"COUNTRY_LID" => array("FIELD" => "LCL.LID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
-				"COUNTRY_NAME" => array("FIELD" => "LCL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
-				"COUNTRY_NAME_LANG" => array("FIELD" => "LCL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
-				"COUNTRY_SHORT_NAME_LANG" => array("FIELD" => "LCL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
-
-				"REGION_LID" => array("FIELD" => "LRL.LID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
-				"REGION_NAME" => array("FIELD" => "LRL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
-				"REGION_NAME_LANG" => array("FIELD" => "LRL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
-				"REGION_SHORT_NAME_LANG" => array("FIELD" => "LRL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")"),
-			
-				"CITY_LID" => array("FIELD" => "LGL.LID", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
-				"CITY_NAME" => array("FIELD" => "LGL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
-				"CITY_NAME_LANG" => array("FIELD" => "LGL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
-				"CITY_SHORT_NAME_LANG" => array("FIELD" => "LGL.SHORT_NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
-
-				"COUNTRY" => array("FIELD" => "LCL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_country_lang LCL ON (L.COUNTRY_ID = LCL.COUNTRY_ID".$additionalFilterLCL.")"),
-				"CITY" => array("FIELD" => "LGL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_city_lang LGL ON (L.CITY_ID = LGL.CITY_ID".$additionalFilterLGL.")"),
-				"REGION" => array("FIELD" => "LRL.NAME", "TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location_region_lang LRL ON (L.REGION_ID = LRL.REGION_ID".$additionalFilterLRL.")")
-			);
 		// <-- FIELDS
 
 		$arSqls = CSaleOrder::PrepareSql($arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields);
@@ -94,7 +58,7 @@ class CSaleLocation extends CAllSaleLocation
 				return False;
 		}
 
-		$strSql = 
+		$strSql =
 			"SELECT ".$arSqls["SELECT"]." ".
 			"FROM b_sale_location L ".
 			"	".$arSqls["FROM"]." ";
@@ -170,23 +134,23 @@ class CSaleLocation extends CAllSaleLocation
 			"	LEFT JOIN b_sale_location_country_lang LCL ON (LC.ID = LCL.COUNTRY_ID AND LCL.LID = '".$DB->ForSql($strLang, 2)."') ".
 			"	LEFT JOIN b_sale_location_city_lang LGL ON (LG.ID = LGL.CITY_ID AND LGL.LID = '".$DB->ForSql($strLang, 2)."') ".
 			"WHERE L.ID = ".$ID." ";*/
-		
+
 		$strSql = "
-		SELECT L.ID, L.COUNTRY_ID, L.CITY_ID, L.SORT, LC.NAME as COUNTRY_NAME_ORIG, LC.SHORT_NAME as COUNTRY_SHORT_NAME, LCL.NAME as COUNTRY_NAME_LANG, 
-		LG.NAME as CITY_NAME_ORIG, LG.SHORT_NAME as CITY_SHORT_NAME, LGL.NAME as CITY_NAME_LANG, 
-		L.REGION_ID, LR.NAME as REGION_NAME_ORIG, LR.SHORT_NAME as REGION_SHORT_NAME, LRL.NAME as REGION_NAME_LANG, 
-		IF(LCL.ID IS NULL, LC.NAME, LCL.NAME) as COUNTRY_NAME, 
+		SELECT L.ID, L.COUNTRY_ID, L.CITY_ID, L.SORT, LC.NAME as COUNTRY_NAME_ORIG, LC.SHORT_NAME as COUNTRY_SHORT_NAME, LCL.NAME as COUNTRY_NAME_LANG,
+		LG.NAME as CITY_NAME_ORIG, LG.SHORT_NAME as CITY_SHORT_NAME, LGL.NAME as CITY_NAME_LANG,
+		L.REGION_ID, LR.NAME as REGION_NAME_ORIG, LR.SHORT_NAME as REGION_SHORT_NAME, LRL.NAME as REGION_NAME_LANG,
+		IF(LCL.ID IS NULL, LC.NAME, LCL.NAME) as COUNTRY_NAME,
 		IF(LGL.ID IS NULL, LG.NAME, LGL.NAME) as CITY_NAME,
-		IF(LRL.ID IS NULL, LR.NAME, LRL.NAME) as REGION_NAME 
-		FROM b_sale_location L 
-			LEFT JOIN b_sale_location_country LC ON (L.COUNTRY_ID = LC.ID) 
-			LEFT JOIN b_sale_location_city LG ON (L.CITY_ID = LG.ID) 
-			LEFT JOIN b_sale_location_country_lang LCL ON (LC.ID = LCL.COUNTRY_ID AND LCL.LID = '".$DB->ForSql($strLang, 2)."') 
-			LEFT JOIN b_sale_location_city_lang LGL ON (LG.ID = LGL.CITY_ID AND LGL.LID = '".$DB->ForSql($strLang, 2)."') 
-			LEFT JOIN b_sale_location_region LR ON (L.REGION_ID = LR.ID) 
+		IF(LRL.ID IS NULL, LR.NAME, LRL.NAME) as REGION_NAME
+		FROM b_sale_location L
+			LEFT JOIN b_sale_location_country LC ON (L.COUNTRY_ID = LC.ID)
+			LEFT JOIN b_sale_location_city LG ON (L.CITY_ID = LG.ID)
+			LEFT JOIN b_sale_location_country_lang LCL ON (LC.ID = LCL.COUNTRY_ID AND LCL.LID = '".$DB->ForSql($strLang, 2)."')
+			LEFT JOIN b_sale_location_city_lang LGL ON (LG.ID = LGL.CITY_ID AND LGL.LID = '".$DB->ForSql($strLang, 2)."')
+			LEFT JOIN b_sale_location_region LR ON (L.REGION_ID = LR.ID)
 			LEFT JOIN b_sale_location_region_lang LRL ON (LR.ID = LRL.REGION_ID AND LRL.LID = '".$DB->ForSql($strLang, 2)."')
 		WHERE L.ID = ".$ID." ";
-		
+
 		$db_res = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 		if ($res = $db_res->Fetch())
@@ -204,7 +168,7 @@ class CSaleLocation extends CAllSaleLocation
 		global $DB;
 		$arSqlSearch = Array();
 
-		if(!is_array($arFilter)) 
+		if(!is_array($arFilter))
 			$filter_keys = Array();
 		else
 			$filter_keys = array_keys($arFilter);
@@ -243,7 +207,7 @@ class CSaleLocation extends CAllSaleLocation
 			$strSqlSearch .= " (".$arSqlSearch[$i].") ";
 		}
 
-		$strSql = 
+		$strSql =
 			"SELECT DISTINCT C.ID, C.NAME as NAME_ORIG, C.SHORT_NAME, CL.NAME as NAME, ".
 			"	IF(CL.ID IS NULL, C.NAME, CL.NAME) as NAME_LANG ".
 			"FROM b_sale_location_country C ".
@@ -252,7 +216,7 @@ class CSaleLocation extends CAllSaleLocation
 				strlen($arOrder["SORT"]) > 0
 				?
 				"	LEFT JOIN b_sale_location SL ON (SL.COUNTRY_ID = C.ID AND (SL.CITY_ID = 0 OR ISNULL(SL.CITY_ID))) "
-				: 
+				:
 				""
 			).
 			"WHERE 1 = 1 ".
@@ -297,7 +261,7 @@ class CSaleLocation extends CAllSaleLocation
 
 	/**
 	* The function select all region
-	* 
+	*
 	* @param array $arOrder sorting an array of results
 	* @param array $arFilter filtered an array of results
 	* @param string $strLang language regions of the sample
@@ -311,7 +275,7 @@ class CSaleLocation extends CAllSaleLocation
 		global $DB;
 		$arSqlSearch = Array();
 
-		if(!is_array($arFilter)) 
+		if(!is_array($arFilter))
 			$filter_keys = Array();
 		else
 			$filter_keys = array_keys($arFilter);
@@ -353,7 +317,7 @@ class CSaleLocation extends CAllSaleLocation
 			$strSqlSearch .= " (".$arSqlSearch[$i].") ";
 		}
 
-		$strSql = 
+		$strSql =
 			"SELECT C.ID, C.NAME as NAME_ORIG, C.SHORT_NAME, CL.NAME as NAME, ".
 			"	IF(CL.ID IS NULL, C.NAME, CL.NAME) as NAME_LANG ".
 			"FROM b_sale_location_region C ".
@@ -511,10 +475,11 @@ class CSaleLocation extends CAllSaleLocation
 		if (!CSaleLocation::CountryCheckFields("ADD", $arFields))
 			return false;
 
-		$db_events = GetModuleEvents("sale", "OnBeforeCountryAdd");
-		while ($arEvent = $db_events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnBeforeCountryAdd', true) as $arEvent)
+		{
 			if (ExecuteModuleEventEx($arEvent, array($arFields))===false)
 				return false;
+		}
 
 		$arInsert = $DB->PrepareInsert("b_sale_location_country", $arFields);
 		$strSql =
@@ -524,7 +489,9 @@ class CSaleLocation extends CAllSaleLocation
 
 		$ID = IntVal($DB->LastID());
 
-		$db_lang = CLangAdmin::GetList(($b="sort"), ($o="asc"), array("ACTIVE" => "Y"));
+		$b = "sort";
+		$o = "asc";
+		$db_lang = CLangAdmin::GetList($b, $o, array("ACTIVE" => "Y"));
 		while ($arLang = $db_lang->Fetch())
 		{
 			if ($arFields[$arLang['LID']])
@@ -537,8 +504,7 @@ class CSaleLocation extends CAllSaleLocation
 			}
 		}
 
-		$events = GetModuleEvents("sale", "OnCountryAdd");
-		while ($arEvent = $events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnCountryAdd', true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array($ID, $arFields));
 
 		return $ID;
@@ -552,10 +518,11 @@ class CSaleLocation extends CAllSaleLocation
 		if (!CSaleLocation::CityCheckFields("ADD", $arFields))
 			return false;
 
-		$db_events = GetModuleEvents("sale", "OnBeforeCityAdd");
-		while ($arEvent = $db_events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnBeforeCityAdd', true) as $arEvent)
+		{
 			if (ExecuteModuleEventEx($arEvent, array($arFields))===false)
 				return false;
+		}
 
 		$arInsert = $DB->PrepareInsert("b_sale_location_city", $arFields);
 		$strSql =
@@ -565,7 +532,9 @@ class CSaleLocation extends CAllSaleLocation
 
 		$ID = IntVal($DB->LastID());
 
-		$db_lang = CLangAdmin::GetList(($b="sort"), ($o="asc"), array("ACTIVE" => "Y"));
+		$b = "sort";
+		$o = "asc";
+		$db_lang = CLangAdmin::GetList($b, $o, array("ACTIVE" => "Y"));
 		while ($arLang = $db_lang->Fetch())
 		{
 			if ($arFields[$arLang["LID"]])
@@ -578,8 +547,7 @@ class CSaleLocation extends CAllSaleLocation
 			}
 		}
 
-		$events = GetModuleEvents("sale", "OnCityAdd");
-		while ($arEvent = $events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnCityAdd', true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array($ID, $arFields));
 
 		return $ID;
@@ -593,10 +561,11 @@ class CSaleLocation extends CAllSaleLocation
 		if (!CSaleLocation::RegionCheckFields("ADD", $arFields))
 			return false;
 
-		$db_events = GetModuleEvents("sale", "OnBeforeRegionAdd");
-		while ($arEvent = $db_events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnBeforeRegionAdd', true) as $arEvent)
+		{
 			if (ExecuteModuleEventEx($arEvent, array($arFields))===false)
 				return false;
+		}
 
 		$arInsert = $DB->PrepareInsert("b_sale_location_region", $arFields);
 		$strSql =
@@ -606,7 +575,9 @@ class CSaleLocation extends CAllSaleLocation
 
 		$ID = IntVal($DB->LastID());
 
-		$db_lang = CLangAdmin::GetList(($b="sort"), ($o="asc"), array("ACTIVE" => "Y"));
+		$b = "sort";
+		$o = "asc";
+		$db_lang = CLangAdmin::GetList($b, $o, array("ACTIVE" => "Y"));
 		while ($arLang = $db_lang->Fetch())
 		{
 			if ($arFields[$arLang["LID"]])
@@ -619,8 +590,7 @@ class CSaleLocation extends CAllSaleLocation
 			}
 		}
 
-		$events = GetModuleEvents("sale", "OnRegionAdd");
-		while ($arEvent = $events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnRegionAdd', true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array($ID, $arFields));
 
 		return $ID;
@@ -636,10 +606,11 @@ class CSaleLocation extends CAllSaleLocation
 		// make IX_B_SALE_LOC_CODE feel happy
 		$arFields['CODE'] = 'randstr'.rand(999, 99999);
 
-		$db_events = GetModuleEvents("sale", "OnBeforeLocationAdd");
-		while ($arEvent = $db_events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnBeforeLocationAdd', true) as $arEvent)
+		{
 			if (ExecuteModuleEventEx($arEvent, array($arFields))===false)
 				return false;
+		}
 
 		$arInsert = $DB->PrepareInsert("b_sale_location", $arFields);
 		$strSql =
@@ -652,11 +623,9 @@ class CSaleLocation extends CAllSaleLocation
 		// make IX_B_SALE_LOC_CODE feel happy
 		Location\LocationTable::update($ID, array('CODE' => $ID));
 
-		$events = GetModuleEvents("sale", "OnLocationAdd");
-		while ($arEvent = $events->Fetch())
+		foreach (GetModuleEvents('sale', 'OnLocationAdd', true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array($ID, $arFields));
 
 		return $ID;
 	}
 }
-?>

@@ -28,7 +28,49 @@ class CIMEvent
 	{
 		$bSocialnetworkInstalled = CModule::IncludeModule("socialnetwork");
 
-		if ($arParams['ENTITY_TYPE_ID'] == 'LOG_COMMENT') // no source
+		if (
+			$arParams['ENTITY_TYPE_ID'] == 'LISTS_NEW_ELEMENT'
+			&& CModule::IncludeModule("socialnetwork")
+		) // BP
+		{
+			$rsLog = CSocNetLog::GetList(
+				array(),
+				array(
+					"RATING_TYPE_ID" => $arParams['ENTITY_TYPE_ID'],
+					"RATING_ENTITY_ID" =>  $arParams['ENTITY_ID']
+				),
+				false,
+				false,
+				array("ID", "USER_ID", "TITLE_TEMPLATE", "TITLE")
+			);
+
+			if ($arLog = $rsLog->Fetch())
+			{
+				if ($arLog['USER_ID'] != $arParams['USER_ID'])
+				{
+					$url = COption::GetOptionString("socialnetwork", "log_entry_page", $arSites[$user_site_id]["DIR"]."company/personal/log/#log_id#/", SITE_ID);
+					$url = str_replace("#log_id#", $arLog["ID"], $url);
+
+					$arParams['ENTITY_LINK'] = $url;
+					$arParams['ENTITY_TITLE'] = htmlspecialcharsback($arLog["TITLE"]);
+
+					$arMessageFields = array(
+						"MESSAGE_TYPE" => IM_MESSAGE_SYSTEM,
+						"TO_USER_ID" => intval($arLog['USER_ID']),
+						"FROM_USER_ID" => intval($arParams['USER_ID']),
+						"NOTIFY_TYPE" => IM_NOTIFY_FROM,
+						"NOTIFY_MODULE" => "main",
+						"NOTIFY_EVENT" => "rating_vote",
+						"NOTIFY_TAG" => "RATING|".($arParams['VALUE'] >= 0 ? "" : "DL|").$arParams['ENTITY_TYPE_ID']."|".$arParams['ENTITY_ID'],
+						"NOTIFY_MESSAGE" => self::GetMessageRatingVote($arParams),
+						"NOTIFY_MESSAGE_OUT" => self::GetMessageRatingVote($arParams, true)
+					);
+
+					CIMNotify::Add($arMessageFields);
+				}
+			}
+		}
+		elseif ($arParams['ENTITY_TYPE_ID'] == 'LOG_COMMENT') // no source
 		{
 			if ($arComment = CSocNetLogComments::GetByID($arParams['ENTITY_ID']))
 			{
@@ -87,7 +129,7 @@ class CIMEvent
 					}
 				}
 
-				if ($arComment['USER_ID'] != $arParams['USER_ID'])				
+				if ($arComment['USER_ID'] != $arParams['USER_ID'])
 				{
 					$followValue = "Y";
 
@@ -394,6 +436,16 @@ class CIMEvent
 	{
 		$like = $arParams['VALUE'] >= 0? '_LIKE': '_DISLIKE';
 
+		foreach(\Bitrix\Main\EventManager::getInstance()->findEventHandlers("im", "OnGetMessageRatingVote") as $event)
+		{
+			ExecuteModuleEventEx($event, array(&$arParams, &$bForMail));
+		}
+
+		if(isset($arParams['MESSAGE'])) // message was generated manually inside OnGetMessageRatingVote
+		{
+			return $arParams['MESSAGE'];
+		}
+
 		if (
 			$arParams['ENTITY_TYPE_ID'] == 'FORUM_POST' 
 			|| $arParams['ENTITY_TYPE_ID'] == 'BLOG_COMMENT'
@@ -426,21 +478,51 @@ class CIMEvent
 			{
 				$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_MESSAGE"], '', ''), GetMessage('IM_EVENT_RATING_COMMENT'.($arParams['MENTION'] ? '_MENTION' : '').$like).' ('.$arParams['ENTITY_LINK'].')');
 			}
-			elseif ($arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT' && $arParams['ENTITY_PARAM'] == 'library')
+			elseif (
+				$arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT'
+				&& $arParams['ENTITY_PARAM'] == 'library'
+			)
+			{
 				$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_TITLE"], '', ''), GetMessage('IM_EVENT_RATING_FILE'.$like).' ('.$arParams['ENTITY_LINK'].')');
-			elseif ($arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT' && $arParams['ENTITY_PARAM'] == 'photos')
+			}
+			elseif (
+				$arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT'
+				&& $arParams['ENTITY_PARAM'] == 'photos'
+			)
 			{
 				if (is_numeric($arParams["ENTITY_TITLE"]))
+				{
 					$message = str_replace(Array('#A_START#', '#A_END#'), Array('', ''), GetMessage('IM_EVENT_RATING_PHOTO1'.$like).' ('.$arParams['ENTITY_LINK'].')');
+				}
 				else
+				{
 					$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_TITLE"], '', ''), GetMessage('IM_EVENT_RATING_PHOTO'.$like).' ('.$arParams['ENTITY_LINK'].')');
+				}
 			}
 			elseif ($arParams['ENTITY_TYPE_ID'] == 'LOG_COMMENT')
 			{
 				$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_TITLE"], '', ''), GetMessage('IM_EVENT_RATING_COMMENT'.($arParams['MENTION'] ? '_MENTION' : '').$like).' ('.$arParams['ENTITY_LINK'].')');
 			}
+			elseif ($arParams['ENTITY_TYPE_ID'] == 'LISTS_NEW_ELEMENT')
+			{
+				$message = str_replace(
+					array(
+						'#TITLE#',
+						'#A_START#',
+						'#A_END#'
+					),
+					array(
+						$arParams["ENTITY_TITLE"],
+						'',
+						''
+					),
+					GetMessage('IM_EVENT_RATING_LISTS_NEW_ELEMENT_LIKE'.$like)
+				);
+			}
 			else
+			{
 				$message = str_replace('#LINK#', $arParams["ENTITY_TITLE"], GetMessage('IM_EVENT_RATING_ELSE'.$like).strlen($arParams['ENTITY_LINK'])>0?' ('.$arParams['ENTITY_LINK'].')': '');
+			}
 		}
 		else
 		{
@@ -460,22 +542,51 @@ class CIMEvent
 			{
 				$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_MESSAGE"], '<a href="'.$arParams['ENTITY_LINK'].'" class="bx-notifier-item-action">', '</a>'), GetMessage('IM_EVENT_RATING_COMMENT'.($arParams['MENTION'] ? '_MENTION' : '').$like));
 			}
-			elseif ($arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT' && $arParams['ENTITY_PARAM'] == 'library')
+			elseif (
+				$arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT'
+				&& $arParams['ENTITY_PARAM'] == 'library'
+			)
+			{
 				$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_TITLE"], '<a href="'.$arParams['ENTITY_LINK'].'" class="bx-notifier-item-action">', '</a>'), GetMessage('IM_EVENT_RATING_FILE'.$like));
-			elseif ($arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT' && $arParams['ENTITY_PARAM'] == 'photos')
+			}
+			elseif (
+				$arParams['ENTITY_TYPE_ID'] == 'IBLOCK_ELEMENT'
+				&& $arParams['ENTITY_PARAM'] == 'photos'
+			)
 			{
 				if (is_numeric($arParams["ENTITY_TITLE"]))
+				{
 					$message = str_replace(Array('#A_START#', '#A_END#'), Array('<a href="'.$arParams['ENTITY_LINK'].'" class="bx-notifier-item-action">', '</a>'), GetMessage('IM_EVENT_RATING_PHOTO1'.$like));
+				}
 				else
+				{
 					$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_TITLE"], '<a href="'.$arParams['ENTITY_LINK'].'" class="bx-notifier-item-action">', '</a>'), GetMessage('IM_EVENT_RATING_PHOTO'.$like));
+				}
 			}
 			elseif ($arParams['ENTITY_TYPE_ID'] == 'LOG_COMMENT')
 			{
 				$message = str_replace(Array('#TITLE#', '#A_START#', '#A_END#'), Array($arParams["ENTITY_TITLE"], '<a href="'.$arParams['ENTITY_LINK'].'" class="bx-notifier-item-action">', '</a>'), GetMessage('IM_EVENT_RATING_COMMENT'.($arParams['MENTION'] ? '_MENTION' : '').$like));
 			}
+			elseif ($arParams['ENTITY_TYPE_ID'] == 'LISTS_NEW_ELEMENT')
+			{
+				$message = str_replace(
+					array(
+						'#TITLE#',
+						'#A_START#',
+						'#A_END#'
+					),
+					array(
+						$arParams["ENTITY_TITLE"],
+						'<a href="'.$arParams['ENTITY_LINK'].'" class="bx-notifier-item-action">',
+						'</a>'
+					),
+					GetMessage('IM_EVENT_RATING_LISTS_NEW_ELEMENT'.$like)
+				);
+			}
 			else
+			{
 				$message = str_replace('#LINK#', strlen($arParams['ENTITY_LINK'])>0?'<a href="'.$arParams['ENTITY_LINK'].'" class="bx-notifier-item-action">'.$arParams["ENTITY_TITLE"].'</a>': '<i>'.$arParams["ENTITY_TITLE"].'</i>', GetMessage('IM_EVENT_RATING_ELSE'.$like));
-
+			}
 		}
 
 		return $message;

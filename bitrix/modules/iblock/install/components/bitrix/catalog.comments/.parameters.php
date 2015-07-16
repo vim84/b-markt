@@ -1,16 +1,23 @@
 <?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
-use \Bitrix\Main\Loader as Loader;
+/** @var array $arCurrentValues */
+use \Bitrix\Main\Loader;
 
-if(!Loader::includeModule("iblock"))
+if (!Loader::includeModule("iblock"))
 	return;
 $useBlogs = \Bitrix\Main\ModuleManager::isModuleInstalled('blog');
 
 $arIBlockTypes = CIBlockParameters::GetIBlockTypes();
 
 $arIBlock = array();
-$rsIBlock = CIBlock::GetList(Array("sort" => "asc"), array("TYPE" => $arCurrentValues["IBLOCK_TYPE"], "ACTIVE"=>"Y"));
-while($arr=$rsIBlock->Fetch())
-	$arIBlock[$arr["ID"]] = "[".$arr["ID"]."] ".$arr["NAME"];
+$iblockFilter = (
+	!empty($arCurrentValues['IBLOCK_TYPE'])
+	? array('TYPE' => $arCurrentValues['IBLOCK_TYPE'], 'ACTIVE' => 'Y')
+	: array('ACTIVE' => 'Y')
+);
+$rsIBlock = CIBlock::GetList(array('SORT' => 'ASC'), $iblockFilter);
+while ($arr = $rsIBlock->Fetch())
+	$arIBlock[$arr['ID']] = '['.$arr['ID'].'] '.$arr['NAME'];
+unset($arr, $rsIBlock, $iblockFilter);
 
 $arComponentParameters = array(
 	"GROUPS" => array(
@@ -67,6 +74,12 @@ $arComponentParameters = array(
 			"TYPE" => "STRING",
 			"PARENT" => "BASE",
 			"DEFAULT" => "5"
+		),
+		"SHOW_DEACTIVATED" => array(
+			"NAME" => GetMessage('CATALOG_SC_SHOW_DEACTIVATED'),
+			"TYPE" => "CHECKBOX",
+			"PARENT" => "BASE",
+			"DEFAULT" => "N"
 		),
 		"BLOG_USE" => array(
 			"NAME" => GetMessage("CATALOG_SC_BLOG_USE"),
@@ -160,7 +173,7 @@ if ($useBlogs && isset($arCurrentValues["BLOG_USE"]) && $arCurrentValues["BLOG_U
 	}
 }
 
-if(isset($arCurrentValues["FB_USE"]) && $arCurrentValues["FB_USE"] == "Y")
+if (isset($arCurrentValues["FB_USE"]) && $arCurrentValues["FB_USE"] == "Y")
 {
 	$arComponentParameters["PARAMETERS"]["FB_TITLE"] = array(
 		"NAME" => GetMessage("CATALOG_SC_FB_TITLE"),
@@ -218,4 +231,3 @@ if (isset($arCurrentValues["VK_USE"]) && $arCurrentValues["VK_USE"] == "Y")
 		"DEFAULT" => "API_ID"
 	);
 }
-?>

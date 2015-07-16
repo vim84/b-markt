@@ -1,7 +1,6 @@
 <?
+use Bitrix\Main;
 use Bitrix\Main\ModuleManager;
-use Bitrix\Main\Type\DateTime;
-use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Currency;
 
@@ -9,6 +8,8 @@ Loc::loadMessages(__FILE__);
 
 class CAllCurrency
 {
+	protected static $currencyCache = array();
+
 /*
 * @deprecated deprecated since currency 9.0.0
 * @see CCurrency::GetByID()
@@ -259,7 +260,8 @@ class CAllCurrency
 		{
 			ExecuteModuleEventEx($arEvent, array($arFields['CURRENCY'], $arFields));
 		}
-
+		if (isset(self::$currencyCache[$arFields['CURRENCY']]))
+			unset(self::$currencyCache[$arFields['CURRENCY']]);
 		return $arFields["CURRENCY"];
 	}
 
@@ -284,8 +286,9 @@ class CAllCurrency
 			$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 			self::updateBaseRates('', $currency);
-			Currency\CurrencyManager::clearCurrencyCache();
 			Currency\CurrencyManager::clearTagCache($currency);
+			if (isset(self::$currencyCache[$currency]))
+				unset(self::$currencyCache[$currency]);
 		}
 		if (isset($arFields['LANG']))
 		{
@@ -302,6 +305,10 @@ class CAllCurrency
 			}
 			unset($settings, $lang);
 		}
+		if (!empty($strUpdate) || isset($arFields['LANG']))
+		{
+			Currency\CurrencyManager::clearCurrencyCache();
+		}
 
 		foreach (GetModuleEvents("currency", "OnCurrencyUpdate", true) as $arEvent)
 		{
@@ -313,7 +320,7 @@ class CAllCurrency
 
 	public function Delete($currency)
 	{
-		global $DB, $stackCacheManager;
+		global $DB;
 
 		$currency = Currency\CurrencyManager::checkCurrencyID($currency);
 		if ($currency === false)
@@ -344,9 +351,6 @@ class CAllCurrency
 			ExecuteModuleEventEx($arEvent, array($currency));
 		}
 
-		$stackCacheManager->Clear("currency_currency_lang");
-		$stackCacheManager->Clear("currency_rate");
-
 		Currency\CurrencyManager::clearCurrencyCache();
 
 		$DB->Query("delete from b_catalog_currency_lang where CURRENCY = '".$sqlCurrency."'", true);
@@ -354,27 +358,39 @@ class CAllCurrency
 
 		Currency\CurrencyManager::clearTagCache($currency);
 
+		if (isset(self::$currencyCache[$currency]))
+			unset(self::$currencyCache[$currency]);
 		return $DB->Query("delete from b_catalog_currency where CURRENCY = '".$sqlCurrency."'", true);
 	}
 
 	public function GetByID($currency)
 	{
-		global $DB;
-
 		$currency = Currency\CurrencyManager::checkCurrencyID($currency);
 		if ($currency === false)
 			return false;
 
-		$strSql = "select CUR.CURRENCY, CUR.AMOUNT_CNT, CUR.AMOUNT, CUR.SORT, CUR.BASE, CUR.NUMCODE, CUR.CREATED_BY, CUR.MODIFIED_BY, ".
-			$DB->DateToCharFunction('CUR.DATE_UPDATE', 'FULL').' as DATE_UPDATE_FORMAT, '.
-			$DB->DateToCharFunction('CUR.DATE_CREATE', 'FULL').' as DATE_CREATE_FORMAT '.
-			"from b_catalog_currency CUR where CUR.CURRENCY = '".$DB->ForSQL($currency)."'";
-		$db_res = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-
-		if ($res = $db_res->Fetch())
-			return $res;
-
-		return false;
+		if (!isset(self::$currencyCache[$currency]))
+		{
+			self::$currencyCache[$currency] = false;
+			$currencyIterator = Currency\CurrencyTable::getById($currency);
+			if ($currencyData = $currencyIterator->fetch())
+			{
+				$currencyData['DATE_UPDATE_FORMAT'] = (
+					$currencyData['DATE_UPDATE'] instanceof Main\Type\DateTime
+					? $currencyData['DATE_UPDATE']->toString()
+					: null
+				);
+				$currencyData['DATE_CREATE_FORMAT'] = (
+					$currencyData['DATE_CREATE'] instanceof Main\Type\DateTime
+					? $currencyData['DATE_CREATE']->toString()
+					: null
+				);
+				unset($currencyData['DATE_UPDATE'], $currencyData['DATE_CREATE']);
+				self::$currencyCache[$currency] = $currencyData;
+			}
+			unset($currencyData, $currencyIterator);
+		}
+		return self::$currencyCache[$currency];
 	}
 
 	public function GetBaseCurrency()
@@ -384,47 +400,43 @@ class CAllCurrency
 
 	public function SetBaseCurrency($currency)
 	{
-		global $DB;
 		$currency = Currency\CurrencyManager::checkCurrencyID($currency);
 		if ($currency === false)
 			return false;
-		$currency = $DB->ForSql($currency);
-		$query = "select CURRENCY, BASE from b_catalog_currency where CURRENCY = '".$currency."'";
-		$currencyIterator = $DB->Query($query, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
-		if ($existCurrency = $currencyIterator->Fetch())
+
+		$currencyIterator = Currency\CurrencyTable::getList(array(
+			'select' => array('CURRENCY', 'BASE'),
+			'filter' => array('=CURRENCY' => $currency)
+		));
+		if ($existCurrency = $currencyIterator->fetch())
 		{
 			if ($existCurrency['BASE'] == 'Y')
 				return true;
 			$result = self::updateBaseCurrency($currency);
 			if ($result)
-			{
 				Currency\CurrencyManager::clearCurrencyCache();
-			}
 			return $result;
 		}
 		return false;
 	}
 
-	public function SelectBox($sFieldName, $sValue, $sDefaultValue = "", $bFullName = true, $JavaFunc = "", $sAdditionalParams = "")
+	public function SelectBox($sFieldName, $sValue, $sDefaultValue = '', $bFullName = true, $JavaFunc = '', $sAdditionalParams = '')
 	{
 		$s = '<select name="'.$sFieldName.'"';
 		if ('' != $JavaFunc) $s .= ' onchange="'.$JavaFunc.'"';
 		if ('' != $sAdditionalParams) $s .= ' '.$sAdditionalParams.' ';
 		$s .= '>';
+		$s1 = '';
 		$found = false;
 
-		$by = "sort";
-		$order = "asc";
-		$s1 = '';
-		$dbCurrencyList = CCurrency::GetList($by, $order);
-		while ($arCurrency = $dbCurrencyList->Fetch())
+		$currencyList = Currency\CurrencyManager::getCurrencyList();
+		if (!empty($currencyList) && is_array($currencyList))
 		{
-			$title = $arCurrency["CURRENCY"];
-			if ($bFullName)
-				$title .= ' ('.$arCurrency["FULL_NAME"].')';
-
-			$found = ($arCurrency["CURRENCY"] == $sValue);
-			$s1 .= '<option value="'.$arCurrency["CURRENCY"].'"'.($found ? ' selected':'').'>'.htmlspecialcharsex($title).'</option>';
+			foreach ($currencyList as $currency => $title)
+			{
+				$found = ($currency == $sValue);
+				$s1 .= '<option value="'.$currency.'"'.($found ? ' selected' : '').'>'.($bFullName ? htmlspecialcharsex($title) : $currency).'</option>';
+			}
 		}
 		if ('' != $sDefaultValue)
 			$s .= '<option value=""'.($found ? '' : ' selected').'>'.htmlspecialcharsex($sDefaultValue).'</option>';
@@ -436,9 +448,9 @@ class CAllCurrency
 		global $CACHE_MANAGER;
 
 		if (defined("CURRENCY_SKIP_CACHE") && CURRENCY_SKIP_CACHE
-			|| StrToLower($by) == "name"
-			|| StrToLower($by) == "currency"
-			|| StrToLower($order) == "desc")
+			|| strtolower($by) == "name"
+			|| strtolower($by) == "currency"
+			|| strtolower($order) == "desc")
 		{
 			$dbCurrencyList = CCurrency::__GetList($by, $order, $lang);
 		}
@@ -450,7 +462,7 @@ class CAllCurrency
 
 			if ($CACHE_MANAGER->Read($cacheTime, "currency_currency_list_".$lang, 'b_catalog_currency'))
 			{
-				$arCurrencyList = $CACHE_MANAGER->Get("currency_currency_list_".$lang, 'b_catalog_currency');
+				$arCurrencyList = $CACHE_MANAGER->Get("currency_currency_list_".$lang);
 				$dbCurrencyList = new CDBResult();
 				$dbCurrencyList->InitFromArray($arCurrencyList);
 			}
@@ -461,7 +473,7 @@ class CAllCurrency
 				while ($arCurrency = $dbCurrencyList->Fetch())
 					$arCurrencyList[] = $arCurrency;
 
-				$CACHE_MANAGER->Set("currency_currency_list_".$lang, $arCurrencyList, 'b_catalog_currency');
+				$CACHE_MANAGER->Set("currency_currency_list_".$lang, $arCurrencyList);
 
 				$dbCurrencyList = new CDBResult();
 				$dbCurrencyList->InitFromArray($arCurrencyList);
@@ -480,10 +492,10 @@ class CAllCurrency
 			$normalBy = 'sort';
 			$by = 'sort';
 		}
-		$normalOrder = strtolower($order);
-		if ($normalOrder != 'desc')
+		$normalOrder = strtoupper($order);
+		if ($normalOrder != 'DESC')
 		{
-			$normalOrder = 'asc';
+			$normalOrder = 'ASC';
 			$order = 'asc';
 		}
 		switch($normalBy)
@@ -505,14 +517,22 @@ class CAllCurrency
 		$currencyIterator = Currency\CurrencyTable::getList(array(
 			'select' => array(
 				'CURRENCY', 'AMOUNT_CNT', 'AMOUNT', 'SORT', 'BASE', 'NUMCODE', 'CREATED_BY', 'MODIFIED_BY',
-				new Entity\ExpressionField('DATE_UPDATE_FORMAT', $datetimeField,  array('DATE_UPDATE'), array('data_type' => 'datetime')),
-				new Entity\ExpressionField('DATE_CREATE_FORMAT', $datetimeField,  array('DATE_CREATE'), array('data_type' => 'datetime')),
-				'FULL_NAME' => 'LANG_FORMAT.FULL_NAME', 'LID' => 'LANG_FORMAT.LID', 'FORMAT_STRING' => 'LANG_FORMAT.FORMAT_STRING',
-				'DEC_POINT' => 'LANG_FORMAT.DEC_POINT', 'THOUSANDS_SEP' => 'LANG_FORMAT.THOUSANDS_SEP',
-				'DECIMALS' => 'LANG_FORMAT.DECIMALS', 'HIDE_ZERO' => 'LANG_FORMAT.HIDE_ZERO'
+				new Main\Entity\ExpressionField('DATE_UPDATE_FORMAT', $datetimeField,  array('DATE_UPDATE'), array('data_type' => 'datetime')),
+				new Main\Entity\ExpressionField('DATE_CREATE_FORMAT', $datetimeField,  array('DATE_CREATE'), array('data_type' => 'datetime')),
+				'FULL_NAME' => 'RT_LANG.FULL_NAME', 'LID' => 'RT_LANG.LID', 'FORMAT_STRING' => 'RT_LANG.FORMAT_STRING',
+				'DEC_POINT' => 'RT_LANG.DEC_POINT', 'THOUSANDS_SEP' => 'RT_LANG.THOUSANDS_SEP',
+				'DECIMALS' => 'RT_LANG.DECIMALS', 'HIDE_ZERO' => 'RT_LANG.HIDE_ZERO'
 			),
-			'filter' => array('=LANG_FORMAT.LID' => $lang),
-			'order' => $currencyOrder
+			'order' => $currencyOrder,
+			'runtime' => array(
+				'RT_LANG' => array(
+					'data_type' => 'Bitrix\Currency\CurrencyLang',
+					'reference' => array(
+						'=this.CURRENCY' => 'ref.CURRENCY',
+						'=ref.LID' => new Main\DB\SqlExpression('?', $lang)
+					)
+				)
+			)
 		));
 		unset($datetimeField);
 		$currencyList = array();
@@ -598,7 +618,7 @@ class CAllCurrency
 				if (!($currencyAgent = $agentIterator->Fetch()))
 				{
 					self::updateAllCurrencyBaseRate();
-					$checkDate = DateTime::createFromTimestamp(strtotime('tomorrow 00:01:00'));;
+					$checkDate = Main\Type\DateTime::createFromTimestamp(strtotime('tomorrow 00:01:00'));;
 					CAgent::AddAgent('\Bitrix\Currency\CurrencyTable::currencyBaseRateAgent();', 'currency', 'Y', 86400, '', 'Y', $checkDate->toString(), 100, false, true);
 				}
 			}
@@ -640,9 +660,7 @@ class CAllCurrency
 	{
 		global $DB;
 		if ($currency === '')
-		{
 			$currency = (string)Currency\CurrencyManager::getBaseCurrency();
-		}
 		if ($currency === '')
 			return;
 
@@ -650,10 +668,8 @@ class CAllCurrency
 		{
 			$factor = 1;
 			if ($updateCurrency != $currency)
-			{
 				$factor = CCurrencyRates::GetConvertFactor($updateCurrency, $currency);
-			}
-			$query = "update b_catalog_currency set CURRENT_BASE_RATE = ".doubleval($factor)." where CURRENCY = '".$updateCurrency."'";
+			$query = "update b_catalog_currency set CURRENT_BASE_RATE = ".(float)$factor." where CURRENCY = '".$updateCurrency."'";
 			$DB->Query($query, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
 		}
 		else
@@ -664,10 +680,8 @@ class CAllCurrency
 			{
 				$factor = 1;
 				if ($oneCurrency['CURRENCY'] != $currency)
-				{
 					$factor = CCurrencyRates::GetConvertFactor($oneCurrency['CURRENCY'], $currency);
-				}
-				$query = "update b_catalog_currency set CURRENT_BASE_RATE = ".doubleval($factor)." where CURRENCY = '".$oneCurrency['CURRENCY']."'";
+				$query = "update b_catalog_currency set CURRENT_BASE_RATE = ".(float)$factor." where CURRENCY = '".$oneCurrency['CURRENCY']."'";
 				$DB->Query($query, false, 'File: '.__FILE__.'<br>Line: '.__LINE__);
 			}
 		}

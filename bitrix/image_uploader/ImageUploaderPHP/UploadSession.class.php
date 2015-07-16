@@ -132,6 +132,8 @@ class UploadSession {
     if (empty($this->_post[PostFields::packageGuid])) {
       // If not - it is not image uploader request, ignore it.
       return false;
+    } else if (!preg_match("/^\\{[a-z0-9-]+\\}$/i", $this->_post[PostFields::packageGuid])) {
+        throw new Exception('Upload '.PostFields::packageGuid.' is invalid.');
     }
 
     // check if request completed

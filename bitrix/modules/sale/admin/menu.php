@@ -1,19 +1,40 @@
 <?
+/** @global CUser $USER
+ * @global CMain $APPLICATION
+ * @global CAdminMenu $adminMenu */
 
 use Bitrix\Sale\Location;
+use Bitrix\Main\Config\Option;
 
 IncludeModuleLangFile(__FILE__);
 $aMenu = array();
-$bViewAll = $USER->CanDoOperation('catalog_read');
-$boolVat = $USER->CanDoOperation('catalog_vat');
 
-$boolStore = $USER->CanDoOperation('catalog_store');
-$boolGroup = $USER->CanDoOperation('catalog_group');
-$boolPrice = $USER->CanDoOperation('catalog_price');
-$boolExportEdit = $USER->CanDoOperation('catalog_export_edit');
-$boolExportExec = $USER->CanDoOperation('catalog_export_exec');
-$boolImportEdit = $USER->CanDoOperation('catalog_import_edit');
-$boolImportExec = $USER->CanDoOperation('catalog_import_exec');
+$bViewAll = false;
+$boolVat = false;
+$boolStore = false;
+$boolGroup = false;
+$boolPrice = false;
+$boolExportEdit = false;
+$boolExportExec = false;
+$boolImportEdit = false;
+$boolImportExec = false;
+$discountView = false;
+
+$catalogInstalled = \Bitrix\Main\ModuleManager::isModuleInstalled('catalog');
+if ($catalogInstalled)
+{
+	$bViewAll = $USER->CanDoOperation('catalog_read');
+	$boolVat = $USER->CanDoOperation('catalog_vat');
+
+	$boolStore = $USER->CanDoOperation('catalog_store');
+	$boolGroup = $USER->CanDoOperation('catalog_group');
+	$boolPrice = $USER->CanDoOperation('catalog_price');
+	$boolExportEdit = $USER->CanDoOperation('catalog_export_edit');
+	$boolExportExec = $USER->CanDoOperation('catalog_export_exec');
+	$boolImportEdit = $USER->CanDoOperation('catalog_import_edit');
+	$boolImportExec = $USER->CanDoOperation('catalog_import_exec');
+	$discountView = $USER->CanDoOperation('catalog_discount');
+}
 
 global $adminMenu;
 
@@ -135,34 +156,65 @@ if ($APPLICATION->GetGroupRight("sale")!="D")
 	/* Buyers End*/
 }
 	/* Discounts Begin*/
-if ($APPLICATION->GetGroupRight("sale") == "W" || $USER->CanDoOperation('catalog_discount') || $bViewAll)
+if ($APPLICATION->GetGroupRight("sale") == "W" || $discountView || $bViewAll)
 {
-	$arMenu =
-		array(
-			"parent_menu" => "global_menu_store",
-			"sort" => 500,
-			"text" => GetMessage("CM_DISCOUNTS"),
-			"title" => GetMessage("CM_DISCOUNTS"),
-			"icon" => "sale_menu_icon_catalog",
-			"page_icon" => "sale_page_icon_catalog",
-			"items_id" => "menu_sale_discounts",
-			"items" => Array(),
-		);
+	$useSaleDiscountOnly = (string)Option::get('sale', 'use_sale_discount_only') == 'Y';
+	$arMenu = array(
+		"parent_menu" => "global_menu_store",
+		"sort" => 500,
+		"text" => GetMessage("CM_MARKETING_MANAGE"),
+		"title" => GetMessage("CM_MARKETING_MANAGE_TITLE"),
+		"icon" => "sale_menu_icon_catalog",
+		"page_icon" => "sale_page_icon_catalog",
+		"items_id" => "menu_sale_discounts",
+		"items" => array(),
+	);
 
 	if ($APPLICATION->GetGroupRight("sale") == "W")
 	{
-		$arMenu["items"][] = array(
-			"text" => GetMessage("SALE_MENU_DISCOUNT"),
-			"title" => GetMessage("SALE_MENU_DISCOUNT_TITLE"),
-			"url" => "sale_discount.php?lang=".LANGUAGE_ID,
-			"more_url" => array("sale_discount_edit.php"),
-		);
+		if ($useSaleDiscountOnly)
+		{
+			$arMenu["items"][] = array(
+				"text" => GetMessage("SALE_MENU_DISCOUNT"),
+				"title" => GetMessage("SALE_MENU_DISCOUNT_TITLE"),
+				"url" => "sale_discount.php?lang=".LANGUAGE_ID,
+				"more_url" => array("sale_discount_edit.php"),
+			);
+			$arMenu["items"][] = array(
+				"text" => (GetMessage('SALE_MENU_DISCOUNT_COUPONS')),
+				"title" => GetMessage("SALE_MENU_DISCOUNT_COUPONS_TITLE"),
+				"url" => "sale_discount_coupons.php?lang=".LANGUAGE_ID,
+				"more_url" => array("sale_discount_coupon_edit.php"),
+			);
+		}
+		else
+		{
+			$arMenu["items"][] = array(
+				"text" => GetMessage("SALE_MENU_DISCOUNT"),
+				"title" => GetMessage("SALE_MENU_DISCOUNT_TITLE"),
+				"items_id" => "menu_sale_discount",
+				"items" => array(
+					array(
+						"text" => GetMessage("SALE_MENU_DISCOUNT"),
+						"title" => GetMessage("SALE_MENU_DISCOUNT_TITLE"),
+						"url" => "sale_discount.php?lang=".LANGUAGE_ID,
+						"more_url" => array("sale_discount_edit.php"),
+					),
+					array(
+						"text" => (GetMessage('SALE_MENU_DISCOUNT_COUPONS_EXT')),
+						"title" => GetMessage("SALE_MENU_DISCOUNT_COUPONS_TITLE"),
+						"url" => "sale_discount_coupons.php?lang=".LANGUAGE_ID,
+						"more_url" => array("sale_discount_coupon_edit.php"),
+					)
+				)
+			);
+		}
 	}
 	$aMenu[] = $arMenu;
 }
 	/* Discounts End*/
 
-if ($USER->CanDoOperation('catalog_store') || $bViewAll)
+if ($boolStore || $bViewAll)
 {
 	$arMenu = array(
 		"parent_menu" => "global_menu_store",
@@ -175,7 +227,6 @@ if ($USER->CanDoOperation('catalog_store') || $bViewAll)
 		"items" => array(),
 	);
 	$aMenu[] = $arMenu;
-
 }
 
 if ($APPLICATION->GetGroupRight("sale") != "D")
@@ -194,7 +245,7 @@ if ($APPLICATION->GetGroupRight("sale") != "D")
 			"items" => array(),
 		);
 
-		if(IsModuleInstalled('report'))
+		if (IsModuleInstalled('report'))
 		{
 			$arSaleReports = array();
 			if(method_exists($adminMenu, "IsSectionActive"))
@@ -386,98 +437,103 @@ if ($APPLICATION->GetGroupRight("sale") == "W" ||
 		// this file can be loaded directly, without module include, so ...
 		require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/include.php");
 
-		$locationMenu = array(
-			"text" => GetMessage("SALE_LOCATION"),
-			"title" => GetMessage("SALE_LOCATION_DESCR"),
-			"items_id" => "menu_sale_locations",
-		);
-
-		if(CSaleLocation::isLocationProEnabled())
+		if(class_exists('CSaleLocation'))
 		{
-			$locationMenu["items"] = array(
-				array(
-					"text" => GetMessage("sale_menu_locations"),
-					"title" => GetMessage("sale_menu_locations_title"),
-					"url" => Location\Admin\LocationHelper::getListUrl(0),
-					"more_url" => array(Location\Admin\LocationHelper::getEditUrl()),
-
-					"module_id" => "sale",
-					"items_id" => Location\Admin\LocationHelper::packItemsQueryString(),
-					"dynamic" => true,
-					"items" => Location\Admin\LocationHelper::getLocationSubMenu()
-				),
-				array(
-					"text" => GetMessage("SALE_LOCATION_GROUPS"),
-					"title" => GetMessage("SALE_LOCATION_GROUPS_DESCR"),
-					"url" => Location\Admin\GroupHelper::getListUrl(),
-					"more_url" => array(Location\Admin\GroupHelper::getEditUrl()),
-				),
-				array(
-					"text" => GetMessage("SALE_MENU_LOCATION_ZONES"),
-					"title" => GetMessage("SALE_MENU_LOCATION_ZONES_TITLE"),
-					"url" => Location\Admin\SiteLocationHelper::getListUrl(),
-					"more_url" => array(Location\Admin\SiteLocationHelper::getEditUrl()),
-				),
-				array(
-					"text" => GetMessage("SALE_MENU_LOCATION_DEFAULT"),
-					"title" => GetMessage("SALE_MENU_LOCATION_DEFAULT_TITLE"),
-					"url" => Location\Admin\DefaultSiteHelper::getListUrl(),
-					"more_url" => array(Location\Admin\DefaultSiteHelper::getEditUrl()),
-				),
-
-				array(
-					"text" => GetMessage("SALE_MENU_LOCATION_TYPES"),
-					"title" => GetMessage("SALE_MENU_LOCATION_TYPES_TITLE"),
-					"url" => Location\Admin\TypeHelper::getListUrl(),
-					"more_url" => array(Location\Admin\TypeHelper::getEditUrl()),
-				),
-				array(
-					"text" => GetMessage("SALE_MENU_LOCATION_SERVICES"),
-					"title" => GetMessage("SALE_MENU_LOCATION_SERVICES_TITLE"),
-					"url" => Location\Admin\ExternalServiceHelper::getListUrl(),
-					"more_url" => array(Location\Admin\ExternalServiceHelper::getEditUrl()),
-				),
-				array(
-					"text" => GetMessage("SALE_LOCATION_IMPORT"),
-					"title" => GetMessage("SALE_LOCATION_IMPORT_DESCR"),
-					"url" => Location\Admin\Helper::getImportUrl(),
-				)
-			);
-		}
-		else
-		{
-			$locationMenu["items"] = array(
-				array(
-					"text" => GetMessage("sale_menu_locations"),
-					"title" => GetMessage("sale_menu_locations_title"),
-					"url" => "sale_location_admin.php?lang=".LANGUAGE_ID,
-					"more_url" => array("sale_location_edit.php"),
-				),
-				array(
-					"text" => GetMessage("SALE_LOCATION_GROUPS"),
-					"title" => GetMessage("SALE_LOCATION_GROUPS_DESCR"),
-					"url" => "sale_location_group_admin.php?lang=".LANGUAGE_ID,
-					"more_url" => array("sale_location_group_edit.php"),
-				),
-				array(
-					"text" => GetMessage("SALE_LOCATION_IMPORT"),
-					"title" => GetMessage("SALE_LOCATION_IMPORT_DESCR"),
-					"url" => "sale_location_import.php?lang=".LANGUAGE_ID,
-				),
+			$locationMenu = array(
+				"text" => GetMessage("SALE_LOCATION"),
+				"title" => GetMessage("SALE_LOCATION_DESCR"),
+				"items_id" => "menu_sale_locations",
 			);
 
-			if(!CSaleLocation::isLocationProMigrated())
+			if(CSaleLocation::isLocationProEnabled())
 			{
+				$locationMenu["items"] = array(
+					array(
+						"text" => GetMessage("sale_menu_locations"),
+						"title" => GetMessage("sale_menu_locations_title"),
+						"url" => Location\Admin\LocationHelper::getListUrl(0),
+						"more_url" => array(Location\Admin\LocationHelper::getEditUrl()),
+
+						"module_id" => "sale",
+						"items_id" => Location\Admin\LocationHelper::packItemsQueryString(),
+						"dynamic" => true,
+						"items" => Location\Admin\LocationHelper::getLocationSubMenu()
+					),
+					array(
+						"text" => GetMessage("SALE_LOCATION_GROUPS"),
+						"title" => GetMessage("SALE_LOCATION_GROUPS_DESCR"),
+						"url" => Location\Admin\GroupHelper::getListUrl(),
+						"more_url" => array(Location\Admin\GroupHelper::getEditUrl()),
+					),
+					array(
+						"text" => GetMessage("SALE_MENU_LOCATION_ZONES"),
+						"title" => GetMessage("SALE_MENU_LOCATION_ZONES_TITLE"),
+						"url" => Location\Admin\SiteLocationHelper::getListUrl(),
+						"more_url" => array(Location\Admin\SiteLocationHelper::getEditUrl()),
+					),
+					array(
+						"text" => GetMessage("SALE_MENU_LOCATION_DEFAULT"),
+						"title" => GetMessage("SALE_MENU_LOCATION_DEFAULT_TITLE"),
+						"url" => Location\Admin\DefaultSiteHelper::getListUrl(),
+						"more_url" => array(Location\Admin\DefaultSiteHelper::getEditUrl()),
+					),
+
+					array(
+						"text" => GetMessage("SALE_MENU_LOCATION_TYPES"),
+						"title" => GetMessage("SALE_MENU_LOCATION_TYPES_TITLE"),
+						"url" => Location\Admin\TypeHelper::getListUrl(),
+						"more_url" => array(Location\Admin\TypeHelper::getEditUrl()),
+					),
+					array(
+						"text" => GetMessage("SALE_MENU_LOCATION_SERVICES"),
+						"title" => GetMessage("SALE_MENU_LOCATION_SERVICES_TITLE"),
+						"url" => Location\Admin\ExternalServiceHelper::getListUrl(),
+						"more_url" => array(Location\Admin\ExternalServiceHelper::getEditUrl()),
+					),
+					array(
+						"text" => GetMessage("SALE_LOCATION_IMPORT"),
+						"title" => GetMessage("SALE_LOCATION_IMPORT_DESCR"),
+						"url" => Location\Admin\Helper::getImportUrl(),
+				),
+				array(
+					"text" => GetMessage("SALE_LOCATION_REINDEX"),
+					"title" => GetMessage("SALE_LOCATION_REINDEX_DESCR"),
+					"url" => Location\Admin\Helper::getReindexUrl(),
+					)
+				);
+			}
+			else
+			{
+				$locationMenu["items"] = array(
+					array(
+						"text" => GetMessage("sale_menu_locations"),
+						"title" => GetMessage("sale_menu_locations_title"),
+						"url" => "sale_location_admin.php?lang=".LANGUAGE_ID,
+						"more_url" => array("sale_location_edit.php"),
+					),
+					array(
+						"text" => GetMessage("SALE_LOCATION_GROUPS"),
+						"title" => GetMessage("SALE_LOCATION_GROUPS_DESCR"),
+						"url" => "sale_location_group_admin.php?lang=".LANGUAGE_ID,
+						"more_url" => array("sale_location_group_edit.php"),
+					),
+					array(
+						"text" => GetMessage("SALE_LOCATION_IMPORT"),
+						"title" => GetMessage("SALE_LOCATION_IMPORT_DESCR"),
+						"url" => "sale_location_import.php?lang=".LANGUAGE_ID,
+					),
+				);
+
 				$locationMenu["items"][] = array(
 					"text" => GetMessage("SALE_MENU_LOCATION_MIGRATION"),
 					"title" => GetMessage("SALE_MENU_LOCATION_MIGRATION_TITLE"),
 					"url" => Location\Admin\Helper::getMigrationUrl(),
 				);
 			}
-		}
 
-		$arMenu["items"][] = $locationMenu;
-		unset($locationMenu);
+			$arMenu["items"][] = $locationMenu;
+			unset($locationMenu);
+		}
 		/* LOCATIONS END */
 
 		$arMenu["items"][] = array(
@@ -558,8 +614,4 @@ if ($APPLICATION->GetGroupRight("sale") != "D")
 	/* Affiliates End*/
 }
 
-if (!empty($aMenu))
-	return $aMenu;
-else
-	return $false;
-?>
+return (!empty($aMenu) ? $aMenu : false);

@@ -287,6 +287,9 @@ class CLdapServer
 		if(is_set($arFields, "SYNC") && $arFields["SYNC"]!="Y")
 			$arFields["SYNC"]="N";
 
+		if(is_set($arFields, "SYNC_USER_ADD") && $arFields["SYNC_USER_ADD"] != "Y")
+			$arFields["SYNC_USER_ADD"] = "N";
+
 		if(is_set($arFields, "CONVERT_UTF8") && $arFields["CONVERT_UTF8"]!="Y")
 			$arFields["CONVERT_UTF8"]="N";
 
@@ -479,34 +482,74 @@ class CLdapServer
 
 		$arCache = array();
 
+		// selecting a list of groups, from which users will not be imported
+		$noImportGroups = array();
+
+		$dbGroups = CLdapServer::GetGroupBan($ldap_server_id);
+		while($arGroup = $dbGroups->Fetch())
+			$noImportGroups[md5($arGroup['LDAP_GROUP_ID'])] = $arGroup['LDAP_GROUP_ID'];
+
 		$cnt = 0;
 		// have to update $oLdapServer->arFields["FIELD_MAP"] for user fields
 		// for each one of them looking for similar in user list
-		foreach($arLdapUsers as $userLogin=>$arLdapUserFields)
+		foreach($arLdapUsers as $userLogin => $arLdapUserFields)
 		{
 			if(!is_array($arUsers[$userLogin]))
-				continue;
-
-			// if date of update is set, then compare it
-			$ldapTime = time();
-			if($syncTime>0
-				&& strlen($oLdapServer->arFields["SYNC_ATTR"])>0
-				&& preg_match("'([0-9]{4})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})\.0Z'", $arLdapUserFields[strtolower($oLdapServer->arFields["SYNC_ATTR"])], $arTimeMatch)
-				)
 			{
-				$ldapTime = gmmktime($arTimeMatch[4], $arTimeMatch[5], $arTimeMatch[6], $arTimeMatch[2], $arTimeMatch[3], $arTimeMatch[1]);
-				$userTime = MakeTimeStamp($arUsers[$userLogin]["TIMESTAMP_X"]);
+				if($oLdapServer->arFields["SYNC_USER_ADD"] != "Y")
+					continue;
+
+				// if user is not found among already existing ones, then import him
+				// â $arLdapUserFields - user fields from ldap
+				$userActive = $oLdapServer->getLdapValueByBitrixFieldName("ACTIVE", $arLdapUserFields);
+
+				if($userActive != "Y")
+					continue;
+
+				$arUserFields = $oLdapServer->GetUserFields($arLdapUserFields, $departmentCache);
+
+				// $arUserFields here contains LDAP user fields for a LDAP user
+				// make a check, whether this user belongs to those groups only, from which import will not be made...
+				$allUserGroups = $arUserFields['LDAP_GROUPS'];
+
+				$userImportIsBanned = true;
+				foreach ($allUserGroups as $groupId)
+				{
+					$groupId = trim($groupId);
+					if (!empty($groupId) && !array_key_exists(md5($groupId), $noImportGroups))
+					{
+						$userImportIsBanned = false;
+						break;
+					}
+				}
+
+				// ...if he does not, then import him
+				if (!$userImportIsBanned || empty($allUserGroups))
+					$oLdapServer->SetUser($arUserFields);
 			}
-
-			if($syncTime<$ldapTime || $syncTime<$userTime)
+			else
 			{
-				// make an update
-				$arUserFields = $oLdapServer->GetUserFields($arLdapUserFields,$arCache);
-				$arUserFields["ID"] = $arUsers[$userLogin]["ID"];
+				// if date of update is set, then compare it
+				$ldapTime = time();
+				if($syncTime>0
+					&& strlen($oLdapServer->arFields["SYNC_ATTR"])>0
+					&& preg_match("'([0-9]{4})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})\.0Z'", $arLdapUserFields[strtolower($oLdapServer->arFields["SYNC_ATTR"])], $arTimeMatch)
+					)
+				{
+					$ldapTime = gmmktime($arTimeMatch[4], $arTimeMatch[5], $arTimeMatch[6], $arTimeMatch[2], $arTimeMatch[3], $arTimeMatch[1]);
+					$userTime = MakeTimeStamp($arUsers[$userLogin]["TIMESTAMP_X"]);
+				}
 
-				//echo $arUserFields["LOGIN"]." - updated<br>";
-				$oLdapServer->SetUser($arUserFields);
-				$cnt++;
+				if($syncTime<$ldapTime || $syncTime<$userTime)
+				{
+					// make an update
+					$arUserFields = $oLdapServer->GetUserFields($arLdapUserFields,$arCache);
+					$arUserFields["ID"] = $arUsers[$userLogin]["ID"];
+
+					//echo $arUserFields["LOGIN"]." - updated<br>";
+					$oLdapServer->SetUser($arUserFields);
+					$cnt++;
+				}
 			}
 		}
 

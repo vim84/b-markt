@@ -735,7 +735,7 @@ BX.TreeCondCtrlPopup.prototype.CreateLink = function()
 					className: ''
 				},
 				style: { display: '' },
-				html: (this.IsValue() ? BX.util.htmlspecialchars(this.ViewFormat(this.valuesContainer[this.id] ,this.label)) : this.defaultText),
+				html: (this.IsValue() ? BX.util.htmlspecialchars(this.ViewFormat(this.valuesContainer[this.id], this.label)) : this.defaultText),
 				events: {
 					click: BX.proxy(this.PopupShow, this)
 				}
@@ -770,6 +770,165 @@ BX.TreeCondCtrlPopup.prototype.Delete = function()
 	{
 		BX.unbindAll(this.input);
 		this.input = BX.remove(this.input);
+	}
+};
+
+BX.TreeCondCtrlDialog = function(parentContainer, state, arParams)
+{
+	var i,
+		data;
+
+	if (BX.TreeCondCtrlPopup.superclass.constructor.apply(this, arguments))
+	{
+		if (!arParams.popup_url)
+		{
+			return this.boolResult;
+		}
+		this.popup_url = arParams.popup_url;
+
+		this.popup_params = {};
+		if (arParams.popup_params)
+		{
+			for (i in arParams.popup_params)
+			{
+				if (arParams.popup_params.hasOwnProperty(i))
+				{
+					this.popup_params[i] = arParams.popup_params[i];
+				}
+			}
+		}
+
+		this.popup_param_id = null;
+		if (BX.type.isNotEmptyString(arParams.param_id))
+		{
+			this.popup_param_id = arParams.param_id;
+		}
+
+		this.label = '';
+		if (!!state.labels && !!state.labels[this.id])
+		{
+			this.label = state.labels[this.id];
+		}
+		if (this.label.length === 0)
+		{
+			this.label = (this.valuesContainer[this.id].length > 0 ? this.valuesContainer[this.id] : this.defaultText);
+		}
+		this.popup_params.event = 'onTreeCondDialogSave';
+
+		data = this.prepareData(this.popup_params);
+		if (data.length > 0)
+		{
+			this.popup_url += (this.popup_url.indexOf('?') !== -1 ? "&" : "?") + data;
+		}
+		this.dialog = null;
+
+		this.Init();
+	}
+	return this.boolResult;
+};
+BX.extend(BX.TreeCondCtrlDialog, BX.TreeCondCtrlAtom);
+
+BX.TreeCondCtrlDialog.prototype.Init = function()
+{
+	if (this.boolResult && BX.TreeCondCtrlSelect.superclass.Init.apply(this, arguments))
+	{
+		if (this.popup_param_id)
+		{
+			this.popup_params[this.popup_param_id] = this.parentContainer.id+'_'+this.id;
+		}
+		this.input = this.parentContainer.appendChild(BX.create(
+			'INPUT',
+			{
+				props: {
+					type: 'hidden',
+					id: this.parentContainer.id+'_'+this.id,
+					name: this.name,
+					className: '',
+					value: (this.IsValue() ? this.valuesContainer[this.id] : '')
+				},
+				style: { display: 'none' },
+				events: {
+					change: BX.proxy(this.onChange, this)
+				}
+			}
+		));
+		this.boolResult = !!this.input;
+	}
+	return this.boolResult;
+};
+
+BX.TreeCondCtrlDialog.prototype.CreateLink = function()
+{
+	if (this.boolResult)
+	{
+		this.link = this.parentContainer.appendChild(BX.create(
+			'A',
+			{
+				props: {
+					id: this.parentContainer.id+'_'+this.id+'_link',
+					className: ''
+				},
+				style: { display: '' },
+				html: (this.IsValue() ? BX.util.htmlspecialchars(this.ViewFormat(this.valuesContainer[this.id], this.label)) : this.defaultText),
+				events: {
+					click: BX.proxy(this.DialogShow, this)
+				}
+			}
+		));
+		this.boolResult = !!this.link;
+	}
+	return this.boolResult;
+};
+
+BX.TreeCondCtrlDialog.prototype.onChange = function()
+{
+	this.valuesContainer[this.id] = this.input.value;
+};
+
+BX.TreeCondCtrlDialog.prototype.DialogShow = function()
+{
+	if (this.dialog !== null)
+		this.dialog = null;
+	this.dialog = new BX.CAdminDialog({
+		content_url: this.popup_url,
+		height: Math.max(500, window.innerHeight-400),
+		width: Math.max(800, window.innerWidth-400),
+		draggable: true,
+		resizable: true,
+		min_height: 500,
+		min_width: 800
+	});
+	if (!!this.dialog)
+	{
+		BX.addCustomEvent('onTreeCondDialogSave', BX.proxy(this.onSave, this));
+		this.dialog.Show();
+	}
+};
+
+BX.TreeCondCtrlDialog.prototype.onSave = function(params)
+{
+	BX.removeCustomEvent('onTreeCondDialogSave', BX.proxy(this.onSave, this));
+	if (typeof params === 'object')
+	{
+		this.input.value = params.id;
+		this.link.innerHTML = this.ViewFormat(params.id, params.name);
+		this.onChange();
+	}
+	this.dialog.Close();
+	this.dialog = null;
+};
+
+BX.TreeCondCtrlDialog.prototype.Delete = function()
+{
+	BX.TreeCondCtrlDialog.superclass.Delete.apply(this, arguments);
+	if (this.input)
+	{
+		BX.unbindAll(this.input);
+		this.input = BX.remove(this.input);
+	}
+	if (!!this.dialog)
+	{
+		this.dialog = null;
 	}
 };
 
@@ -996,7 +1155,8 @@ BX.TreeConditions = function(arParams, obTree, obControls)
 		'input': BX.TreeCondCtrlInput,
 		'select': BX.TreeCondCtrlSelect,
 		'popup': BX.TreeCondCtrlPopup,
-		'datetime': BX.TreeCondCtrlDateTime
+		'datetime': BX.TreeCondCtrlDateTime,
+		'dialog': BX.TreeCondCtrlDialog
 	};
 
 	if (!!arParams.atomtypes && typeof(arParams.atomtypes) === 'object')
@@ -1851,9 +2011,7 @@ BX.TreeConditions.prototype.UpdateLogic = function(obTreeLevel, obParams)
 	{
 		strClass = 'condition-logic';
 		if (!!obParams.style)
-		{
 			strClass = strClass.concat(' ', obParams.style);
-		}
 		BX.adjust(obTreeLevel.logic, {props: {className: strClass}, html : obParams.message });
 	}
 	return this.boolResult;
@@ -1922,9 +2080,7 @@ BX.TreeConditions.prototype.ChangeVisual = function(obTreeLevel)
 			for (j = 0; j < obTreeLevel.children.length; j++)
 			{
 				if (!!obTreeLevel.children[j])
-				{
 					this.UpdateLogic(obTreeLevel.children[j], obParams);
-				}
 			}
 		}
 	}
@@ -1945,14 +2101,13 @@ BX.TreeConditions.prototype.NextVisual = function(obTreeLevel)
 		{
 			intCurrentIndex++;
 			if (intCurrentIndex >= obTreeLevel.visual.logic.length)
-			{
 				intCurrentIndex = 0;
-			}
 
 			arValues = obTreeLevel.visual.values[intCurrentIndex];
 			for (j in arValues)
 			{
-				obTreeLevel.values[j] = arValues[j];
+				if (arValues.hasOwnProperty(j))
+					obTreeLevel.values[j] = arValues[j];
 			}
 			for (i = 0; i < obTreeLevel.obj.length; i++)
 			{
@@ -1963,9 +2118,7 @@ BX.TreeConditions.prototype.NextVisual = function(obTreeLevel)
 			for (i = 0; i < obTreeLevel.children.length; i++)
 			{
 				if (!!obTreeLevel.children[i])
-				{
 					this.UpdateLogic(obTreeLevel.children[i], obParams);
-				}
 			}
 		}
 	}

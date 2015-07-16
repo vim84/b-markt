@@ -3,6 +3,7 @@ function BxInterfaceGrid(table_id)
 	this.oActions = {};
 	this.oColsMeta = {};
 	this.oColsNames = {};
+	this.customNames = {};
 	this.oEditData = {};
 	this.oSaveData = {};
 	this.oOptions = {};
@@ -145,7 +146,7 @@ function BxInterfaceGrid(table_id)
 		menu.PopupHide();
 
 		_this.activeRow = el;
-		if(_this.activeRow)
+		if(_this.activeRow && !BX.hasClass(el, 'bx-grid-gutter') && !BX.hasClass(el, 'bx-grid-head'))
 			_this.activeRow.className += ' bx-active';
 
 		menu.OnClose = function()
@@ -563,8 +564,9 @@ function BxInterfaceGrid(table_id)
 		this.EnableActions();
 	};
 
-	this.Sort = function(url, sort_state, def_order, args)
+	this.Sort = function(url, by, sort_state, def_order, args)
 	{
+		var order;
 		if(sort_state == '')
 		{
 			var e = null, bControl = false;
@@ -574,14 +576,16 @@ function BxInterfaceGrid(table_id)
 				e = window.event;
 			if(e)
 				bControl = e.ctrlKey;
-			url += (bControl? (def_order == 'acs'? 'desc':'asc') : def_order);
+			order = (bControl? (def_order == 'acs'? 'desc':'asc') : def_order);
 		}
 		else if(sort_state == 'asc')
-			url += 'desc';
+			order = 'desc';
 		else
-			url += 'asc';
+			order = 'asc';
 
-		this.Reload(url);
+		url += order;
+
+		BX.ajax.get('/bitrix/components'+_this.vars.component_path+'/settings.php?GRID_ID='+_this.table_id+'&action=savesort&by='+by+'&order='+order+'&sessid='+_this.vars.sessid, function(){_this.Reload(url)});
 	};
 
 	this.InitVisCols = function()
@@ -709,7 +713,8 @@ function BxInterfaceGrid(table_id)
 					'sort_by':data.sort_by,
 					'sort_order':data.sort_order,
 					'page_size':data.page_size,
-					'saved_filter':data.saved_filter
+					'saved_filter':data.saved_filter,
+					'custom_names': data.custom_names
 				};
 				_this.bViewsChanged = true;
 
@@ -732,7 +737,8 @@ function BxInterfaceGrid(table_id)
 					'sort_by':data.sort_by,
 					'sort_order':data.sort_order,
 					'page_size':data.page_size,
-					'saved_filter':data.saved_filter
+					'saved_filter':data.saved_filter,
+					'custom_names': data.custom_names
 				};
 				_this.bViewsChanged = true;
 
@@ -790,6 +796,8 @@ function BxInterfaceGrid(table_id)
 		if(bCreated)
 			form.appendChild(BX('view_settings_'+this.table_id));
 
+		this.customNames = (view.custom_names? view.custom_names : {});
+
 		//name
 		form.view_name.focus();
 		form.view_name.value = view.name;
@@ -813,13 +821,21 @@ function BxInterfaceGrid(table_id)
 		//invisible cols
 		jsSelectUtils.deleteAllOptions(form.view_all_cols);
 		for(i in this.oColsNames)
+		{
 			if(!oVisCols[i])
-				form.view_all_cols.options[form.view_all_cols.length] = new Option(this.oColsNames[i], i, false, false);
+			{
+				var colName = (this.customNames[i]? this.customNames[i] : this.oColsNames[i]);
+				form.view_all_cols.options[form.view_all_cols.length] = new Option(colName, i, false, false);
+			}
+		}
 
 		//visible cols
 		jsSelectUtils.deleteAllOptions(form.view_cols);
 		for(i in oVisCols)
-			form.view_cols.options[form.view_cols.length] = new Option(this.oColsNames[i], i, false, false);
+		{
+			colName = (this.customNames[i]? this.customNames[i] : this.oColsNames[i]);
+			form.view_cols.options[form.view_cols.length] = new Option(colName, i, false, false);
+		}
 
 		//sorting
 		jsSelectUtils.selectOption(form.view_sort_by, view.sort_by);
@@ -838,8 +854,66 @@ function BxInterfaceGrid(table_id)
 		if(form.set_default_settings)
 		{
 			form.set_default_settings.checked = false;
+			form.delete_users_settings.checked = false;
 			form.delete_users_settings.disabled = true;
 		}
+
+		//init controls
+		form.up_btn.disabled = form.down_btn.disabled = form.rename_btn.disabled = form.add_btn.disabled = form.del_btn.disabled = true;
+	};
+
+	this.RenameColumn = function()
+	{
+		var bCreated = false;
+		if(!window['renameDialog'+this.table_id])
+		{
+			window['renameDialog'+this.table_id] = new BX.CDialog({
+				'content':'<form name="rename_'+this.table_id+'"></form>',
+				'title': this.vars.mess.renameTitle,
+				'width': this.vars.renameWndSize.width,
+				'height': this.vars.renameWndSize.height,
+				'resize_id': 'InterfaceGridRenameWnd',
+				'buttons': [
+					{
+						'title': this.vars.mess.settingsSave,
+						'action': function()
+						{
+							var selectedCol = settingsForm.view_cols.value;
+							var value = form.col_name.value;
+
+							if(value.length > 0)
+							{
+								_this.customNames[selectedCol] = value;
+							}
+							else
+							{
+								value = _this.oColsNames[selectedCol];
+								delete _this.customNames[selectedCol];
+							}
+							settingsForm.view_cols.options[settingsForm.view_cols.selectedIndex].text = value;
+
+							this.parentWindow.Close();
+						}
+					},
+					BX.CDialog.prototype.btnCancel
+				]
+			});
+			bCreated = true;
+		}
+
+		window['renameDialog'+this.table_id].Show();
+
+		var form = document['rename_'+this.table_id];
+		var settingsForm = document['settings_'+this.table_id];
+
+		if(bCreated)
+			form.appendChild(BX('rename_column_'+this.table_id));
+
+		var selectedCol = settingsForm.view_cols.value;
+
+		form.col_name.focus();
+		form.col_name_def.value = this.oColsNames[selectedCol];
+		form.col_name.value = (this.customNames[selectedCol]? this.customNames[selectedCol] : this.oColsNames[selectedCol]);
 	};
 
 	this.SaveSettings = function(view_id, doReload)
@@ -861,7 +935,8 @@ function BxInterfaceGrid(table_id)
 			'sort_by': form.view_sort_by.value,
 			'sort_order': form.view_sort_order.value,
 			'page_size': form.view_page_size.value,
-			'saved_filter': form.view_filters.value
+			'saved_filter': form.view_filters.value,
+			'custom_names': this.customNames
 		};
 
 		if(form.set_default_settings)
@@ -1473,3 +1548,4 @@ function BxInterfaceGrid(table_id)
 			span.style.display = (bShowBr? '':'none');
 	};
 }
+

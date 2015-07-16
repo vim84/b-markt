@@ -400,8 +400,24 @@ class CSocNetGroup extends CAllSocNetGroup
 				}
 			}
 		}
-		elseif(!$GLOBALS["USER_FIELD_MANAGER"]->Update("SONET_GROUP", $ID, $arFields))
-			$ID = False;
+		else
+		{
+			if($GLOBALS["USER_FIELD_MANAGER"]->Update("SONET_GROUP", $ID, $arFields))
+			{
+				if(defined("BX_COMP_MANAGED_CACHE"))
+				{
+					if ($bClearCommonTag)
+					{
+						$GLOBALS["CACHE_MANAGER"]->ClearByTag("sonet_group");
+					}
+					$GLOBALS["CACHE_MANAGER"]->ClearByTag("sonet_group_".$ID);
+				}
+			}
+			else
+			{
+				$ID = False;
+			}
+		}
 
 		return $ID;
 	}

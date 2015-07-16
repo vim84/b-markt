@@ -160,8 +160,11 @@ class Table extends BaseObject
 					$tokenizer->skipWhiteSpace();
 					if (!$tokenizer->testUpperText('KEY'))
 						throw new NotSupportedException("'KEY' expected. line:".$tokenizer->getCurrentToken()->line);
-					$tokenizer->skipWhiteSpace();
-					$table->createIndex($tokenizer, true);
+
+					$tokenizer->putBack(); //KEY
+					$tokenizer->putBack(); //WS
+					$tokenizer->putBack(); //PRIMARY
+					$table->createConstraint($tokenizer, false);
 				}
 				elseif ($tokenizer->testUpperText('CONSTRAINT'))
 				{
@@ -243,18 +246,37 @@ class Table extends BaseObject
 	 */
 	public function getCreateDdl($dbType = '')
 	{
+		$result = array();
+
 		$items = array();
 		/** @var Column $column */
 		foreach ($this->columns->getList() as $column)
 		{
 			$items[] = $column->name." ".$column->body;
 		}
-		/** @var Constraint $constraint */
-		foreach ($this->constraints->getList() as $constraint)
+		if ($dbType !== 'MSSQL')
 		{
-			$items[] = "CONSTRAINT ".$constraint->name." ".$constraint->body;
+			/** @var Constraint $constraint */
+			foreach ($this->constraints->getList() as $constraint)
+			{
+				if ($constraint->name === '')
+					$items[] = $constraint->body;
+				else
+					$items[] = "CONSTRAINT ".$constraint->name." ".$constraint->body;
+			}
 		}
-		return "CREATE TABLE ".$this->name."(\n\t".implode(",\n\t", $items)."\n)".$this->body;
+		$result[] = "CREATE TABLE ".$this->name."(\n\t".implode(",\n\t", $items)."\n)".$this->body;
+
+		if ($dbType === 'MSSQL')
+		{
+			/** @var Constraint $constraint */
+			foreach ($this->constraints->getList() as $constraint)
+			{
+				$result[] = $constraint->getCreateDdl($dbType);
+			}
+		}
+
+		return $result;
 	}
 
 	/**

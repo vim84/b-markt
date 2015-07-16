@@ -41,6 +41,8 @@ class CBitrixComponentTemplate
 	private $frames = array();
 	private $frameMode = false;
 
+	private $languageId = false;
+
 	function CBitrixComponentTemplate()
 	{
 		$this->__bInited = false;
@@ -138,6 +140,24 @@ class CBitrixComponentTemplate
 		return $arReturn;
 	}
 
+	/**
+	 * @param mixed $languageId
+	 */
+	public function setLanguageId($languageId)
+	{
+		$this->languageId = $languageId;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getLanguageId()
+	{
+		return $this->languageId;
+	}
+
+
+
 	/***********  INIT  ***************/
 	function ApplyCachedData($arData)
 	{
@@ -201,16 +221,26 @@ class CBitrixComponentTemplate
 				$arBXRuntimeTemplateEngines[$ext] = $engineID;
 	}
 
+	/**
+	 * @param CBitrixComponent $component
+	 * @param bool|string $siteTemplate
+	 * @param string $customTemplatePath
+	 * @return bool
+	 */
 	function Init(&$component, $siteTemplate = false, $customTemplatePath = "")
 	{
 		global $arBXRuntimeTemplateEngines;
 
 		$this->__bInited = false;
 
-		if ($siteTemplate === false && defined("SITE_TEMPLATE_ID"))
-			$this->__siteTemplate = SITE_TEMPLATE_ID;
+		if ($siteTemplate === false)
+		{
+			$this->__siteTemplate = $component->getSiteTemplateId();
+		}
 		else
+		{
 			$this->__siteTemplate = $siteTemplate;
+		}
 
 		if (strlen($this->__siteTemplate) <= 0)
 			$this->__siteTemplate = ".default";
@@ -612,7 +642,7 @@ class CBitrixComponentTemplate
 			{
 				if ($lang === false)
 				{
-					$lang = LANGUAGE_ID;
+					$lang = $this->getLanguageId();
 				}
 				$arLangMessages = \Bitrix\Main\Localization\Loc::loadLanguageFile($absPath, $lang);
 			}

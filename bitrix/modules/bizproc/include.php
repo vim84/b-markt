@@ -11,6 +11,9 @@ $arClasses = array(
 	"CBPActivityExecutorOperationType" => "classes/general/constants.php",
 	"CBPDocumentEventType" => "classes/general/constants.php",
 	"CBPCanUserOperateOperation" => "classes/general/constants.php",
+	"CBPSetPermissionsMode" => "classes/general/constants.php",
+	"CBPTaskStatus" => "classes/general/constants.php",
+	"CBPTaskUserStatus" => "classes/general/constants.php",
 	"CBPDocument" => "classes/general/document.php",
 	"CBPDocumentService" => "classes/general/documentservice.php",
 	"CBPArgumentException" => "classes/general/exception.php",
@@ -43,6 +46,8 @@ $arClasses = array(
 	"CBPWorkflowTemplateResult" => "classes/general/workflowtemplateloader.php",
 	"CBPWorkflowTemplateUser" => "classes/general/workflowtemplateloader.php",
 	"CBPCalc" => "classes/general/calc.php",
+	"CBPViewHelper" => "classes/general/viewhelper.php",
+	'CBPTaskChangedStatus' => "classes/general/constants.php",
 );
 CModule::AddAutoloadClasses("bizproc", $arClasses);
 /*patchlimitationmutatormark1*/

@@ -25,31 +25,6 @@ if (!is_array($arWorkflowState) || count($arWorkflowState) <= 0)
 }
 else
 {
-	//$GLOBALS["__bwl_ParseStringParameterTmp_arAllowableUserGroups"] = CBPDocument::GetAllowableUserGroups($documentType);
-	function __bwl_ParseStringParameterTmp($matches)
-	{
-		$result = "";
-		if ($matches[1] == "user")
-		{
-			$user = $matches[2];
-
-			$l = strlen("user_");
-			if (substr($user, 0, $l) == "user_")
-				$result = CBPHelper::ConvertUserToPrintableForm(intval(substr($user, $l)));
-			else
-				$result = $user; //$GLOBALS["__bwl_ParseStringParameterTmp_arAllowableUserGroups"][$user];
-		}
-		elseif ($matches[1] == "group")
-		{
-			$result = $matches[2]; //$GLOBALS["__bwl_ParseStringParameterTmp_arAllowableUserGroups"][$matches[2]];
-		}
-		else
-		{
-			$result = $matches[0];
-		}
-		return $result;
-	}
-
 	$bCanView = CBPDocument::CanUserOperateDocument(
 		CBPCanUserOperateOperation::ViewWorkflow,
 		$GLOBALS["USER"]->GetID(),
@@ -206,11 +181,7 @@ else
 
 						$note = ((strlen($track["ACTION_NOTE"]) > 0) ? ": ".$track["ACTION_NOTE"] : "");
 
-						$note = preg_replace_callback(
-							"/\{=([A-Za-z0-9_]+)\:([A-Za-z0-9_]+)\}/i",
-							"__bwl_ParseStringParameterTmp",
-							$note
-						);
+						$note = CBPTrackingService::parseStringParameter($note);
 
 						echo str_replace(
 							array("#ACTIVITY#", "#STATUS#", "#RESULT#", "#NOTE#"),
@@ -231,7 +202,7 @@ else
 						array("ID", "MODIFIED", "ACTION_NOTE")
 					);
 					while ($arResult = $dbResult->GetNext())
-						echo "<i>".$arResult["MODIFIED"]."</i><br>".preg_replace_callback("/\{=([A-Za-z0-9_]+)\:([A-Za-z0-9_]+)\}/i", "__bwl_ParseStringParameterTmp", $arResult["ACTION_NOTE"])."<br><br>";
+						echo "<i>".$arResult["MODIFIED"]."</i><br>".CBPTrackingService::parseStringParameter($arResult["ACTION_NOTE"])."<br><br>";
 
 					echo "<a href='".htmlspecialcharsbx($APPLICATION->GetCurPageParam("admin_mode=Y", array("admin_mode")))."'>".GetMessage("BPABL_RES2ADMINMODE")."</a>";
 				}
@@ -244,8 +215,5 @@ else
 	<?
 	$tabControl->End();
 }
-?>
 
-<?
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-?>

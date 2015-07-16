@@ -1,7 +1,7 @@
 <?
 ##############################################
 # Bitrix Site Manager                        #
-# Copyright (c) 2002-2007 Bitrix             #
+# Copyright (c) 2002-2015 Bitrix             #
 # http://www.bitrixsoft.com                  #
 # mailto:admin@bitrixsoft.com                #
 ##############################################
@@ -217,25 +217,19 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_REQUEST["save"] <> '' || $_REQUEST
 					if (isset(${"SITES_".$moduleName}))
 						$st = ${"SITES_".$moduleName};
 
-// echo "Delete group rights for all sites<br>";
 					$APPLICATION->DelGroupRight($MID, array($ID), false);
 					foreach($arSites["reference_id"] as $site_id_tmp)
 					{
-// echo "Delete group rights for site ".$site_id_tmp."<br>";
 						$APPLICATION->DelGroupRight($MID, array($ID), $site_id_tmp);
 					}
 				}
 
-				if (
-					!empty($rt)
-					&& is_array($rt)
-				)
+				if (!empty($rt)	&& is_array($rt))
 				{
 					foreach ($rt as $i => $right)
 					{
 						if (strlen($right) > 0 && $right != "NOT_REF")
 						{
-// echo $MID." ".$ID." ".$right." ".$st[$i]."<br>";
 							$APPLICATION->SetGroupRight($MID, $ID, $right, (array_key_exists($i, $st) && strlen($st[$i]) > 0 && $st[$i] != "NOT_REF" ? $st[$i] : false));
 						}
 					}
@@ -328,9 +322,6 @@ elseif($USER->CanDoOperation('edit_groups'))
 	$APPLICATION->SetTitle(GetMessage("EDIT_GROUP_TITLE", array("#ID#" => $ID)));
 else
 	$APPLICATION->SetTitle(GetMessage("EDIT_GROUP_TITLE_VIEW", array("#ID#" => $ID)));
-/***************************************************************************
-HTML form
-****************************************************************************/
 
 require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/prolog_admin_after.php");
 
@@ -502,10 +493,7 @@ $tabControl->BeginNextTab();
 				var el1 = eval("document.form1.gp_" + i + "_parent");
 				var el2 = eval("document.form1.gp_" + i + "");
 
-				if (sel == "parent")
-					el1.checked = true;
-				else
-					el1.checked = false;
+				el1.checked = (sel == "parent");
 
 				gpChangeParent(i);
 
@@ -552,7 +540,6 @@ $tabControl->BeginNextTab();
 
 	function gpSync()
 	{
-		var el = document.form1.gp_level;
 		var level = {
 			low: 0,
 			middle: 0,
@@ -651,7 +638,6 @@ $tabControl->BeginNextTab();
 						level.middle++;
 					else
 						level.low++;
-				default:
 					break;
 				}
 			}
@@ -790,32 +776,24 @@ $tabControl->BeginNextTab();
 			<select id="subordinate_groups" name="subordinate_groups[]" multiple size="6">
 			<?
 			$arSubordinateGroups = CGroup::GetSubordinateGroups($ID);
-			$rsData = CGroup::GetList($by, $order, array(), "Y");
+			$rsData = CGroup::GetList($by, $order, array("ACTIVE"=>"Y", "ADMIN"=>"N", "ANONYMOUS"=>"N"));
 			while($arRes = $rsData->Fetch())
 			{
-				if ($arRes['ID'] == 1 || $arRes['ID'] == $ID)
+				if ($arRes['ID'] == $ID)
 					continue;
 				if($strError <> '' && is_array($_REQUEST["subordinate_groups"]))
+				{
 					$bSel = (in_array($arRes['ID'], $_REQUEST["subordinate_groups"]));
+				}
 				else
-					$bSel = (in_array($arRes['ID'], $arSubordinateGroups) || $arRes['ID'] == 2);
-				?><option value="<?=$arRes['ID']?>"<?echo ($bSel? ' selected' : '')?>><? echo '['.$arRes['ID'].'] '.htmlspecialcharsbx($arRes['NAME'])?></option><?
+				{
+					$bSel = (in_array($arRes['ID'], $arSubordinateGroups));
+				}
+				?><option value="<?=$arRes['ID']?>"<?echo ($bSel? ' selected' : '')?>><? echo htmlspecialcharsbx($arRes['NAME']).' ['.$arRes['ID'].']'?></option><?
 			}
 			?>
 			</select>
 			<script>
-			document.getElementById('subordinate_groups').onblur = function(e)
-			{
-				for (var i=0, len = this.options.length; i<len; i++)
-				{
-					if (this.options[i].value == 2)
-					{
-						this.options[i].selected = 'selected';
-						break;
-					}
-				}
-			};
-
 			function settingsAddRights(a)
 			{
 				var tbl = BX.findPreviousSibling(a, { 'tag': 'table'});
@@ -829,7 +807,7 @@ $tabControl->BeginNextTab();
 				var selRights = BX.findChild(tableRow.cells[1], { 'tag': 'select'}, true);
 				selRights.selectedIndex = 0;
 
-				selSites = BX.findChild(tableRow.cells[0], { 'tag': 'select'}, true);
+				var selSites = BX.findChild(tableRow.cells[0], { 'tag': 'select'}, true);
 				selSites.selectedIndex = 0;
 			}
 

@@ -39,7 +39,8 @@ if ($arParams['IS_BLOG'] == 'Y')
 	);
 }
 
-if (!empty($arResult['User']['MAILBOX']) || $arParams['ID'] == $USER->getID() || $USER->isAdmin() || $USER->canDoOperation('bitrix24_config'))
+$extmailAvailable = CModule::IncludeModule('intranet') && CIntranetUtils::IsExternalMailAvailable();
+if (!empty($arResult['User']['MAILBOX']) || $extmailAvailable && ($arParams['ID'] == $USER->getID() || $USER->isAdmin()))
 {
 	$arParams['EDITABLE_FIELDS'][] = 'EXTMAIL';
 }
@@ -241,7 +242,7 @@ foreach ($arFields as $GROUP_ID => $arGroupFields):
 				case 'EXTMAIL':
 					if (!empty($arResult['User']['MAILBOX']))
 						echo $arResult['User']['MAILBOX'];
-					if ($arParams['ID'] == $USER->getID() || $USER->isAdmin() || $USER->canDoOperation('bitrix24_config'))
+					if ($extmailAvailable && ($arParams['ID'] == $USER->getID() || $USER->isAdmin()))
 					{
 						?> <a href="<?=$arParams['PATH_TO_MAIL'].(strpos($arParams['PATH_TO_MAIL'], '?') !== false ? '&' : '?'); ?>page=<?=($arParams['ID'] == $USER->getID() ? 'home' : 'manage'); ?>"><?=GetMessage('ISL_EXTMAIL_EDIT'); ?></a><?
 					}

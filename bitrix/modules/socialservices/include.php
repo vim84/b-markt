@@ -10,6 +10,7 @@ $arClasses = array(
 	"CSocServAuthDB" => "classes/".$DBType."/authmanager.php",
 	"CSocServUtil" => "classes/general/authmanager.php",
 	"CSocServAuth" => "classes/general/authmanager.php",
+	"CSocServOAuthTransport" => "classes/general/oauthtransport.php",
 	"CBitrix24NetOAuthInterface" => "classes/general/bitrix24net.php",
 	"CSocServBitrix24Net" => "classes/general/bitrix24net.php",
 	"CBitrix24NetTransport" => "classes/general/bitrix24net.php",
@@ -38,7 +39,11 @@ $arClasses = array(
 	"CBitrixPHPAppTransport" => "classes/general/bitrix24.php",
 	"CSocServYandexAuth" => "classes/general/yandex.php",
 	"CYandexOAuthInterface" => "classes/general/yandex.php",
-	//"CSocServDropbox" => "classes/general/dropbox.php",
+	"CSocServDropboxAuth" => "classes/general/dropbox.php",
+	"CSocServBoxAuth" => "classes/general/box.php",
+	"CBoxOAuthInterface" => "classes/general/box.php",
+	"CBitrixSeoOAuthInterface" => "classes/general/bitrixseo.php",
+	"CBitrixSeoTransport" => "classes/general/bitrixseo.php",
 );
 
 CModule::AddAutoloadClasses("socialservices", $arClasses);

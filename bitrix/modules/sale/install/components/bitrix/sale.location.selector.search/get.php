@@ -7,9 +7,10 @@ use Bitrix\Main;
 use Bitrix\Main\Loader;
 
 require_once($_SERVER["DOCUMENT_ROOT"].'/bitrix/modules/main/include/prolog_before.php');
-require_once(dirname(__FILE__).'/class.php');
 
 Loader::includeModule('sale');
+
+require_once(dirname(__FILE__).'/class.php');
 
 $result = true;
 $errors = array();
@@ -18,7 +19,12 @@ $data = array();
 try
 {
 	CUtil::JSPostUnescape();
-	$data = CBitrixLocationSelectorSearchComponent::processSearchRequest();
+
+	$request = Main\Context::getCurrent()->getRequest()->getPostList();
+	if($request['version'] == '2')
+		$data = CBitrixLocationSelectorSearchComponent::processSearchRequestV2($_REQUEST);
+	else
+		$data = CBitrixLocationSelectorSearchComponent::processSearchRequest();
 }
 catch(Main\SystemException $e)
 {

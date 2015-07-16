@@ -206,6 +206,13 @@ if($arParams["DESTINATION_SHOW"] == "Y" || !empty($arParams["TAGS"]))
 ?></ol><?
 }
 
+if (defined("BITRIX24_INDEX_COMPOSITE"))
+{
+	$dynamicArea = new \Bitrix\Main\Page\FrameStatic("blogpostform-init");
+	$dynamicArea->startDynamicArea();
+	$dynamicArea->setStub('');
+}
+
 if (in_array('socnetlogdest', $array))
 {
 ?>
@@ -247,15 +254,20 @@ if (in_array('socnetlogdest', $array))
 </script>
 <?
 }
+
+if (defined("BITRIX24_INDEX_COMPOSITE"))
+{
+	$dynamicArea->finishDynamicArea();
+}
 /***************** Upload files ************************************/
 ?><?=$arParams["UPLOADS_HTML"]?><?
 ?><?=$arParams["~AT_THE_END_HTML"]?><?
 ?>
 	<div class="feed-add-post-buttons" id="lhe_buttons_<?=$arParams["FORM_ID"]?>">
-		<a class="feed-add-button feed-add-com-button" href="javascript:void(0)" id="lhe_button_submit_<?=$arParams["FORM_ID"]?>" onmousedown="BX.addClass(this, 'feed-add-button-press')" onmouseup="BX.removeClass(this,'feed-add-button-press')" onclick="BX.onCustomEvent(BX('div<?=$arParams["divId"]?>'), 'OnButtonClick', ['submit']);"><?
+		<a class="feed-add-button feed-add-com-button" id="lhe_button_submit_<?=$arParams["FORM_ID"]?>" ><?
 			?><?=GetMessage("MPF_BUTTON_SEND")?><?
 		?></a>
-		<a class="feed-cancel-com" href="javascript:void(0)" id="lhe_button_cancel_<?=$arParams["FORM_ID"]?>" onclick="BX.onCustomEvent(BX('div<?=$arParams["divId"]?>'), 'OnButtonClick', ['cancel']);"><?=GetMessage("MPF_BUTTON_CANCEL")?></a>
+		<a class="feed-cancel-com" id="lhe_button_cancel_<?=$arParams["FORM_ID"]?>"><?=GetMessage("MPF_BUTTON_CANCEL")?></a>
 	</div>
 </div>
 

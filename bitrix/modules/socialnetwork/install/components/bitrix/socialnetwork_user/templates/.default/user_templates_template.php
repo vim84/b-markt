@@ -7,7 +7,7 @@ if (CSocNetFeatures::IsActiveFeature(SONET_ENTITY_USER, $arResult["VARIABLES"]["
 {
 	$APPLICATION->IncludeComponent(
 		"bitrix:tasks.template.edit",
-		".default",
+		($arResult["VARIABLES"]["action"] == "edit" ? '.default' : 'detail'),
 		Array(
 			"USER_ID" => $arResult["VARIABLES"]["user_id"],
 			"PAGE_VAR" => $arResult["ALIASES"]["page"],

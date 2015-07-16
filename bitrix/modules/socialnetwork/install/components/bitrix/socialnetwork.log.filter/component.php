@@ -149,7 +149,7 @@ if (!function_exists("__SL_PF_sort"))
 }
 
 usort($arResult["PresetFilters"], "__SL_PF_sort");
-$arResult["PresetFilters"] = CSocNetLogComponent::ConvertPresetToFilters($arResult["PresetFilters"]);
+$arResult["PresetFilters"] = CSocNetLogComponent::ConvertPresetToFilters($arResult["PresetFilters"], $arParams);
 
 if ($_REQUEST["preset_filter_top_id"] == "clearall")
 {

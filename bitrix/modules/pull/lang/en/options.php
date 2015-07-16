@@ -29,4 +29,11 @@ $MESS["PULL_OPTIONS_NGINX_VERSION_040"] = "Bitrix Virtual Appliance 4.4 or highe
 $MESS["PULL_OPTIONS_NGINX_VERSION_034_DESC"] = "nginx-push-stream-module 0.4.0 is strongly recommended; install it whenever possible.<br> If using nginx-push-stream-module 0.3.4, WebSocket and command broadcasting will be unavailable.";
 $MESS["PULL_OPTIONS_NGINX_BUFFER"] = "Maximum number of commands to send while connected to server";
 $MESS["PULL_OPTIONS_NGINX_BUFFERS_DESC"] = "This option depends on the \"large_client_header_buffers\" nginx's parameter. The default value is calculated for <b>8k</b> buffers.";
+$MESS["PULL_OPTIONS_PATH_TO_LISTENER_MODERN_DESC"] = "Notice that modern browsers may connect to a remote push server even on a different domain (CORS requests).";
+$MESS["PULL_OPTIONS_HEAD_PUB"] = "Command sending URL";
+$MESS["PULL_OPTIONS_HEAD_SUB_MODERN"] = "Command reading URL for modern browsers";
+$MESS["PULL_OPTIONS_HEAD_SUB"] = "Command reading URL for outdated browsers";
+$MESS["PULL_OPTIONS_HEAD_SUB_MOB"] = "Command reading URL for mobile browsers";
+$MESS["PULL_OPTIONS_HEAD_SUB_WS"] = "Command reading URL for Web Socket enabled browsers";
+$MESS["PULL_OPTIONS_HEAD_BLOCK"] = "Exclude sites";
 ?>

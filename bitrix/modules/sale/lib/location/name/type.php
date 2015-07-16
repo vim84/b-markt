@@ -62,6 +62,13 @@ class TypeTable extends NameEntity
 					'=this.TYPE_ID' => 'ref.ID'
 				)
 			),
+
+			'CNT' => array(
+				'data_type' => 'integer',
+				'expression' => array(
+					'count(*)'
+				)
+			),
 		);
 	}
 }

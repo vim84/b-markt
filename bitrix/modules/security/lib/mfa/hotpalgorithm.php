@@ -133,7 +133,8 @@ class HotpAlgorithm
 	{
 		return array(
 			'type' => static::$type,
-			'title' => Loc::getMessage('SECURITY_HOTP_TITLE')
+			'title' => Loc::getMessage('SECURITY_HOTP_TITLE'),
+			'required_two_code' => true
 		);
 	}
 }

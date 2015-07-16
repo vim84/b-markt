@@ -547,7 +547,6 @@ class HttpClient
 			{
 				$this->send($postData);
 			}
-			$this->send("\r\n");
 		}
 	}
 

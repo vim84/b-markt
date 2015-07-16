@@ -357,4 +357,5 @@ $MESS["SOD_POPUP_ORDER_ACTION"] = "Отправить заявку в ТК";
 $MESS["SOD_POPUP_SEEND_AND_SAVE"] = "Сохранить и отправить";
 $MESS["SOD_POPUP_REQUEST_ERROR"] = "При отправке запроса в ТК произошла ошибка";
 $MESS["SOD_POPUP_REQUEST_SUCCESS"] = "Заявка в ТК успешно отправлена";
+$MESS["SOA_ERROR_PS"] = "Ошибка настройки выбранного способа оплаты.";
 ?>

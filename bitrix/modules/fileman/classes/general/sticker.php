@@ -88,7 +88,7 @@ class CSticker
 			if ($arRes['SYS'])
 				$name = GetMessage('TASK_NAME_'.strtoupper($arRes['NAME']));
 			if (strlen($name) == 0)
-				$name = $arRes['NAME'];
+				$name = $arRes['TITLE'];
 			$arTasks[$arRes['ID']] = Array('title' => $name, 'letter' => $arRes['LETTER']);
 		}
 		return $arTasks;
@@ -101,6 +101,7 @@ class CSticker
 
 		global $DB, $USER;
 		$bDBResult = isset($Params['bDBResult'])? $Params['bDBResult']: false;
+		$Params['arFilter']['PAGE_URL'] = str_replace(' ', '%20', $Params['arFilter']['PAGE_URL']);
 		$arFilter = $Params['arFilter'];
 		$arOrder = isset($Params['arOrder']) ? $Params['arOrder'] : Array('ID' => 'asc');
 
@@ -322,7 +323,7 @@ class CSticker
 	{
 		global $APPLICATION;
 		return CSticker::GetCount(array(
-			"PAGE_URL" => $APPLICATION->GetCurPage(),
+			"PAGE_URL" => str_replace(' ', '%20', $APPLICATION->GetCurPage()),
 			"SITE_ID" => SITE_ID
 		));
 	}
@@ -386,6 +387,8 @@ class CSticker
 
 		if (!isset($arFields['SITE_ID']))
 			$arFields['SITE_ID'] = $_REQUEST['site_id'];
+
+		$arFields['PAGE_URL'] = str_replace(' ', '%20', $arFields['PAGE_URL']);
 
 		if ($bNew) // Add
 		{
@@ -766,7 +769,7 @@ class CSticker
 		);
 
 		$res = CUserOptions::GetOption('fileman', "stickers_list_filter", false);
-		if ($res !== false)
+		if ($res !== false && CheckSerializedData($res))
 		{
 			$Filter = unserialize($res);
 			if (is_array($Filter))

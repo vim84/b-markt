@@ -1327,7 +1327,15 @@ class CAllRatings
 		$ID = intval($ID);
 		$err_mess = (CRatings::err_mess())."<br>Function: __AddComponents<br>Line: ";
 		foreach ($arFields['CONFIGS'] as $MODULE_ID => $RAT_ARRAY)
+		{
+			if (!is_array($RAT_ARRAY))
+				continue;
+
 			foreach ($RAT_ARRAY as $RAT_TYPE => $COMPONENT)
+			{
+				if (!is_array($COMPONENT))
+					continue;
+
 				foreach ($COMPONENT as $COMPONENT_NAME => $COMPONENT_VALUE)
 				{
 					if (!isset($arRatingConfigs[$MODULE_ID][$MODULE_ID."_".$RAT_TYPE."_".$COMPONENT_NAME]))
@@ -1353,6 +1361,8 @@ class CAllRatings
 
 					$DB->Add("b_rating_component", $arFields_i, array(), "", false, $err_mess.__LINE__);
 				}
+			}
+		}
 
 
 		return true;

@@ -47,4 +47,5 @@ $MESS["SOA_NAME_COLUMN_PREVIEW_PICTURE"] = "Image";
 $MESS["SOA_NAME_COLUMN_DETAIL_PICTURE"] = "Detailed image";
 $MESS["SOA_SUM_DEFAULT_COLUMN"] = "Total";
 $MESS["SOA_ORDER_CALCULATE_ERROR"] = "Error calculating the order.";
+$MESS["SOA_TEMPL_ORDER_PS_ERROR"] = "The selected payment method failed. Please contact the site administrator or select another method.";
 ?>

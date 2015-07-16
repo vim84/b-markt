@@ -4,7 +4,10 @@ CModule::IncludeModule("iblock");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/iblock/prolog.php");
 IncludeModuleLangFile(__FILE__);
 
-$rsIBlocks = CIBlock::GetList(array("IBLOCK_TYPE" => "ASC", "NAME" => "ASC"), array("MIN_PERMISSION" => "W"));
+$rsIBlocks = CIBlock::GetList(array(), array(
+	"MIN_PERMISSION" => "X",
+	"OPERATION" => "iblock_export",
+));
 if(!$rsIBlocks->Fetch())
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
@@ -66,6 +69,10 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && $_REQUEST["Export"]=="Y")
 
 	$fp = false;
 	if(!check_bitrix_sessid())
+	{
+		$arErrors[] = GetMessage("IBLOCK_CML2_ACCESS_DENIED");
+	}
+	elseif(!CIBlockRights::UserHasRightTo($NS["IBLOCK_ID"], $NS["IBLOCK_ID"], "iblock_export"))
 	{
 		$arErrors[] = GetMessage("IBLOCK_CML2_ACCESS_DENIED");
 	}
@@ -339,7 +346,19 @@ $tabControl->BeginNextTab();
 	<tr>
 		<td><?echo GetMessage("IBLOCK_CML2_IBLOCK_ID")?>:</td>
 		<td>
-			<?echo GetIBlockDropDownList($IBLOCK_ID, 'IBLOCK_TYPE_ID', 'IBLOCK_ID', false, 'class="adm-detail-iblock-types"', 'class="adm-detail-iblock-list"');?>
+			<?echo GetIBlockDropDownListEx(
+				$IBLOCK_ID,
+				'IBLOCK_TYPE_ID',
+				'IBLOCK_ID',
+				array(
+					"MIN_PERMISSION" => "X",
+					"OPERATION" => "iblock_export",
+				),
+				'',
+				'',
+				'class="adm-detail-iblock-types"',
+				'class="adm-detail-iblock-list"'
+			);?>
 		</td>
 	</tr>
 	<tr>

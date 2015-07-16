@@ -18,6 +18,7 @@ abstract class Helper
 	const DEBUG_MODE_OPT = 'location2_debug_mode';
 
 	const IMPORT_PAGE_URL = 'sale_location_import.php';
+	const REINDEX_PAGE_URL = 'sale_location_reindex.php';
 	const MIGRATION_PAGE_URL = 'sale_location_migration.php';
 
 	const LOCATION_LINK_DATA_CACHE_TAG = 'sale-location-data';
@@ -450,14 +451,22 @@ abstract class Helper
 
 	public static function convertToArray($data)
 	{
-		if(is_array($data))
-			return $data;
+		if(!is_array($data))
+		{
+			$converted = array();
+			foreach($data as $key => $value)
+				$converted[$key] = $value;
 
-		$converted = array();
-		foreach($data as $key => $value)
-			$converted[$key] = $value;
+			$data = $converted;
+		}
 
-		return $converted;
+		foreach($data as &$value)
+		{
+			if(is_string($value))
+				$value = trim($value);
+		}
+
+		return $data;
 	}
 
 	// deprecated: not optimal
@@ -506,6 +515,11 @@ abstract class Helper
 	public static function getImportUrl()
 	{
 		return self::getUrl(static::IMPORT_PAGE_URL, array());
+	}
+
+	public static function getReindexUrl()
+	{
+		return self::getUrl(static::REINDEX_PAGE_URL, array());
 	}
 
 	public static function getMigrationUrl()

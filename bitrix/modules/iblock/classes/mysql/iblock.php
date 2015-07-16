@@ -53,7 +53,11 @@ class CIBlock extends CAllIBlock
 				$strSqlSearch .= " AND  (".$sql.") ";
 		}
 
-		$bCheckPermissions = !array_key_exists("CHECK_PERMISSIONS", $arFilter) || $arFilter["CHECK_PERMISSIONS"]!=="N";
+		$bCheckPermissions =
+			!array_key_exists("CHECK_PERMISSIONS", $arFilter)
+			|| $arFilter["CHECK_PERMISSIONS"] !== "N"
+			|| array_key_exists("OPERATION", $arFilter)
+		;
 		$bIsAdmin = is_object($USER) && $USER->IsAdmin();
 		if($bCheckPermissions && !$bIsAdmin)
 		{
@@ -82,7 +86,9 @@ class CIBlock extends CAllIBlock
 					AND (IBG.PERMISSION='X' OR B.ACTIVE='Y')
 				";
 
-			if($min_permission >= "X")
+			if (strlen($arFilter["OPERATION"]) > 0)
+				$operation  = "'".$DB->ForSql($arFilter["OPERATION"])."'";
+			elseif($min_permission >= "X")
 				$operation = "'iblock_edit'";
 			elseif($min_permission >= "U")
 				$operation = "'element_edit'";

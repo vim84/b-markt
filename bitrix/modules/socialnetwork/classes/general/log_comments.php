@@ -638,14 +638,21 @@ class CAllSocNetLogComments
 			return false;
 		}
 
-		$db_events = GetModuleEvents("socialnetwork", "OnSendMentionGetEntityFields");
-		while ($arEvent = $db_events->Fetch())
+		switch ($arCommentFields["EVENT_ID"])
 		{
-			$arTitleRes = ExecuteModuleEventEx($arEvent, array($arCommentFields));
-			if ($arTitleRes)
-			{
+			case "forum":
+				$arTitleRes = self::OnSendMentionGetEntityFields_Forum($arCommentFields);
 				break;
-			}
+			default:
+				$db_events = GetModuleEvents("socialnetwork", "OnSendMentionGetEntityFields");
+				while ($arEvent = $db_events->Fetch())
+				{
+					$arTitleRes = ExecuteModuleEventEx($arEvent, array($arCommentFields));
+					if ($arTitleRes)
+					{
+						break;
+					}
+				}
 		}
 
 		if (
@@ -659,6 +666,7 @@ class CAllSocNetLogComments
 				"FROM_USER_ID" => $arCommentFields["USER_ID"],
 				"NOTIFY_TYPE" => IM_NOTIFY_FROM,
 				"NOTIFY_MODULE" => (!empty($arTitleRes["NOTIFY_MODULE"]) ? $arTitleRes["NOTIFY_MODULE"] : "socialnetwork"),
+				"NOTIFY_EVENT" => "mention",
 				"NOTIFY_TAG" => (!empty($arTitleRes["NOTIFY_TAG"]) ? $arTitleRes["NOTIFY_TAG"] : "LOG_COMMENT|COMMENT_MENTION|".$arCommentFields["ID"])
 			);
 
@@ -767,5 +775,59 @@ class CAllSocNetLogComments
 			}
 		}
 	}
+
+	function OnSendMentionGetEntityFields_Forum($arCommentFields)
+	{	
+		if ($arCommentFields["EVENT_ID"] != "forum")
+		{
+			return false;
+		}
+
+		$dbLog = CSocNetLog::GetList(
+			array(),
+			array(
+				"ID" => $arCommentFields["LOG_ID"],
+				"EVENT_ID" => "forum"
+			),
+			false,
+			false,
+			array("ID", "TITLE")
+		);
+
+		if ($arLog = $dbLog->Fetch())
+		{
+			$genderSuffix = "";
+			$dbUsers = CUser::GetList(($by="ID"), ($order="desc"), array("ID" => $arCommentFields["USER_ID"]), array("PERSONAL_GENDER", "LOGIN", "NAME", "LAST_NAME", "SECOND_NAME"));
+			if ($arUser = $dbUsers->Fetch())
+			{
+				$genderSuffix = $arUser["PERSONAL_GENDER"];
+			}
+
+			$strPathToLogEntry = str_replace("#log_id#", $arLog["ID"], COption::GetOptionString("socialnetwork", "log_entry_page", "/company/personal/log/#log_id#/", SITE_ID));
+			$strPathToLogEntryComment = $strPathToLogEntry.(strpos($strPathToLogEntry, "?") !== false ? "&" : "?")."commentID=".$arCommentFields["ID"];
+
+			$title = str_replace(Array("\r\n", "\n"), " ", $arLog["TITLE"]);
+			$title = TruncateText($title, 100);
+			$title_out = TruncateText($title, 255);
+						
+			$arReturn = array(
+				"URL" => $strPathToLogEntryComment,
+				"NOTIFY_TAG" => "FORUM|COMMENT_MENTION|".$arCommentFields["ID"],
+				"NOTIFY_MESSAGE" => GetMessage("SONET_GLC_FORUM_MENTION".(strlen($genderSuffix) > 0 ? "_".$genderSuffix : ""), Array(
+					"#title#" => "<a href=\"#url#\" class=\"bx-notifier-item-action\">".$title."</a>"
+				)),
+				"NOTIFY_MESSAGE_OUT" => GetMessage("SONET_GLC_FORUM_MENTION".(strlen($genderSuffix) > 0 ? "_".$genderSuffix : ""), Array(
+					"#title#" => $title_out
+				))." ("."#server_name##url#)"
+			);
+
+			return $arReturn;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	
 }
 ?>

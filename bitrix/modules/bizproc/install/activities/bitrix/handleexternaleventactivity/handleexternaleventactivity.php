@@ -126,6 +126,14 @@ class CBPHandleExternalEventActivity
 		}
 	}
 
+	public function OnStateExternalEvent($arEventParameters = array())
+	{
+		if ($this->executionStatus != CBPActivityExecutionStatus::Closed && array_key_exists("User", $arEventParameters))
+		{
+			$this->SenderUserId = "user_".$arEventParameters["User"];
+		}
+	}
+
 	public static function ValidateProperties($arTestProperties = array(), CBPWorkflowTemplateUser $user = null)
 	{
 		$arErrors = array();
@@ -194,8 +202,7 @@ class CBPHandleExternalEventActivity
 
 		$arCurrentActivity = &CBPWorkflowTemplateLoader::FindActivityByName($arWorkflowTemplate, $activityName);
 		$arCurrentActivity["Properties"] = $arProperties;
-
- 		$currentParent = &CBPWorkflowTemplateLoader::FindParentActivityByName($arWorkflowTemplate, $activityName);
+		$currentParent = &CBPWorkflowTemplateLoader::FindParentActivityByName($arWorkflowTemplate, $activityName);
 
 		$c = count($currentParent['Children']);
 		if ($c == 1)

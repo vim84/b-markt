@@ -13,7 +13,7 @@
 
 		BX.merge(this, {
 			opts: { // default options
-				timeout: 	100
+				timeout:	100
 			},
 			sys: {
 				code: 'loader'
@@ -40,7 +40,7 @@
 				sv.timer = null;
 			}, this.opts.timeout);
 		},
-		
+
 		hide: function(){
 
 			clearTimeout(this.vars.timer);
@@ -61,12 +61,12 @@
 
 		BX.merge(this, {
 			opts: { // default options
-				eventTimeout: 	150,
-				scrollError: 	30
+				eventTimeout:	150,
+				scrollError:	30
 			},
 			vars: {
-				prevScrollTop: 	0,
-				atBottom: 		false
+				prevScrollTop:	0,
+				atBottom:		false
 			},
 			sys: {
 				code: 'scrollpanenative'
@@ -98,8 +98,27 @@
 			BX.bind(sc.container, 'scroll', function(){
 				ctx.checkScrollState();
 			});
-			BX.bind(sc.container, 'mousewheel', function(){
-				ctx.checkScrollState();
+			BX.bind(sc.container, 'mousewheel', function(e){
+
+				var wData = BX.getWheelData(e);
+				var jam = false;
+
+				var scrollTop = ctx.ctrls.container.scrollTop;
+				var scrollHeight = ctx.ctrls.container.scrollHeight;
+				var clientHeight = ctx.ctrls.container.clientHeight;
+
+				if(wData > 0 && scrollTop == 0) // move up
+					jam = true;
+
+				if(wData < 0 && (scrollTop >= scrollHeight - clientHeight)) // move down
+					jam = true;
+
+				if(jam){
+					BX.PreventDefault(e);
+					BX.eventCancelBubble(e);
+					return false;
+				}
+
 			});
 			BX.bind(window, 'resize', function(){
 				ctx.checkScrollState();
@@ -194,9 +213,9 @@
 
 		BX.merge(this, {
 			opts: { // default options
-				source: 					'/somewhere.php',
-				pageSize: 					5, // amount of variants to show
-				paginatedRequest: 			true // if true, parameters for server-side paginator will be sent in the request
+				source:						'/somewhere.php',
+				pageSize:					5, // amount of variants to show
+				paginatedRequest:			true // if true, parameters for server-side paginator will be sent in the request
 			},
 			vars: { // significant variables
 				lastPage: 0,
@@ -256,7 +275,7 @@
 
 					}else
 						ctx.showError({errors: result.errors, type: 'server-logic', options: parameters.options});
-					
+
 					if(BX.type.isFunction(parameters.callbacks.onComplete))
 						parameters.callbacks.onComplete.call(ctx);
 
@@ -273,7 +292,7 @@
 						parameters.callbacks.onComplete.call(ctx);
 
 					if(BX.type.isFunction(parameters.callbacks.onError))
-						parameters.callbacks.onError.call(ctx);
+						parameters.callbacks.onError.apply(ctx, [type, e]);
 				}
 
 			});
@@ -287,7 +306,9 @@
 			} : {};
 		},
 
+		// show internal or ajax call errors, but not logic errors (like "not found or smth")
 		showError: function(parameters){
+			BX.debug(parameters);
 		},
 
 		// this function is called just before request send, i.e. it`s look like a 'query proxy'
@@ -378,33 +399,48 @@
 		};
 	};
 
-	BX.util.wrapSubstring = function(haystack, search, wrapTagName, esapeParts){
+	BX.util.wrapSubstring = function(haystack, chunks, wrapTagName, escapeParts){
 
-		search = search.toString().toLowerCase();
-		if(search.length == 0)
-			return esapeParts ? BX.util.htmlspecialchars(haystack) : haystack;
+		if(haystack.length == 0)
+			return '';
 
-		var i = haystack.toLowerCase().indexOf(search);
-		if(i >= 0){
-
-			var left = haystack.slice(0, i);
-			var middle = haystack.slice(i, i + search.length);
-			var right = haystack.slice(i + search.length, haystack.length);
-
-			if(esapeParts){
-				left = BX.util.htmlspecialchars(left);
-				middle = BX.util.htmlspecialchars(middle);
-				right = BX.util.htmlspecialchars(right);
-			}
-
-			return left + '<'+wrapTagName+'>'+middle+'</'+wrapTagName+'>' + right;
+		if(escapeParts){
+			haystack = BX.util.htmlspecialchars(haystack);
+			wrapTagName = BX.util.htmlspecialchars(wrapTagName);
 		}
 
-		return esapeParts ? BX.util.htmlspecialchars(haystack) : haystack;
+		if(chunks.length == 0)
+			return haystack;
+
+		var scan = '';
+		var search = '';
+		var searched = {};
+		for(var k in chunks){
+
+			search = chunks[k].toString().toLowerCase();
+			scan = haystack.toLowerCase();
+
+			if(typeof searched[search] != 'undefined')
+				continue;
+
+			var i = scan.indexOf(search);
+
+			if(i >= 0){
+				var left = haystack.slice(0, i);
+				var middle = haystack.slice(i, i + search.length);
+				var right = haystack.slice(i + search.length, haystack.length);
+
+				haystack = left + '#A#'+middle+'#B#' + right;
+			}
+
+			searched[search] = true;
+		}
+
+		return haystack.replace(/#A#/g, '<'+wrapTagName+'>').replace(/#B#/g, '</'+wrapTagName+'>');
 	}
 
 	BX.util.getObjectLength = function(obj){
-		
+
 		if(typeof obj != 'object')
 			return 0;
 

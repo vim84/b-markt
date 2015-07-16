@@ -131,6 +131,8 @@ BX.merge(BX.iterator.prototype, {
 
 		var request = 		BX.clone(sv.fields);
 		request.step = 		sv.step;
+		request.csrf = 		BX.bitrix_sessid();
+
 		sv.lastRequest = 	request;
 
 		sv.ajaxTag = BX.ajax({

@@ -22,16 +22,16 @@ BX.Finder = function(container, context, panels, lang)
 	BX.Finder.disabledElement = [];
 	BX.Finder.searchTimeout = null;
 	BX.Finder.loadPlace = {};
-	
+
 	if (BX.Finder.context == 'access')
-	{	
+	{
 		BX.Finder.elements = BX.findChildren(container, { className : "bx-finder-element" }, true);
 		for (var i = 0; i < BX.Finder.elements.length; i++)
 		{
 			BX.Finder.mapElements[i] = BX.Finder.elements[i].getAttribute('rel');
 			BX.Finder.onDisableItem(i);
 		}
-			
+
 		BX.addCustomEvent(BX.Access, "onSelectProvider", BX.Finder.onSelectProvider);
 		BX.addCustomEvent(BX.Access, "onDeleteItem", BX.Finder.onDeleteItem);
 		BX.addCustomEvent(BX.Access, "onAfterPopupShow", BX.Finder.onAfterPopupShow);
@@ -93,7 +93,7 @@ BX.Finder.onAddItem = function(provider, type, element)
 	{
 		elementTextBox = BX.findChild(element, { className : "bx-finder-company-department-check-text" }, true);
 	}
-	
+
 	if (type == 'structure-checkbox')
 		elementText = elementTextBox.getAttribute('rel');
 	else
@@ -123,7 +123,7 @@ BX.Finder.onDeleteItem = function(arParams)
 BX.Finder.onAfterPopupShow = function()
 {
 	if (BX.Finder.context == 'access')
-	{			
+	{
 		for (var i = 0; i < BX.Finder.mapElements.length; i++)
 			BX.Finder.onDisableItem(i);
 
@@ -174,7 +174,7 @@ BX.Finder.onUnDisableItem = function()
 	{
 		if (typeof(BX.Finder.disabledId[i]) == 'undefined')
 			continue;
-			
+
 		if (BX.Finder.context == 'access' && !BX.Access.showSelected && BX.Access.obAlreadySelected[BX.Finder.disabledId[i]])
 			continue;
 
@@ -189,16 +189,16 @@ BX.Finder.onUnDisableItem = function()
 BX.Finder.SwitchTab = function(currentTab, bSearchFocus)
 {
 	var tabsContent = BX.findChildren(
-		BX.findChild(currentTab.parentNode.parentNode, { tagName : "div", className : "bx-finder-box-tabs-content"}),
+		BX.findChild(currentTab.parentNode.parentNode, { tagName : "td", className : "bx-finder-box-tabs-content-cell"}, true),
 		{ tagName : "div" }
 	);
 
 	if (!tabsContent)
 		return false;
-		
+
 	if (bSearchFocus !== false)
 		bSearchFocus = true;
-		
+
 	var tabIndex = 0;
 	var tabs = BX.findChildren(currentTab.parentNode, { tagName : "a" });
 	for (var i = 0; i < tabs.length; i++)
@@ -233,9 +233,9 @@ BX.Finder.OpenCompanyDepartment = function(provider, id, department)
 		BX.toggleClass(nextDiv, "bx-finder-company-department-children-opened");
 
 	if (!BX.Finder.loadPlace[id])
-	{	
+	{
 		BX.Finder.loadPlace[id] = BX.findChild(nextDiv, { className : "bx-finder-company-department-employees" });
-			
+
 		if (BX.Finder.context == 'access')
 			var ajaxSendUrl = '/bitrix/tools/access_dialog.php';
 		else
@@ -251,20 +251,20 @@ BX.Finder.OpenCompanyDepartment = function(provider, id, department)
 			data: {'mode': 'ajax', 'action' : 'structure-item', 'provider' : provider, 'item' : id, 'sessid': BX.bitrix_sessid(), 'site_id': BX.message('SITE_ID')||''},
 			onsuccess: function(data)	{
 				BX.Finder.loadPlace[id].innerHTML = data;
-							
+
 				newElements = BX.findChildren(BX.Finder.loadPlace[id], { className : "bx-finder-element" }, true);
 				for (var i = 0; i < newElements.length; i++)
-				{	
+				{
 					BX.Finder.elements.push(newElements[i]);
 					BX.Finder.mapElements.push(newElements[i].getAttribute('rel'));
 					BX.Finder.onDisableItem(BX.Finder.mapElements.length-1);
 				}
-				
+
 			},
-			onfailure: function(data)	{} 
+			onfailure: function(data)	{}
 		});
 	}
-	
+
 	return false;
 }
 
@@ -275,7 +275,7 @@ BX.Finder.OpenItemFolder = function(department)
 	var nextDiv = BX.findNextSibling(department, { tagName : "div"} );
 	if (BX.hasClass(nextDiv, "bx-finder-company-department-children"))
 		BX.toggleClass(nextDiv, "bx-finder-company-department-children-opened");
-	
+
 	return false;
 }
 
@@ -284,10 +284,10 @@ BX.Finder.Search = function(element, provider)
 
 	if (!BX.Finder.searchTab[provider])
 		BX.Finder.searchTab[provider] = BX.findChild(element.parentNode.parentNode, { className : "bx-finder-box-tab-search" }, true);
-		
+
 	BX.Finder.SwitchTab(BX.Finder.searchTab[provider], false);
-	
-	
+
+
 	if (!BX.Finder.searchPanel[provider])
 		BX.Finder.searchPanel[provider] = BX.findChild(element.parentNode.parentNode, { className : "bx-finder-box-tab-content-selected" }, true);
 
@@ -298,7 +298,7 @@ BX.Finder.Search = function(element, provider)
 		var ajaxSendUrl = location.href.split('#');
 		ajaxSendUrl = ajaxSendUrl[0];
 	}
-	
+
 	clearTimeout(BX.Finder.searchTimeout);
 	if (element.value != '')
 	{
@@ -328,10 +328,10 @@ BX.Finder.Search = function(element, provider)
 					else
 					{
 						BX.Finder.searchPanel[provider].innerHTML = data;
-						
+
 						newElements = BX.findChildren(BX.Finder.searchPanel[provider], { className : "bx-finder-element" }, true);
 						for (var i = 0; i < newElements.length; i++)
-						{	
+						{
 							BX.Finder.elements.push(newElements[i]);
 							BX.Finder.mapElements.push(newElements[i].getAttribute('rel'));
 							BX.Finder.onDisableItem(BX.Finder.mapElements.length-1);
@@ -339,7 +339,7 @@ BX.Finder.Search = function(element, provider)
 					}
 					clearTimeout(BX.Finder.searchTimeout);
 				},
-				onfailure: function(data)	{} 
+				onfailure: function(data)	{}
 			});
 		}, 500);
 	}

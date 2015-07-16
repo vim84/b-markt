@@ -22,9 +22,16 @@ if ($ex = $APPLICATION->GetException())
 }
 
 IncludeModuleLangFile(__FILE__);
-
-if (!empty($return_url) && strtolower(substr($return_url, strlen($APPLICATION->GetCurPage())))==strtolower($APPLICATION->GetCurPage()))
-	$return_url = "";
+$returnUrl = '';
+if (!empty($_REQUEST['return_url']))
+{
+	$currentUrl = $APPLICATION->GetCurPage();
+	if (strtolower(substr($_REQUEST['return_url'], strlen($currentUrl))) != strtolower($currentUrl))
+	{
+		$returnUrl = $_REQUEST['return_url'];
+	}
+	unset($currentUrl);
+}
 
 $aTabs = array(
 	array("DIV" => "edit1", "TAB" => GetMessage("CDEN_TAB_DISCOUNT"), "ICON" => "catalog", "TITLE" => GetMessage("CDEN_TAB_DISCOUNT_DESCR")),
@@ -36,14 +43,14 @@ $aTabs = array(
 
 $tabControl = new CAdminForm("fdiscount_edit", $aTabs);
 
-$arCouponTypeList = CCatalogDiscountCoupon::GetCoupontTypes(true);
+$arCouponTypeList = Catalog\DiscountCouponTable::getCouponTypes(true);
 
 $errorMessage = "";
 $bVarsFromForm = false;
 $boolCondParseError = false;
 $boolCouponAdd = false;
 
-$ID = intval($ID);
+$ID = (isset($_REQUEST['ID']) ? (int)$_REQUEST['ID'] : 0);
 
 $boolCopy = false;
 if (0 < $ID)
@@ -58,6 +65,7 @@ if (
 	&& isset($_POST['Update']) && (string)$_POST['Update'] == 'Y'
 )
 {
+	$CONDITIONS = '';
 	$obCond2 = new CCatalogCondTree();
 
 	$boolCond = $obCond2->Init(BT_COND_MODE_PARSE, BT_COND_BUILD_CATALOG, array());
@@ -179,7 +187,8 @@ if (
 
 	if (!$bVarsFromForm)
 	{
-		$DB->StartTransaction();
+		$conn = Main\Application::getConnection();
+		$conn->startTransaction();
 
 		if ($ID > 0 && !$boolCopy)
 		{
@@ -198,11 +207,11 @@ if (
 			else
 				$errorMessage .= (0 < $ID ? str_replace('#ID#', $ID, GetMessage('BT_CAT_DISCOUNT_EDIT_ERR_UPDATE')) : GetMessage('BT_CAT_DISCOUNT_EDIT_ERR_ADD'))."<br>";
 			$bVarsFromForm = true;
-			$DB->Rollback();
+			$conn->rollbackTransaction();
 		}
 		else
 		{
-			$DB->Commit();
+			$conn->commitTransaction();
 			if ($boolCouponAdd)
 			{
 				$i = 0;
@@ -227,16 +236,16 @@ if (
 
 			if (!$bVarsFromForm)
 			{
-				if (strlen($apply)<=0)
+				if (empty($_POST['apply']))
 				{
-					if (!empty($return_url))
-						LocalRedirect($return_url);
+					if (!empty($returnUrl))
+						LocalRedirect($returnUrl);
 					else
-						LocalRedirect("/bitrix/admin/cat_discount_admin.php?lang=".LANGUAGE_ID.GetFilterParams("filter_", false));
+						LocalRedirect('/bitrix/admin/cat_discount_admin.php?lang='.LANGUAGE_ID.GetFilterParams('filter_', false));
 				}
 				else
 				{
-					LocalRedirect("/bitrix/admin/cat_discount_edit.php?lang=".LANGUAGE_ID."&ID=".$ID.GetFilterParams("filter_", false).'&'.$tabControl->ActiveTabParam());
+					LocalRedirect('/bitrix/admin/cat_discount_edit.php?lang='.LANGUAGE_ID.'&ID='.$ID.GetFilterParams('filter_', false).'&'.$tabControl->ActiveTabParam());
 				}
 			}
 		}
@@ -263,7 +272,7 @@ $arDefaultValues = array(
 );
 $arDefCoupons = array(
 	'COUPON_ADD' => 'N',
-	'COUPON_TYPE' => CCatalogDiscountCoupon::TYPE_ONE_TIME,
+	'COUPON_TYPE' => Catalog\DiscountCouponTable::TYPE_ONE_ROW,
 	'COUPON_COUNT' => '',
 );
 
@@ -456,9 +465,9 @@ $tabControl->BeginEpilogContent();
 <input type="hidden" name="lang" value="<?echo LANGUAGE_ID ?>">
 <input type="hidden" name="ID" value="<?echo $ID ?>">
 <? echo bitrix_sessid_post(); ?><?
-if (!empty($return_url))
+if (!empty($returnUrl))
 {
-	?><input type="hidden" name="return_url" value="<? echo htmlspecialcharsbx($return_url); ?>"><?
+	?><input type="hidden" name="return_url" value="<? echo htmlspecialcharsbx($returnUrl); ?>"><?
 }
 if ($boolCopy)
 {
@@ -627,8 +636,7 @@ $tabControl->BeginNextFormTab();
 		<td valign="top" width="60%">
 			<select name="CAT_IDS[]" multiple size="8"><?
 				$priceTypeIterator = Catalog\GroupTable::getList(array(
-					'select' => array('ID', 'NAME', 'LANG_NAME' => 'LANG.NAME'),
-					'filter' => array('LANG.LANG' => LANGUAGE_ID),
+					'select' => array('ID', 'NAME', 'LANG_NAME' => 'CURRENT_LANG.NAME'),
 					'order' => array('NAME' => 'ASC', 'ID' => 'ASC')
 				));
 				while ($priceType = $priceTypeIterator->fetch())
@@ -715,8 +723,6 @@ $arButtonsParams = array(
 $tabControl->Buttons($arButtonsParams);
 
 $tabControl->Show();
-
-$tabControl->ShowWarnings("fdiscount_edit", $obMessages);
 ?>
 <script type="text/javascript">
 BX.ready(function(){
@@ -743,4 +749,4 @@ BX.ready(function(){
 	}
 });
 </script>
-<?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");?>
+<?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");

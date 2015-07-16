@@ -10,4 +10,8 @@ $MESS["CC_BLEE_ACCESS_DENIED_STATUS"] = "У вас нет прав на реда
 $MESS["CC_BLEE_UPPER_LEVEL"] = "Верхний уровень";
 $MESS["CC_BLEE_SONET_LOG_TITLE_TEMPLATE"] = "Добавлен или изменен элемент списка \"#TITLE#\"";
 $MESS["CC_BLEE_SONET_DEL_LOG_TITLE_TEMPLATE"] = "Удален элемент списка \"#TITLE#\"";
+$MESS["CC_BLEE_DELETE_ERROR"] = "Ошибка удаления.";
+$MESS["CC_BLEE_IS_CONSTANTS_TUNED"] = "Необходимо настроить константы бизнес процесса.";
+$MESS["CC_BLEE_IS_CONSTANTS_TUNED_NEW"] = "Необходимо настроить параметры Бизнес-процесса.";
+$MESS["CC_BLEE_VALIDATE_FIELD_ERROR"] = "Значение поля '#NAME#' не верно";
 ?>

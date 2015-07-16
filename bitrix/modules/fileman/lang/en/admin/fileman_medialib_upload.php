@@ -23,4 +23,9 @@ $MESS["MEDIALIB_UPLOADER_EDIT"] = "Edit";
 $MESS["MEDIALIB_UPLOADER_TURN"] = "Rotate clockwise";
 $MESS["MEDIALIB_UPLOADER_DEL"] = "Delete";
 $MESS["FM_ML"] = "Media Library";
+$MESS["MEDIALIB_UPLOADER_TITLE1"] = "HTML5 uploader";
+$MESS["MEDIALIB_UPLOADER_TITLE2"] = "Java uploader";
+$MESS["MEDIALIB_UPLOADER_INTO"] = "Upload to collection";
+$MESS["FM_ML_UPL_NOTICE_CYR"] = "The file name can include Latim letters, numbers, hyphens, dots and underscores. Other characters will be stripped out.";
+$MESS["MEDIALIB_UPLOADER_COUNT2"] = "Files selected";
 ?>

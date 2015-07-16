@@ -9,5 +9,5 @@ $MESS["authprov_sg_panel_search_text"] = "Введите название гру
 $MESS["authprov_sg_name"] = "Группы социальной сети";
 $MESS["authprov_sg_name_out"] = "Группа социальной сети";
 $MESS["authprov_sg_socnet_group"] = "Группа соцсети";
-$MESS["authprov_sg_current"] = "Текущая группа";
+$MESS["authprov_sg_current"] = "Текущая";
 ?>

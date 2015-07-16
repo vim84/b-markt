@@ -15,7 +15,7 @@ $MESS ['BPT_ST_INIT'] = "Вход в статус";
 $MESS ['BPT_ST_SUBJECT'] = "Необходимо утвердить документ \"{=Document:NAME}\"";
 $MESS ['BPT_ST_TEXT'] = "Вы должны утвердить или отклонить документ \"{=Document:NAME}\".
  
-Для утверждения документа перейдите по ссылке http://#HTTP_HOST##TASK_URL#
+Для утверждения документа перейдите по ссылке #BASE_HREF##TASK_URL#
  
 Содержание документа:
 {=Document:DETAIL_TEXT}

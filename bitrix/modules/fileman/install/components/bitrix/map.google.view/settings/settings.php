@@ -73,7 +73,7 @@ $APPLICATION->IncludeComponent('bitrix:map.google.system', '', array(
 ), false, array('HIDE_ICONS' => 'Y'));
 ?>
 </div><div class="bx-google-map-address-search" id="bx_google_map_address_search" style="visibility: hidden; ">
-	<?echo GetMessage('MYMV_SET_ADDRESS_SEARCH')?>: <input type="text" name="address" value="" style="width: 390px;" onkeypress="jsGoogleCESearch.setTypingStarted(this)" autocomplete="off" />
+	<?echo GetMessage('MYMV_SET_ADDRESS_SEARCH')?>: <input type="text" name="address" value="" style="width: 380px;" onkeyup="jsGoogleCESearch.setTypingStarted(this)" autocomplete="off" />
 </div><div class="bx-google-map-controls" id="bx_google_map_controls" style="margin-left: 510px; visibility: hidden;">
 	<div class="bx-google-map-controls-group">
 		<b><?echo GetMessage('MYMV_SET_START_POS')?></b><br />
@@ -102,13 +102,13 @@ if (window.google && window.google.maps && window.google.maps.Map)
 }
 else
 {
-(function BXWaitForMap(){if(null==window.GLOBAL_arMapObjects)return;if(window.GLOBAL_arMapObjects['system_view_edit']){jsGoogleCE.init();}else{setTimeout(BXWaitForMap,300);}})();
+(function BXWaitForMap(){if(null==window.GLOBAL_arMapObjects)return;if(window.GLOBAL_arMapObjects['system_view_edit'] && window.google && window.google.maps && window.google.maps.event){jsGoogleCE.init();}else{setTimeout(BXWaitForMap,300);}})();
 }
 </script>
 <?
 $obJSPopup->StartButtons();
 ?>
-<input type="submit" value="<?echo GetMessage('MYMV_SET_SUBMIT')?>" onclick="return jsGoogleCE.__saveChanges();"/>
+<input type="submit" value="<?echo GetMessage('MYMV_SET_SUBMIT')?>" onclick="return jsGoogleCE.__saveChanges();" class="adm-btn-save"/>
 <?
 $obJSPopup->ShowStandardButtons(array('cancel'));
 $obJSPopup->EndButtons();

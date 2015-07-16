@@ -455,6 +455,34 @@ class CIBlockCMLImport
 		return $this->arEnumCache[$PROP_ID][$XML_ID];
 	}
 
+	function GetSectionEnumByXML_ID($FIELD_ID, $XML_ID)
+	{
+		if(strlen($XML_ID) <= 0)
+			return "";
+
+		$cacheId = "E".$FIELD_ID;
+		if(!isset($this->arEnumCache[$cacheId]))
+			$this->arEnumCache[$cacheId] = array();
+
+		if(!isset($this->arEnumCache[$cacheId][$XML_ID]))
+		{
+			$obEnum = new CUserFieldEnum;
+			$rsEnum = $obEnum->GetList(array(), array(
+				"USER_FIELD_ID" => $FIELD_ID,
+				"XML_ID" => $XML_ID,
+			));
+			if($arEnum = $rsEnum->Fetch())
+				$this->arEnumCache[$cacheId][$XML_ID] = $arEnum["ID"];
+			else
+				$this->arEnumCache[$cacheId][$XML_ID] = false;
+		}
+
+		if ($this->arEnumCache[$cacheId][$XML_ID])
+			return $this->arEnumCache[$cacheId][$XML_ID];
+		else
+			return $XML_ID;
+	}
+
 	function GetPropertyByXML_ID($IBLOCK_ID, $XML_ID)
 	{
 		$obProperty = new CIBlockProperty;
@@ -756,6 +784,8 @@ class CIBlockCMLImport
 					$arIBlock["DETAIL_PAGE_URL"] = $ar["VALUE"];
 				elseif($ar["NAME"] == $this->mess["IBLOCK_XML2_BX_SECTION_URL"])
 					$arIBlock["SECTION_PAGE_URL"] = $ar["VALUE"];
+				elseif($ar["NAME"] == $this->mess["IBLOCK_XML2_BX_CANONICAL_URL"])
+					$arIBlock["CANONICAL_PAGE_URL"] = $ar["VALUE"];
 				elseif($ar["NAME"] == $this->mess["IBLOCK_XML2_BX_INDEX_ELEMENTS"])
 					$arIBlock["INDEX_ELEMENT"] = ($ar["VALUE"]=="true") || intval($ar["VALUE"])? "Y": "N";
 				elseif($ar["NAME"] == $this->mess["IBLOCK_XML2_BX_INDEX_SECTIONS"])
@@ -1465,6 +1495,7 @@ class CIBlockCMLImport
 		);
 		while($ar = $rs->Fetch())
 		{
+			$XML_ENUM_PARENT = array();
 			$arField = array(
 			);
 			$rsP = $this->_xml_file->GetList(
@@ -1498,6 +1529,8 @@ class CIBlockCMLImport
 					$arField["IS_SEARCHABLE"] = ($arP["VALUE"]=="true") || intval($arP["VALUE"])? "Y": "N";
 				elseif($arP["NAME"] == $this->mess["IBLOCK_XML2_BX_SETTINGS"])
 					$arField["SETTINGS"] = unserialize($arP["VALUE"]);
+				elseif($arP["NAME"]==$this->mess["IBLOCK_XML2_CHOICE_VALUES"])
+					$XML_ENUM_PARENT = $arP["ID"];
 			}
 
 			$rsUserFields = $obTypeManager->GetList(array(), array("ENTITY_ID"=> "IBLOCK_".$IBLOCK_ID."_SECTION", "XML_ID"=>$arField["XML_ID"]));
@@ -1549,6 +1582,25 @@ class CIBlockCMLImport
 						));
 					else
 						return false;
+				}
+			}
+
+			if ($XML_ENUM_PARENT)
+			{
+				$rsE = $this->_xml_file->GetList(
+					array("ID" => "asc"),
+					array("PARENT_ID" => $XML_ENUM_PARENT)
+				);
+				while($arE = $rsE->Fetch())
+				{
+					if(isset($arE["VALUE_CLOB"]))
+						$arE["VALUE"] = $arE["VALUE_CLOB"];
+					$arEnumXmlNodes[] = $arE;
+				}
+
+				if (!empty($arEnumXmlNodes))
+				{
+					$this->ImportSectionPropertyEnum($arField["ID"], $arEnumXmlNodes);
 				}
 			}
 
@@ -1906,7 +1958,7 @@ class CIBlockCMLImport
 		{
 			$hlblock = Bitrix\Highloadblock\HighloadBlockTable::getList(array(
 				"filter" => array(
-					"TABLE_NAME" => $tableName,
+					"=TABLE_NAME" => $tableName,
 				)))->fetch();
 			if (!$hlblock)
 			{
@@ -1963,7 +2015,7 @@ class CIBlockCMLImport
 
 		$hlblock = Bitrix\Highloadblock\HighloadBlockTable::getList(array(
 			"filter" => array(
-				"TABLE_NAME" => $arProperty["USER_TYPE_SETTINGS"]["TABLE_NAME"],
+				"=TABLE_NAME" => $arProperty["USER_TYPE_SETTINGS"]["TABLE_NAME"],
 			)))->fetch();
 
 		$entity = Bitrix\Highloadblock\HighloadBlockTable::compileEntity($hlblock);
@@ -2016,6 +2068,76 @@ class CIBlockCMLImport
 		return true;
 	}
 
+	function ImportSectionPropertyEnum($FIELD_ID, $arEnumXmlNodes)
+	{
+		$arEnumMap = array();
+		$arEnumValues = array();
+		$obEnum = new CUserFieldEnum;
+		$rsEnum = $obEnum->GetList(array(), array(
+			"USER_FIELD_ID" => $FIELD_ID,
+		));
+		while($arEnum = $rsEnum->Fetch())
+		{
+			$arEnumValues[$arEnum["ID"]] = $arEnum;
+			$arEnumMap[$arEnum["XML_ID"]] = &$arEnumValues[$arEnum["ID"]];
+		}
+
+		$i = 0;
+		foreach($arEnumXmlNodes as $arE)
+		{
+			if($arE["NAME"] == $this->mess["IBLOCK_XML2_CHOICE"])
+			{
+				$arE = $this->_xml_file->GetAllChildrenArray($arE);
+				if(isset($arE[$this->mess["IBLOCK_XML2_ID"]]))
+				{
+					$xml_id = $arE[$this->mess["IBLOCK_XML2_ID"]];
+					if(!array_key_exists($xml_id, $arEnumMap))
+					{
+						$arEnumValues["n".$i] = array();
+						$arEnumMap[$xml_id] = &$arEnumValues["n".$i];
+						$i++;
+					}
+					$arEnumMap[$xml_id]["CML2_EXPORT_FLAG"] = true;
+					$arEnumMap[$xml_id]["XML_ID"] = $xml_id;
+					if(isset($arE[$this->mess["IBLOCK_XML2_VALUE"]]))
+						$arEnumMap[$xml_id]["VALUE"] = $arE[$this->mess["IBLOCK_XML2_VALUE"]];
+					if(isset($arE[$this->mess["IBLOCK_XML2_BY_DEFAULT"]]))
+						$arEnumMap[$xml_id]["DEF"] = ($arE[$this->mess["IBLOCK_XML2_BY_DEFAULT"]]=="true") || intval($arE[$this->mess["IBLOCK_XML2_BY_DEFAULT"]])? "Y": "N";
+					if(isset($arE[$this->mess["IBLOCK_XML2_SORT"]]))
+						$arEnumMap[$xml_id]["SORT"] = intval($arE[$this->mess["IBLOCK_XML2_SORT"]]);
+				}
+			}
+		}
+
+		$bUpdateOnly = array_key_exists("bUpdateOnly", $this->next_step) && $this->next_step["bUpdateOnly"];
+		$sort = 100;
+
+		foreach($arEnumValues as $id=>$arEnum)
+		{
+			if(!isset($arEnum["CML2_EXPORT_FLAG"]))
+			{
+				//Delete value only when full exchange happened
+				if(!$bUpdateOnly)
+					$arEnumValues[$id]["VALUE"] = "";
+			}
+			elseif(isset($arEnum["SORT"]))
+			{
+				if($arEnum["SORT"] > $sort)
+					$sort = $arEnum["SORT"] + 100;
+			}
+			else
+			{
+				$arEnumValues[$id]["SORT"] = $sort;
+				$sort += 100;
+			}
+		}
+
+		$obEnum = new CUserFieldEnum;
+		$res = $obEnum->SetEnumValues($FIELD_ID, $arEnumValues);
+
+		return true;
+	}
+
 	function ImportSectionProperties($XML_SECTION_PROPERTIES, $IBLOCK_ID, $SECTION_ID = 0)
 	{
 		if($SECTION_ID == 0)
@@ -2050,6 +2172,8 @@ class CIBlockCMLImport
 					$arLink["DISPLAY_TYPE"] = $arP["VALUE"];
 				elseif($arP["NAME"]==$this->mess["IBLOCK_XML2_SMART_FILTER_DISPLAY_EXPANDED"])
 					$arLink["DISPLAY_EXPANDED"] = ($arP["VALUE"]=="true") || intval($arP["VALUE"])? "Y": "N";
+				elseif($arP["NAME"]==$this->mess["IBLOCK_XML2_SMART_FILTER_HINT"])
+					$arLink["FILTER_HINT"] = $arP["VALUE"];
 				elseif($arP["NAME"]==$this->mess["IBLOCK_XML2_BX_LINKED_IBLOCK"])
 					$iblockId = $this->GetIBlockByXML_ID($arP["VALUE"]);
 				elseif($arP["NAME"]==$this->mess["IBLOCK_XML2_GROUP"] && $iblockId > 0)
@@ -2508,8 +2632,11 @@ class CIBlockCMLImport
 	{
 		static $cacheValue = array();
 		static $cacheDescr = array();
+		$xmlValue = (int)$xmlValue;
 		if (!isset($cacheValue[$xmlValue]))
 		{
+			$cacheValue[$xmlValue] = $xmlValue;
+			$cacheDescr[$xmlValue] = false;
 			if ($xmlValue > 0)
 			{
 				$rsBaseUnit = CCatalogMeasure::GetList(array(), array("CODE" => $xmlValue));
@@ -2519,16 +2646,6 @@ class CIBlockCMLImport
 					$cacheValue[$xmlValue] = $arIDUnit["SYMBOL_RUS"];
 					$cacheDescr[$xmlValue] = $arIDUnit["ID"];
 				}
-				else
-				{
-					$cacheValue[$xmlValue] = $xmlValue;
-					$cacheDescr[$xmlValue] = false;
-				}
-			}
-			else
-			{
-				$cacheValue[$xmlValue] = $xmlValue;
-				$cacheDescr[$xmlValue] = false;
 			}
 		}
 
@@ -3299,6 +3416,22 @@ class CIBlockCMLImport
 						unset($arElement["CODE"]);
 					else
 						$arElement["CODE"] = $this->CheckElementCode($this->next_step["IBLOCK_ID"], $arElement["CODE"]);
+				}
+
+				//Check if detail picture hasn't been changed
+				if (
+					isset($arElement["DETAIL_PICTURE"])
+					&& !isset($arElement["PREVIEW_PICTURE"])
+					&& is_array($arElement["DETAIL_PICTURE"])
+					&& isset($arElement["DETAIL_PICTURE"]["external_id"])
+					&& $this->arElementFilesId
+					&& $this->arElementFilesId["DETAIL_PICTURE"]
+					&& isset($this->arElementFiles[$this->arElementFilesId["DETAIL_PICTURE"][0]])
+					&& $this->arElementFiles[$this->arElementFilesId["DETAIL_PICTURE"][0]]["EXTERNAL_ID"] === $arElement["DETAIL_PICTURE"]["external_id"]
+					&& $this->arElementFiles[$this->arElementFilesId["DETAIL_PICTURE"][0]]["DESCRIPTION"] === $arElement["DETAIL_PICTURE"]["description"]
+				)
+				{
+					unset($arElement["DETAIL_PICTURE"]);
 				}
 
 				$obElement->Update($arDBElement["ID"], $arElement, $bWF, true, $this->iblock_resize);
@@ -4126,25 +4259,25 @@ class CIBlockCMLImport
 					&& array_key_exists($arXMLProp[$this->mess["IBLOCK_XML2_ID"]], $arUserFields)
 				)
 				{
-					$FIELD_NAME = $arUserFields[$arXMLProp[$this->mess["IBLOCK_XML2_ID"]]]["FIELD_NAME"];
-					$MULTIPLE = $arUserFields[$arXMLProp[$this->mess["IBLOCK_XML2_ID"]]]["MULTIPLE"];
-					$IS_FILE = $arUserFields[$arXMLProp[$this->mess["IBLOCK_XML2_ID"]]]["USER_TYPE"]["BASE_TYPE"] === "file";
-
+					$arUserField = $arUserFields[$arXMLProp[$this->mess["IBLOCK_XML2_ID"]]];
 					unset($arXMLProp[$this->mess["IBLOCK_XML2_ID"]]);
+
 					$arProp = array();
 					$i = 0;
 					foreach($arXMLProp as $value)
 					{
-						if($IS_FILE)
+						if($arUserField["USER_TYPE"]["BASE_TYPE"] === "file")
 							$arProp["n".($i++)] = $this->MakeFileArray($value);
+						elseif($arUserField["USER_TYPE"]["BASE_TYPE"] === "enum")
+							$arProp["n".($i++)] = $this->GetSectionEnumByXML_ID($arUserField["ID"], $value);
 						else
 							$arProp["n".($i++)] = $value;
 					}
 
-					if($MULTIPLE == "N")
-						$arSection[$FIELD_NAME] = array_pop($arProp);
+					if($arUserField["MULTIPLE"] == "N")
+						$arSection[$arUserField["FIELD_NAME"]] = array_pop($arProp);
 					else
-						$arSection[$FIELD_NAME] = $arProp;
+						$arSection[$arUserField["FIELD_NAME"]] = $arProp;
 				}
 			}
 		}
@@ -4188,10 +4321,14 @@ class CIBlockCMLImport
 							)
 							{
 								if($arField2["MULTIPLE"] == "Y" && is_array($arField2["VALUE"]))
+								{
 									foreach($arField2["VALUE"] as $old_file_id)
 										$arSection[$arField2["FIELD_NAME"]][] = array("del"=>true,"old_id"=>$old_file_id);
+								}
 								elseif($arField2["MULTIPLE"] == "N" && $arField2["VALUE"] > 0)
+								{
 									$arSection[$arField2["FIELD_NAME"]]["old_id"] = $arField2["VALUE"];
+								}
 							}
 						}
 						break;
@@ -4603,14 +4740,31 @@ class CIBlockCMLExport
 		return "";
 	}
 
+	function ExportEnum($arUserField, $value)
+	{
+		static $cache = array();
+		if (!isset($cache[$value]))
+		{
+			$obEnum = new CUserFieldEnum;
+			$rsEnum = $obEnum->GetList(array(), array(
+				"USER_FIELD_ID" => $arUserField["ID"],
+				"ID" => $value,
+			));
+			$cache[$value] = $rsEnum->Fetch();
+		}
+		return $cache[$value]["XML_ID"];
+	}
+
 	function formatXMLNode($level, $tagName, $value)
 	{
 		if(is_array($value))
 		{
 			$xmlValue = "";
 			foreach($value as $k => $v)
+			{
 				if($k)
 					$xmlValue .= "\n".rtrim($this->formatXMLNode($level+1, $k, $v), "\n");
+			}
 			$xmlValue .= "\n".str_repeat("\t", $level);
 		}
 		else
@@ -4640,19 +4794,45 @@ class CIBlockCMLExport
 		fwrite($this->fp, "\t\t<".GetMessage("IBLOCK_XML2_GROUPS_PROPERTIES").">\n");
 		foreach($arUserFields as $FIELD_ID => $arField)
 		{
-			fwrite($this->fp, $this->formatXMLNode(3, GetMessage("IBLOCK_XML2_PROPERTY"), array(
-				GetMessage("IBLOCK_XML2_ID") => $arField["XML_ID"],
-				GetMessage("IBLOCK_XML2_NAME") => $FIELD_ID,
-				GetMessage("IBLOCK_XML2_SORT") => $arField["SORT"],
-				GetMessage("IBLOCK_XML2_MULTIPLE") => $arField["MULTIPLE"] == "Y"? "true": "false",
-				GetMessage("IBLOCK_XML2_BX_PROPERTY_TYPE") => $arField["USER_TYPE_ID"],
-				GetMessage("IBLOCK_XML2_BX_IS_REQUIRED") => $arField["MANDATORY"] == "Y"? "true": "false",
-				GetMessage("IBLOCK_XML2_BX_FILTER") => $arField["SHOW_FILTER"] == "Y"? "true": "false",
-				GetMessage("IBLOCK_XML2_BX_SHOW_IN_LIST") => $arField["SHOW_IN_LIST"] == "Y"? "true": "false",
-				GetMessage("IBLOCK_XML2_BX_EDIT_IN_LIST") => $arField["EDIT_IN_LIST"] == "Y"? "true": "false",
-				GetMessage("IBLOCK_XML2_BX_SEARCH") => $arField["IS_SEARCHABLE"] == "Y"? "true": "false",
-				GetMessage("IBLOCK_XML2_BX_SETTINGS") => serialize($arField["SETTINGS"]),
-			)));
+			fwrite($this->fp, "\t\t\t<".GetMessage("IBLOCK_XML2_PROPERTY").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_ID").">".htmlspecialcharsbx($arField["XML_ID"])."</".GetMessage("IBLOCK_XML2_ID").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_NAME").">".htmlspecialcharsbx($FIELD_ID)."</".GetMessage("IBLOCK_XML2_NAME").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_SORT").">".htmlspecialcharsbx($arField["SORT"])."</".GetMessage("IBLOCK_XML2_SORT").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_MULTIPLE").">".($arField["MULTIPLE"] == "Y"? "true": "false")."</".GetMessage("IBLOCK_XML2_MULTIPLE").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_BX_PROPERTY_TYPE").">".htmlspecialcharsbx($arField["USER_TYPE_ID"])."</".GetMessage("IBLOCK_XML2_BX_PROPERTY_TYPE").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_BX_IS_REQUIRED").">".($arField["MANDATORY"] == "Y"? "true": "false")."</".GetMessage("IBLOCK_XML2_BX_IS_REQUIRED").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_BX_FILTER").">".($arField["SHOW_FILTER"] == "Y"? "true": "false")."</".GetMessage("IBLOCK_XML2_BX_FILTER").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_BX_SHOW_IN_LIST").">".($arField["SHOW_IN_LIST"] == "Y"? "true": "false")."</".GetMessage("IBLOCK_XML2_BX_SHOW_IN_LIST").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_BX_EDIT_IN_LIST").">".($arField["EDIT_IN_LIST"] == "Y"? "true": "false")."</".GetMessage("IBLOCK_XML2_BX_EDIT_IN_LIST").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_BX_SEARCH").">".($arField["IS_SEARCHABLE"] == "Y"? "true": "false")."</".GetMessage("IBLOCK_XML2_BX_SEARCH").">\n");
+			fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_BX_SETTINGS").">".htmlspecialcharsbx(serialize($arField["SETTINGS"]))."</".GetMessage("IBLOCK_XML2_BX_SETTINGS").">\n");
+
+			if (is_callable(array($arField["USER_TYPE"]['CLASS_NAME'], 'getlist')))
+			{
+				fwrite($this->fp, "\t\t\t\t<".GetMessage("IBLOCK_XML2_CHOICE_VALUES").">\n");
+
+				$rsEnum = call_user_func_array(
+					array($arField["USER_TYPE"]["CLASS_NAME"], "getlist"),
+					array(
+						$arField,
+					)
+				);
+				while($arEnum = $rsEnum->GetNext())
+				{
+					fwrite($this->fp,
+						"\t\t\t\t\t<".GetMessage("IBLOCK_XML2_CHOICE").">\n"
+						.$this->formatXMLNode(6, GetMessage("IBLOCK_XML2_ID"), $arEnum["XML_ID"])
+						.$this->formatXMLNode(6, GetMessage("IBLOCK_XML2_VALUE"), $arEnum["VALUE"])
+						.$this->formatXMLNode(6, GetMessage("IBLOCK_XML2_BY_DEFAULT"), ($arEnum["DEF"]=="Y"? "true": "false"))
+						.$this->formatXMLNode(6, GetMessage("IBLOCK_XML2_SORT"), intval($arEnum["SORT"]))
+						."\t\t\t\t\t</".GetMessage("IBLOCK_XML2_CHOICE").">\n"
+					);
+				}
+
+				fwrite($this->fp, "\t\t\t\t</".GetMessage("IBLOCK_XML2_CHOICE_VALUES").">\n");
+			}
+
+			fwrite($this->fp, "\t\t\t</".GetMessage("IBLOCK_XML2_PROPERTY").">\n");
 		}
 		fwrite($this->fp, "\t\t</".GetMessage("IBLOCK_XML2_GROUPS_PROPERTIES").">\n");
 	}
@@ -4735,6 +4915,8 @@ class CIBlockCMLExport
 						{
 							if($arField["USER_TYPE"]["BASE_TYPE"] === "file")
 								$values[] = $this->ExportFile($arSection[$FIELD_ID]);
+							elseif($arField["USER_TYPE"]["BASE_TYPE"] === "enum")
+								$values[] = $this->ExportEnum($arField, $arSection[$FIELD_ID]);
 							else
 								$values[] = $arSection[$FIELD_ID];
 						}
@@ -4745,14 +4927,20 @@ class CIBlockCMLExport
 						else
 						{
 							foreach($arSection[$FIELD_ID] as $value)
+							{
 								if($arField["USER_TYPE"]["BASE_TYPE"] === "file")
 									$values[] = $this->ExportFile($value);
+								elseif($arField["USER_TYPE"]["BASE_TYPE"] === "enum")
+									$values[] = $this->ExportEnum($arField, $value);
 								else
 									$values[] = $value;
+							}
 						}
 
 						foreach($values as $value)
+						{
 							fwrite($this->fp, $this->formatXMLNode($level+2, GetMessage("IBLOCK_XML2_VALUE"), $value));
+						}
 
 						fwrite($this->fp, $white_space."\t\t\t</".GetMessage("IBLOCK_XML2_PROPERTY_VALUES").">\n");
 					}
@@ -4982,6 +5170,7 @@ class CIBlockCMLExport
 						GetMessage("IBLOCK_XML2_SMART_FILTER") => ($arLink["SMART_FILTER"] == "Y"? "true": "false"),
 						GetMessage("IBLOCK_XML2_SMART_FILTER_DISPLAY_TYPE") => $arLink["DISPLAY_TYPE"],
 						GetMessage("IBLOCK_XML2_SMART_FILTER_DISPLAY_EXPANDED") => ($arLink["DISPLAY_EXPANDED"] == "Y"? "true": "false"),
+						GetMessage("IBLOCK_XML2_SMART_FILTER_HINT") => $arLink["FILTER_HINT"],
 					);
 
 					if (isset($arLink["IBLOCK_XML_ID"]))
@@ -5058,6 +5247,7 @@ class CIBlockCMLExport
 					.$this->formatXMLNode(2, GetMessage("IBLOCK_XML2_BX_LIST_URL"), $this->arIBlock["LIST_PAGE_URL"])
 					.$this->formatXMLNode(2, GetMessage("IBLOCK_XML2_BX_DETAIL_URL"), $this->arIBlock["DETAIL_PAGE_URL"])
 					.$this->formatXMLNode(2, GetMessage("IBLOCK_XML2_BX_SECTION_URL"), $this->arIBlock["SECTION_PAGE_URL"])
+					.$this->formatXMLNode(2, GetMessage("IBLOCK_XML2_BX_CANONICAL_URL"), $this->arIBlock["CANONICAL_PAGE_URL"])
 					.$this->formatXMLNode(2, GetMessage("IBLOCK_XML2_BX_PICTURE"), $this->ExportFile($this->arIBlock["PICTURE"]))
 					.$this->formatXMLNode(2, GetMessage("IBLOCK_XML2_BX_INDEX_ELEMENTS"), ($this->arIBlock["INDEX_ELEMENT"]=="Y"? "true": "false"))
 					.$this->formatXMLNode(2, GetMessage("IBLOCK_XML2_BX_INDEX_SECTIONS"), ($this->arIBlock["INDEX_SECTION"]=="Y"? "true": "false"))

@@ -21,6 +21,12 @@ if(IsModuleInstalled('socialnetwork'))
 		"OPTIONS" => array(),
 	);
 }
+$aTabs[] = array(
+	"DIV" => "livefeed",
+	"TAB" => GetMessage("LISTS_OPTIONS_TAB_LIVE_FEED"),
+	"TITLE" => GetMessage("LISTS_OPTIONS_TAB_TITLE_LIVE_FEED"),
+	"OPTIONS" => array(),
+);
 
 $arGroups = array("REFERENCE"=>array(), "REFERENCE_ID"=>array());
 $rsGroups = CGroup::GetDropDownList();
@@ -74,6 +80,21 @@ if($REQUEST_METHOD=="POST" && strlen($Update.$Apply.$RestoreDefaults)>0 && check
 		{
 			COption::SetOptionString("lists", "socnet_iblock_type_id", $_POST["socnet_iblock_type_id"]);
 			CLists::EnableSocnet($_POST["socnet_enable"] === "Y");
+		}
+
+		if(($_POST["turnProcessesOn"]))
+		{
+			COption::SetOptionString("lists", "turnProcessesOn", $_POST["turnProcessesOn"]);
+		}
+		elseif($_POST["turnProcessesOn"] == "")
+		{
+			COption::SetOptionString("lists", "turnProcessesOn", "N");
+		}
+
+		if(isset($_POST["livefeed_iblock_type_id"]) && isset($_POST["livefeed_url"]))
+		{
+			COption::SetOptionString("lists", "livefeed_iblock_type_id", $_POST["livefeed_iblock_type_id"]);
+			COption::SetOptionString("lists", "livefeed_url", $_POST["livefeed_url"]);
 		}
 	}
 
@@ -156,15 +177,37 @@ if(IsModuleInstalled('socialnetwork'))
 	$tabControl->BeginNextTab();
 	?>
 	<tr>
-		<td width="40%"><?echo GetMessage("LISTS_OPTIONS_SOCNET_ENABLE")?>:</td>
-		<td width="60%"><input type="checkbox" name="socnet_enable" <?if($socnet_enable) echo "checked"?> value="Y"></td>
+		<td width="30%"><?echo GetMessage("LISTS_OPTIONS_SOCNET_ENABLE")?>:</td>
+		<td width="70%"><input type="checkbox" name="socnet_enable" <?if($socnet_enable) echo "checked"?> value="Y"></td>
 	</tr>
 	<tr>
-		<td><?echo GetMessage("LISTS_OPTIONS_SOCNET_IBLOCK_TYPE")?>:</td>
-		<td><?echo SelectBoxFromArray("socnet_iblock_type_id", $arIBTypes, $socnet_iblock_type_id, GetMessage("MAIN_NO"))?></td>
+		<td width="30%"><?echo GetMessage("LISTS_OPTIONS_SOCNET_IBLOCK_TYPE")?>:</td>
+		<td width="70%"><?echo SelectBoxFromArray("socnet_iblock_type_id", $arIBTypes, $socnet_iblock_type_id, GetMessage("MAIN_NO"))?></td>
 	</tr>
 	<?
 }
+
+	$livefeed_iblock_type_id = COption::GetOptionString("lists", "livefeed_iblock_type_id");
+	$livefeed_url = COption::GetOptionString('lists', 'livefeed_url');
+	$turnProcessesOn = COption::GetOptionString("lists", "turnProcessesOn");
+	$tabControl->BeginNextTab();
+	?>
+		<tr>
+			<td width="30%"><?echo GetMessage("LISTS_OPTIONS_LIVE_FEED_CHECK")?>:</td>
+			<td width="70%"><input type="checkbox" name="turnProcessesOn" <?if($turnProcessesOn == "Y") echo "checked"?> value="Y"></td>
+		</tr>
+		<tr>
+			<td width="30%"><?echo GetMessage("LISTS_OPTIONS_LIVE_FEED_IBLOCK_TYPE")?>:</td>
+			<td width="70%"><?echo SelectBoxFromArray("livefeed_iblock_type_id", $arIBTypes, $livefeed_iblock_type_id, GetMessage("MAIN_NO"))?></td>
+		</tr>
+		<tr>
+			<td width="30%"><?echo GetMessage("LISTS_OPTIONS_LIVE_FEED_SEF_FOLDER")?>:</td>
+			<td width="70%">
+				<input type="text" name="livefeed_url" id="livefeed_url" value="<? echo $livefeed_url; ?>">
+			</td>
+		</tr>
+	<?
+
 $tabControl->Buttons();?>
 	<input type="submit" name="Update" value="<?=GetMessage("MAIN_SAVE")?>" title="<?=GetMessage("MAIN_OPT_SAVE_TITLE")?>" class="adm-btn-save">
 	<input type="submit" name="Apply" value="<?=GetMessage("MAIN_OPT_APPLY")?>" title="<?=GetMessage("MAIN_OPT_APPLY_TITLE")?>">

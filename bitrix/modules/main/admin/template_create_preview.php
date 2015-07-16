@@ -52,7 +52,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($edit_php || $lpa) && check_bitrix_s
 			for ($n = 0; $n<$l; $n++)
 			{
 				$start = $arPHP[$n][0];
-				$new_content .= CMain::EncodePHPTags(substr($content_,$end,$start-$end));
+				$new_content .= LPA::EncodePHPTags(substr($content_,$end,$start-$end));
 				$end = $arPHP[$n][1];
 
 				//Trim php tags
@@ -123,11 +123,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($edit_php || $lpa) && check_bitrix_s
 				}
 			}
 
-			$new_content .= CMain::EncodePHPTags(substr($content_,$end));
+			$new_content .= LPA::EncodePHPTags(substr($content_,$end));
 			$CONTENT = $new_content;
 		}
 		else
-			$CONTENT = CMain::EncodePHPTags($new_content);
+			$CONTENT = LPA::EncodePHPTags($new_content);
 
 		// Get array of PHP scripts from original template src
 		if(strlen($ID) > 0)

@@ -7,13 +7,9 @@ $arParams["FILE"] = (is_array($arParams["FILE"]) ? $arParams["FILE"] : intVal($a
 $arParams["SHOW_MODE"] = (in_array($arParams["SHOW_MODE"], array("LINK", "THUMB", "FULL", "RSS")) ? $arParams["SHOW_MODE"] : "FULL");
 $arParams["MAX_FILE_SIZE"] = intVal($arParams["MAX_FILE_SIZE"] > 0 ? $arParams["MAX_FILE_SIZE"] : 100)*1024*1024;
 //$arParams["SIZE"] user data in img tag <img width=... height=...>
-if (is_array($arParams["MAX_SIZE"]))
-{
-	$arParams["WIDTH"] = $arParams["MAX_SIZE"]["width"];
-	$arParams["HEIGHT"] = $arParams["MAX_SIZE"]["height"];
-}
-$arParams["WIDTH"] = intval($arParams["WIDTH"]);
-$arParams["HEIGHT"] = intval($arParams["HEIGHT"]);
+if (!is_array($arParams["MAX_SIZE"]))
+	$arParams["MAX_SIZE"] = ($arParams["WIDTH"] > 0 ? array("width" => $arParams["WIDTH"]) : array()) +
+		($arParams["HEIGHT"] > 0 ? array("height" => $arParams["HEIGHT"]) : array());
 //$arParams["HTML_SIZE"] html resize for image. This is helpful for disk space economy.
 $arParams["CONVERT"] = ($arParams["CONVERT"] == "N" ? "N" : "Y");
 $arParams["FAMILY"] = trim($arParams["FAMILY"]);
@@ -60,7 +56,7 @@ if (is_array($arResult["FILE"]) && !empty($arResult["FILE"]["SRC"]))
 			Array(
 				"URL" => ($arParams["SHOW_MODE"] == "RSS" ? $arResult["FILE"]["FULL_SRC"] : $arResult["FILE"]["SRC"]),
 				"SIZE" => $arParams["SIZE"],
-				"MAX_SIZE" => array("width"=> $arParams["WIDTH"], "height"=> $arParams["HEIGHT"]),
+				"MAX_SIZE" => $arParams["MAX_SIZE"],
 				"HTML_SIZE" => $arParams["HTML_SIZE"],
 				"MODE" => ($arParams["SHOW_MODE"] == "RSS" ? "RSS" : "SHOW2IMAGES"),
 				"IMG_WIDTH" => $arResult["FILE"]["WIDTH"],

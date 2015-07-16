@@ -12,12 +12,28 @@ if($USER->CanDoOperation('fileman_view_file_structure'))
 			return strcmp(strtoupper($a["sSectionName"]), strtoupper($b["sSectionName"]));
 		}
 
-		function __fileman_mnu_gen($bLogical, $bFullList, $site, $path, $sShowOnly, $arSiteDirs=Array(), $bCountOnly = false, $arSitesDR_=Array())
+		function __fileman_mnu_gen($bLogical, $bFullList, $site, $path, $sShowOnly, $arSiteDirs=Array(), $bCountOnly = false, $arSitesDR_= Array(), $siteList = Array())
 		{
 			global $APPLICATION, $USER, $DB, $MESS;
 			global $__tmppath;
 			global $_fileman_menu_dist_dr;
 			$aMenu = Array();
+			if(count($siteList) <= 0)
+			{
+				$dbSitesList = CSite::GetList($b = "lendir", $o = "desc");
+				$siteList = array();
+				while ($arSite = $dbSitesList->GetNext())
+				{
+					if ($arSite['DOC_ROOT'] == CSite::GetSiteDocRoot($site) || $arSite['DOC_ROOT'] == '')
+					{
+						$siteList[] = array(
+							'ID' => $arSite['ID'],
+							'DIR' => $arSite['DIR'],
+							'DOC_ROOT' => $arSite['DOC_ROOT']
+						);
+					}
+				}
+			}
 			$path = preg_replace("'[\\/]+'", "/", $path);
 			$bCheckFolders = $path == '' && $sShowOnly == '';
 
@@ -66,7 +82,7 @@ if($USER->CanDoOperation('fileman_view_file_structure'))
 
 			usort($arFldrs, "__fileman_fmnu_fldr_cmp");
 
-			for($i = 0; $i < count($arFldrs); $i++)
+			for($i = 0, $l = count($arFldrs); $i < $l; $i++)
 			{
 				extract($arFldrs[$i]);
 
@@ -74,14 +90,22 @@ if($USER->CanDoOperation('fileman_view_file_structure'))
 					return Array('');
 
 				$dynamic = true;
+				for($ii = 0, $ll = count($siteList); $ii < $ll; $ii++)
+				{
+					$dir = trim($siteList[$ii]["DIR"], "/");
+					if (substr(trim($path.'/'.$file, "/"), 0, strlen($dir)) == $dir)
+					{
+						$site_ = $siteList[$ii]["ID"];
+						break;
+					}
+				}
 				if(!$bCheckFolders && ($sShowOnly == $path || $bFullList))
 				{
-					$items = __fileman_mnu_gen($bLogical, $bFullList, $site, $path.'/'.$file, '', $arSiteDirs, true, $arSitesDR_);
+					$items = __fileman_mnu_gen($bLogical, $bFullList, $site, $path.'/'.$file, '', $arSiteDirs, true, $arSitesDR_, $siteList);
 					if(count($items) <= 0)
 						$dynamic = false;
 				}
 
-				$site_ = $site;
 				$addUrl = "path=".urlencode($path.'/'.$file);
 				$addUrl .= "&site=".$site_;
 				if ($bLogical)
@@ -131,7 +155,7 @@ if($USER->CanDoOperation('fileman_view_file_structure'))
 						"more_url" => $more_urls,
 						"items_id" => ($bLogical ? "menu_fileman_site_".$site."_".$path."/".$file : "menu_fileman_file_".$site."_".$path."/".$file),
 						"title" => htmlspecialcharsex($sSectionName." (".$path.'/'.$file.")"),
-						"items" => $bCheckFolders ? array() :  __fileman_mnu_gen($bLogical, $bFullList, $site, $path.'/'.$file, $sShowOnly, $arSiteDirs, false, $arSitesDR_)
+						"items" => $bCheckFolders ? array() :  __fileman_mnu_gen($bLogical, $bFullList, $site, $path.'/'.$file, $sShowOnly, $arSiteDirs, false, $arSitesDR_, $siteList)
 					);
 			}
 			return $aMenu;
@@ -284,7 +308,7 @@ if($USER->CanDoOperation('fileman_view_file_structure'))
 				}
 				elseif(isset($_REQUEST['path']))
 				{
-					if($site_id==$site)
+					if($k == CSite::GetSiteDocRoot($site))
 					{
 						$sShowOnly = rtrim($_REQUEST['path'], "/");
 						$bFullList = true;
@@ -383,7 +407,7 @@ if($USER->CanDoOperation('fileman_view_file_structure'))
 	}
 }
 
-if (COption::GetOptionString('fileman', "use_medialib", "Y") != "N" && CModule::IncludeModule("fileman") && CMedialib::CanDoOperation('medialib_view_collection', 0))
+if (COption::GetOptionString('fileman', "use_medialib", "Y") != "N" && CModule::IncludeModule("fileman") && CMedialib::CanDoOperation('medialib_view_collection', 0, false, true))
 {
 	if (!is_array($aMenu))
 	{
@@ -393,7 +417,7 @@ if (COption::GetOptionString('fileman', "use_medialib", "Y") != "N" && CModule::
 			"sort" => 100,
 			"text" => GetMessage("FM_MENU_TITLE"),
 			"title" => GetMessage("FM_MENU_DESC"),
-			"url" => "fileman_index.php?lang=".LANG,
+			"url" => "",
 			"icon" => "fileman_menu_icon",
 			"page_icon" => "fileman_page_icon",
 			"items_id" => "menu_fileman",

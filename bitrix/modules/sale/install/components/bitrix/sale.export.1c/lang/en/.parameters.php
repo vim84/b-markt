@@ -14,4 +14,5 @@ $MESS["SALE_1C_INTERVAL"] = "Import step duration, sec. (0 - import all at once)
 $MESS["SALE_1C_FILE_SIZE_LIMIT"] = "Maximum size of import file chunk (bytes)";
 $MESS["SALE_1C_SITE_NEW_ORDERS"] = "Site to import new orders and contractors to";
 $MESS["SALE_1C_IMPORT_NEW_ORDERS"] = "Create new orders and contractors from 1C";
+$MESS["CP_BCI1_CHANGE_STATUS_FROM_1C"] = "Use 1C data to set order status ";
 ?>

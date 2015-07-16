@@ -1,4 +1,7 @@
 <?
+
+use \Bitrix\Sale\DiscountCouponsManager;
+
 IncludeModuleLangFile(__FILE__);
 
 /**
@@ -1020,6 +1023,7 @@ class CSaleYMHandler
 		{
 			self::$isYandexRequest = true;
 			$arPostData = $this->extractPostData($postData);
+			DiscountCouponsManager::init(DiscountCouponsManager::MODE_EXTERNAL);
 
 			switch ($reqObject)
 			{

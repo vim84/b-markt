@@ -134,9 +134,14 @@ if($REQUEST_METHOD == "POST" && ($save.$apply.$Send.$Resend.$Continue!="") && $P
 		{
 			if(strlen($file["name"])>0 and intval($file["size"])>0)
 			{
-				$res = $posting->SaveFile($ID, $file);
-				if(!$res)
-					break;
+				if (!$posting->SaveFile($ID, $file))
+				{
+					$_SESSION["SESS_ADMIN"]["POSTING_EDIT_MESSAGE"] = array(
+						"MESSAGE" => $posting->LAST_ERROR,
+						"TYPE" => "ERROR",
+					);
+					LocalRedirect("posting_edit.php?ID=".$ID."&lang=".LANG."&".$tabControl->ActiveTabParam());
+				}
 			}
 		}
 	}
@@ -147,9 +152,13 @@ if($REQUEST_METHOD == "POST" && ($save.$apply.$Send.$Resend.$Continue!="") && $P
 		{
 			LocalRedirect("posting_admin.php?ID=".$ID."&action=send&lang=".LANG."&".bitrix_sessid_get());
 		}
+
 		if($apply!="")
 		{
-			$_SESSION["SESS_ADMIN"]["POSTING_EDIT_MESSAGE"]=array("MESSAGE"=>GetMessage("post_save_ok"), "TYPE"=>"OK");
+			$_SESSION["SESS_ADMIN"]["POSTING_EDIT_MESSAGE"] = array(
+				"MESSAGE" => GetMessage("post_save_ok"),
+				"TYPE" => "OK",
+			);
 			LocalRedirect("posting_edit.php?ID=".$ID."&lang=".LANG."&".$tabControl->ActiveTabParam());
 		}
 		else

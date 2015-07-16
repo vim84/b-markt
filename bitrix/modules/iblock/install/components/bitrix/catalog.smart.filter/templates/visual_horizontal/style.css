@@ -135,6 +135,7 @@
 .bx_filter .bx_filter_parameters_box_container .bx_filter_parameters_box_container_block:nth-child(2){
 	padding-left: 5px;
 }
+
 .bx_filter .bx_filter_parameters_box_container .bx_filter_input_container input{
 	display:block;
 	-webkit-box-sizing:border-box;
@@ -153,6 +154,26 @@
 	box-shadow:inset 0 3px 6px 0 rgba(215,215,215,.75);
 }
 
+.bx_filter .bx_filter_parameters_box_container .bx_filter_calendar_container{
+	max-width:100%;
+	position:relative;
+}
+
+.bx_filter .bx_filter_parameters_box_container .bx_filter_calendar_container input.calendar{
+	padding:0 23px 0 4px;
+	font-size:15px;
+}
+
+.bx_filter .bx_filter_parameters_box_container .bx_filter_input_container img.calendar-icon{
+	display:block;
+	-webkit-box-sizing:border-box;
+	-moz-box-sizing:border-box;
+	box-sizing:border-box;
+	position:absolute;
+	font-size:18px;
+	top:7px;
+	right:3px;
+}
 
 /*Track*/
 .bx_filter .bx_ui_slider_track{
@@ -457,7 +478,7 @@
 	margin:0 5px;
 	vertical-align:middle;
 	text-align:center;
-	cursor: pointer;
+	cursor:pointer;
 }
 .bx_filter .bx_filter_param_label.disabled .bx_filter_param_text{
 	color:#6c6c6c;
@@ -467,7 +488,7 @@
 	background: #f3f8fa;
 }
 /*
-*	Checkbox / Radio 
+*	Checkbox / Radio
 *
 */
 .bx_filter .bx_filter_input_checkbox{
@@ -493,7 +514,7 @@
 }
 
 /*
-* 	BTN 
+* 	BTN
 *
 */
 .bx_filter .bx_filter_param_btn{
@@ -708,7 +729,7 @@
 }
 
 /*
-*	BTN result and reset 
+*	BTN result and reset
 *
 */
 .bx_filter .bx_filter_search_button{

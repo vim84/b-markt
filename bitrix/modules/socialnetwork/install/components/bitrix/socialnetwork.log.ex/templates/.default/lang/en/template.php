@@ -24,4 +24,5 @@ $MESS["SONET_C30_MENU_TITLE_DELETE"] = "Delete from Activity Stream";
 $MESS["SONET_C30_MENU_TITLE_DELETE_CONFIRM"] = "Are you sure you want to delete this post and all the comments added to it?";
 $MESS["SONET_C30_MENU_TITLE_DELETE_SUCCESS"] = "The post has been deleted.";
 $MESS["SONET_C30_MENU_TITLE_DELETE_FAILURE"] = "Error deleting the post.";
+$MESS["SONET_C30_T_RELOAD_ERROR"] = "Error updating Activity Stream";
 ?>

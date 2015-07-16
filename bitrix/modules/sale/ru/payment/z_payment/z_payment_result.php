@@ -48,6 +48,13 @@ if (CModule::IncludeModule("sale"))
 	$sk  = CSalePaySystemAction::GetParamValue("ZP_MERCHANT_KEY");
 	$CruR  = CSalePaySystemAction::GetParamValue("ZP_CODE_RUR");
 
+	if(strlen($sk) <=0)
+	{
+		$bCorrectPayment = False;
+		$err=4;
+		$err_text='ERR: ОШИБКА АВТОРИЗАЦИИ';
+	}
+
 	// Проверяем, не произошла ли подмена суммы.
 	$order_amount =CCurrencyRates::ConvertCurrency($arOrder["PRICE"], $arOrder["CURRENCY"] , $CruR);
 

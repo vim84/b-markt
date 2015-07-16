@@ -24,7 +24,7 @@ $MESS["IM_SMILE_SET_EMPTY"] = "Set: #ID#";
 $MESS["IM_MESSAGE_DELETED"] = "This message has been deleted.";
 $MESS["IM_MESSAGE_DELETED_OUT"] = "Message of #DATE# has been deleted.";
 $MESS["IM_MESSAGE_LIKE"] = "I like your message \"#MESSAGE#\" you made in chat \"#TITLE#\"";
-$MESS["IM_MESSAGE_LIKE_PRIVATE"] = "I like your your message \"#MESSAGE#\" in our conversation.";
+$MESS["IM_MESSAGE_LIKE_PRIVATE"] = "I like your message \"#MESSAGE#\" in our conversation.";
 $MESS["IM_MESSAGE_FILE"] = "File";
 $MESS["IM_MESSAGE_FILE_DOWN"] = "Download:";
 ?>

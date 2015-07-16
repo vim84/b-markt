@@ -14,6 +14,7 @@ $isAdmin = $USER->CanDoOperation('edit_php');
 if(!CModule::IncludeModule('perfmon'))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
+require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/perfmon/prolog.php");
 IncludeModuleLangFile(__FILE__);
 
 $aTabs = array(
@@ -157,7 +158,12 @@ if(count($arIndexColumns) > 1)
 }
 $arIndexColumns = array_keys($arIndexColumns);
 
-$IndexExists = $DB->GetIndexName($arSuggest["TABLE_NAME"], $arIndexColumns);
+$table = trim($arSuggest["TABLE_NAME"], "`");
+$index = array();
+foreach ($arIndexColumns as $indColumn)
+	$index[] = trim($indColumn, "`");
+
+$IndexExists = $DB->GetIndexName($table, $index);
 
 $strError = '';
 
@@ -177,7 +183,9 @@ if($_SERVER["REQUEST_METHOD"] === "POST" && check_bitrix_sessid() && $isAdmin)
 			LocalRedirect("/bitrix/admin/perfmon_index_detail.php?ID=".$ID."&lang=".LANGUAGE_ID."&".$tabControl->ActiveTabParam());
 		}
 		else
+		{
 			$strError = $DB->GetErrorMessage();
+		}
 	}
 	elseif(isset($_REQUEST["drop_index"]) && isset($_REQUEST["ddl"]))
 	{
@@ -399,7 +407,7 @@ $tabControl->BeginNextTab();
 	</tr>
 	<tr>
 		<td width="50%"><?echo GetMessage("PERFMON_IDETAIL_AVG_QUERY_TIME")?>:</td>
-		<td width="50%"><?echo str_replace(" ", "&nbsp;", number_format($arSuggest["SQL_TIME"]/$arSuggest["SQL_COUNT"], 6, ".", " "))?></td>
+		<td width="50%"><?echo perfmon_NumberFormat($arSuggest["SQL_TIME"]/$arSuggest["SQL_COUNT"], 6)?></td>
 	</tr>
 	<tr class="heading">
 		<td colspan="2"><?echo GetMessage("PERFMON_IDETAIL_INDEX")?></td>
@@ -408,7 +416,7 @@ $tabControl->BeginNextTab();
 		<tr>
 			<td><?echo GetMessage("PERFMON_IDETAIL_CREATE_INDEX_DDL")?>:</td>
 			<?
-				$prefix = substr("ix_perf_".$arSuggest["TABLE_NAME"], 0, 27)."_";
+				$prefix = substr("ix_perf_".trim($arSuggest["TABLE_NAME"], "`"), 0, 27)."_";
 				$i = 1;
 				while(array_key_exists($prefix.$i, $arIndexes))
 					$i++;
@@ -508,14 +516,14 @@ $tabControl->BeginNextTab();
 		?>
 		<tr>
 			<td><?echo GetMessage("PERFMON_IDETAIL_QUERY_TIME")?>:</td>
-			<td><?echo str_replace(" ", "&nbsp;", number_format($etime - $stime, 6, ".", " "))?></td>
+			<td><?echo perfmon_NumberFormat($etime - $stime, 6)?></td>
 		</tr>
 		<?
 		if($ratio > 1)
 		{?>
 		<tr>
 			<td><?echo GetMessage("PERFMON_IDETAIL_GAIN")?>:</td>
-			<td><span class="notetext"><?echo str_replace(" ", "&nbsp;", number_format($ratio*100, 2, ".", " ")), "%"?></span></td>
+			<td><span class="notetext"><?echo perfmon_NumberFormat($ratio*100, 2), "%"?></span></td>
 		</tr>
 		<?}
 		?>

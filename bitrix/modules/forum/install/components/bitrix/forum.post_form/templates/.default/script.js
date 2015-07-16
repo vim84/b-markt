@@ -2,6 +2,7 @@
 	if (BX.Forum && BX.Forum.transliterate)
 		return;
 	BX.Forum = (BX.Forum ? BX.Forum : {});
+	var repo = {};
 
 	BX.Forum.transliterate = function(node)
 	{
@@ -192,9 +193,9 @@
 					{
 						PostFormAjaxNavigation(result.navigation, result.pageNumber);
 					}
-					if (!!result.messageStart)
+					if (!!result["messageStart"])
 					{
-						PostFormAjaxMsgStart(result.messageStart);
+						PostFormAjaxMsgStart(result["messageStart"]);
 					}
 					ClearForumPostForm(postform);
 					fRunScripts(result.message);
@@ -243,47 +244,22 @@
 		},
 		ClearForumPostForm = function(form)
 		{
+			window.LHEPostForm.reinitDataBefore('POST_MESSAGE');
 			var editor = LHEPostForm.getEditor('POST_MESSAGE'), node, handler = LHEPostForm.getHandler('POST_MESSAGE');
 			if (editor)
 			{
 				editor.CheckAndReInit('');
-				if (editor.fAutosave)
-					BX.bind(editor.pEditorDocument, 'keydown',
-						BX.proxy(editor.fAutosave.Init, editor.fAutosave));
-
 				for (var i in handler.arFiles)
 				{
-					if (handler.arFiles.hasOwnProperty(i) && (node = BX('file-doc'+handler.arFiles[i]["id"])) && !!node)
+					if (handler.arFiles.hasOwnProperty(i))
 					{
-						BX.remove(node);
-						BX.hide(BX('wd-doc'+handler.arFiles[i]["id"]));
-						BX.remove(BX('filetoupload' + handler.arFiles[i]["id"]));
-					}
-				}
-				var files = form["UF_FORUM_MESSAGE_DOC[]"];
-				if(files !== null && typeof files != 'undefined')
-				{
-					var end = false, file = false;
-					do
-					{
-						if (!!form["UF_FORUM_MESSAGE_DOC[]"])
+						if ((node = BX('file-doc'+handler.arFiles[i]["id"])) && !!node)
 						{
-							if (!!form["UF_FORUM_MESSAGE_DOC[]"][0]) {
-								file = form["UF_FORUM_MESSAGE_DOC[]"][0];
-							} else {
-								file = form["UF_FORUM_MESSAGE_DOC[]"];
-								end = true;
-							}
-							if (!!window.wduf_places && !!window.wduf_places[file.value])
-								window.wduf_places[file.value] = null;
-							while(BX('wd-doc' + file.value))
-								BX.remove(BX('wd-doc' + file.value));
-							BX.remove(file);
+							BX.remove(node);
+							BX.hide(BX('wd-doc'+handler.arFiles[i]["id"]));
+							BX.remove(BX('filetoupload' + handler.arFiles[i]["id"]));
 						}
-						else {
-							end = true;
-						}
-					} while (!end);
+					}
 				}
 			}
 
@@ -757,6 +733,8 @@
 				BX.ready(function(){
 					BX.bind(BX('forum-refresh-captcha'), 'click', BX.proxy(oCaptcha.Update, oCaptcha));
 				});
+				if (params["bVarsFromForm"] == "Y")
+					oCaptcha.Show();
 			}
 		});
 	};

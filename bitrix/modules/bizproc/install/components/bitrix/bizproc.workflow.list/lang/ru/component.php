@@ -22,4 +22,6 @@ $MESS ['BPATT_DO_LOAD_EDIT_TITLE'] = "Запускать бизнес-проце
 $MESS ['BPATT_DO_LOAD_EDIT'] = "Запускать при изменении";
 $MESS ['BPATT_DO_EDIT_VARS'] = "Изменить начальные значения переменных";
 $MESS ['BPATT_DO_EDIT_VARS1'] = "Переменные";
+$MESS ['BPATT_DO_EDIT_CONSTANTS'] = "Задать значения констант";
+$MESS ['BPATT_DO_EDIT_CONSTANTS1'] = "Константы";
 ?>

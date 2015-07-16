@@ -229,18 +229,15 @@ ksort($arOperations);
 			<option value="main" <? echo ($str_MODULE_ID == 'main') ? 'selected' : '';?>><?=GetMessage('KERNEL')?></option>
 		<?
 		$modules = COperation::GetAllowedModules();
-		for($i = 0, $l = count($modules); $i < $l; $i++):
-			$MID = $modules[$i];
-			$def = ($str_MODULE_ID == $MID) ? $str_LETTER : false;
-
-			if ($MID=="main" || !file_exists($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/".$MID."/install/index.php"))
+		foreach($modules as $MID):
+			if ($MID == "main")
 				continue;
 			if (!($m = CModule::CreateModuleObject($MID)))
 				continue;
-			?>
+		?>
 			<script>arModules.push('<?=$MID?>');</script>
 			<option value="<?=htmlspecialcharsbx($MID)?>"<?echo ($str_MODULE_ID == $MID? ' selected' : '');?>><?=htmlspecialcharsbx($m->MODULE_NAME);?></option>
-		<?endfor;?>
+		<?endforeach;?>
 		</select>
 		</td>
 	</tr>

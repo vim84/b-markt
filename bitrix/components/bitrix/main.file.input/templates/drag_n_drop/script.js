@@ -33,6 +33,7 @@ window.BlogBFileDialog = function(arParams)
 	arParams.doc_prefix = 'wd-doc';
 	arParams.placeholder = BX.findChild(this.controller, {'className': 'file-placeholder-tbody'}, true);
 	this.doc_prefix = arParams.doc_prefix;
+	this.values = (arParams["values"] || []);
 
 	if (!!BX.FileUploadAgent) {
 		this.agent = new BX.FileUploadAgent(arParams);
@@ -73,14 +74,15 @@ window.BlogBFileDialog.prototype.ShowUploadedFile = function(agent) // event
 			});
 			agent.controller.appendChild(hidden);
 		}
-		this.CreateFileRow(uploadResult);
+		this.values.push(this.CreateFileRow(uploadResult));
 		agent._clearPlace();
 
 		if (this.controller && this.controller.parentNode)
 			BX.onCustomEvent(this.controller.parentNode, 'OnFileUploadSuccess', [uploadResult, this]);
 
 	} else {
-		agent.ShowUploadError(this.msg.upload_error);
+		var text = (uploadResult && uploadResult["error"] ? uploadResult["error"] : this.msg.upload_error);
+		agent.ShowUploadError(text);
 
 		if (this.controller && this.controller.parentNode)
 			BX.onCustomEvent(this.controller.parentNode, 'OnFileUploadFail');
@@ -123,6 +125,7 @@ window.BlogBFileDialog.prototype.CreateFileRow = function(result)
 				BX.cleanNode(parent, true);
 			}, this));
 		this.agent.AddNodeToPlaceholder(span);
+		newNode = span;
 	} else {
 		newNode.setAttribute('id', this.doc_prefix + result.element_id);
 		this.agent.AddRowToPlaceholder(newNode);
@@ -373,6 +376,8 @@ window.BlogBFileDialogUploader.prototype.Callback = function(files, uniqueID)
 			result.element_thumbnail = ((!!files[i].img_source_src) ? files[i].img_source_src: files[i].fileSrc);
 			if (!!result.element_thumbnail)
 				result.element_thumbnail = result.element_thumbnail.replace(/\/([^\/]+)$/, function(str, name) { return "/" + BX.util.urlencode(name); } );
+			if (files[i]["error"])
+				result["error"] = files[i]["error"];
 
 			BX.onCustomEvent(this, 'uploadFinish', [result]);
 		}
@@ -578,7 +583,21 @@ window.MFIDD = function(params){
 	var status = (params["status"] === 'show' ? 'show' : (params["status"] === 'hide' ? 'hide' : 'switch'));
 	if (status == 'switch')
 		status = (params['controller'].style.display != 'none' ? 'hide' : 'show');
-
+	var showControl = function(status)
+	{
+		if (status == "show")
+		{
+			BX.fx.show(params['controller'], 'fade', {time:0.2});
+			if (params['switcher'] && params['switcher'].style.display != 'none')
+				BX.fx.hide(params['switcher'], 'fade', {time:0.1});
+			if (!! window['BfileUnbindDispatcher' + params['uid']])
+				window['BfileUnbindDispatcher' + params['uid']]();
+		}
+		else if (params['controller'].style.display !== "none")
+		{
+			BX.fx.hide(params['controller'], 'fade', {time:0.2});
+		}
+	};
 	if (! params['controller'].loaded)
 	{
 		params['controller'].loaded = true;
@@ -603,26 +622,12 @@ window.MFIDD = function(params){
 				'access_denied' : BX.message('access_denied')
 			}
 		});
-		BX.fx.show(params['controller'], 'fade', {time:0.2});
-		if (params['switcher'] && params['switcher'].style.display != 'none')
-			BX.fx.hide(params['switcher'], 'fade', {time:0.1});
-
+		showControl(status);
 		window['BfileFD' + params['uid']].LoadDialogs('DropInterface');
-
-		if (!! window['BfileUnbindDispatcher' + params['uid']])
-			window['BfileUnbindDispatcher' + params['uid']]();
 		BX.onCustomEvent('BFileDSelectFileDialogLoaded', [window['BfileFD' + params['uid']]]);
 	}
 	else
-	{
-		if (status == "show") {
-			BX.fx.show(params['controller'], 'fade', {time:0.2});
-			if (params['switcher'] && params['switcher'].style.display != 'none')
-				BX.fx.hide(params['switcher'], 'fade', {time:0.1});
-		} else {
-			BX.fx.hide(params['controller'], 'fade', {time:0.2});
-		}
-	}
+		showControl(status);
 }
 window.BlogBFileJustDialog = function(arParams)
 {

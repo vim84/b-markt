@@ -7,28 +7,26 @@ else
 	return;
 
 if (
-	!array_key_exists("ALIGN", $arParams) 
-	|| strlen(trim($arParams["ALIGN"])) <= 0 
+	!array_key_exists("ALIGN", $arParams)
+	|| strlen(trim($arParams["ALIGN"])) <= 0
 	|| !in_array($arParams["ALIGN"], array("left", "right"))
 )
 	$arParams["ALIGN"] = "left";
 
-if(!class_exists('BookmarksCounter')){
-	class BookmarksCounter {public static $counter = 1;}}
-
-$arResult["COUNTER"] = BookmarksCounter::$counter++;
+$arResult["COUNTER"] = $this->__currentCounter;
 
 $arResult["FOLDER_PATH"] = $folderPath = $template->GetFolder();
 $path2Handlers = $_SERVER["DOCUMENT_ROOT"].$folderPath."/handlers/";
 CheckDirPath($path2Handlers);
-				
-$arHandlers = array();	
+
+$arHandlers = array();
 if ($handle = opendir($path2Handlers))
 {
 	while (($file = readdir($handle)) !== false)
 	{
 		if ($file == "." || $file == "..")
 			continue;
+
 		if (is_file($path2Handlers.$file) && strtoupper(substr($file, strlen($file)-4))==".PHP")
 		{
 			$name = $title = $icon_url_template = $charset = "";
@@ -36,13 +34,13 @@ if ($handle = opendir($path2Handlers))
 			$charsBack = false;
 
 			include($path2Handlers.$file);
-					
+
 			if (strlen($name) > 0)
 			{
 				$arHandlers[$name] = array(
 					"TITLE" => $title,
 					"ICON" => $icon_url_template,
-					"SORT" => intval($sort)	
+					"SORT" => intval($sort),
 				);
 				if (strlen($charset) > 0)
 					$arHandlers[$name]["CHARSET"] = $charset;
@@ -64,25 +62,12 @@ if(!is_array($arParams["HANDLERS"]))
 	}
 	$arParams["HANDLERS"] = array_keys($arHandlers);
 }
-	
+
 $arResult["BOOKMARKS"] = array();
-
-if (defined('SITE_SERVER_NAME') && strlen(SITE_SERVER_NAME) > 0)
-	$SiteServerName = SITE_SERVER_NAME;
-else
-	$SiteServerName = COption::GetOptionString("main", "server_name", $GLOBALS["SERVER_NAME"]);
-
-if (strlen($SiteServerName) > 0)
-{
-	$protocol = (CMain::IsHTTPS() ? "https" : "http");
-	$arResult["PAGE_URL"] = $protocol."://".$SiteServerName.$arParams["PAGE_URL"];
-}
-else
-	$arResult["PAGE_URL"] = "";	
-
+$arResult["PAGE_URL"] = CHTTP::URN2URI($arParams["PAGE_URL"]);
 $arResult["PAGE_TITLE"] = $arParams["PAGE_TITLE"];
 
-foreach($arResult["HANDLERS_ALL"] as $name=>$arHandler)
+foreach ($arResult["HANDLERS_ALL"] as $name => $arHandler)
 {
 	if (in_array($name, $arParams["HANDLERS"]))
 	{
@@ -91,33 +76,30 @@ foreach($arResult["HANDLERS_ALL"] as $name=>$arHandler)
 			$PageTitleBack = htmlspecialcharsback($PageTitle);
 
 		$arHandler["ICON"] = str_replace("#PAGE_URL#", $arResult["PAGE_URL"], $arHandler["ICON"]);
+		$arHandler["ICON"] = str_replace("#PAGE_URL_ENCODED#", urlencode($arResult["PAGE_URL"]), $arHandler["ICON"]);
 
 		if (array_key_exists("CHARSBACK", $arHandler) && $arHandler["CHARSBACK"])
 		{
 			$arHandler["ICON"] = str_replace("#PAGE_TITLE#", CUtil::JSEscape($PageTitleBack), $arHandler["ICON"]);
+			$arHandler["ICON"] = str_replace("#PAGE_TITLE_ENCODED#", urlencode($PageTitleBack), $arHandler["ICON"]);
 			$arHandler["ICON"] = str_replace("#PAGE_TITLE_ORIG#", CUtil::addslashes($PageTitle), $arHandler["ICON"]);
+			$utfTitle = $APPLICATION->ConvertCharset($PageTitleBack, LANG_CHARSET, "UTF-8");
+			$arHandler["ICON"] = str_replace("#PAGE_TITLE_UTF_ENCODED#", urlencode($utfTitle), $arHandler["ICON"]);
 		}
 		else
+		{
 			$arHandler["ICON"] = str_replace("#PAGE_TITLE#", CUtil::addslashes($PageTitle), $arHandler["ICON"]);
-			
+			$arHandler["ICON"] = str_replace("#PAGE_TITLE_ENCODED#", urlencode($PageTitle), $arHandler["ICON"]);
+			$utfTitle = $APPLICATION->ConvertCharset($PageTitle, LANG_CHARSET, "UTF-8");
+			$arHandler["ICON"] = str_replace("#PAGE_TITLE_UTF_ENCODED#", urlencode($utfTitle), $arHandler["ICON"]);
+		}
+
 		$arResult["BOOKMARKS"][$name]["ICON"] = $arHandler["ICON"];
 		$arResult["BOOKMARKS"][$name]["SORT"] = $arHandler["SORT"];
 	}
 }
 
-if (!function_exists('__bookmark_sort'))
-{
-	function __bookmark_sort($a, $b)
-	{
-		if ($a['SORT'] == $b['SORT'])
-			return 0;
-		if ($a['SORT'] < $b['SORT'])
-			return -1;
-		return 1;
-	}
-}
-usort($arResult["BOOKMARKS"], "__bookmark_sort");
-
+sortByColumn($arResult["BOOKMARKS"], "SORT");
 
 CUtil::InitJSCore();
 $this->IncludeComponentTemplate();

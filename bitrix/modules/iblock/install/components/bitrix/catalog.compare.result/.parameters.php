@@ -1,47 +1,73 @@
 <?
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
-
+/** @var array $arCurrentValues */
 use Bitrix\Main\Loader;
-use Bitrix\Currency\CurrencyTable;
+use Bitrix\Currency;
+use Bitrix\Iblock;
 
-if(!Loader::includeModule("iblock"))
+if (!Loader::includeModule("iblock"))
 	return;
 
 $boolCatalog = Loader::includeModule("catalog");
 
+$iblockExists = (!empty($arCurrentValues['IBLOCK_ID']) && (int)$arCurrentValues['IBLOCK_ID'] > 0);
+
 $arIBlockType = CIBlockParameters::GetIBlockTypes();
 
 $arIBlock = array();
-$rsIBlock = CIBlock::GetList(array("SORT" => "ASC"), array("TYPE" => $arCurrentValues["IBLOCK_TYPE"], "ACTIVE"=>"Y"));
-while($arr=$rsIBlock->Fetch())
-	$arIBlock[$arr["ID"]] = "[".$arr["ID"]."] ".$arr["NAME"];
+$iblockFilter = (
+	!empty($arCurrentValues['IBLOCK_TYPE'])
+	? array('TYPE' => $arCurrentValues['IBLOCK_TYPE'], 'ACTIVE' => 'Y')
+	: array('ACTIVE' => 'Y')
+);
+$rsIBlock = CIBlock::GetList(array('SORT' => 'ASC'), $iblockFilter);
+while ($arr = $rsIBlock->Fetch())
+	$arIBlock[$arr['ID']] = '['.$arr['ID'].'] '.$arr['NAME'];
+unset($arr, $rsIBlock, $iblockFilter);
 
 $arProperty = array();
 $arProperty_N = array();
-if (0 < intval($arCurrentValues["IBLOCK_ID"]))
+if ($iblockExists)
 {
-	$rsProp = CIBlockProperty::GetList(Array("sort"=>"asc", "name"=>"asc"), Array("IBLOCK_ID"=>$arCurrentValues["IBLOCK_ID"], "ACTIVE"=>"Y"));
-	while ($arr=$rsProp->Fetch())
+	$propertyIterator = Iblock\PropertyTable::getList(array(
+		'select' => array('ID', 'IBLOCK_ID', 'NAME', 'CODE', 'PROPERTY_TYPE'),
+		'filter' => array('=IBLOCK_ID' => $arCurrentValues['IBLOCK_ID'], '=ACTIVE' => 'Y', '!=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_FILE),
+		'order' => array('SORT' => 'ASC', 'NAME' => 'ASC')
+	));
+	while ($property = $propertyIterator->fetch())
 	{
-		if($arr["PROPERTY_TYPE"] != "F")
-			$arProperty[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
+		$propertyCode = (string)$property['CODE'];
+		if ($propertyCode == '')
+			$propertyCode = $property['ID'];
+		$propertyName = '['.$propertyCode.'] '.$property['NAME'];
 
-		if($arr["PROPERTY_TYPE"] == "N")
-			$arProperty_N[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
+		$arProperty[$propertyCode] = $propertyName;
+		if ($property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_NUMBER)
+			$arProperty_N[$propertyCode] = $propertyName;
 	}
+	unset($propertyCode, $propertyName, $property, $propertyIterator);
 }
 
 $arOffers = CIBlockPriceTools::GetOffersIBlock($arCurrentValues["IBLOCK_ID"]);
 $OFFERS_IBLOCK_ID = is_array($arOffers)? $arOffers["OFFERS_IBLOCK_ID"]: 0;
 $arProperty_Offers = array();
-if($OFFERS_IBLOCK_ID)
+if ($OFFERS_IBLOCK_ID)
 {
-	$rsProp = CIBlockProperty::GetList(Array("sort"=>"asc", "name"=>"asc"), Array("IBLOCK_ID"=>$OFFERS_IBLOCK_ID, "ACTIVE"=>"Y"));
-	while($arr=$rsProp->Fetch())
+	$propertyIterator = Iblock\PropertyTable::getList(array(
+		'select' => array('ID', 'IBLOCK_ID', 'NAME', 'CODE', 'PROPERTY_TYPE'),
+		'filter' => array('=IBLOCK_ID' => $OFFERS_IBLOCK_ID, '=ACTIVE' => 'Y', '!=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_FILE),
+		'order' => array('SORT' => 'ASC', 'NAME' => 'ASC')
+	));
+	while ($property = $propertyIterator->fetch())
 	{
-		if($arr["PROPERTY_TYPE"] != "F")
-			$arProperty_Offers[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
+		$propertyCode = (string)$property['CODE'];
+		if ($propertyCode == '')
+			$propertyCode = $property['ID'];
+		$propertyName = '['.$propertyCode.'] '.$property['NAME'];
+
+		$arProperty_Offers[$propertyCode] = $propertyName;
 	}
+	unset($propertyCode, $propertyName, $property, $propertyIterator);
 }
 
 $arSort = CIBlockParameters::GetElementSortFields(
@@ -53,15 +79,7 @@ $arPrice = array();
 if ($boolCatalog)
 {
 	$arSort = array_merge($arSort, CCatalogIBlockParameters::GetCatalogSortFields());
-	$rsPrice=CCatalogGroup::GetListEx(
-		array("SORT" => "ASC"),
-		array(),
-		false,
-		false,
-		array('ID', 'NAME', 'NAME_LANG')
-	);
-	while($arr=$rsPrice->Fetch())
-		$arPrice[$arr["NAME"]] = "[".$arr["NAME"]."] ".$arr["NAME_LANG"];
+	$arPrice = CCatalogIBlockParameters::getPriceTypesList();
 }
 else
 {
@@ -269,23 +287,13 @@ if ($boolCatalog)
 
 	if (isset($arCurrentValues['CONVERT_CURRENCY']) && $arCurrentValues['CONVERT_CURRENCY'] == 'Y')
 	{
-		$arCurrencyList = array();
-		$currencyIterator = CurrencyTable::getList(array(
-			'select' => array('CURRENCY'),
-			'order' => array('SORT' => 'ASC')
-		));
-		while ($currency = $currencyIterator->fetch())
-		{
-			$arCurrencyList[$currency['CURRENCY']] = $currency['CURRENCY'];
-		}
-		unset($currency, $currencyIterator);
 		$arComponentParameters['PARAMETERS']['CURRENCY_ID'] = array(
 			'PARENT' => 'PRICES',
 			'NAME' => GetMessage('CP_BCCR_CURRENCY_ID'),
 			'TYPE' => 'LIST',
-			'VALUES' => $arCurrencyList,
-			'DEFAULT' => CCurrency::GetBaseCurrency(),
-			"ADDITIONAL_VALUES" => "Y",
+			'VALUES' => Currency\CurrencyManager::getCurrencyList(),
+			'DEFAULT' => Currency\CurrencyManager::getBaseCurrency(),
+			'ADDITIONAL_VALUES' => 'Y',
 		);
 	}
 }
@@ -295,4 +303,3 @@ if(!$OFFERS_IBLOCK_ID)
 	unset($arComponentParameters["PARAMETERS"]["OFFERS_FIELD_CODE"]);
 	unset($arComponentParameters["PARAMETERS"]["OFFERS_PROPERTY_CODE"]);
 }
-?>

@@ -25,6 +25,7 @@ $arParams['ELEMENT_CODE'] = ($arParams['ELEMENT_ID'] > 0 ? '' : trim($arParams['
 $arParams['URL_TO_COMMENT'] = trim($arParams['URL_TO_COMMENT']);
 $arParams['WIDTH'] = intval($arParams["WIDTH"]);
 $arParams['COMMENTS_COUNT'] = intval($arParams['COMMENTS_COUNT']);
+$arParams['SHOW_DEACTIVATED'] = (isset($arParams['SHOW_DEACTIVATED']) && $arParams['SHOW_DEACTIVATED'] == 'Y' ? 'Y' : 'N');
 $arParams['BLOG_USE'] = (isset($arParams['BLOG_USE']) && $arParams['BLOG_USE'] === 'Y' ? 'Y' : 'N');
 $arParams['FB_USE'] = (isset($arParams['FB_USE']) && $arParams['FB_USE'] === 'Y' ? 'Y' : 'N');
 $arParams['VK_USE'] = (isset($arParams['VK_USE']) && $arParams['VK_USE'] === 'Y' ? 'Y' : 'N');
@@ -121,20 +122,23 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 	{
 		if ($arParams["ELEMENT_CODE"] !== '')
 		{
+			$findFilter = array(
+				"IBLOCK_ID" => $arParams["IBLOCK_ID"],
+				"IBLOCK_LID" => SITE_ID,
+				"IBLOCK_ACTIVE" => "Y",
+				"ACTIVE_DATE" => "Y",
+				"CHECK_PERMISSIONS" => "Y",
+				"MIN_PERMISSION" => 'R'
+			);
+			if ($arParams["SHOW_DEACTIVATED"] !== "Y")
+				$findFilter["ACTIVE"] = "Y";
+
 			$arParams["ELEMENT_ID"] = CIBlockFindTools::GetElementID(
 				$arParams["ELEMENT_ID"],
 				$arParams["ELEMENT_CODE"],
 				false,
 				false,
-				array(
-					"IBLOCK_ID" => $arParams["IBLOCK_ID"],
-					"IBLOCK_LID" => SITE_ID,
-					"IBLOCK_ACTIVE" => "Y",
-					"ACTIVE_DATE" => "Y",
-					"ACTIVE" => "Y",
-					"CHECK_PERMISSIONS" => "Y",
-					"MIN_PERMISSION" => 'R'
-				)
+				$findFilter
 			);
 		}
 	}
@@ -366,11 +370,12 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 			"IBLOCK_LID" => SITE_ID,
 			"IBLOCK_ACTIVE" => "Y",
 			"ACTIVE_DATE" => "Y",
-			"ACTIVE" => "Y",
 			"CHECK_PERMISSIONS" => "Y",
 			"MIN_PERMISSION" => 'R',
 			"SHOW_HISTORY" => "Y"
 		);
+		if ($arParams["SHOW_DEACTIVATED"] !== "Y")
+			$arFilter["ACTIVE"] = "Y";
 
 		$rsElement = CIBlockElement::GetList(
 			array(),

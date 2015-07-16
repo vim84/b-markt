@@ -223,6 +223,11 @@ Class forum extends CModule
 
 		RegisterModuleDependences("main", "OnAfterRegisterModule", "main", "forum", "InstallUserFields", 100, "/modules/forum/install/index.php");
 
+		RegisterModuleDependences('conversion', 'OnGetCounterTypes' , 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onGetCounterTypes');
+		RegisterModuleDependences('conversion', 'OnGetRateTypes' , 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onGetRateTypes');
+		RegisterModuleDependences('forum', 'onAfterTopicAdd', 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onTopicAdd');
+		RegisterModuleDependences('forum', 'onAfterMessageAdd', 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onMessageAdd');
+
 		if ($arInstall["INSTALL_SMILES"] == "Y")
 		{
 			$bInsSmiles = False;
@@ -345,6 +350,12 @@ Class forum extends CModule
 		UnRegisterModuleDependences("main", "OnGetRatingsObjects", "forum", "CRatingsComponentsForum", "OnGetRatingObject");
 		UnRegisterModuleDependences("main", "OnGetRatingContentOwner", "forum", "CRatingsComponentsForum", "OnGetRatingContentOwner");
 		UnRegisterModuleDependences("im", "OnGetNotifySchema", "forum", "CForumNotifySchema", "OnGetNotifySchema");
+
+		UnRegisterModuleDependences('conversion', 'OnGetCounterTypes' , 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onGetCounterTypes');
+		UnRegisterModuleDependences('conversion', 'OnGetRateTypes' , 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onGetRateTypes');
+		UnRegisterModuleDependences('forum', 'onAfterTopicAdd', 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onTopicAdd');
+		UnRegisterModuleDependences('forum', 'onAfterMessageAdd', 'forum', '\Bitrix\Forum\Internals\ConversionHandlers', 'onMessageAdd');
+
 		CAgent::RemoveAgent("CForumTopic::CleanUp();","forum");
 		CAgent::RemoveAgent("CForumStat::CleanUp();","forum");
 		CAgent::RemoveAgent("CForumFiles::CleanUp();","forum");
@@ -403,8 +414,10 @@ Class forum extends CModule
 
 	function InstallUserFields($id = "all")
 	{
+		global $APPLICATION;
+
 		$errors = null;
-		$id = (in_array($id, array("all", "webdav")) ? $id : false);
+		$id = (in_array($id, array("all", "webdav", "disk")) ? $id : false);
 		if (!!$id && IsModuleInstalled("webdav"))
 		{
 			$arFields = array(
@@ -431,6 +444,47 @@ Class forum extends CModule
 					if ($strEx = $GLOBALS['APPLICATION']->GetException())
 					{
 						$errors = $strEx->GetString();
+					}
+				}
+			}
+		}
+		if(($id == 'all' || $id == 'disk') && IsModuleInstalled("disk"))
+		{
+			$props = array(
+				array(
+					"ENTITY_ID" => "FORUM_MESSAGE",
+					"FIELD_NAME" => "UF_FORUM_MESSAGE_DOC",
+					"USER_TYPE_ID" => "disk_file",
+				),
+				array(
+					"ENTITY_ID" => "FORUM_MESSAGE",
+					"FIELD_NAME" => "UF_FORUM_MESSAGE_VER",
+					"USER_TYPE_ID" => "disk_version",
+				)
+			);
+			$uf = new CUserTypeEntity;
+			foreach ($props as $prop)
+			{
+				$rsData = CUserTypeEntity::getList(array("ID" => "ASC"), array("ENTITY_ID" => $prop["ENTITY_ID"], "FIELD_NAME" => $prop["FIELD_NAME"]));
+				if (!($rsData && ($arRes = $rsData->Fetch())))
+				{
+					$intID = $uf->add(array(
+						"ENTITY_ID" => $prop["ENTITY_ID"],
+						"FIELD_NAME" => $prop["FIELD_NAME"],
+						"XML_ID" => $prop["FIELD_NAME"],
+						"USER_TYPE_ID" => $prop["USER_TYPE_ID"],
+						"SORT" => 100,
+						"MULTIPLE" => ($prop["USER_TYPE_ID"] == "disk_version" ? "N" : "Y"),
+						"MANDATORY" => "N",
+						"SHOW_FILTER" => "N",
+						"SHOW_IN_LIST" => "N",
+						"EDIT_IN_LIST" => "Y",
+						"IS_SEARCHABLE" => ($prop["USER_TYPE_ID"] == "disk_file" ? "Y" : "N")
+					), false);
+
+					if (false == $intID && ($strEx = $APPLICATION->getException()))
+					{
+						$errors = $strEx->getString();
 					}
 				}
 			}

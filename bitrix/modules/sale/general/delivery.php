@@ -36,7 +36,7 @@ class CAllSaleDelivery
 			$arOrderTmpDel = array(
 				"PRICE" => $arOrder["ORDER_PRICE"] + $arOrder["TAX_PRICE"] - $arOrder["DISCOUNT_PRICE"],
 				"WEIGHT" => $arOrder["ORDER_WEIGHT"],
-				"LOCATION_FROM" => COption::GetOptionInt('sale', 'location', '2961', $arOrder["SITE_ID"]),
+				"LOCATION_FROM" => COption::GetOptionString('sale', 'location', '2961', $arOrder["SITE_ID"]),
 				"LOCATION_TO" => $arOrder["DELIVERY_LOCATION"],
 				"LOCATION_ZIP" => $arOrder["DELIVERY_LOCATION_ZIP"],
 				"ITEMS" => $arOrder["BASKET_ITEMS"]
@@ -225,7 +225,9 @@ class CAllSaleDelivery
 			}
 			catch(Exception $e)
 			{
-				return new DB\ArrayResult(array());
+				$dbResult = new CDBResult();
+				$dbResult->InitFromArray(array());
+				return $dbResult;
 			}
 		}
 		else
@@ -408,7 +410,7 @@ class CAllSaleDelivery
 					// change location id to location code
 					$arFields["LOCATIONS"][$i]['LOCATION_CODE'] = $arFields["LOCATIONS"][$i]['LOCATION_ID'];
 					unset($arFields["LOCATIONS"][$i]['LOCATION_ID']);
-					
+
 					$arInsert = $DB->PrepareInsert("b_sale_delivery2location", $arFields["LOCATIONS"][$i]);
 
 					$strSql =

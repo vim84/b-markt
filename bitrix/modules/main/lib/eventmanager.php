@@ -384,6 +384,8 @@ class EventManager
 		try
 		{
 			$result = true;
+			$includeResult = true;
+
 			$event->addDebugInfo($handler);
 
 			if (isset($handler["TO_MODULE_ID"]) && !empty($handler["TO_MODULE_ID"]) && ($handler["TO_MODULE_ID"] != 'main'))
@@ -395,12 +397,12 @@ class EventManager
 				$path = ltrim($handler["TO_PATH"], "/");
 				if (($path = Loader::getLocal($path)) !== false)
 				{
-					$result = include_once($path);
+					$includeResult = include_once($path);
 				}
 			}
 			elseif (isset($handler["FULL_PATH"]) && !empty($handler["FULL_PATH"]) && IO\File::isFileExists($handler["FULL_PATH"]))
 			{
-				$result = include_once($handler["FULL_PATH"]);
+				$includeResult = include_once($handler["FULL_PATH"]);
 			}
 
 			$event->addDebugInfo($result);
@@ -438,6 +440,10 @@ class EventManager
 				if ($callback != null)
 				{
 					$result = call_user_func_array($callback, $args);
+				}
+				else
+				{
+					$result = $includeResult;
 				}
 
 				if (($result != null) && !($result instanceof EventResult))

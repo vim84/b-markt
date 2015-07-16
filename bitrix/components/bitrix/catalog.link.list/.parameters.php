@@ -1,37 +1,59 @@
 <?
-use Bitrix\Main\Loader;
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
+/** @var array $arCurrentValues */
+use Bitrix\Main\Loader;
+use Bitrix\Iblock;
+use Bitrix\Currency;
 
 if(!Loader::includeModule("iblock"))
 	return;
-
-$boolCatalog = Loader::includeModule("catalog");
+$catalogIncluded = Loader::includeModule('catalog');
+$iblockExists = (!empty($arCurrentValues['IBLOCK_ID']) && (int)$arCurrentValues['IBLOCK_ID'] > 0);
 
 $arIBlockType = CIBlockParameters::GetIBlockTypes();
 
-$rsIBlock = CIBlock::GetList(array("sort" => "asc"), array("TYPE" => $arCurrentValues["IBLOCK_TYPE"], "ACTIVE"=>"Y"));
-while($arr=$rsIBlock->Fetch())
-	$arIBlock[$arr["ID"]] = "[".$arr["ID"]."] ".$arr["NAME"];
+$arIBlock = array();
+$iblockFilter = (
+	!empty($arCurrentValues['IBLOCK_TYPE'])
+	? array('TYPE' => $arCurrentValues['IBLOCK_TYPE'], 'ACTIVE' => 'Y')
+	: array('ACTIVE' => 'Y')
+);
+$rsIBlock = CIBlock::GetList(array('SORT' => 'ASC'), $iblockFilter);
+while ($arr = $rsIBlock->Fetch())
+	$arIBlock[$arr['ID']] = '['.$arr['ID'].'] '.$arr['NAME'];
+unset($arr, $rsIBlock, $iblockFilter);
 
 $arProperty_LNS = array();
 $arProperty_N = array();
 $arProperty_LINK = array();
-$rsProp = CIBlockProperty::GetList(array("sort"=>"asc", "name"=>"asc"), array("ACTIVE"=>"Y", "IBLOCK_ID"=>$arCurrentValues["IBLOCK_ID"]));
-while ($arr=$rsProp->Fetch())
+if ($iblockExists)
 {
-	$arProperty[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
-	if(in_array($arr["PROPERTY_TYPE"], array("L", "N", "S")))
+	$propertyIterator = Iblock\PropertyTable::getList(array(
+		'select' => array('ID', 'IBLOCK_ID', 'NAME', 'CODE', 'PROPERTY_TYPE'),
+		'filter' => array('=IBLOCK_ID' => $arCurrentValues['IBLOCK_ID'], '=ACTIVE' => 'Y'),
+		'order' => array('SORT' => 'ASC', 'NAME' => 'ASC')
+	));
+	while ($property = $propertyIterator->fetch())
 	{
-		$arProperty_LNS[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
+		$propertyCode = (string)$property['CODE'];
+		if ($propertyCode == '')
+			$propertyCode = $property['ID'];
+		$propertyName = '['.$propertyCode.'] '.$property['NAME'];
+
+		if (
+			$property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_LIST
+			|| $property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_NUMBER
+			|| $property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_STRING
+		)
+			$arProperty_LNS[$propertyCode] = $propertyName;
+
+		if ($property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_ELEMENT)
+			$arProperty_LINK[$propertyCode] = $propertyName;
+
+		if ($property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_NUMBER)
+			$arProperty_N[$propertyCode] = $propertyName;
 	}
-	if($arr["PROPERTY_TYPE"]=="E")
-	{
-		$arProperty_LINK[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
-	}
-	if($arr["PROPERTY_TYPE"]=="N")
-	{
-		$arProperty_N[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
-	}
+	unset($propertyCode, $propertyName, $property, $propertyIterator);
 }
 
 $arSort = CIBlockParameters::GetElementSortFields(
@@ -40,11 +62,10 @@ $arSort = CIBlockParameters::GetElementSortFields(
 );
 
 $arPrice = array();
-if ($boolCatalog)
+if ($catalogIncluded)
 {
 	$arSort = array_merge($arSort, CCatalogIBlockParameters::GetCatalogSortFields());
-	$rsPrice = CCatalogGroup::GetList($v1="sort", $v2="asc");
-	while($arr=$rsPrice->Fetch()) $arPrice[$arr["NAME"]] = "[".$arr["NAME"]."] ".$arr["NAME_LANG"];
+	$arPrice = CCatalogIBlockParameters::getPriceTypesList();
 }
 else
 {
@@ -238,7 +259,7 @@ $arComponentParameters = array(
 );
 CIBlockParameters::AddPagerSettings($arComponentParameters, GetMessage("T_IBLOCK_DESC_PAGER_CATALOG"), true, true);
 
-if ($boolCatalog)
+if ($catalogIncluded)
 {
 	$arComponentParameters["PARAMETERS"]['HIDE_NOT_AVAILABLE'] = array(
 		'PARENT' => 'DATA_SOURCE',
@@ -256,21 +277,13 @@ if ($boolCatalog)
 
 	if (isset($arCurrentValues['CONVERT_CURRENCY']) && 'Y' == $arCurrentValues['CONVERT_CURRENCY'])
 	{
-		$arCurrencyList = array();
-		$by = 'SORT';
-		$order = 'ASC';
-		$rsCurrencies = CCurrency::GetList($by, $order);
-		while ($arCurrency = $rsCurrencies->Fetch())
-		{
-			$arCurrencyList[$arCurrency['CURRENCY']] = $arCurrency['CURRENCY'];
-		}
 		$arComponentParameters['PARAMETERS']['CURRENCY_ID'] = array(
 			'PARENT' => 'PRICES',
 			'NAME' => GetMessage('CP_BCLL_CURRENCY_ID'),
 			'TYPE' => 'LIST',
-			'VALUES' => $arCurrencyList,
-			'DEFAULT' => CCurrency::GetBaseCurrency(),
-			"ADDITIONAL_VALUES" => "Y",
+			'VALUES' => Currency\CurrencyManager::getCurrencyList(),
+			'DEFAULT' => Currency\CurrencyManager::getBaseCurrency(),
+			'ADDITIONAL_VALUES' => 'Y',
 		);
 	}
 }
@@ -284,4 +297,3 @@ if (isset($arCurrentValues['DISPLAY_COMPARE']) && $arCurrentValues['DISPLAY_COMP
 		'DEFAULT' => ''
 	);
 }
-?>

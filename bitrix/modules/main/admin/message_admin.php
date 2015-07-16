@@ -20,7 +20,7 @@ define("HELP_FILE", "settings/mail_events/message_admin.php");
 if(!$USER->CanDoOperation('edit_other_settings') && !$USER->CanDoOperation('view_other_settings'))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
-$isAdmin = $USER->CanDoOperation('edit_other_settings');
+$isAdmin = $USER->CanDoOperation('lpa_template_edit');
 
 IncludeModuleLangFile(__FILE__);
 $err_mess = "File: ".__FILE__."<br>Line: ";
@@ -107,10 +107,24 @@ if(CheckFilter($arFilterFields))
 // edit (Check rights before saving!)
 if($lAdmin->EditAction() && $isAdmin) // if saving from list
 {
+	$allowedFieldsForUpdate = array(
+		"ACTIVE",
+		"SUBJECT",
+		"BODY_TYPE",
+		"EMAIL_FROM",
+		"EMAIL_TO",
+		"BCC",
+		"EVENT_NAME"
+	);
+
 	foreach($FIELDS as $ID=>$arFields)
 	{
 		if(!$lAdmin->IsUpdated($ID))
 			continue;
+
+		foreach($arFields as $fieldKey => $fieldValue)
+			if(!in_array($fieldKey, $allowedFieldsForUpdate))
+				unset($arFields[$fieldKey]);
 
 		$DB->StartTransaction();
 		$ID = intval($ID);
@@ -166,7 +180,12 @@ if(($arID = $lAdmin->GroupAction()) && $isAdmin)
 }
 
 $rsData = CEventMessage::GetList($by, $order, $arFilter);
+$resultObject = null;
+if(isset($rsData->resultObject))
+	$resultObject = $rsData->resultObject;
 $rsData = new CAdminResult($rsData, $sTableID);
+if(!isset($rsData->resultObject))
+	$rsData->resultObject = $resultObject;
 $rsData->NavStart();
 
 // LIST
@@ -180,7 +199,6 @@ $lAdmin->AddHeaders(array(
 	array("id"=>"ACTIVE", "content"=>GetMessage('ACTIVE'), "sort"=>"active", "default"=>true, "align"=>"center"),
 	array("id"=>"LID", "content"=>GetMessage('LANG'), "default"=>true, "align"=>"center"),
 	array("id"=>"EVENT_NAME", "content"=>GetMessage("EVENT_TYPE"), "sort"=>"event_name", "default"=>true),
-	array("id"=>"EVENT_TYPE", "content"=>GetMessage("EVENT_TYPE")),
 	array("id"=>"SUBJECT", "content"=>GetMessage('SUBJECT'), "sort"=>"subject", "default"=>true),
 	array("id"=>"EMAIL_FROM", "content"=>GetMessage("F_FROM"), "sort"=>"from"),
 	array("id"=>"EMAIL_TO", "content"=>GetMessage("F_TO"), "sort"=>"to"),
@@ -234,11 +252,6 @@ $lAdmin->AddGroupActionTable(Array(
 	"deactivate"=>GetMessage("MAIN_ADMIN_LIST_DEACTIVATE"),
 ));
 
-
-//			$arr = array("REFERENCE" => $event_type_ref, "REFERENCE_ID" => $event_type_ref_id);
-//			echo SelectBoxFromArray("EVENT_NAME", $arr, htmlspecialcharsbx($find_type_id));
-
-
 // contextual menu (add, go_to_list)
 $aContext = array(
 	array(
@@ -291,11 +304,11 @@ $oFilter->Begin();
 </tr>
 <tr>
 	<td><?echo GetMessage("MAIN_F_ID")?></td>
-	<td><input type="text" name="find_id" size="47" value="<?echo htmlspecialcharsbx($find_id)?>"><?=ShowFilterLogicHelp()?></td>
+	<td><input type="text" name="find_id" size="47" value="<?echo htmlspecialcharsbx($find_id)?>"></td>
 </tr>
 <tr>
 	<td><?echo GetMessage("MAIN_F_EVENT_TYPE")?></td>
-	<td><input type="text" name="find_event_type" size="47" value="<?echo htmlspecialcharsbx($find_event_type)?>"><?=ShowFilterLogicHelp()?><br><?
+	<td><input type="text" name="find_event_type" size="47" value="<?echo htmlspecialcharsbx($find_event_type)?>"><br><?
 		$event_type_ref = array();
 		$event_type_ref_id = array();
 		$ref_en = array();
@@ -327,19 +340,19 @@ $oFilter->Begin();
 </tr>
 <tr>
 	<td><?echo GetMessage("MAIN_F_FROM")?></td>
-	<td><input type="text" name="find_from" size="47" value="<?echo htmlspecialcharsbx($find_from)?>"><?=ShowFilterLogicHelp()?></td>
+	<td><input type="text" name="find_from" size="47" value="<?echo htmlspecialcharsbx($find_from)?>"></td>
 </tr>
 <tr>
 	<td><?echo GetMessage("MAIN_F_TO")?></td>
-	<td><input type="text" name="find_to" size="47" value="<?echo htmlspecialcharsbx($find_to)?>"><?=ShowFilterLogicHelp()?></td>
+	<td><input type="text" name="find_to" size="47" value="<?echo htmlspecialcharsbx($find_to)?>"></td>
 </tr>
 <tr>
 	<td><?echo GetMessage("MAIN_F_BCC")?></td>
-	<td><input type="text" name="find_bcc" size="47" value="<?echo htmlspecialcharsbx($find_bcc)?>"><?=ShowFilterLogicHelp()?></td>
+	<td><input type="text" name="find_bcc" size="47" value="<?echo htmlspecialcharsbx($find_bcc)?>"></td>
 </tr>
 <tr>
 	<td><?echo GetMessage("F_SUBJECT")?></td>
-	<td><input type="text" name="find_subject" size="47" value="<?echo htmlspecialcharsbx($find_subject)?>"><?=ShowFilterLogicHelp()?></td>
+	<td><input type="text" name="find_subject" size="47" value="<?echo htmlspecialcharsbx($find_subject)?>"></td>
 </tr>
 <tr>
 	<td><?=GetMessage("MAIN_F_BODY_TYPE")?></td>
@@ -350,7 +363,7 @@ $oFilter->Begin();
 </tr>
 <tr>
 	<td><?echo GetMessage("MAIN_F_MESSAGE_BODY")?></td>
-	<td><input type="text" name="find_body" size="47" value="<?echo htmlspecialcharsbx($find_body)?>"><?=ShowFilterLogicHelp()?></td>
+	<td><input type="text" name="find_body" size="47" value="<?echo htmlspecialcharsbx($find_body)?>"></td>
 </tr>
 <?
 $oFilter->Buttons(array("table_id"=>$sTableID, "url"=>$APPLICATION->GetCurPage(), "form"=>"find_form"));

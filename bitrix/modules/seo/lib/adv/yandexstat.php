@@ -320,7 +320,7 @@ class YandexStatTable extends Entity\DataManager
 					{
 						if(array_key_exists($statEntry['BannerID'], $bannerList))
 						{
-							static::add(array(
+							$statFields = array(
 								'CAMPAIGN_ID' => $campaignId,
 								'BANNER_ID' => $bannerList[$statEntry['BannerID']],
 								'DATE_DAY' => new Date($statEntry['StatDate'], 'Y-m-d'),
@@ -334,7 +334,21 @@ class YandexStatTable extends Entity\DataManager
 								'SHOWS' => $statEntry['Shows'],
 								'SHOWS_SEARCH' => $statEntry['ShowsSearch'],
 								'SHOWS_CONTEXT' => $statEntry['ShowsContext'],
+							);
+
+							$statCheckRes = static::getList(array(
+								'filter' => array(
+									'BANNER_ID' => $statFields['BANNER_ID'],
+									'DATE_DAY' => $statFields['DATE_DAY'],
+								),
+								'select' => array('ID')
 							));
+
+							$statCheck = $statCheckRes->fetch();
+							if(!$statCheck)
+							{
+								static::add($statFields);
+							}
 						}
 					}
 				}

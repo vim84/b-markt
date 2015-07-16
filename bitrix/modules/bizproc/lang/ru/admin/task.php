@@ -8,4 +8,5 @@ $MESS["BPAT_DESCR"] = "Описание задания";
 $MESS["BPAT_NAME"] = "Название задания";
 $MESS["BPAT_NO_TASK"] = "Задание не найдено";
 $MESS["BPAT_USER"] = "Пользователь";
+$MESS["BPAT_USER_NOT_FOUND"] = "(Не найден)";
 ?>

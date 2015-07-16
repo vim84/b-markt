@@ -580,7 +580,7 @@ class CSaleOrderChangeFormat
 
 	public static function FormatOrderPriceDeliveryChanged($arData)
 	{
-		$info = GetMessage("SOC_ORDER_PRICE_DELIVERY_CHANGED_INFO", array("#AMOUNT#" => CurrencyFormat($arData["PRICE_DELIVERY"], $arData["CURRENCY"])));
+		$info = GetMessage("SOC_ORDER_PRICE_DELIVERY_CHANGED_INFO", array("#AMOUNT#" => CCurrencyLang::CurrencyFormat($arData["PRICE_DELIVERY"], $arData["CURRENCY"], true)));
 
 		return array(
 			"NAME" => GetMessage("SOC_ORDER_PRICE_DELIVERY_CHANGED"),
@@ -590,7 +590,7 @@ class CSaleOrderChangeFormat
 
 	public static function FormatOrderPriceChanged($arData)
 	{
-		$info = GetMessage("SOC_ORDER_PRICE_CHANGED_INFO", array("#AMOUNT#" => CurrencyFormat($arData["PRICE"], $arData["CURRENCY"])));
+		$info = GetMessage("SOC_ORDER_PRICE_CHANGED_INFO", array("#AMOUNT#" => CCurrencyLang::CurrencyFormat($arData["PRICE"], $arData["CURRENCY"], true)));
 
 		return array(
 			"NAME" => GetMessage("SOC_ORDER_PRICE_CHANGED"),
@@ -634,7 +634,7 @@ class CSaleOrderChangeFormat
 		foreach ($arData as $param => $value)
 			$info = str_replace("#".$param."#", $value, $info);
 
-		$info = str_replace("#AMOUNT#", CurrencyFormat($arData["PRICE"], $arData["CURRENCY"]), $info);
+		$info = str_replace("#AMOUNT#", CCurrencyLang::CurrencyFormat($arData["PRICE"], $arData["CURRENCY"], true), $info);
 
 		return array(
 			"NAME" => GetMessage("SOC_BASKET_PRICE_CHANGED"),

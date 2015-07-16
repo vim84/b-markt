@@ -102,6 +102,8 @@ else
 						<?
 						foreach ($arResult["DocumentFields"] as $key => $value)
 						{
+							if (empty($value['Filterable']))
+								continue;
 							?><option value="<?= $key ?>"<?= (in_array($key, $arResult["Data"]["FilterableFields"])) ? " selected" : "" ?>><?= htmlspecialcharsbx($value["Name"])." [".$key."]" ?></option><?
 						}
 						?>

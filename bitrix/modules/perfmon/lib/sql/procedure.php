@@ -29,7 +29,7 @@ class Procedure extends BaseObject
 	public static function create(Tokenizer $tokenizer)
 	{
 		$type = $tokenizer->getCurrentToken()->text;
-		$token = $tokenizer->nextToken();
+		$tokenizer->nextToken();
 		$tokenizer->skipWhiteSpace();
 
 		$name = $tokenizer->getCurrentToken()->text;

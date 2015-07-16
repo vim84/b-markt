@@ -189,10 +189,10 @@ class CMenu
 
 		$arMenuCache = false;
 		$bCached = false;
-		$bCacheIsAllowed = CACHED_menu!==false && !$USER->IsAuthorized() && !$this->MenuExtDir;
+		$bCacheIsAllowed = CACHED_menu!==false && !$USER->IsAuthorized() && $this->MenuExtDir == '';
 		if($bCacheIsAllowed)
 		{
-			$cache_id = $_SERVER["DOCUMENT_ROOT"].",".$this->MenuDir.",".$this->MenuExtDir.",".$this->type;
+			$cache_id = $_SERVER["DOCUMENT_ROOT"].",".$this->MenuDir.",,".$this->type;
 			if($CACHE_MANAGER->Read(CACHED_menu, $cache_id, "menu"))
 			{
 				$arMenuCache = $CACHE_MANAGER->Get($cache_id);
@@ -235,7 +235,7 @@ class CMenu
 			$PARAMS = $MenuItem[3];
 
 			//Calculate menu items stack for iblock items only
-			if($this->MenuExtDir && is_array($PARAMS) && isset($PARAMS["FROM_IBLOCK"]))
+			if($this->MenuExtDir <> '' && is_array($PARAMS) && isset($PARAMS["FROM_IBLOCK"]))
 			{
 				if($previousDepthLevel == -1)
 					$previousDepthLevel = $PARAMS["DEPTH_LEVEL"];
@@ -270,7 +270,7 @@ class CMenu
 			if(count($MenuItem)>4)
 			{
 				$CONDITION = $MenuItem[4];
-				if(strlen($CONDITION)>0 && (!eval("return ".$CONDITION.";")))
+				if($CONDITION <> '' && (!eval("return ".$CONDITION.";")))
 					$bSkipMenuItem = true;
 			}
 
@@ -354,7 +354,7 @@ class CMenu
 			//Adjust selection for iblock sections tree
 			if(
 				$SELECTED
-				&& $this->MenuExtDir
+				&& $this->MenuExtDir <> ''
 				&& is_array($PARAMS)
 				&& isset($PARAMS["FROM_IBLOCK"])
 			)

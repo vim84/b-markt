@@ -41,6 +41,7 @@ class CPerfomanceTable extends CAllPerfomanceTable
 {
 	function Init($TABLE_NAME)
 	{
+		$TABLE_NAME = trim($TABLE_NAME, "`");
 		$this->TABLE_NAME = $TABLE_NAME;
 	}
 
@@ -52,6 +53,8 @@ class CPerfomanceTable extends CAllPerfomanceTable
 			$TABLE_NAME = $this->TABLE_NAME;
 		if (strlen($TABLE_NAME) <= 0)
 			return false;
+
+		$TABLE_NAME = trim($TABLE_NAME, "`");
 
 		$strSql = "
 			SHOW TABLES LIKE '".$DB->ForSQL($TABLE_NAME)."'
@@ -72,6 +75,8 @@ class CPerfomanceTable extends CAllPerfomanceTable
 			$TABLE_NAME = $this->TABLE_NAME;
 		if (strlen($TABLE_NAME) <= 0)
 			return array();
+
+		$TABLE_NAME = trim($TABLE_NAME, "`");
 
 		if (!array_key_exists($TABLE_NAME, $cache))
 		{
@@ -103,6 +108,8 @@ class CPerfomanceTable extends CAllPerfomanceTable
 		if (strlen($TABLE_NAME) <= 0)
 			return array();
 
+		$TABLE_NAME = trim($TABLE_NAME, "`");
+
 		if (!array_key_exists($TABLE_NAME, $cache))
 		{
 			$strSql = "
@@ -133,13 +140,13 @@ class CPerfomanceTable extends CAllPerfomanceTable
 		if (strlen($TABLE_NAME) <= 0)
 			return false;
 
+		$TABLE_NAME = trim($TABLE_NAME, "`");
+
 		if (!array_key_exists($TABLE_NAME, $cache))
 		{
 			global $DB;
 
-			$strSql = "
-				SHOW COLUMNS FROM `".$DB->ForSQL($TABLE_NAME)."`
-			";
+			$strSql = "SHOW COLUMNS FROM `".$DB->ForSQL($TABLE_NAME)."`";
 			$rs = $DB->Query($strSql);
 			$arResult = array();
 			$arResultExt = array();
@@ -147,7 +154,7 @@ class CPerfomanceTable extends CAllPerfomanceTable
 			{
 				$canSort = true;
 				$match = array();
-				if (preg_match("/^(varchar|char)\\((\\d+)\\)/", $ar["Type"], $match))
+				if (preg_match("/^(varchar|char|varbinary)\\((\\d+)\\)/", $ar["Type"], $match))
 				{
 					$ar["DATA_TYPE"] = "string";
 					$ar["DATA_LENGTH"] = $match[2];
@@ -161,7 +168,7 @@ class CPerfomanceTable extends CAllPerfomanceTable
 					$ar["DATA_TYPE"] = "string";
 					$ar["ORM_DATA_TYPE"] = "string";
 				}
-				elseif (preg_match("/^(text|longtext|mediumtext)/", $ar["Type"]))
+				elseif (preg_match("/^(text|longtext|mediumtext|longblob)/", $ar["Type"]))
 				{
 					$canSort = false;
 					$ar["DATA_TYPE"] = "string";

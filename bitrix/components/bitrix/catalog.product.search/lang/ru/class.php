@@ -34,3 +34,5 @@ $MESS["SPS_EXPAND"] = "Развернуть";
 $MESS["SPS_COLLAPSE"] = "Свернуть";
 $MESS["SPS_CHOOSE_CATALOG"] = "Выбрать каталог";
 $MESS["SPS_OFFER"] = "SKU";
+$MESS["SPS_QUANTITY"] = "Кол-во";
+$MESS["SPS_FIELD_ACTION"] = "Действие";

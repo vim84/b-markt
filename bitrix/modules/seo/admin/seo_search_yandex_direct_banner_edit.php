@@ -60,6 +60,9 @@ catch(Exception $e)
 
 $bReadOnly = $bNeedAuth;
 $bAllowUpdate = !$bNeedAuth;
+$bSale = Main\ModuleManager::isModuleInstalled('sale')
+	&& Main\ModuleManager::isModuleInstalled('catalog')
+	&& Main\Loader::includeModule('currency');
 
 $request = Main\Context::getCurrent()->getRequest();
 
@@ -391,78 +394,6 @@ $tabControl->Begin();
 $tabControl->BeginNextTab();
 ?>
 <style>
-	.yandex-adv-block
-	{
-		display: inline-block;
-		width: 370px;
-		overflow: hidden;
-		background-color: #FFFFFF !important;
-		color: #000000 !important;
-		padding: 20px;
-		margin-top: 4px;
-		border: solid 1px #BBBBBB;
-		font: 13px Arial, Helvetica, sans-serif !important;
-		line-height: 16px !important;
-	}
-
-	.yandex-adv-block .yandex-title
-	{
-		font-size: 16px !important;
-		line-height: 18px !important;
-		margin: -5px 0 0 0;
-		padding-bottom: 1px;
-		font-weight: 400 !important;
-	}
-
-	.yandex-adv-block .yandex-title-link
-	{
-		text-decoration: underline !important;
-		position: relative;
-		z-index: 2;
-		margin: -10px 0 0;
-		padding: 10px 0 0;
-		vertical-align: top;
-		color: #33c !important;
-	}
-
-	.yandex-adv-block .yandex-title-link:hover
-	{
-		color: #d00 !important;
-	}
-
-	.yandex-adv-block .yandex-adv
-	{
-		color: #070 !important;
-		margin: 2px 0;
-		padding-bottom: 0;
-		line-height: 16px !important;
-	}
-
-	.yandex-adv-block .yandex-adv-note
-	{
-		margin: 0 12px 0 0;
-		background: none repeat scroll 0 0 #ffeba0 !important;
-		border-radius: 3px;
-		color: #332f1e !important;
-		display: inline-block;
-		font: 11px/15px Verdana !important;
-		padding: 0 6px 1px;
-		vertical-align: baseline;
-	}
-
-	.yandex-adv-block .yandex-adv-link
-	{
-		transition: color 0.15s ease-out 0s;
-		margin-right: 20px;
-		color: #070 !important;
-		text-decoration: none !important;
-	}
-
-	.yandex-adv-block .yandex-adv-link:hover
-	{
-		color: #d00 !important;
-		text-decoration: none !important;
-	}
 
 	.yandex-adv-stats
 	{
@@ -556,11 +487,10 @@ endif;
 			<span id="title_stats" class="yandex-adv-stats"><?=Adv\YandexBannerTable::MAX_TITLE_LENGTH-strlen($banner["SETTINGS"]["Title"])?></span>
 		</td>
 		<td width="60%" valign="top" rowspan="2">
-			<div class="yandex-adv-block">
-				<h2 class="yandex-title"><a href="/" class="yandex-title-link" id="yandex_link"><b id="yandex_title_content"><?=Loc::getMessage('SEO_BANNER_DATA_TITLE')?></b> / <font id="yandex_link_content"><?=$request->getHttpHost()?></font></a></h2>
-				<div class="yandex-adv"><div class="yandex-adv-note"><?=Loc::getMessage('SEO_BANNER_ADV_MARK')?></div><a class="yandex-adv-link" href="/" id="yandex_link_content_link"><?=$request->getHttpHost()?></a></div>
-				<div class="yandex-text" id="yandex_text_content"><?=Loc::getMessage('SEO_BANNER_DATA_TEXT')?></div>
-			</div>
+<?
+$bannerInfo = $ID > 0 ? $banner : null;
+require("tab/seo_search_yandex_direct_banner.php");
+?>
 		</td>
 	</tr>
 	<tr>
@@ -761,7 +691,7 @@ function updateAdv()
 	BX('text_stats').innerHTML = <?=Adv\YandexBannerTable::MAX_TEXT_LENGTH;?>-text.length;
 
 	BX('yandex_title_content').innerHTML = BX.util.htmlspecialchars(title||BX('title_content').placeholder);
-	BX('yandex_text_content').innerHTML = BX.util.htmlspecialchars(text||BX('text_content').placeholder).replace(/\n/g	, '<br />');
+	BX('yandex_text_content').innerHTML = BX.util.htmlspecialchars(text||BX('text_content').placeholder).replace(/\n+/g, ' ');
 	BX('yandex_link_content').innerHTML = BX.util.htmlspecialchars(domain);
 	BX('yandex_link_content_link').innerHTML = BX.util.htmlspecialchars(domain);
 	BX('yandex_link').href = link;
@@ -1143,7 +1073,7 @@ foreach($banner["SETTINGS"]["Phrases"] as $phraseData)
 			{
 				if (res.error)
 				{
-					switch (res.error.code)
+					switch (res.error.code + '')
 					{
 						case '92':
 							if(!yandexTimeout)
@@ -1343,7 +1273,7 @@ foreach($banner["SETTINGS"]["Phrases"] as $phraseData)
 				{
 					if (res.error)
 					{
-						switch (res.error.code)
+						switch (res.error.code+'')
 						{
 							case '74':
 								if(!yandexTimeout)
@@ -1558,6 +1488,31 @@ if($bShowStats)
 	$bLoadStats = count($gaps) > 0;
 	$bShowStats = count($graphData) > 0 || $bLoadStats;
 
+	$bannerProfit = 0;
+
+	if(!$bLoadStats && $bSale)
+	{
+		$orderStats = Adv\OrderTable::getList(array(
+			'filter' => array(
+				'=BANNER_ID' => $banner['ID'],
+				'=PROCESSED' => Adv\OrderTable::PROCESSED,
+				">=TIMESTAMP_X" => $dateStart,
+				"<TIMESTAMP_X" => $dateFinish,
+			),
+			'group' => array(
+				'BANNER_ID'
+			),
+			'select' => array('BANNER_SUM'),
+			'runtime' => array(
+				new \Bitrix\Main\Entity\ExpressionField('BANNER_SUM', 'SUM(SUM)'),
+			),
+		));
+		if($stat = $orderStats->fetch())
+		{
+			$bannerProfit = $stat['BANNER_SUM'];
+		}
+	}
+
 ?>
 <tr>
 	<td width="30%" class="adm-detail-required-field"><?=Loc::getMessage('SEO_YANDEX_STATS_PERIOD')?>:</td>
@@ -1569,6 +1524,16 @@ if($bShowStats)
 				</select>&nbsp;<span id="seo_graph_interval"><?=CalendarDate("date_from", $dateStart->toString(), 'form1', "4")?>&nbsp;&hellip;<?=CalendarDate("date_to", $dateFinish->toString(), 'form1', "4")?></span></span>&nbsp;&nbsp;<input type="button" value="<?=Loc::getMessage('SEO_YANDEX_STATS_PERIOD_APPLY')?>" onclick="loadGraphData()" id="stats_loading_button" name="template_preview"><span id="stats_wait" class="loading-message-text" style="display: none; margin-top: 5px;"><?=Loc::getMessage('SEO_YANDEX_STATS_WAIT')?></span>
 	</td>
 </tr>
+<?
+	if($bSale):
+?>
+<tr>
+	<td><?=Loc::getMessage('SEO_YANDEX_STATS_SUM_ORDER_REPIOD')?>:</td>
+	<td><span id="banner_profit"><?=\CCurrencyLang::CurrencyFormat(doubleval($bannerProfit), \Bitrix\Currency\CurrencyManager::getBaseCurrency(), true)?></span></td>
+</tr>
+<?
+	endif;
+?>
 <tr>
 	<td><?=Loc::getMessage('SEO_YANDEX_STATS_GRAPH_TYPE')?>:</td>
 	<td><select onchange="setGraph(this.value)">
@@ -1682,6 +1647,11 @@ if($bShowStats)
 				BX('stats_wait').style.display = 'none';
 
 				setData(res.data);
+
+				if(typeof res.order_sum != 'undefined' && BX('banner_profit'))
+				{
+					BX('banner_profit').innerHTML = res.order_sum_format;
+				}
 
 				if(!!res.error && res.error.code == '<?=Engine\YandexDirect::ERROR_NO_STATS?>')
 				{

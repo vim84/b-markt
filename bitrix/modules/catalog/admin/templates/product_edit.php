@@ -1,27 +1,22 @@
 <?
-use Bitrix\Main\Type\Collection;
-use Bitrix\Currency\CurrencyTable;
+/** @global CUser $USER */
+use Bitrix\Main;
+use Bitrix\Currency;
 
 if ($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_price'))
 {
 	IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/catalog/templates/product_edit.php');
 
 	$currencyList = array();
-	$currencyIterator = CurrencyTable::getList(array(
-		'select' => array('CURRENCY', 'LANG_FORMAT.FULL_NAME'),
-		'filter' => array('=LANG_FORMAT.LID' => LANGUAGE_ID),
-		'order' => array('SORT' => 'ASC', 'CURRENCY' => 'ASC')
-	));
-	while ($currency = $currencyIterator->fetch())
+	foreach (Currency\CurrencyManager::getCurrencyList() as $currency => $currencyName)
 	{
-		$currency['FULL_NAME'] = (string)$currency['CURRENCY_CURRENCY_LANG_FORMAT_FULL_NAME'];
-		$currencyList[$currency['CURRENCY']] = array(
-			'CURRENCY' => $currency['CURRENCY'],
-			'FULL_NAME' => htmlspecialcharsex($currency['FULL_NAME']),
-			'FULL_NAME_JS' => CUtil::JSEscape(htmlspecialcharsbx($currency['FULL_NAME']))
+		$currencyList[$currency] = array(
+			'CURRENCY' => $currency,
+			'FULL_NAME' => htmlspecialcharsex($currencyName),
+			'FULL_NAME_JS' => CUtil::JSEscape(htmlspecialcharsbx($currencyName))
 		);
 	}
-	unset($currency, $currencyIterator);
+	unset($currency, $currencyName);
 
 	$IBLOCK_ID = (int)$IBLOCK_ID;
 	if ($IBLOCK_ID <= 0)
@@ -411,7 +406,7 @@ function togglePriceType()
 	{
 		if (count($arPriceBoundaries) > 1)
 		{
-			Collection::sortByColumn($arPriceBoundaries, array('FROM' => SORT_ASC));
+			Main\Type\Collection::sortByColumn($arPriceBoundaries, array('FROM' => SORT_ASC));
 		}
 		else
 		{
@@ -738,7 +733,7 @@ function OnChangePriceExist()
 	if (trim($str_CAT_BASE_PRICE) != '' && doubleval($str_CAT_BASE_PRICE) >= 0)
 		$boolBaseExistPrice = true;
 	?>
-			<input type="text" <?if ($bReadOnly) echo "disabled readonly" ?> id="CAT_BASE_PRICE" name="CAT_BASE_PRICE" value="<?echo htmlspecialcharsbx($str_CAT_BASE_PRICE) ?>" size="30" OnBlur="ChangeBasePrice(this)">
+			<input type="text" <?if ($bReadOnly) echo "disabled readonly" ?> id="CAT_BASE_PRICE" name="CAT_BASE_PRICE" value="<?echo htmlspecialcharsbx($str_CAT_BASE_PRICE) ?>" size="30">
 		</td>
 	</tr>
 	<tr id="tr_BASE_CURRENCY" style="display: <? echo ($bUseExtendedPrice ? 'none' : 'table-row'); ?>;">
@@ -757,7 +752,7 @@ function OnChangePriceExist()
 			<?
 			foreach ($currencyList as &$currency)
 			{
-				?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["CURRENCY"].($currency['FULL_NAME'] !== '' ? ' ('.$currency['FULL_NAME'].')' : '');?></option><?
+				?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["FULL_NAME"]; ?></option><?
 			}
 			unset($currency);
 			?>
@@ -1000,7 +995,7 @@ function CloneBasePriceGroup()
 	<?
 	foreach ($currencyList as &$currency)
 	{
-		?>str += '<option value="<?echo $currency["CURRENCY"] ?>"><?echo $currency["CURRENCY"].($currency['FULL_NAME_JS'] !== '' ? ' ('.$currency['FULL_NAME_JS'].')' : ''); ?></option>';<?
+		?>str += '<option value="<?echo $currency["CURRENCY"] ?>"><?echo $currency["FULL_NAME_JS"]; ?></option>';<?
 	}
 	unset($currency);
 	?>
@@ -1076,7 +1071,7 @@ function CloneOtherPriceGroup(ind)
 	<?
 	foreach ($currencyList as &$currency)
 	{
-		?>str += '<option value="<?echo $currency["CURRENCY"] ?>"><?echo $currency["CURRENCY"].($currency['FULL_NAME_JS'] !== '' ? ' ('.$currency['FULL_NAME_JS'].')' : ''); ?></option>';<?
+		?>str += '<option value="<?echo $currency["CURRENCY"] ?>"><?echo $currency["FULL_NAME_JS"]; ?></option>';<?
 	}
 	unset($currency);
 	?>
@@ -1459,7 +1454,7 @@ function CloneBarcodeField()
 							<?
 							foreach ($currencyList as &$currency)
 							{
-								?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["CURRENCY"].($currency['FULL_NAME'] !== '' ? ' ('.$currency['FULL_NAME'].')' : '');?></option><?
+								?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["FULL_NAME"];?></option><?
 							}
 							unset($currency);
 							?>
@@ -1499,7 +1494,7 @@ function CloneBarcodeField()
 								<?
 								foreach ($currencyList as &$currency)
 								{
-									?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["CURRENCY"].($currency['FULL_NAME'] !== '' ? ' ('.$currency['FULL_NAME'].')' : '');?></option><?
+									?><option value="<? echo $currency["CURRENCY"]; ?>"<? if ($currency["CURRENCY"] == $str_CAT_BASE_CURRENCY) echo " selected"?>><? echo $currency["FULL_NAME"];?></option><?
 								}
 								unset($currency);
 								?>
@@ -1528,7 +1523,7 @@ function CloneBarcodeField()
 							<?
 							foreach ($currencyList as &$currency)
 							{
-								?><option value="<? echo $currency["CURRENCY"]; ?>"><? echo $currency["CURRENCY"].($currency['FULL_NAME'] !== '' ? ' ('.$currency['FULL_NAME'].')' : '');?></option><?
+								?><option value="<? echo $currency["CURRENCY"]; ?>"><? echo $currency["FULL_NAME"];?></option><?
 							}
 							unset($currency);
 							?>
@@ -2458,6 +2453,14 @@ if ('Y' == $arMainCatalog['SUBSCRIPTION']):
 	}
 		$tabControl1->End();
 	?>
+<script type="text/javascript">
+BX.ready(function(){
+	var basePrice = BX('CAT_BASE_PRICE');
+	if (!!basePrice && !basePrice.disabled)
+		BX.bind(basePrice, 'bxchange', function(e){ ChangeBasePrice(e); });
+
+});
+</script>
 	</td>
 </tr>
 <?

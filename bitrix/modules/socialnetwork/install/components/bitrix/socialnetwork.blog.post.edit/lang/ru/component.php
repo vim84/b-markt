@@ -25,4 +25,3 @@ $MESS["BLOG_GRAT_IBLOCKELEMENT_NAME"] = "Благодарность #GRAT_NAME#"
 $MESS["BLOG_EMPTY_TITLE_PLACEHOLDER"] = "Изображение";
 $MESS["B_B_HIDDEN_GROUP"] = "Скрытая группа";
 $MESS["B_B_PC_DUPLICATE_POST"] = "Ваше сообщение уже добавлено";
-?>

@@ -1,5 +1,5 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
-?><?$APPLICATION->IncludeComponent("bitrix:lists.element.navchain", ".default", array(
+$APPLICATION->IncludeComponent("bitrix:lists.element.navchain", ".default", array(
 	"IBLOCK_TYPE_ID" => $arParams["IBLOCK_TYPE_ID"],
 	"IBLOCK_ID" => $arResult["VARIABLES"]["list_id"],
 	"LISTS_URL" => $arResult["FOLDER"].$arResult["URL_TEMPLATES"]["lists"],
@@ -11,9 +11,20 @@
 	),
 	$component,
 	array("HIDE_ICONS" => "Y")
-);?><?$APPLICATION->IncludeComponent("bitrix:bizproc.workflow.setvar", ".default", array(
-	"MODULE_ID" => "iblock",
-	"ENTITY" => "CIBlockDocument",
+);
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+{
+	$moduleId = "lists";
+	$entity = "BizprocDocument";
+}
+else
+{
+	$moduleId = "iblock";
+	$entity = "CIBlockDocument";
+}
+$APPLICATION->IncludeComponent("bitrix:bizproc.workflow.setvar", ".default", array(
+	"MODULE_ID" => $moduleId,
+	"ENTITY" => $entity,
 	"DOCUMENT_TYPE" => "iblock_".$arResult["VARIABLES"]["list_id"],
 	"ID" => $arResult['VARIABLES']['ID'],
 	"EDIT_PAGE_TEMPLATE" => str_replace(
@@ -31,4 +42,5 @@
 	),
 	$component,
 	array("HIDE_ICONS" => "Y")
-);?>
+);
+?>

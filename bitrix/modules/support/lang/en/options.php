@@ -45,9 +45,9 @@ $MESS["SUP_UPDATE_UPDATE"] = "Data need to be converted:";
 $MESS["SUP_SEARCH_NDX_TAB_NAME"] = "Search index";
 $MESS["SUP_SEARCH_NDX_TAB_TITLE"] = "Re-index tickets";
 $MESS["SUP_SERVICE_OPERAIONS"] = "Service operations";
-$MESS["SUP_SEARCH_NDX_INTERVAL"] = "Period";
+$MESS["SUP_SEARCH_NDX_INTERVAL"] = "Step";
 $MESS["SUP_SEARCH_NDX_INTERVAL_SEC"] = "sec.";
 $MESS["SUP_SEARCH_NDX_START"] = "Start";
 $MESS["SUP_SEARCH_NDX_STOP"] = "Stop";
-$MESS["SUP_SHOW_COMMENTS_IN_TICKET_LIST"] = "Show comments in ticket list (in Control Panel):";
+$MESS["SUP_SHOW_COMMENTS_IN_TICKET_LIST"] = "Show comments in ticket list (in Control Panel)";
 ?>

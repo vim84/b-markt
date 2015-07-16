@@ -12,6 +12,7 @@ Loc::loadMessages(__FILE__);
  * <ul>
  * <li> ID int mandatory
  * <li> TITLE string(255) optional
+ * <li> TYPE string(2) optional
  * <li> AUTHOR_ID int mandatory
  * <li> AVATAR int optional
  * <li> CALL_TYPE int optional
@@ -50,6 +51,11 @@ class ChatTable extends Entity\DataManager
 				'data_type' => 'string',
 				'validation' => array(__CLASS__, 'validateTitle'),
 				'title' => Loc::getMessage('CHAT_ENTITY_TITLE_FIELD'),
+			),
+			'TYPE' => array(
+				'data_type' => 'string',
+				'validation' => array(__CLASS__, 'validateType'),
+				'title' => Loc::getMessage('CHAT_ENTITY_TYPE_FIELD'),
 			),
 			'AUTHOR_ID' => array(
 				'data_type' => 'integer',
@@ -91,6 +97,12 @@ class ChatTable extends Entity\DataManager
 	{
 		return array(
 			new Entity\Validator\Length(null, 255),
+		);
+	}
+	public static function validateType()
+	{
+		return array(
+			new Entity\Validator\Length(null, 2),
 		);
 	}
 	public static function validateEntityType()

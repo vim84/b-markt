@@ -22,4 +22,5 @@ $MESS["CP_BND_CACHE_GROUPS"] = "Respect Access Permissions";
 $MESS["CP_BND_SET_META_KEYWORDS"] = "Set page keywords";
 $MESS["CP_BND_SET_META_DESCRIPTION"] = "Set page description";
 $MESS["CP_BND_SET_BROWSER_TITLE"] = "Set browser window title";
+$MESS["CP_BND_SET_CANONICAL_URL"] = "Set canonical URL";
 ?>

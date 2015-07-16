@@ -7,10 +7,6 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
 if (!Loader::includeModule("catalog"))
 	return;
 
-
-if(!Loader::includeModule("iblock"))
-	return;
-
 $arIBlockType = CIBlockParameters::GetIBlockTypes();
 
 $arIBlock=array();

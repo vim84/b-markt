@@ -1,6 +1,7 @@
 CREATE TABLE b_im_chat(
 	ID int(18) not null auto_increment,
 	TITLE varchar(255) null,
+	TYPE char(2) null,
 	AUTHOR_ID int(18) not null,
 	AVATAR int(18) null,
 	CALL_TYPE smallint(1) DEFAULT 0,
@@ -35,7 +36,8 @@ CREATE TABLE b_im_message(
 	KEY IX_IM_MESS_2 (NOTIFY_TAG, AUTHOR_ID),
 	KEY IX_IM_MESS_3 (NOTIFY_SUB_TAG, AUTHOR_ID),
 	KEY IX_IM_MESS_4 (CHAT_ID, NOTIFY_READ),
-	KEY IX_IM_MESS_5 (CHAT_ID, DATE_CREATE)
+	KEY IX_IM_MESS_5 (CHAT_ID, DATE_CREATE),
+	KEY IX_IM_MESS_6 (AUTHOR_ID)
 );
 
 CREATE TABLE b_im_message_param

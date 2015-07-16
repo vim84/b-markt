@@ -144,16 +144,20 @@ if (
 			
 			$arResult["ActiveFeatures"] = CSocNetFeatures::GetActiveFeaturesNames(SONET_ENTITY_GROUP, $arResult["Group"]["ID"]);
 
-			$arResult["CanView"]["files"] = (
-				array_key_exists("files", $arResult["ActiveFeatures"]) &&
-				(
-					CSocNetUser::IsCurrentUserModuleAdmin() ||
-					(
-						CModule::IncludeModule('webdav') &&
-						CIBlockWebdavSocnet::CanAccessFiles($arParams["FILES_GROUP_IBLOCK_ID"], 'group', $arResult["Group"]["ID"]) // cached
-					)
-				)
-			);
+
+			$arResult["CanView"]["files"] = array_key_exists("files", $arResult["ActiveFeatures"]);
+			if($arResult["CanView"]["files"])
+			{
+				$diskEnabled = CModule::includeModule('disk') && \Bitrix\Disk\Driver::isSuccessfullyConverted();
+				if($diskEnabled)
+				{
+					$arResult["Urls"]["Files"] = CComponentEngine::makePathFromTemplate($arParams["PATH_TO_GROUP_DISK"], array(
+						"group_id" => $arResult["Group"]["ID"],
+						"PATH" => ""
+					));
+				}
+			}
+
 			$arResult["CanView"]["tasks"] = (array_key_exists("tasks", $arResult["ActiveFeatures"]) && CSocNetFeaturesPerms::CanPerformOperation($GLOBALS["USER"]->GetID(), SONET_ENTITY_GROUP, $arResult["Group"]["ID"], "tasks", "view", CSocNetUser::IsCurrentUserModuleAdmin()));
 			$arResult["CanView"]["calendar"] = (array_key_exists("calendar", $arResult["ActiveFeatures"]) && CSocNetFeaturesPerms::CanPerformOperation($GLOBALS["USER"]->GetID(), SONET_ENTITY_GROUP, $arResult["Group"]["ID"], "calendar", "view", CSocNetUser::IsCurrentUserModuleAdmin()));
 			$arResult["CanView"]["forum"] = (array_key_exists("forum", $arResult["ActiveFeatures"]) && CSocNetFeaturesPerms::CanPerformOperation($GLOBALS["USER"]->GetID(), SONET_ENTITY_GROUP, $arResult["Group"]["ID"], "forum", "view", CSocNetUser::IsCurrentUserModuleAdmin()));

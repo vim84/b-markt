@@ -12,7 +12,7 @@ $APPLICATION->IncludeComponent(
 		"SET_SHOW_USER_FIELD" => $arParams["SET_SHOW_USER_FIELD"],
 		"AJAX_ID" => $arParams["AJAX_ID"]
 	),
-	null,
+	$component,
 	array('HIDE_ICONS' => 'Y')
 );
 ?>

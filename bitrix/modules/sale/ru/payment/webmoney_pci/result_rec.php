@@ -2,11 +2,15 @@
 if ($_SERVER["REQUEST_METHOD"] == "POST")
 {
 	$bCorrectPayment = True;
+
 	if (!($arOrder = CSaleOrder::GetByID(IntVal($_POST["pci_wmtid"]))))
 		$bCorrectPayment = False;
 
-	$CNST_SECRET_KEY = CSalePaySystemAction::GetParamValue("CNST_SECRET_KEY");
 	$CNST_PAYEE_PURSE = CSalePaySystemAction::GetParamValue("ACC_NUMBER");
+	$CNST_SECRET_KEY = CSalePaySystemAction::GetParamValue("CNST_SECRET_KEY");
+
+	if(strlen($CNST_SECRET_KEY) <=0 )
+		$bCorrectPayment = False;
 
 	if($_POST["LMI_PREREQUEST"] == "1")
 	{

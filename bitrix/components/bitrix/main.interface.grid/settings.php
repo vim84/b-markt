@@ -69,6 +69,10 @@ if($USER->IsAuthorized() && check_bitrix_sessid())
 	{
 		$gridOptions->SetFilterSwitch($_REQUEST["show"]);
 	}
+	elseif($_REQUEST["action"] == "savesort")
+	{
+		$gridOptions->SetSorting($_REQUEST["by"], $_REQUEST["order"]);
+	}
 
 	$gridOptions->Save();
 }

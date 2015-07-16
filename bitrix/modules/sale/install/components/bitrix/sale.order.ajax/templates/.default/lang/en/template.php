@@ -74,4 +74,5 @@ $MESS["SOA_OTHER_LOCATION"] = "Other location";
 $MESS["SOA_LOCATION_NOT_FOUND"] = "Location was not found";
 $MESS["SOA_LOCATION_NOT_FOUND_PROMPT"] = "Click #ANCHOR#add location#ANCHOR_END# so we know where you want to have your order shipped to";
 $MESS["SOA_NOT_SELECTED_ALT"] = "Make location more specific if required";
+$MESS["SOA_TEMPL_ORDER_PS_ERROR"] = "The selected payment method failed. Please contact the site administrator or select another method.";
 ?>

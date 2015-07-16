@@ -458,10 +458,12 @@ class CIMMessenger
 				WHERE USER_ID = ".$arFields['TO_USER_ID']." AND MESSAGE_TYPE = '".IM_MESSAGE_SYSTEM."'";
 			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			if ($arRes = $dbRes->Fetch())
+			{
 				$chatId = intval($arRes['CHAT_ID']);
+			}
 			else
 			{
-				$chatId = IntVal($DB->Add("b_im_chat", Array('AUTHOR_ID' => $arFields['TO_USER_ID']), Array()));
+				$chatId = IntVal($DB->Add("b_im_chat", Array('TYPE' => IM_MESSAGE_SYSTEM, 'AUTHOR_ID' => $arFields['TO_USER_ID']), Array()));
 				if ($chatId <= 0)
 				{
 					$GLOBALS["APPLICATION"]->ThrowException(GetMessage("IM_ERROR_MESSAGE_CREATE"), "CHAT_ID");
@@ -1294,9 +1296,9 @@ class CIMMessenger
 			{
 				if ($updateStateInterval > 3600)
 					$updateStateInterval = 3600;
-				
+
 				if ($arTemplate['DESKTOP'] == 'true')
-					$updateStateInterval = intval($updateStateInterval/2);
+					$updateStateInterval = intval($updateStateInterval/2)-10;
 				else
 					$updateStateInterval = $updateStateInterval-60;
 			}
@@ -1306,11 +1308,14 @@ class CIMMessenger
 
 		if ($arTemplate['INIT'] == 'Y')
 		{
+			$phonePhoneDirectCall = false;
 			$phoneSipAvailable = 0;
 			$phoneEnabled = self::CheckPhoneStatus();
 			if ($phoneEnabled && CModule::IncludeModule('voximplant'))
 			{
 				$phoneSipAvailable = CVoxImplantConfig::GetModeStatus(CVoxImplantConfig::MODE_SIP);
+				$phoneDeviceActive = CVoxImplantUser::GetPhoneActive($USER->GetId());
+				$phoneDeviceCall = 1;//CVoxImplantUser::GetCallByPhone($USER->GetId());
 			}
 
 			$pathToIm = isset($arTemplate['PATH_TO_IM'])? $arTemplate['PATH_TO_IM']: '';
@@ -1373,7 +1378,7 @@ class CIMMessenger
 						'currentTab' : '".CUtil::JSEscape($arTemplate['CURRENT_TAB'])."',
 						'userId': ".$USER->GetID().",
 						'userEmail': '".CUtil::JSEscape($USER->GetEmail())."',
-						'webrtc': {'turnServer' : '".CUtil::JSEscape($arTemplate['TURN_SERVER'])."', 'turnServerFirefox' : '".CUtil::JSEscape($arTemplate['TURN_SERVER_FIREFOX'])."', 'turnServerLogin' : '".CUtil::JSEscape($arTemplate['TURN_SERVER_LOGIN'])."', 'turnServerPassword' : '".CUtil::JSEscape($arTemplate['TURN_SERVER_PASSWORD'])."', 'mobileSupport': false, 'phoneEnabled': ".($phoneEnabled? 'true': 'false').", 'phoneSipAvailable': ".($phoneSipAvailable? 'true': 'false')."},
+						'webrtc': {'turnServer' : '".CUtil::JSEscape($arTemplate['TURN_SERVER'])."', 'turnServerFirefox' : '".CUtil::JSEscape($arTemplate['TURN_SERVER_FIREFOX'])."', 'turnServerLogin' : '".CUtil::JSEscape($arTemplate['TURN_SERVER_LOGIN'])."', 'turnServerPassword' : '".CUtil::JSEscape($arTemplate['TURN_SERVER_PASSWORD'])."', 'mobileSupport': false, 'phoneEnabled': ".($phoneEnabled? 'true': 'false').", 'phoneSipAvailable': ".($phoneSipAvailable? 'true': 'false').", 'phoneDeviceActive': '".($phoneDeviceActive? 'Y': 'N')."', 'phoneDeviceCall': '".($phoneDeviceCall? 'Y': 'N')."'},
 						'disk': {'enable' : ".($diskStatus? 'true': 'false')."},
 						'path' : {'profile' : '".CUtil::JSEscape($arTemplate['PATH_TO_USER_PROFILE'])."', 'profileTemplate' : '".CUtil::JSEscape($arTemplate['PATH_TO_USER_PROFILE_TEMPLATE'])."', 'mail' : '".CUtil::JSEscape($arTemplate['PATH_TO_USER_MAIL'])."', 'im': '".CUtil::JSEscape($pathToIm)."', 'call': '".CUtil::JSEscape($pathToCall)."', 'file': '".CUtil::JSEscape($pathToFile)."'}
 					});
@@ -1522,6 +1527,7 @@ class CIMMessenger
 				CPullStack::AddByUser($dialogId, Array(
 					'module_id' => 'im',
 					'command' => 'startWriting',
+					'expiry' => 60,
 					'params' => Array(
 						'senderId' => $USER->GetID(),
 						'dialogId' => $dialogId
@@ -1539,6 +1545,7 @@ class CIMMessenger
 					CPullStack::AddByUser($rel['USER_ID'], Array(
 						'module_id' => 'im',
 						'command' => 'startWriting',
+						'expiry' => 60,
 						'params' => Array(
 							'senderId' => $USER->GetID(),
 							'dialogId' => $dialogId
@@ -1658,7 +1665,7 @@ class CIMMessenger
 	public static function InitCounters($userId, $check = true)
 	{
 		return false;
-		
+
 		if (intval($userId) <= 0)
 			return false;
 

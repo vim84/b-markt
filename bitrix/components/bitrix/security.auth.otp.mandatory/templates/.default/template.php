@@ -58,48 +58,59 @@ CJSCore::Init(array('qrcode', 'ajax'));
 		<div class="bx-otp-step-num"></div>
 		<h3 class="bx-otp-section-title"><?=GetMessage("SECURITY_OTP_MANDATORY_AUTH_CHOOSE_TYPE")?></h3>
 		<div class="bx-otp-section">
-
-			<div class="bx-otp-section-col">
-				<h4 class="bx-otp-section-title-small"><?=GetMessage("SECURITY_OTP_MANDATORY_AUTH_SCAN_CODE")?></h4>
-						<span class="bx-otp-section-desc">
-							<?=GetMessage("SECURITY_OTP_MANDATORY_AUTH_SCAN_DESCR")?>
-						</span>
+			<div id="connect-by-qr">
+				<div class="input-type">
+					<span class="current"><?=GetMessage('SECURITY_OTP_MANDATORY_AUTH_SCAN_CODE')?></span>
+					<span class="separator"><?=GetMessage('SECURITY_OTP_MANDATORY_AUTH_INPUT_METHODS_SEPARATOR')?></span>
+					<a href="#" id="connect-mobile-manual-input"><?=GetMessage('SECURITY_OTP_MANDATORY_AUTH_HAND_TYPE')?></a>
+				</div>
+				<div class="bx-otp-section-col">
+					<span class="bx-otp-section-desc">
+						<?=GetMessage("SECURITY_OTP_MANDATORY_AUTH_SCAN_DESCR")?>
+					</span>
+				</div>
+				<div class="bx-otp-section-col clb">
+					<div class="bx-otp-token-container">
+						<div class="bx-otp-token-screen-QR"></div>
+						<div class="bx-otp-token-result-QR">
+							<div data-role="qr-code-block"></div>
+							<!-- QR must be 164x164 px -->
+						</div>
+					</div>
+				</div>
 			</div>
-			<div class="bx-otp-section-col ">
-				<h4 class="bx-otp-section-title-small"><?=GetMessage("SECURITY_OTP_MANDATORY_AUTH_HAND_TYPE")?></h4>
-						<span class="bx-otp-section-desc">
-							<?=GetMessage("SECURITY_OTP_MANDATORY_AUTH_HAND_DESCR")?>
-							<b><?
+			<div id="connect-by-manual-input" style="display: none;">
+				<div class="input-type">
+					<a href="#" id="connect-mobile-scan-qr"><?=GetMessage('SECURITY_OTP_MANDATORY_AUTH_SCAN_CODE')?></a>
+					<span class="separator"><?=GetMessage('SECURITY_OTP_MANDATORY_AUTH_INPUT_METHODS_SEPARATOR')?></span>
+					<span class="current"><?=GetMessage('SECURITY_OTP_MANDATORY_AUTH_HAND_TYPE')?></span>
+				</div>
+				<div class="bx-otp-section-col">
+					<span class="bx-otp-section-desc">
+						<?=GetMessage("SECURITY_OTP_MANDATORY_AUTH_HAND_DESCR")?>
+						<b><?
 							if ($arResult['TYPE'] === \Bitrix\Security\Mfa\Otp::TYPE_TOTP):
 								echo getMessage('SECURITY_OTP_MANDATORY_AUTH_CODE_INFO_TOTP');
 							elseif ($arResult['TYPE'] === \Bitrix\Security\Mfa\Otp::TYPE_HOTP):
 								echo getMessage('SECURITY_OTP_MANDATORY_AUTH_CODE_INFO_HOTP');
 							endif;
 							?></b>.
-						</span>
-			</div>
-
-			<div class="bx-otp-section-col clb">
-				<div class="bx-otp-token-container">
-					<div class="bx-otp-token-screen-QR"></div>
-					<div class="bx-otp-token-result-QR">
-						<div data-role="qr-code-block"></div>
-						<!-- QR must be 164x164 px -->
+					</span>
+				</div>
+				<div class="bx-otp-section-col">
+					<div class="bx-otp-token-container">
+						<div class="bx-otp-token-screen-code"></div>
+						<table class="bx-otp-token-result-code">
+							<tr>
+								<td>
+									<span><?=$arResult['APP_SECRET_SPACED']?></span>
+								</td>
+							</tr>
+						</table>
 					</div>
 				</div>
 			</div>
-			<div class="bx-otp-section-col">
-				<div class="bx-otp-token-container">
-					<div class="bx-otp-token-screen-code"></div>
-					<table class="bx-otp-token-result-code">
-						<tr>
-							<td>
-								<span><?=$arResult['APP_SECRET_SPACED']?></span>
-							</td>
-						</tr>
-					</table>
-				</div>
-			</div>
+
 			<div class="clb"></div>
 		</div>
 	</div>

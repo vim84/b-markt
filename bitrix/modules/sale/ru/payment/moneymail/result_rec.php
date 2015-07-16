@@ -13,10 +13,13 @@ if($mode == "PAYMENT")
 
 		$PASS = CSalePaySystemAction::GetParamValue("PASS");
 
-		$strCheck = md5($PASS."PAYMENT".$invoice.$issuer_id.$payment_id.$payer.$currency.$value.$date.$confirmed);
+		if(strlen($PASS) <= 0)
+			$bCorrectPayment = False;
+		else
+			$strCheck = md5($PASS."PAYMENT".$invoice.$issuer_id.$payment_id.$payer.$currency.$value.$date.$confirmed);
+
 		if ($bCorrectPayment && $CHECKSUM != $strCheck)
 			$bCorrectPayment = False;
-
 		
 		if($bCorrectPayment)
 		{
@@ -25,7 +28,6 @@ if($mode == "PAYMENT")
 			$strPS_STATUS_DESCRIPTION .= "номер платежа - ".$payment_id."; ";
 			$strPS_STATUS_DESCRIPTION .= "дата платежа - ".$date."";
 			$strPS_STATUS_DESCRIPTION .= "код подтверждения платежа - ".$confirmed."";
-			
 
 			$strPS_STATUS_MESSAGE = "";
 			if (isset($payer) && strlen($payer)>0)

@@ -169,6 +169,9 @@ Class mail extends CModule
 
 			RegisterModuleDependences('rest', 'OnRestServiceBuildDescription', 'mail', 'CMailRestService', 'OnRestServiceBuildDescription');
 
+			RegisterModuleDependences('main', 'OnAfterUserUpdate', 'mail', 'CMail', 'onUserUpdate');
+			RegisterModuleDependences('main', 'OnAfterUserDelete', 'mail', 'CMail', 'onUserDelete');
+
 			CAgent::AddAgent("CMailbox::CleanUp();", "mail", "N", 60*60*24);
 
 			return true;

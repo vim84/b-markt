@@ -1,17 +1,18 @@
 <?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 
-$cartStyle = 'bx_cart_block';
-$cartId = $cartStyle.$component->getNextNumber();
+$cartStyle = 'bx-basket';
+$cartId = "bx_basket".$component->getNextNumber();
 $arParams['cartId'] = $cartId;
-
-if ($arParams['SHOW_PRODUCTS'] == 'Y')
-	$cartStyle .= ' bx_cart_sidebar';
 
 if ($arParams['POSITION_FIXED'] == 'Y')
 {
-	$cartStyle .= " bx_cart_fixed {$arParams['POSITION_HORIZONTAL']} {$arParams['POSITION_VERTICAL']}";
+	$cartStyle .= "-fixed {$arParams['POSITION_HORIZONTAL']} {$arParams['POSITION_VERTICAL']}";
 	if ($arParams['SHOW_PRODUCTS'] == 'Y')
-		$cartStyle .= ' close';
+		$cartStyle .= ' bx-closed';
+}
+else
+{
+	$cartStyle .= ' bx-opener';
 }
 ?>
 

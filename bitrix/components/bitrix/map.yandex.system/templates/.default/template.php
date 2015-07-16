@@ -10,6 +10,9 @@ function init_<?echo $arParams['MAP_ID']?>()
 	if (!window.ymaps)
 		return;
 
+	if(typeof window.GLOBAL_arMapObjects['<?echo $arParams['MAP_ID']?>'] !== "undefined")
+		return;
+
 	var node = BX("BX_YMAP_<?echo $arParams['MAP_ID']?>");
 	node.innerHTML = '';
 
@@ -108,7 +111,14 @@ function BXMapLoader_<?echo $arParams['MAP_ID']?>()
 	endif;
 else: // $arParams['DEV_MODE'] == 'Y'
 ?>
-	ymaps.ready(init_<?echo $arParams['MAP_ID']?>);
+
+(function bx_ymaps_waiter(){
+	if(typeof ymaps !== 'undefined')
+		ymaps.ready(init_<?echo $arParams['MAP_ID']?>);
+	else
+		setTimeout(bx_ymaps_waiter, 100);
+})();
+
 <?
 endif; // $arParams['DEV_MODE'] == 'Y'
 ?>

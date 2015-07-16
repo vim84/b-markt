@@ -43,3 +43,17 @@ function jsDelete(form_id, message)
 		}
 	}
 }
+
+function jsMigrate(formId, message)
+{
+	var _form = document.getElementById(formId);
+	var _flag = document.getElementById('action');
+	if(_form && _flag)
+	{
+		if(confirm(message))
+		{
+			_flag.value = 'migrate';
+			_form.submit();
+		}
+	}
+}

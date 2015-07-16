@@ -43,4 +43,15 @@ $MESS ['MAIN_COPY_RECORD_TITLE'] = "Копировать шаблон";
 $MESS ['MAIN_ERROR_SAVING'] = "Ошибка сохранения";
 $MESS ['TYPE_EDIT'] = "Тип события";
 $MESS ['TYPE_EDIT_TITLE'] = "Смотреть тип почтового события";
+$MESS ['ATTACHMENT_TAB'] = "Вложения";
+$MESS ['ATTACHMENT_TAB_TITLE'] = "Почтовые вложения";
+$MESS ['ATTACHMENT_PRESET'] = "Предустановленные";
+$MESS ['ATTACHMENT_PRESET_LOAD'] = "Загрузить вложения";
+$MESS ['ATTACHMENT_PRESET_LIST'] = "Список вложений";
+$MESS ['ATTACHMENT_PRESET_LIST_FILE'] = "Файл";
+$MESS ['ATTACHMENT_PRESET_LIST_SIZE'] = "Размер, байт";
+$MESS ['ATTACHMENT_PRESET_LIST_DELETE'] = "Удалить";
+$MESS ['ATTACHMENT_DYNAMIC'] = "Из полей почтового события";
+$MESS ['AVAILABLE_FIELDS_ATTACHMENT'] = "Доступные изображения из вложения:";
+$MESS ['MSG_SITE_TEMPLATE_ID'] = "Тема оформления:";
 ?>

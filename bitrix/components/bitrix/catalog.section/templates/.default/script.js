@@ -239,10 +239,6 @@ window.JCCatalogSection = function (arParams)
 						this.defaultPict.secondPict = arParams.DEFAULT_PICTURE.PICTURE_SECOND;
 					}
 				}
-				else
-				{
-					this.errorCode = -1;
-				}
 				break;
 			default:
 				this.errorCode = -1;
@@ -349,7 +345,7 @@ window.JCCatalogSection.prototype.Init = function()
 			this.obQuantityDown = BX(this.visual.QUANTITY_DOWN_ID);
 		}
 	}
-	if (3 === this.productType)
+	if (3 === this.productType && this.offers.length > 0)
 	{
 		if (!!this.visual.TREE_ID)
 		{
@@ -432,20 +428,23 @@ window.JCCatalogSection.prototype.Init = function()
 			case 1://product
 				break;
 			case 3://sku
-				TreeItems = BX.findChildren(this.obTree, {tagName: 'li'}, true);
-				if (!!TreeItems && 0 < TreeItems.length)
+				if (this.offers.length > 0)
 				{
-					for (i = 0; i < TreeItems.length; i++)
+					TreeItems = BX.findChildren(this.obTree, {tagName: 'li'}, true);
+					if (!!TreeItems && 0 < TreeItems.length)
 					{
-						BX.bind(TreeItems[i], 'click', BX.delegate(this.SelectOfferProp, this));
+						for (i = 0; i < TreeItems.length; i++)
+						{
+							BX.bind(TreeItems[i], 'click', BX.delegate(this.SelectOfferProp, this));
+						}
 					}
+					for (i = 0; i < this.obTreeRows.length; i++)
+					{
+						BX.bind(this.obTreeRows[i].LEFT, 'click', BX.delegate(this.RowLeft, this));
+						BX.bind(this.obTreeRows[i].RIGHT, 'click', BX.delegate(this.RowRight, this));
+					}
+					this.SetCurrent();
 				}
-				for (i = 0; i < this.obTreeRows.length; i++)
-				{
-					BX.bind(this.obTreeRows[i].LEFT, 'click', BX.delegate(this.RowLeft, this));
-					BX.bind(this.obTreeRows[i].RIGHT, 'click', BX.delegate(this.RowRight, this));
-				}
-				this.SetCurrent();
 				break;
 		}
 		if (!!this.obBuyBtn)
@@ -606,7 +605,7 @@ window.JCCatalogSection.prototype.QuantityChange = function()
 				}
 				else
 				{
-					count = curValue/this.stepQuantity;
+					count = Math.round((curValue*this.precisionFactor)/this.stepQuantity)/this.precisionFactor;
 					intCount = parseInt(count, 10);
 					if (isNaN(intCount))
 					{

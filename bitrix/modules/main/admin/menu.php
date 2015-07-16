@@ -251,6 +251,14 @@ if($USER->CanDoOperation('view_other_settings'))
 					"type_edit.php"
 				),
 			),
+			array(
+				"text" => GetMessage("MAIN_MENU_EVENT_THEMES"),
+				"title" => GetMessage("MAIN_MENU_EVENT_THEMES_TITLE"),
+				"url" => "message_theme_admin.php?lang=".LANGUAGE_ID,
+				"more_url" => array(
+					"message_theme_edit.php"
+				),
+			),
 		),
 	);
 	$aItems[] = array(
@@ -535,13 +543,12 @@ if($USER->CanDoOperation('install_updates'))
 								}
 							}
 						}
+						if($obCache->StartDataCache())
+						{
+							$arCacheData = array("arMarket" => $arMarket);
+							$obCache->EndDataCache($arCacheData);
+						}
 					}
-				}
-
-				if($obCache->StartDataCache())
-				{
-					$arCacheData = array("arMarket" => $arMarket);
-					$obCache->EndDataCache($arCacheData);
 				}
 			}
 		}

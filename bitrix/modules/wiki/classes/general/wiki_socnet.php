@@ -21,7 +21,7 @@ class CWikiSocnet
 		if (!self::IsEnabledSocnet())
 			return false;
 
-		self::$iSocNetId = $SOCNET_GROUP_ID;
+		self::$iSocNetId = intVal($SOCNET_GROUP_ID);
 
 		// detect work group
 		$arFilter = Array();
@@ -156,6 +156,8 @@ class CWikiSocnet
 						"OPERATION" => "view",
 						"OPERATION_ADD" => "view",
 						"ADD_CALLBACK" => array("CWikiSocnet", "AddComment_Wiki"),
+						"UPDATE_CALLBACK" => array("CSocNetLogTools", "UpdateComment_Forum"),
+						"DELETE_CALLBACK" => array("CSocNetLogTools", "DeleteComment_Forum"),
 						"CLASS_FORMAT" => "CWikiSocnet",
 						"METHOD_FORMAT" => "FormatComment_Wiki"
 					)
@@ -226,7 +228,7 @@ class CWikiSocnet
 				'group_wiki_post_history_diff' => 'group/#group_id#/wiki/#wiki_name#/history/diff/',
 				'group_wiki_post_discussion' => 'group/#group_id#/wiki/#wiki_name#/discussion/',
 				'group_wiki_post_category' => 'group/#group_id#/wiki/#wiki_name#/',
-				'group_wiki_post_comment' => 'wiki/comment/#message_id#/'
+				'group_wiki_post_comment' => 'group/#group_id#/wiki/#wiki_name#/?MID=#message_id##message#message_id#'
 			);
 		}
 
@@ -453,9 +455,9 @@ class CWikiSocnet
 					"USER" => "Y"
 				);
 
-				$parserLog->pathToUser = $arParams["PATH_TO_USER"];
+				$parserLog->pathToUser = $parserLog->userPath = $arParams["PATH_TO_USER"];
 				$parserLog->arUserfields = $arFields["UF"];
-
+				$parserLog->bMobile = ($arParams["MOBILE"] == "Y");
 				$arResult["EVENT_FORMATTED"]["MESSAGE"] = htmlspecialcharsbx($parserLog->convert(htmlspecialcharsback($arResult["EVENT_FORMATTED"]["MESSAGE"]), $arAllow));
 			}
 			else
@@ -746,6 +748,54 @@ class CWikiSocnet
 	function __ProcessPath($arUrl, $user_id)
 	{
 		return CSocNetLogTools::ProcessPath($arUrl, $user_id);
+	}
+	
+	function BeforeIndexSocNet($bxSocNetSearch, $arFields)
+	{
+		static $isSonetEnable = false;
+		static $sonetForumId = false;
+		
+		if (!$isSonetEnable)
+		{
+			$isSonetEnable = COption::GetOptionString('wiki', 'socnet_enable');	
+		}
+
+		if (!$sonetForumId)
+		{
+			$sonetForumId = intval(COption::GetOptionString('wiki', 'socnet_forum_id'));
+		}
+
+		if(
+			$arFields['ENTITY_TYPE_ID'] == 'FORUM_POST' 
+			&& $isSonetEnable == 'Y'
+			&& intval($arFields['PARAM1']) == $sonetForumId
+			&& CModule::IncludeModule("socialnetwork")
+		)
+		{
+			if($bxSocNetSearch->_group_id)
+			{
+				$arFields = $bxSocNetSearch->BeforeIndexForum(
+					$arFields,
+					SONET_ENTITY_GROUP, 
+					$bxSocNetSearch->_group_id,
+					"wiki", 
+					"view",
+					$bxSocNetSearch->Url(
+						str_replace(
+							"#wiki_name#",
+							urlencode($arFields["TITLE"]),
+							$bxSocNetSearch->_params["PATH_TO_GROUP_WIKI_POST_COMMENT"]
+						),
+						array(
+							"MID" => "#message_id#"
+						), 
+						"message#message_id#"
+					)
+				);
+			}
+		}
+
+		return $arFields;
 	}
 }
 ?>

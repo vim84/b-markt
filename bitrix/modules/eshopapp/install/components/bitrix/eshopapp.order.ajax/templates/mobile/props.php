@@ -83,6 +83,8 @@ function PrintPropsForm($arSource=Array(), $locationTemplate = ".default")
 					}
 					elseif ($arProperties["TYPE"] == "LOCATION")
 					{
+						//_print_r('L: '.$arProperties["VALUE"].' ------------ '.rand(99, 9999));
+
 						$value = 0;
 						if (is_array($arProperties["VARIANTS"]) && count($arProperties["VARIANTS"]) > 0)
 						{
@@ -96,9 +98,7 @@ function PrintPropsForm($arSource=Array(), $locationTemplate = ".default")
 							}
 						}
 
-						$GLOBALS["APPLICATION"]->IncludeComponent(
-							"bitrix:sale.ajax.locations",
-							$locationTemplate,
+						CSaleLocation::proxySaleAjaxLocationsComponent(
 							array(
 								"AJAX_CALL" => "N",
 								"COUNTRY_INPUT_NAME" => "COUNTRY",//.$arProperties["FIELD_NAME"],
@@ -111,9 +111,16 @@ function PrintPropsForm($arSource=Array(), $locationTemplate = ".default")
 								"ONCITYCHANGE" => ($arProperties["IS_LOCATION"] == "Y" || $arProperties["IS_LOCATION4TAX"] == "Y") ? "submitForm()" : "",
 								"SIZE1" => $arProperties["SIZE1"],
 							),
-							null,
-							array('HIDE_ICONS' => 'Y')
+							array(
+								"CODE" => "",
+								"ID" => $arProperties["VALUE"],
+								"JS_CALLBACK" => ($arProperties["IS_LOCATION"] == "Y" || $arProperties["IS_LOCATION4TAX"] == "Y") ? "submitFormProxy" : ""
+							),
+							$locationTemplate,
+							true,
+							'locationpro-selector-wrapper'
 						);
+
 					}
 					elseif ($arProperties["TYPE"] == "RADIO")
 					{

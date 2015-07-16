@@ -166,8 +166,6 @@ function BXGadget(gadgetHolderID, allGadgets)
 			c = _this.gdCols[i].realPos;
 			if(c.left <= center && c.right >= center)
 			{
-
-				//debugger;
 				for(te in _this.gdList[i])
 				{
 					if (_this.gdList[i].hasOwnProperty(te))
@@ -645,3 +643,4 @@ function BXGadget(gadgetHolderID, allGadgets)
 	jsUtils.addEvent(document.body, "mousemove", _this.onMouseMove);
 	jsUtils.addEvent(document.body, "mouseup", _this.onMouseUp);
 }
+

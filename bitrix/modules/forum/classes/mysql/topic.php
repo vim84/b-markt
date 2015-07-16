@@ -31,10 +31,13 @@ class CForumTopic extends CAllForumTopic
 				case "STATE":
 				case "APPROVED":
 				case "XML_ID":
-					if (strlen($val)<=0)
+					$val = CForumNew::prepareField($strOperation, "string", $val);
+					if ($val == '')
 						$arSqlSearch[] = ($strNegative=="Y"?"NOT":"")."(FT.".$key." IS NULL OR ".($DB->type == "MSSQL" ? "LEN" : "LENGTH")."(FT.".$key.")<=0)";
+					else if ($strOperation == "IN")
+						$arSqlSearch[] = ($strNegative=="Y"?" NOT ":"")."(FT.".$key." IN (".$val.") )";
 					else
-						$arSqlSearch[] = ($strNegative=="Y"?" FT.".$key." IS NULL OR NOT ":"")."(FT.".$key." ".$strOperation." '".$DB->ForSql($val)."' )";
+						$arSqlSearch[] = ($strNegative=="Y"?" FT.".$key." IS NULL OR NOT ":"")."(FT.".$key." ".$strOperation." '".$val."' )";
 					break;
 				case "ID":
 				case "USER_START_ID":
@@ -256,16 +259,18 @@ class CForumTopic extends CAllForumTopic
 			$key = strtoupper($key_res["FIELD"]);
 			$strNegative = $key_res["NEGATIVE"];
 			$strOperation = $key_res["OPERATION"];
-
 			switch ($key)
 			{
 				case "STATE":
 				case "XML_ID":
 				case "APPROVED":
-					if (strlen($val)<=0)
+					$val = CForumNew::prepareField($strOperation, "string", $val);
+					if ($val == '')
 						$arSqlSearch[] = ($strNegative=="Y"?"NOT":"")."(FT.".$key." IS NULL OR ".($DB->type == "MSSQL" ? "LEN" : "LENGTH")."(FT.".$key.")<=0)";
+					else if ($strOperation == "IN")
+						$arSqlSearch[] = ($strNegative=="Y"?" NOT ":"")."(FT.".$key." IN (".$val.") )";
 					else
-						$arSqlSearch[] = ($strNegative=="Y"?" FT.".$key." IS NULL OR NOT ":"")."(FT.".$key." ".$strOperation." '".$DB->ForSql($val)."' )";
+						$arSqlSearch[] = ($strNegative=="Y"?" FT.".$key." IS NULL OR NOT ":"")."(FT.".$key." ".$strOperation." '".$val."' )";
 					break;
 				case "ID":
 				case "FORUM_ID":
@@ -287,7 +292,7 @@ class CForumTopic extends CAllForumTopic
 						$val = implode(", ", $val_int);
 						$arSqlSearch[] = ($strNegative=="Y"?" NOT ":"")."(FT.".$key." IN (".$DB->ForSql($val).") )";
 					}
-					else 
+					else
 						$arSqlSearch[] = ($strNegative=="Y"?"NOT":"")."(FT.".$key." IS NULL OR FT.".$key."<=0)";
 					break;
 				case "TITLE_ALL":

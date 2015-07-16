@@ -50,7 +50,7 @@ class DateTime extends Date
 	}
 
 	/**
-	 * Converts date to string, using Culture and global timezone settings
+	 * Converts date to string, using Culture and global timezone settings.
 	 *
 	 * @param Context\Culture $culture Culture contains datetime format
 	 * @return string
@@ -72,7 +72,7 @@ class DateTime extends Date
 	}
 
 	/**
-	 * Returns timezone object
+	 * Returns timezone object.
 	 *
 	 * @return \DateTimeZone
 	 */
@@ -82,7 +82,7 @@ class DateTime extends Date
 	}
 
 	/**
-	 * Sets timezone object
+	 * Sets timezone object.
 	 *
 	 * @param \DateTimeZone $timezone
 	 * @return DateTime
@@ -94,7 +94,7 @@ class DateTime extends Date
 	}
 
 	/**
-	 * Sets default timezone
+	 * Sets default timezone.
 	 *
 	 * @return DateTime
 	 */
@@ -118,7 +118,7 @@ class DateTime extends Date
 	}
 
 	/**
-	 * Changes time from server time to user time using global timezone settings
+	 * Changes time from server time to user time using global timezone settings.
 	 *
 	 * @return DateTime
 	 */
@@ -141,7 +141,7 @@ class DateTime extends Date
 	}
 
 	/**
-	 * Creates DateTime object from local user time using global timezone settings and default culture
+	 * Creates DateTime object from local user time using global timezone settings and default culture.
 	 *
 	 * @param string $timeString
 	 * @return DateTime
@@ -179,5 +179,33 @@ class DateTime extends Date
 	protected static function getCultureFormat(Context\Culture $culture)
 	{
 		return $culture->getDateTimeFormat();
+	}
+
+	/**
+	 * Creates DateTime object from PHP \DateTime object.
+	 *
+	 * @param \DateTime $datetime
+	 * @return static
+	 */
+	public static function createFromPhp(\DateTime $datetime)
+	{
+		/** @var DateTime $d */
+		$d = new static();
+		$d->value = $datetime;
+		return $d;
+	}
+
+	/**
+	 * Creates DateTime object from Unix timestamp.
+	 *
+	 * @param int $timestamp
+	 * @return static
+	 */
+	public static function createFromTimestamp($timestamp)
+	{
+		/** @var DateTime $d */
+		$d = new static();
+		$d->value->setTimestamp($timestamp);
+		return $d;
 	}
 }

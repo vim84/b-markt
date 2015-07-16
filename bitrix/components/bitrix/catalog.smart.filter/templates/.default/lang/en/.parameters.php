@@ -13,4 +13,5 @@ $MESS["CP_BCT_TPL_FILTER_VIEW_V"] = "vertical";
 $MESS["CP_BCT_TPL_POPUP_POSITION"] = "Show filter information popup";
 $MESS["CP_BCT_TPL_POPUP_POSITION_LEFT"] = "on the left";
 $MESS["CP_BCT_TPL_POPUP_POSITION_RIGHT"] = "on the right";
+$MESS["TP_BCSF_DISPLAY_ELEMENT_COUNT"] = "Show quantity";
 ?>

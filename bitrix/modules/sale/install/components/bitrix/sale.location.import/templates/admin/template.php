@@ -210,7 +210,7 @@ Loc::loadMessages(__FILE__);
 
 			<tr class="bx-ui-load-remote">
 				<td>
-					<?=Loc::getMessage('SALE_SLI_LOAD_LOCATIONS_TILL')?>
+					<?=Loc::getMessage('SALE_SLI_LOAD_LOCATIONS_TILL_INCLUSIVELY')?>
 				</td>
 				<td>
 					<select class="bx-ui-loc-i-option" name="DEPTH_LIMIT">
@@ -221,6 +221,34 @@ Loc::loadMessages(__FILE__);
 					</select>
 				</td>
 			</tr>
+
+			<tr class="bx-ui-load-remote">
+				<td>
+					<?=Loc::getMessage('SALE_SLI_LOCATION_PACK')?>
+				</td>
+				<td>
+					<label>
+						<input type="radio" name="PACK" value="standard" class="bx-ui-loc-i-option" checked />
+						<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_STANDARD')?>
+					</label>
+					<br />
+					<label>
+						<input type="radio" name="PACK" value="extended" class="bx-ui-loc-i-option" />
+						<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_EXTENDED')?>
+					</label>
+				</td>
+			</tr>
+
+			<?if(in_array(LANGUAGE_ID, array('ru', 'ua', 'de'))):?>
+				<tr class="bx-ui-load-remote">
+					<td>
+						<label for="loc-i-option-drop-all"><?=Loc::getMessage('SALE_SLI_EXCLUDE_AREAS')?></label>
+					</td>
+					<td>
+						<input type="checkbox" value="1" name="EXCLUDE_COUNTRY_DISTRICT" class="bx-ui-loc-i-option" />
+					</td>
+				</tr>
+			<?endif?>
 
 			<tr>
 				<td>
@@ -246,23 +274,6 @@ Loc::loadMessages(__FILE__);
 				</td>
 				<td>
 					<input type="checkbox" value="1" name="INTEGRITY_PRESERVE" class="bx-ui-loc-i-option" id="loc-i-option-integrity-preserve" checked />
-				</td>
-			</tr>
-
-			<tr class="bx-ui-load-remote">
-				<td>
-					<?=Loc::getMessage('SALE_SLI_LOCATION_PACK')?>
-				</td>
-				<td>
-					<label>
-						<input type="radio" name="PACK" value="standard" class="bx-ui-loc-i-option" checked />
-						<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_STANDARD')?>
-					</label>
-					<br />
-					<label>
-						<input type="radio" name="PACK" value="extended" class="bx-ui-loc-i-option" />
-						<?=Loc::getMessage('SALE_SLI_LOCATION_PACK_EXTENDED')?>
-					</label>
 				</td>
 			</tr>
 
@@ -295,13 +306,15 @@ Loc::loadMessages(__FILE__);
 
 	<?=BeginNote();?>
 		<?=Loc::getMessage('SALE_SLI_HEAVY_DUTY_NOTICE')?>
+		<br /><br />
+		<?=Loc::getMessage('SALE_SLI_HEAVY_DUTY_HOST_NOTICE')?>
 	<?=EndNote();?>
 
 	<script>
-		BX.locationImport = new BX.locationImport(<?=CUtil::PhpToJSObject(array(
+		BX.locationImport = new BX.Sale.component.location.import(<?=CUtil::PhpToJSObject(array(
 
 				// common
-				'url' => $arResult['URLS']['IMPORT_AJAX'],
+				'url' => CHTTP::urlAddParams($arResult['URLS']['IMPORT_AJAX'], array('lang' => LANGUAGE_ID)),
 				'pageUrl' => $arResult['URLS']['IMPORT'],
 				'scope' => 'location-import',
 				'ajaxFlag' => 'AJAX_CALL',

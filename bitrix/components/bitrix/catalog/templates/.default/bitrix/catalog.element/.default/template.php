@@ -271,13 +271,15 @@ unset($useVoteRating, $useBrands);
 ?>
 <div class="item_price">
 <?
-$boolDiscountShow = (0 < $arResult['MIN_PRICE']['DISCOUNT_DIFF']);
+$minPrice = (isset($arResult['RATIO_PRICE']) ? $arResult['RATIO_PRICE'] : $arResult['MIN_PRICE']);
+$boolDiscountShow = (0 < $minPrice['DISCOUNT_DIFF']);
 ?>
-	<div class="item_old_price" id="<? echo $arItemIDs['OLD_PRICE']; ?>" style="display: <? echo ($boolDiscountShow ? '' : 'none'); ?>"><? echo ($boolDiscountShow ? $arResult['MIN_PRICE']['PRINT_VALUE'] : ''); ?></div>
-	<div class="item_current_price" id="<? echo $arItemIDs['PRICE']; ?>"><? echo $arResult['MIN_PRICE']['PRINT_DISCOUNT_VALUE']; ?></div>
-	<div class="item_economy_price" id="<? echo $arItemIDs['DISCOUNT_PRICE']; ?>" style="display: <? echo ($boolDiscountShow ? '' : 'none'); ?>"><? echo ($boolDiscountShow ? GetMessage('CT_BCE_CATALOG_ECONOMY_INFO', array('#ECONOMY#' => $arResult['MIN_PRICE']['PRINT_DISCOUNT_DIFF'])) : ''); ?></div>
+	<div class="item_old_price" id="<? echo $arItemIDs['OLD_PRICE']; ?>" style="display: <? echo ($boolDiscountShow ? '' : 'none'); ?>"><? echo ($boolDiscountShow ? $minPrice['PRINT_VALUE'] : ''); ?></div>
+	<div class="item_current_price" id="<? echo $arItemIDs['PRICE']; ?>"><? echo $minPrice['PRINT_DISCOUNT_VALUE']; ?></div>
+	<div class="item_economy_price" id="<? echo $arItemIDs['DISCOUNT_PRICE']; ?>" style="display: <? echo ($boolDiscountShow ? '' : 'none'); ?>"><? echo ($boolDiscountShow ? GetMessage('CT_BCE_CATALOG_ECONOMY_INFO', array('#ECONOMY#' => $minPrice['PRINT_DISCOUNT_DIFF'])) : ''); ?></div>
 </div>
 <?
+unset($minPrice);
 if (!empty($arResult['DISPLAY_PROPERTIES']) || $arResult['SHOW_OFFERS_PROPS'])
 {
 ?>
@@ -553,6 +555,27 @@ else
 ?>
 		</span>
 		<span id="<? echo $arItemIDs['NOT_AVAILABLE_MESS']; ?>" class="bx_notavailable" style="display: <? echo (!$canBuy ? '' : 'none'); ?>;"><? echo $notAvailableMessage; ?></span>
+<?
+	if ($arParams['DISPLAY_COMPARE'] || $showSubscribeBtn)
+	{
+		?>
+		<span class="item_buttons_counter_block">
+	<?
+	if ($arParams['DISPLAY_COMPARE'])
+	{
+		?>
+		<a href="javascript:void(0);" class="bx_big bx_bt_button_type_2 bx_cart" id="<? echo $arItemIDs['COMPARE_LINK']; ?>"><? echo $compareBtnMessage; ?></a>
+	<?
+	}
+	if ($showSubscribeBtn)
+	{
+
+	}
+?>
+		</span>
+<?
+	}
+?>
 	</div>
 <?
 }
@@ -662,6 +685,7 @@ if ('Y' == $arParams['USE_COMMENTS'])
 		"ELEMENT_ID" => $arResult['ID'],
 		"ELEMENT_CODE" => "",
 		"IBLOCK_ID" => $arParams['IBLOCK_ID'],
+		"SHOW_DEACTIVATED" => $arParams['SHOW_DEACTIVATED'],
 		"URL_TO_COMMENT" => "",
 		"WIDTH" => "",
 		"COMMENTS_COUNT" => "5",

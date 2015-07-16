@@ -69,6 +69,7 @@ $MESS["IB_E_SITES"] = "Сайты:";
 $MESS["IB_E_LIST_PAGE_URL"] = "URL страницы информационного блока:";
 $MESS["IB_E_SECTION_PAGE_URL"] = "URL страницы раздела:";
 $MESS["IB_E_DETAIL_PAGE_URL"] = "URL страницы детального просмотра:";
+$MESS["IB_E_CANONICAL_PAGE_URL"] = "Канонический URL элемента:<br>(необходимо указать протокол, адрес сервера и путь на сайте)";
 $MESS["IB_E_INDEX_SECTION"] = "Индексировать разделы для модуля поиска:";
 $MESS["IB_E_INDEX_ELEMENT"] = "Индексировать элементы для модуля поиска:";
 $MESS["IB_E_WORKFLOW"] = "Участвует в документообороте:";

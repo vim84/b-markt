@@ -8,4 +8,7 @@ $MESS["CT_BLL_MOVE_TO_SECTION"] = "перенести в раздел";
 $MESS["CT_BLL_SELECTED"] = "Выбрано";
 $MESS["CT_BLL_TOOLBAR_BIZPROC"] = "Бизнес-процессы";
 $MESS["CT_BLL_TOOLBAR_BIZPROC_TITLE"] = "Бизнес-процессы";
-?>
+$MESS["CT_BLL_EXPORT_EXCEL"] = "Экспорт Excel";
+$MESS["CT_BLL_EXPORT_EXCEL_TITLE"] = "Экспорт Excel";
+$MESS["CT_BLL_TOOLBAR_PROCESS"] = "Настройки процесса";
+$MESS["CT_BLL_TOOLBAR_PROCESS_TITLE"] = "Настроить процесс";

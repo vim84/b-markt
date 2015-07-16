@@ -4,21 +4,21 @@ BX.ui.scrollablePager = function(opts, nf){
 
 	BX.merge(this, {
 		opts: { // default options
-			areaHeight:  				100, // the default height for top and bottom areas
-			eventTimeout: 				300, // scroll event throttle timeout
-			pageRenderer: 				false,
+			areaHeight:					100, // the default height for top and bottom areas
+			eventTimeout: 				100, // scroll event throttle timeout
+			pageRenderer:				false,
 
-			setTopReachedOnPage: 		false,
-			setBottomReachedOnPage: 	false
+			setTopReachedOnPage:		false,
+			setBottomReachedOnPage:		false
 		},
 		vars: { // significant variables
-			pages: 				0, // number of pages already loaded
-			boundsReached: 		{top: false, bottom: false}, // flags for indicate that bounds were reached already
-			prevScrollTop: 		false, // container.scrollTop got on the last scroll event
-			scrollEventLock: 	false, // when true, no scroll events handled
-			pageRange: 			false,
+			pages:				0, // number of pages already loaded
+			boundsReached:		{top: false, bottom: false}, // flags for indicate that bounds were reached already
+			prevScrollTop:		false, // container.scrollTop got on the last scroll event
+			scrollEventLock:	false, // when true, no scroll events handled
+			pageRange:			false,
 
-			renderer: 			false
+			renderer:			false
 		},
 		sys: {
 			code: 'pager'
@@ -63,7 +63,7 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 		var nodes = this.createNodesByTemplate('pager-area', {}, true);
 
 		if(nodes == null || !BX.type.isDomNode(nodes[0]))
-			nodes = BX.create('div', {style: {'height': parseInt(this.opts.areaHeight)+'px'}})
+			nodes = BX.create('div', {style: {'height': parseInt(this.opts.areaHeight)+'px'}});
 		else
 			nodes = nodes[0];
 
@@ -86,31 +86,51 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 			this.dispatchScrollEvents();
 		}, this));
 		this.vars.renderer.bindScrollEvents();
-
-		/*
-		BX(function(){
-			ctx.dispatchScrollEvents();
-		});
-		*/
 	},
 
 	////////// PUBLIC: free to use outside
 
-	setTopReached: function(way){
+	////////// scrolling
 
-		if(typeof way == 'undefined')
-			way = true;
+	scrollTo: function(height, ignoreEvents, sign){
 
-		this.manageBounds(way, true);
+		var sv = this.vars;
+
+		if(ignoreEvents)
+			sv.scrollEventLock = true;
+
+		sv.renderer.setScrollTop(height, sign);
+
+		if(ignoreEvents)
+			sv.scrollEventLock = false;
+
+		return true;
 	},
 
-	setBottomReached: function(way){
-
-		if(typeof way == 'undefined')
-			way = true;
-
-		this.manageBounds(way, false);
+	scrollToNode: function(node){
+		// not implemented
 	},
+
+	// to dispatch scroll events manually
+	dispatchScrollEvents: function(){
+
+		if(this.vars.scrollEventLock)
+			return false;
+
+		this.vars.scrollEventDispatcher();
+	},
+
+	// to disable scroll events
+	lockScrollEvents: function(){
+		this.vars.scrollEventLock = true;
+	},
+
+	// to enable scroll events back
+	unLockScrollEvents: function(){
+		this.vars.scrollEventLock = false;
+	},
+
+	////////// paging
 
 	prependPage: function(data){
 		this.addPage(data, this.vars.pageRange == false ? 0 : this.vars.pageRange[0] - 1);
@@ -120,13 +140,78 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 		this.addPage(data, this.vars.pageRange == false ? 0 : this.vars.pageRange[1] + 1);
 	},
 
+	getFreePageNumber: function(bound){
+
+		if(this.vars.pageRange == false)
+			return 0;
+
+		if(bound == 0)
+			return this.vars.pageRange[0] - 1;
+
+		if(bound == 1)
+			return this.vars.pageRange[1] + 1;
+
+		return false;
+	},
+
+	getPageCount: function(){
+		return this.vars.pages;
+	},
+
+	// all content already shown at the top
+	setTopReached: function(way){
+
+		if(typeof way == 'undefined')
+			way = true;
+
+		this.manageBounds(way, true);
+	},
+
+	// all content already shown at the bottom
+	setBottomReached: function(way){
+
+		if(typeof way == 'undefined')
+			way = true;
+
+		this.manageBounds(way, false);
+	},
+
+	//////////cleaning
+
+	cleanUp: function(){
+
+		this.ctrls.pool.innerHTML = '';
+
+		this.setTopReached(false);
+		this.setBottomReached(false);
+
+		this.vars.pages = 0;
+		this.vars.pageRange = false;
+
+		this.vars.renderer.update();
+	},
+
+	// lately should appear as an item in remove stack
+	remove: function(){
+		// drop scope
+		if(BX.type.isDomNode(this.ctrls.scope))
+			this.ctrls.scope.innerHTML = '';
+
+		// ubind custom events
+		BX.unbindAll(this);
+
+		this.vars.renderer.remove();
+	},
+
+	////////// PRIVATE: forbidden to use outside (for compatibility reasons)
+
 	addPage: function(data, pageNum){
 
 		var sv = this.vars,
 			so = this.opts,
 			wrapper = this.getPageWrapper();
 
-		var scrollBefore = this.vars.renderer.getScrollTop();
+		var st = this.ctrls.scope.scrollTop;
 
 		// check range integrity here
 		if(sv.pageRange != false){
@@ -154,14 +239,16 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 		}else
 			return false; // smth strange passed
 
+		var scrollBefore = this.vars.renderer.getScrollTop();
+
 		BX[actAppend ? 'append' : 'prepend'](wrapper, this.ctrls.pool);
 
-		if(!sv.boundsReached.top && sv.pages == 0) // scroll to the first page in the pager
+		if(!sv.boundsReached.top && sv.pages == 0){ // scroll to the first page in the pager
 			this.scrollTo(this.ctrls.areas.top.node.offsetHeight, true);
-		else{
-			if(actAppend) // on append
+		}else{
+			if(actAppend){ // on append
 				this.scrollTo(scrollBefore, true); // special for ie
-			else // on prepend
+			}else // on prepend
 				this.scrollTo(wrapper.offsetHeight, true, +1);
 		}
 
@@ -184,66 +271,6 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 
 		this.dispatchScrollEvents();
 	},
-
-	cleanUp: function(){
-
-		this.ctrls.pool.innerHTML = '';
-
-		this.setTopReached(false);
-		this.setBottomReached(false);
-
-		this.vars.pages = 0;
-		this.vars.pageRange = false;
-
-		this.vars.renderer.update();
-	},
-
-	scrollTo: function(height, ignoreEvents, sign){
-
-		var sv = this.vars;
-
-		if(ignoreEvents)
-			sv.scrollEventLock = true;
-
-		sv.renderer.setScrollTop(height, sign);
-
-		if(ignoreEvents)
-			sv.scrollEventLock = false;
-
-		return true;
-	},
-
-	getFreePageNumber: function(bound){
-
-		if(this.vars.pageRange == false)
-			return 0;
-
-		if(bound == 0)
-			return this.vars.pageRange[0] - 1;
-
-		if(bound == 1)
-			return this.vars.pageRange[1] + 1;
-
-		return false;
-	},
-
-	getPageCount: function(){
-		return this.vars.pages;
-	},
-
-	// lately should appear as an item in remove stack
-	remove: function(){
-		// drop scope
-		if(BX.type.isDomNode(this.ctrls.scope))
-			this.ctrls.scope.innerHTML = '';
-
-		// ubind custom events
-		BX.unbindAll(this);
-
-		this.vars.renderer.remove();
-	},
-
-	////////// PRIVATE: forbidden to use outside (for compatibility reasons)
 
 	checkScrollState: function(){
 
@@ -275,7 +302,7 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 		this.manageBounds(true, true);
 	},
 
-	// bounds are those two small areas at the top and the bottom 
+	// bounds are those two small areas at the top and the bottom
 	manageBounds: function(way, isTop){
 		way = !!way;
 		isTop = !!isTop;
@@ -311,14 +338,6 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 		this.vars.renderer.update();
 	},
 
-	dispatchScrollEvents: function(){
-
-		if(this.vars.scrollEventLock)
-			return false;
-
-		this.vars.scrollEventDispatcher();
-	},
-
 	checkFreeBottomSpace: function(){
 		return this.vars.renderer.getScrollTop() <= this.vars.renderer.getClientHeight();
 	},
@@ -335,6 +354,8 @@ BX.merge(BX.ui.scrollablePager.prototype, {
 });
 
 // renderer based on native controls
+// it takes div being scrolled as SCOPE
+// and scrolled contens of SCOPE as PANE
 BX.ui.scrollablePager.renderers = {
 
 	native: function(){
@@ -387,31 +408,23 @@ BX.ui.scrollablePager.renderers = {
 
 			var ctx = this;
 
-			/*
-			var body = document.getElementsByTagName('body')[0];
+			BX.bind(this.opts.scope, 'mousewheel', function(e){
 
-			BX.bind(this.opts.scope, 'mouseover', function(){
-				BX.addClass(body, 'block-body-scroll');
-			});
-			BX.bind(this.opts.scope, 'mouseout', function(){
-				BX.removeClass(body, 'block-body-scroll');
-			});
-			*/
+				var wData = BX.getWheelData(e);
+				var jam = false;
 
-			/*
-			BX.bind(window, 'wheel', function(e){
+				if(wData > 0 && ctx.getScrollTop() == 0) // move up
+					jam = true;
 
-				if(!ctx.opts.parent.opts.parent.vars.opened)
-					return true;
+				if(wData < 0 && (ctx.getScrollTop() >= ctx.getScrollHeight() - ctx.getClientHeight())) // move down
+					jam = true;
 
-				if(!ctx.insidePopup){
+				if(jam){
 					BX.PreventDefault(e);
 					BX.eventCancelBubble(e);
+					return false;
 				}
 			});
-			*/
-
-			////////////////////////
 
 			this.fireEvent = function(e){
 				BX.onCustomEvent(ctx, 'bx-ui-pagerenderer-scroll-changed', []);
@@ -420,15 +433,6 @@ BX.ui.scrollablePager.renderers = {
 			BX.bind(this.opts.scope, 'scroll', this.fireEvent);
 			BX.bind(this.opts.pane, 'touchstart', this.fireEvent);
 			BX.bind(window, 'resize', this.fireEvent);
-
-			/*
-			BX.bind(this.opts.scope, 'scroll', function(){
-				console.dir('item scroll');
-			});
-			BX.bind(this.opts.scope, 'mousewheel', function(){
-				console.dir('item wheel');
-			});
-			*/
 		};
 
 		return this;

@@ -491,7 +491,6 @@ $MESS["EC_MOBILE_HELP_SUNBIRD_ONE_HELP"] = "<p>To configure Mozilla Thunderbird 
 <li>Enter your user name and password in the pop-up window.</li>
 </ol>";
 $MESS["EC_SET_PORT"] = "<li>To specify the port number, save the account and open it for editing again.</li>";
-$MESS["EC_SET_PORT_BX24"] = "<li>Once you have saved the record, open it for editing again and set the port number: <b>1443</b>.</li>";
 $MESS["EC_EVENT_NOT_FOUND"] = "Error! The item was not found.";
 $MESS["EC_EVENT_ERROR_DEL"] = "Error deleting the item.";
 $MESS["DEL_CON_CALENDARS"] = "Delete Calendars";

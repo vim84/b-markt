@@ -48,16 +48,6 @@ if (isset($_POST[$action_var]) && strlen($_POST[$action_var]) > 0)
 
 	if ($_POST[$action_var] == "select_item")
 	{
-		$arSelect = array("ID", "IBLOCK_ID", "PROPERTY_CML2_LINK", "XML_ID");
-		foreach ($arColumns as &$columnName)
-		{
-			if (strpos($columnName, "PROPERTY_", 0) === 0)
-			{
-				$arSelect[] = str_replace("_VALUE", "", $columnName);
-			}
-		}
-		unset($columnName);
-
 		$arItemSelect = array(
 			"ID",
 			"XML_ID",
@@ -78,7 +68,7 @@ if (isset($_POST[$action_var]) && strlen($_POST[$action_var]) > 0)
 		if ($currentId > 0)
 		{
 			$dbItemRes = CSaleBasket::GetList(array(),
-				array("ID" => intval($_POST["basketItemId"])),
+				array('ID' => $currentId),
 				false,
 				false,
 				$arItemSelect
@@ -102,27 +92,46 @@ if (isset($_POST[$action_var]) && strlen($_POST[$action_var]) > 0)
 				$arItem['PROPS'][] = $arProp;
 			}
 
-			$dbRes = CIBlockElement::GetList(
-				array("SORT" => "ASC", "ID" => "ASC"),
-				array("ID" => $arItem["PRODUCT_ID"]),
-				false,
-				false,
-				$arSelect
-			);
-
-			if ($arElement = $dbRes->Fetch())
+			$element = false;
+			$sku = false;
+			$parentId = 0;
+			$elementIterator = \Bitrix\Iblock\ElementTable::getList(array(
+				'select' => array('ID', 'IBLOCK_ID', 'XML_ID'),
+				'filter' => array('ID' => $arItem['PRODUCT_ID'])
+			));
+			$element = $elementIterator->fetch();
+			unset($elementIterator);
+			if (!empty($element))
+			{
+				$sku = CCatalogSKU::GetInfoByOfferIBlock($element['IBLOCK_ID']);
+				if (!empty($sku))
+				{
+					$propertyIterator = CIBlockElement::GetProperty(
+						$element['IBLOCK_ID'],
+						$element['ID'],
+						array(),
+						array('ID' => $sku['SKU_PROPERTY_ID'])
+					);
+					if ($property = $propertyIterator->Fetch())
+					{
+						$parentId = (int)$property['VALUE'];
+					}
+					unset($property, $propertyIterator);
+				}
+			}
+			if (!empty($element) && $parentId > 0)
 			{
 				$bBasketUpdate = false;
-				$arPropsValues["CML2_LINK"] = $arElement["PROPERTY_CML2_LINK_VALUE"];
+				$arPropsValues["CML2_LINK"] = $parentId;
 
-				$newProductId = getProductByProps($arElement["IBLOCK_ID"], $arPropsValues);
+				$newProductId = getProductByProps($element['IBLOCK_ID'], $arPropsValues, true);
 
-				if ($newProductId > 0)
+				if (!empty($newProductId))
 				{
 					if ($productProvider = CSaleBasket::GetProductProvider($arItem))
 					{
 						$arFieldsTmp = $productProvider::GetProductData(array(
-							"PRODUCT_ID" => $newProductId,
+							"PRODUCT_ID" => $newProductId['ID'],
 							"QUANTITY"   => $arItem['QUANTITY'],
 							"RENEWAL"    => "N",
 							"USER_ID"    => $USER->GetID(),
@@ -138,7 +147,7 @@ if (isset($_POST[$action_var]) && strlen($_POST[$action_var]) > 0)
 						$arFieldsTmp = CSaleBasket::ExecuteCallbackFunction(
 							$arItem["CALLBACK_FUNC"],
 							$arItem["MODULE"],
-							$newProductId,
+							$newProductId['ID'],
 							$arItem['QUANTITY'],
 							"N",
 							$USER->GetID(),
@@ -149,84 +158,80 @@ if (isset($_POST[$action_var]) && strlen($_POST[$action_var]) > 0)
 					if (!empty($arFieldsTmp) && is_array($arFieldsTmp))
 					{
 						$arFields = array(
-							'PRODUCT_ID' => $newProductId,
+							'PRODUCT_ID' => $newProductId['ID'],
 							'PRODUCT_PRICE_ID' => $arFieldsTmp["PRODUCT_PRICE_ID"],
 							'PRICE' => $arFieldsTmp["PRICE"],
 							'CURRENCY' => $arFieldsTmp["CURRENCY"],
 							'QUANTITY' => $arFieldsTmp['QUANTITY'],
 							'WEIGHT' => $arFieldsTmp['WEIGHT'],
 						);
-						$dbProduct = CIBlockElement::GetList(array(), array("ID" => $newProductId), false, false, array('ID', 'IBLOCK_ID', 'IBLOCK_SECTION_ID','XML_ID'));
-						if ($arProduct = $dbProduct->Fetch())
+
+						$arProps = array();
+						if (strpos($newProductId['XML_ID'], '#') === false)
 						{
-							$arParentSku = CCatalogSku::GetProductInfo($newProductId, $arElement["IBLOCK_ID"]);
-							if ($arParentSku && !empty($arParentSku))
+							$parentIterator = \Bitrix\Iblock\ElementTable::getList(array(
+								'select' => array('ID', 'XML_ID'),
+								'filter' => array('ID' => $parentId)
+							));
+							if ($parentProduct = $parentIterator->fetch())
 							{
-								$arProps = array();
+								$newProductId['XML_ID'] = $parentProduct['XML_ID'].'#'.$newProductId['XML_ID'];
+							}
+							unset($parentProduct, $parentIterator);
+						}
+						$arFields["PRODUCT_XML_ID"] = $newProductId['XML_ID'];
 
-								if (strpos($arProduct["XML_ID"], '#') === false)
+						$propertyIterator = \Bitrix\Iblock\PropertyTable::getList(array(
+							'select' => array('ID', 'CODE'),
+							'filter' => array('IBLOCK_ID' => $newProductId['IBLOCK_ID'], '!ID' => $sku['SKU_PROPERTY_ID'])
+						));
+						while ($property = $propertyIterator->fetch())
+						{
+							$property['CODE'] = (string)$property['CODE'];
+							$arPropsSku[] = ($property['CODE'] != '' ? $property['CODE'] : $property['ID']);
+						}
+						unset($property, $propertyIterator);
+						$product_properties = CIBlockPriceTools::GetOfferProperties(
+							$newProductId['ID'],
+							$sku['PRODUCT_IBLOCK_ID'],
+							$arPropsSku
+						);
+
+						$newValues = array();
+						foreach ($product_properties as $productSkuProp)
+						{
+							$bFieldExists = false;
+							foreach ($strOffersProps as $existingSkuProp)
+							{
+								if ($existingSkuProp == $productSkuProp["CODE"])
 								{
-									$dbParentProduct = CIBlockElement::GetList(array(), array("ID" => $arParentSku['ID']), false, false, array('ID','XML_ID'));
-									if ($arParentProduct = $dbParentProduct->Fetch())
-									{
-										$arProduct["XML_ID"] = $arParentProduct['XML_ID'].'#'.$arProduct["XML_ID"];
-									}
+									$bFieldExists = true;
+									break;
 								}
-								$arFields["PRODUCT_XML_ID"] = $arProduct["XML_ID"];
+							}
 
-								$dbOfferProperties = CIBlock::GetProperties($arProduct["IBLOCK_ID"], array(), array("!XML_ID" => "CML2_LINK"));
-								while($arOfferProperties = $dbOfferProperties->Fetch())
-								{
-									$arPropsSku[] = $arOfferProperties["CODE"];
-								}
-
-								$product_properties = CIBlockPriceTools::GetOfferProperties(
-									$newProductId,
-									$arParentSku["IBLOCK_ID"],
-									$arPropsSku
-								);
-
-								$newValues = array();
-								foreach ($product_properties as $productSkuProp)
-								{
-									$bFieldExists = false;
-									foreach ($strOffersProps as $existingSkuProp)
-									{
-										if ($existingSkuProp == $productSkuProp["CODE"])
-										{
-											$bFieldExists = true;
-											break;
-										}
-									}
-
-									if ($bFieldExists === true)
-									{
-										$newValues[] = array(
-											"NAME" => $productSkuProp["NAME"],
-											"CODE" => $productSkuProp["CODE"],
-											"VALUE" => $productSkuProp["VALUE"],
-											"SORT" => $productSkuProp["SORT"]
-										);
-									}
-								}
-
+							if ($bFieldExists === true)
+							{
 								$newValues[] = array(
-									"NAME" => "Product XML_ID",
-									"CODE" => "PRODUCT.XML_ID",
-									"VALUE" => $arProduct["XML_ID"]
+									"NAME" => $productSkuProp["NAME"],
+									"CODE" => $productSkuProp["CODE"],
+									"VALUE" => $productSkuProp["VALUE"],
+									"SORT" => $productSkuProp["SORT"]
 								);
+							}
+						}
 
-								$arFields['PROPS'] = (isset($arItem['PROPS']) ? updateBasketOffersProps($arItem['PROPS'], $newValues) : $newValues);
-								unset($newValues);
-							}
-							else
-							{
-								$arErrors[] = GetMessage('SBB_PRODUCT_PRICE_NOT_FOUND');
-							}
-							if (empty($arErrors))
-							{
-								$bBasketUpdate = CSaleBasket::Update($arItem['ID'], $arFields);
-							}
+						$newValues[] = array(
+							"NAME" => "Product XML_ID",
+							"CODE" => "PRODUCT.XML_ID",
+							"VALUE" => $newProductId["XML_ID"]
+						);
+
+						$arFields['PROPS'] = (isset($arItem['PROPS']) ? updateBasketOffersProps($arItem['PROPS'], $newValues) : $newValues);
+						unset($newValues);
+						if (empty($arErrors))
+						{
+							$bBasketUpdate = CSaleBasket::Update($arItem['ID'], $arFields);
 						}
 					}
 					else
@@ -281,11 +286,12 @@ if (isset($_POST[$action_var]) && strlen($_POST[$action_var]) > 0)
 		CBitrixComponent::includeComponentClass("bitrix:sale.basket.basket");
 
 		$basket = new CBitrixBasketComponent();
+		$basket->onIncludeComponentLang();
 
 		$basket->weightKoef = htmlspecialcharsbx(COption::GetOptionString('sale', 'weight_koef', 1, SITE_ID));
 		$basket->weightUnit = htmlspecialcharsbx(COption::GetOptionString('sale', 'weight_unit', "", SITE_ID));
 		$basket->columns = $arColumns;
-		$basket->offersProps = explode(",", $strOffersProps);
+		$basket->offersProps = $strOffersProps;
 
 		$basket->quantityFloat = (isset($_POST["quantity_float"]) && $_POST["quantity_float"] == "Y") ? "Y" : "N";
 		$basket->countDiscount4AllQuantity = (isset($_POST["count_discount_4_all_quantity"]) && $_POST["count_discount_4_all_quantity"] == "Y") ? "Y" : "N";
@@ -294,7 +300,6 @@ if (isset($_POST[$action_var]) && strlen($_POST[$action_var]) > 0)
 		$basket->usePrepayment = (isset($_POST["use_prepayment"]) && $_POST["use_prepayment"] == "Y") ? "Y" : "N";
 
 		$res = $basket->recalculateBasket($_POST);
-
 		foreach ($res as $key => $value)
 		{
 			$arRes[$key] = $value;

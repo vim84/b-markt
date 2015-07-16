@@ -80,12 +80,24 @@ elseif(isset($_REQUEST["test"]) && $_REQUEST["test"] === "cluster")
 			$threads_duration = 10;
 
 		$match = array();
-		if(preg_match("/^([0-9a-zA-Z-_.]+)\$/", $_GET["server_name"], $match))
+		if(
+			preg_match("/^http:\\/\\/([0-9a-zA-Z-_.]+)\\/?\$/", $_GET["server_name"], $match)
+			|| preg_match("/^([0-9a-zA-Z-_.]+)\\/?\$/", $_GET["server_name"], $match)
+		)
 		{
 			$server_name = $match[1];
 			$server_port = 80;
 		}
-		elseif(preg_match("/^([0-9a-zA-Z-_.]+):(\\d+)\$/", $_GET["server_name"], $match))
+		elseif(
+			preg_match("/^https:\\/\\/([0-9a-zA-Z-_.]+)\\/?\$/", $_GET["server_name"], $match)
+		)
+		{
+			$server_name = $match[1];
+			$server_port = 443;
+		}
+		elseif(
+			preg_match("/^([0-9a-zA-Z-_.]+):(\\d+)\\/?\$/", $_GET["server_name"], $match)
+		)
 		{
 			$server_name = $match[1];
 			$server_port = $match[2];
@@ -328,12 +340,6 @@ elseif(isset($_REQUEST["test"]))
 
 			if($bPHPIsGood)
 			{
-				if(\Bitrix\Main\Data\Cache::getCacheEngineType() == "cacheengineeaccelerator")
-					$bPHPIsGood = intval(ini_get("eaccelerator.shm_max")) > 0;
-			}
-
-			if($bPHPIsGood)
-			{
 				echo GetMessage("PERFMON_PANEL_MARK_PHP_IS_GOOD");
 				COption::SetOptionString("perfmon", "mark_php_is_good", "Y");
 			}
@@ -359,7 +365,7 @@ elseif(isset($_REQUEST["test"]))
 				if(time() > $end_time)
 				{
 					CPerfomanceKeeper::SetActive(false);
-					if(COption::GetOptionString("perfmon", "total_mark_value", "") == "measure");
+					if(COption::GetOptionString("perfmon", "total_mark_value", "") == "measure")
 						COption::SetOptionString("perfmon", "total_mark_value", "calc");
 				}
 			}
@@ -554,6 +560,8 @@ if($REQUEST_METHOD == "POST" && ($calc.$total_calc!="") && $RIGHT >= "W" && chec
 		CPerfomanceComponent::Clear();
 		CPerfomanceSQL::Clear();
 		CPerfomanceHit::Clear();
+		CPerfomanceError::Clear();
+		CPerfomanceCache::Clear();
 		COption::SetOptionString("perfmon", "total_mark_value", "measure");
 		COption::SetOptionInt("perfmon", "total_mark_duration", $total_duration);
 		COption::RemoveOption("perfmon", "total_mark_hits");
@@ -1324,9 +1332,6 @@ else
 			{
 			case "cacheenginememcache":
 				$cache_type = GetMessage("PERFMON_PANEL_CACHE_STORAGE_MEMCACHE");
-				break;
-			case "cacheengineeaccelerator":
-				$cache_type = GetMessage("PERFMON_PANEL_CACHE_STORAGE_EACCELERATOR");
 				break;
 			case "cacheengineapc":
 				$cache_type = GetMessage("PERFMON_PANEL_CACHE_STORAGE_APC");

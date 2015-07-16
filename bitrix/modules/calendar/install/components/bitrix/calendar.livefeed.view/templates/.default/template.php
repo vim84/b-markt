@@ -86,13 +86,23 @@ $id = $arResult['ID'];
 						if (!$bShowAll && $cnt > $arParams['ATTENDEES_SHOWN_COUNT'])
 						{
 							// Put to popup
-							$popupContent .= '<a href="'.$att['URL'].'" target="_blank" class="bxcal-att-popup-img bxcal-att-popup-att-full"><span class="bxcal-att-popup-avatar"><img src="'.$att['AVATAR_SRC'].'" width="'.$arParams['AVATAR_SIZE'].'" height="'.$arParams['AVATAR_SIZE'].'" /></span><span class="bxcal-att-popup-name">'.htmlspecialcharsbx($att['DISPLAY_NAME']).'</span></a>';
+							$popupContent .= '<a href="'.$att['URL'].'" target="_blank" class="bxcal-att-popup-img bxcal-att-popup-att-full">'.
+								'<span class="bxcal-att-popup-avatar">'.
+									($att['AVATAR_SRC'] ? '<img src="'.$att['AVATAR_SRC'].'" width="'.$arParams['AVATAR_SIZE'].'" height="'.$arParams['AVATAR_SIZE'].'" class="bxcal-att-popup-img-not-empty" />' : '').
+								'</span>'.
+								'<span class="bxcal-att-popup-name">'.htmlspecialcharsbx($att['DISPLAY_NAME']).'</span>'.
+							'</a>';
 						}
 						else // Display avatar
 						{
-							?>
-							<a title="<?= htmlspecialcharsbx($att['DISPLAY_NAME'])?>" href="<?= $att['URL']?>" target="_blank" class="bxcal-att-popup-img"><span class="bxcal-att-popup-avatar"><img src="<?= $att['AVATAR_SRC']?>" width="<?= $arParams['AVATAR_SIZE']?>" height="<?= $arParams['AVATAR_SIZE']?>" /></span></a>
-							<?
+							?><a title="<?= htmlspecialcharsbx($att['DISPLAY_NAME'])?>" href="<?= $att['URL']?>" target="_blank" class="bxcal-att-popup-img"><?
+								?><span class="bxcal-att-popup-avatar"><?
+									if ($att['AVATAR_SRC'])
+									{
+										?><img src="<?= $att['AVATAR_SRC']?>" width="<?= $arParams['AVATAR_SIZE']?>" height="<?= $arParams['AVATAR_SIZE']?>" class="bxcal-att-popup-img-not-empty" /><?
+									}
+								?></span><?
+							?></a><?
 						}
 					}?>
 
@@ -120,13 +130,20 @@ $id = $arResult['ID'];
 							if (!$bShowAll && $cnt > $arParams['ATTENDEES_SHOWN_COUNT'])
 							{
 								// Put to popup
-								$popupContent .= '<a href="'.$att['URL'].'" target="_blank" class="bxcal-att-popup-img bxcal-att-popup-att-full"><span class="bxcal-att-popup-avatar"><img src="'.$att['AVATAR_SRC'].'" width="'.$arParams['AVATAR_SIZE'].'" height="'.$arParams['AVATAR_SIZE'].'" /></span><span class="bxcal-att-popup-name">'.htmlspecialcharsbx($att['DISPLAY_NAME']).'</span></a>';
+								$popupContent .= '<a href="'.$att['URL'].'" target="_blank" class="bxcal-att-popup-img bxcal-att-popup-att-full">'.
+									'<span class="bxcal-att-popup-avatar">'.
+										($att['AVATAR_SRC'] ? '<img src="'.$att['AVATAR_SRC'].'" width="'.$arParams['AVATAR_SIZE'].'" height="'.$arParams['AVATAR_SIZE'].'" class="bxcal-att-popup-img-not-empty" />' : '').
+									'</span>'.
+									'<span class="bxcal-att-popup-name">'.htmlspecialcharsbx($att['DISPLAY_NAME']).'</span>'.
+								'</a>';
 							}
 							else // Display avatar
 							{
-								?>
-								<a title="<?= htmlspecialcharsbx($att['DISPLAY_NAME'])?>" href="<?= $att['URL']?>" target="_blank" class="bxcal-att-popup-img"><span class="bxcal-att-popup-avatar"><img src="<?= $att['AVATAR_SRC']?>" width="<?= $arParams['AVATAR_SIZE']?>" height="<?= $arParams['AVATAR_SIZE']?>" /></span></a>
-							<?
+								?><a title="<?= htmlspecialcharsbx($att['DISPLAY_NAME'])?>" href="<?= $att['URL']?>" target="_blank" class="bxcal-att-popup-img"><?
+									?><span class="bxcal-att-popup-avatar"><?
+										?><img src="<?= $att['AVATAR_SRC']?>" width="<?= $arParams['AVATAR_SIZE']?>" height="<?= $arParams['AVATAR_SIZE']?>" class="bxcal-att-popup-img-not-empty" /><?
+									?></span><?
+								?></a><?
 							}
 						}?>
 

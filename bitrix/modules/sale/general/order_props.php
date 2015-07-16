@@ -110,18 +110,15 @@ class CAllSaleOrderProps
 					{
 						// if we came from places like CRM, we got location in CODEs, because CRM knows nothing about location IDs.
 						// so, CRM sends LOCATION_IN_CODES in options array. In the other case, we assume we got locations as IDs
-						if($arOptions['LOCATION_IN_CODES'])
+						$res = CSaleLocation::GetById($curVal);
+						if(intval($res['ID']))
 						{
-							if(!($locId = CSaleLocation::checkLocationCodeExists($curVal)))
-								$curVal = null;
+							$curVal = $res['ID'];
 						}
 						else
 						{
-							if(!($locId = CSaleLocation::checkLocationIdExists($curVal)))
-								$curVal = null;
+							$curVal = null;
 						}
-
-						//self::TranslateLocationPropertyValues($personTypeId, $arOrderPropsValues, false);
 					}
 					else
 					{
@@ -142,15 +139,12 @@ class CAllSaleOrderProps
 
 			if ($arOrderProp["TYPE"] == "LOCATION" && ($arOrderProp["IS_LOCATION"] == "Y" || $arOrderProp["IS_LOCATION4TAX"] == "Y"))
 			{
-				if(!$arOptions['LOCATION_IN_CODES'])
-					$locId = intval($curVal);
-
 				if ($arOrderProp["IS_LOCATION"] == "Y")
-					$arOrder["DELIVERY_LOCATION"] = $locId;
+					$arOrder["DELIVERY_LOCATION"] = $curVal;
 				if ($arOrderProp["IS_LOCATION4TAX"] == "Y")
-					$arOrder["TAX_LOCATION"] = $locId;
+					$arOrder["TAX_LOCATION"] = $curVal;
 
-				if (!$locId)
+				if (!$curVal)
 					$bErrorField = true;
 			}
 			elseif ($arOrderProp["IS_PROFILE_NAME"] == "Y" || $arOrderProp["IS_PAYER"] == "Y" || $arOrderProp["IS_EMAIL"] == "Y" || $arOrderProp["IS_ZIP"] == "Y")
@@ -346,7 +340,46 @@ class CAllSaleOrderProps
 		$ID = intval($ID);
 		if ($ID <= 0)
 			return false;
-		$strSql = "SELECT * FROM b_sale_order_props WHERE ID = ".$ID;
+
+		if(CSaleLocation::isLocationProMigrated())
+		{
+			$strSql = "
+				SELECT
+					P.ID,
+					P.PERSON_TYPE_ID,
+					P.NAME,
+					P.TYPE,
+					P.REQUIED,
+					".self::getPropertyDefaultValueFieldSelectSql().",
+					P.SORT,
+					P.USER_PROPS,
+					P.IS_LOCATION,
+					P.PROPS_GROUP_ID,
+					P.SIZE1,
+					P.SIZE2,
+					P.DESCRIPTION,
+					P.IS_EMAIL,
+					P.IS_PROFILE_NAME,
+					P.IS_PAYER,
+					P.IS_LOCATION4TAX,
+					P.IS_FILTERED,
+					P.CODE,
+					P.IS_ZIP,
+					P.IS_PHONE,
+					P.ACTIVE,
+					P.UTIL,
+					P.INPUT_FIELD_LOCATION,
+					P.MULTIPLE
+				FROM 
+					b_sale_order_props P
+					".self::getLocationTableJoinSql()."
+				WHERE P.ID = ".$ID;
+		}
+		else
+		{
+			$strSql = "SELECT * FROM b_sale_order_props WHERE ID = ".$ID;
+		}
+
 		$db_res = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 		if ($res = $db_res->Fetch())
@@ -441,6 +474,28 @@ class CAllSaleOrderProps
 				return false;
 		}
 
+		$prevDefault = $arFields['DEFAULT_VALUE'];
+
+		// need to check here if we got CODE or ID came
+		if(isset($arFields['DEFAULT_VALUE']) && ((string) $arFields['DEFAULT_VALUE'] != '') && CSaleLocation::isLocationProMigrated())
+		{
+			$type = '';
+			if(!isset($arFields['TYPE']))
+			{
+				$prop = self::GetByID($ID);
+				$type = $prop['TYPE'];
+			}
+			else
+			{
+				$type = $arFields['TYPE'];
+			}
+
+			if($type == 'LOCATION')
+			{
+				$arFields['DEFAULT_VALUE'] = CSaleLocation::tryTranslateIDToCode($arFields['DEFAULT_VALUE']);
+			}
+		}
+
 		if (!CSaleOrderProps::CheckFields("UPDATE", $arFields, $ID))
 			return false;
 
@@ -450,6 +505,8 @@ class CAllSaleOrderProps
 			$strSql = "UPDATE b_sale_order_props SET ".$strUpdate." WHERE ID = ".$ID;
 			$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 		}
+
+		$arFields['DEFAULT_VALUE'] = $prevDefault;
 
 		foreach(GetModuleEvents("sale", "OnOrderPropsUpdate", true) as $arEvent)
 		{
@@ -526,8 +583,56 @@ class CAllSaleOrderProps
 		}
 		elseif ($propertyType == "LOCATION")
 		{
-			$arValue = CSaleLocation::GetByID($value, $lang);
-			$curValue = $arValue["COUNTRY_NAME"].((strlen($arValue["COUNTRY_NAME"])<=0 || strlen($arValue["REGION_NAME"])<=0) ? "" : " - ").$arValue["REGION_NAME"].((strlen($arValue["COUNTRY_NAME"])<=0 || strlen($arValue["CITY_NAME"])<=0) ? "" : " - ").$arValue["CITY_NAME"];
+			if(CSaleLocation::isLocationProMigrated())
+			{
+				$curValue = '';
+				if(strlen($value))
+				{
+					$arValue = array();
+
+					if(intval($value))
+					{
+						try
+						{
+							$locationStreetPropertyValue = '';
+							$res = \Bitrix\Sale\Location\LocationTable::getPathToNode($value, array('select' => array('LNAME' => 'NAME.NAME', 'TYPE_ID'), 'filter' => array('=NAME.LANGUAGE_ID' => LANGUAGE_ID)));
+							$types = \Bitrix\Sale\Location\Admin\TypeHelper::getTypeCodeIdMapCached();
+							$path = array();
+							while($item = $res->fetch())
+							{
+								// copy street to STREET property
+								if($types['ID2CODE'][$item['TYPE_ID']] == 'STREET')
+									$arResult[$curKey."_STREET"] = $item['LNAME'];
+
+								if($types['ID2CODE'][$item['TYPE_ID']] == 'COUNTRY')
+									$arValue["COUNTRY_NAME"] = $item['LNAME'];
+
+								if($types['ID2CODE'][$item['TYPE_ID']] == 'REGION')
+									$arValue["REGION_NAME"] = $item['LNAME'];
+
+								if($types['ID2CODE'][$item['TYPE_ID']] == 'CITY')
+									$arValue["CITY_NAME"] = $item['LNAME'];
+
+								if($types['ID2CODE'][$item['TYPE_ID']] == 'VILLAGE')
+									$arResult[$curKey."_VILLAGE"] = $item['LNAME'];
+
+								$path[] = $item['LNAME'];
+							}
+
+							$curValue = implode(' - ', $path);
+						}
+						catch(\Bitrix\Main\SystemException $e)
+						{
+						}
+					}
+				}
+			}
+			else
+			{
+				$arValue = CSaleLocation::GetByID($value, $lang);
+				$curValue = $arValue["COUNTRY_NAME"].((strlen($arValue["COUNTRY_NAME"])<=0 || strlen($arValue["REGION_NAME"])<=0) ? "" : " - ").$arValue["REGION_NAME"].((strlen($arValue["COUNTRY_NAME"])<=0 || strlen($arValue["CITY_NAME"])<=0) ? "" : " - ").$arValue["CITY_NAME"];
+			}
+
 			$arResult[$curKey] = $curValue;
 			$arResult[$curKey."_COUNTRY"] = $arValue["COUNTRY_NAME"];
 			$arResult[$curKey."_REGION"] = $arValue["REGION_NAME"];
@@ -631,6 +736,88 @@ class CAllSaleOrderProps
 	public static function PrepareRelation4Where($val, $key, $operation, $negative, $field, &$arField, &$arFilter)
 	{
 		return false;
+	}
+
+	public static function getPropertyDefaultValueFieldSelectSql($tableAlias = 'P')
+	{
+		$tableAlias = \Bitrix\Main\HttpApplication::getConnection()->getSqlHelper()->forSql($tableAlias);
+
+		if(CSaleLocation::isLocationProMigrated())
+
+			return "
+				CASE
+
+					WHEN 
+						".$tableAlias.".TYPE = 'LOCATION'
+					THEN 
+						CAST(L.ID as ".\Bitrix\Sale\Location\DB\Helper::getSqlForDataType('char', 255).")
+
+					ELSE 
+						".$tableAlias.".DEFAULT_VALUE
+
+				END as DEFAULT_VALUE, ".$tableAlias.".DEFAULT_VALUE as DEFAULT_VALUE_ORIG";
+
+			//return "CASE WHEN L.ID IS NULL THEN ".$tableAlias.".DEFAULT_VALUE ELSE L.ID END as DEFAULT_VALUE, ".$tableAlias.".DEFAULT_VALUE as DEFAULT_VALUE_ORIG";
+		else
+			return $tableAlias.".DEFAULT_VALUE";
+	}
+
+	public static function getLocationTableJoinSql($tableAlias = 'P')
+	{
+		$tableAlias = \Bitrix\Main\HttpApplication::getConnection()->getSqlHelper()->forSql($tableAlias);
+
+		if(CSaleLocation::isLocationProMigrated())
+			return "LEFT JOIN b_sale_location L ON (".$tableAlias.".TYPE = 'LOCATION' AND ".$tableAlias.".DEFAULT_VALUE IS NOT NULL AND (".$tableAlias.".DEFAULT_VALUE = L.CODE))";
+		else
+			return " ";
+	}
+
+	public static function addPropertyDefaultValueField($tableAlias = 'V', &$arFields)
+	{
+		$tableAlias = \Bitrix\Main\HttpApplication::getConnection()->getSqlHelper()->forSql($tableAlias);
+
+		// locations kept in CODEs, but must be shown as IDs
+		if(CSaleLocation::isLocationProMigrated())
+		{
+			$arFields['DEFAULT_VALUE'] = array("FIELD" => "
+
+				CASE 
+
+					WHEN 
+						TYPE = 'LOCATION'
+					THEN 
+						CAST(L.ID as ".\Bitrix\Sale\Location\DB\Helper::getSqlForDataType('char', 255).")
+
+					ELSE 
+						".$tableAlias.".DEFAULT_VALUE 
+				END",
+
+				/*
+				"CASE WHEN L.ID IS NULL THEN ".$tableAlias.".DEFAULT_VALUE ELSE L.ID END", 
+				*/
+				"TYPE" => "string", "FROM" => "LEFT JOIN b_sale_location L ON (TYPE = 'LOCATION' AND ".$tableAlias.".DEFAULT_VALUE IS NOT NULL AND ".$tableAlias.".DEFAULT_VALUE = L.CODE)");
+			$arFields['DEFAULT_VALUE_ORIG'] = array("FIELD" => $tableAlias.".DEFAULT_VALUE", "TYPE" => "string");
+		}
+		else
+		{
+			$arFields['DEFAULT_VALUE'] = array("FIELD" => $tableAlias.".DEFAULT_VALUE", "TYPE" => "string");
+		}
+	}
+
+	public static function translateLocationIDToCode($arFields)
+	{
+		if(!CSaleLocation::isLocationProMigrated())
+			return $arFields['DEFAULT_VALUE'];
+
+		if(isset($arFields['TYPE']) && $arFields['TYPE'] == 'LOCATION')
+		{
+			if((string) $arFields['DEFAULT_VALUE'] === (string) intval($arFields['DEFAULT_VALUE'])) // real ID, need to translate
+			{
+				return CSaleLocation::tryTranslateIDToCode($arFields['DEFAULT_VALUE']);
+			}
+		}
+
+		return $arFields['DEFAULT_VALUE'];
 	}
 }
 

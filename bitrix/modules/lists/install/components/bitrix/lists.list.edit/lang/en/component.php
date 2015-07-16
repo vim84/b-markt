@@ -10,4 +10,7 @@ $MESS["CC_BLLE_TITLE_EDIT"] = "Grid Settings: #NAME#";
 $MESS["CC_BLLE_TITLE_NEW"] = "New List";
 $MESS["CC_BLLE_NAME_FIELD"] = "Name";
 $MESS["CC_BLLE_CHAIN_EDIT"] = "Grid Settings";
+$MESS["CC_BLLE_TITLE_EDIT_PROCESS"] = "Edit workflow: #NAME#";
+$MESS["CC_BLLE_TITLE_NEW_PROCESS"] = "New workflow";
+$MESS["CC_BLLE_FIELD_NAME_DEFAULT_PROCESS"] = "New workflow";
 ?>

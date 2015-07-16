@@ -8,7 +8,7 @@
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 
-if($APPLICATION->GetGroupRight("main") < "R")
+if($APPLICATION->GetGroupRight("sale") < "R")
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
 IncludeModuleLangFile(__FILE__);

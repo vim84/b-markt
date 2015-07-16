@@ -56,6 +56,11 @@ class CAllSocNetUserRelations
 			$GLOBALS["APPLICATION"]->ThrowException(str_replace("#ID#", $arFields["RELATION"], GetMessage("SONET_UR_ERROR_NO_RELATION")), "ERROR_NO_RELATION");
 			return false;
 		}
+		elseif (is_set($arFields, "RELATION") && $arFields["RELATION"] == SONET_RELATIONS_TYPE_FRIENDS2)
+		{
+			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SONET_UR_ERROR_RELATION_FRIENDS2"), "ERROR_RELATION_FRIENDS2");
+			return false;
+		}
 
 		if ((is_set($arFields, "INITIATED_BY") || $ACTION=="ADD") && !in_array($arFields["INITIATED_BY"], array("F", "S")))
 			$arFields["INITIATED_BY"] = "F";

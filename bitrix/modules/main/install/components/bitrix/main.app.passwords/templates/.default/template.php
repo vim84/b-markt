@@ -38,10 +38,9 @@ var bx_app_pass_mess = {
 	<div class="bx-otp-section-white">
 
 	<?
-	$first = true;
 	foreach($arResult["APPLICATIONS"] as $app_id => $app):
 	?>
-		<div class="bx-otp-accordion-container <?=($first || !empty($arResult["ROWS"][$app_id])? "open" : "close")?>" id="bx_app_pass_container_<?=$app_id?>">
+		<div class="bx-otp-accordion-container <?=(!empty($arResult["ROWS"][$app_id])? "open" : "close")?>" id="bx_app_pass_container_<?=$app_id?>">
 			<div class="bx-otp-accordion-head-block" onclick="return bx_app_pass_toggle('bx_app_pass_container_<?=$app_id?>')">
 				<div class="bx-otp-accordion-head-title"><?=String::htmlEncode($app["NAME"])?></div>
 				<div class="bx-otp-accordion-head-description"><?=$app["DESCRIPTION"]?></div>
@@ -130,7 +129,6 @@ var bx_app_pass_mess = {
 			</div>
 		</div>
 	<?
-			$first = false;
 	endforeach;
 	?>
 

@@ -114,6 +114,8 @@ if ($bCatalog)
 		CCatalogProduct::TYPE_SKU => GetMessage('IBEL_CATALOG_TYPE_MESS_SKU'),
 		CCatalogProduct::TYPE_OFFER => GetMessage('IBEL_CATALOG_TYPE_MESS_OFFER')
 	);
+	if (!$boolCatalogSet)
+		unset($arProductTypeList[CCatalogProduct::TYPE_SET]);
 	$showCatalogWithOffers = (COption::GetOptionString('catalog', 'show_catalog_tab_with_offers') == 'Y');
 }
 
@@ -1031,7 +1033,7 @@ if ($arID = $lAdmin->GroupAction())
 $CAdminCalendar_ShowScript = CAdminCalendar::ShowScript();
 
 $arHeader = array();
-if ($bCatalog && $boolCatalogSet)
+if ($bCatalog)
 {
 	$arHeader[] = array(
 		"id" => "CATALOG_TYPE",
@@ -1579,7 +1581,7 @@ while($arRes = $rsData->NavNext(true, "f_"))
 			$arRes['CATALOG_QUANTITY_TRACE'] = $arRes['CATALOG_QUANTITY_TRACE_ORIG'];
 			$f_CATALOG_QUANTITY_TRACE = $f_CATALOG_QUANTITY_TRACE_ORIG;
 		}
-		if ($boolCatalogSet && isset($arSelectedFieldsMap['CATALOG_TYPE']))
+		if (isset($arSelectedFieldsMap['CATALOG_TYPE']))
 		{
 			$arRes['CATALOG_TYPE'] = (int)$arRes['CATALOG_TYPE'];
 			if (0 >= $arRes['CATALOG_TYPE'])
@@ -2521,7 +2523,7 @@ foreach($arRows as $f_ID => $row)
 		}
 	}
 
-	if ($boolCatalogSet && isset($arSelectedFieldsMap['CATALOG_TYPE']))
+	if (isset($arSelectedFieldsMap['CATALOG_TYPE']))
 	{
 		$strProductType = '';
 		if (isset($arProductTypeList[$row->arRes["CATALOG_TYPE"]]))
@@ -2557,7 +2559,7 @@ foreach($arRows as $f_ID => $row)
 	$clearCounter = array(
 		"TEXT" => GetMessage('IBEL_A_CLEAR_COUNTER'),
 		"TITLE" => GetMessage('IBEL_A_CLEAR_COUNTER_TITLE'),
-		"ACTION" => $lAdmin->ActionDoGroup($row->arRes['orig']['ID'], "clear_counter", $sThisSectionUrl),
+		"ACTION" => "if(confirm('".GetMessageJS("IBLOCK_CLEAR_COUNTER_CONFIRM")."')) ".$lAdmin->ActionDoGroup($row->arRes['orig']['ID'], "clear_counter", $sThisSectionUrl),
 		"ONCLICK" => ""
 	);
 
@@ -2617,7 +2619,9 @@ foreach($arRows as $f_ID => $row)
 					"ONCLICK" => "",
 				);
 				$arActions[] = $arActive;
+				$arActions[] = array('SEPARATOR' => 'Y');
 				$arActions[] = $clearCounter;
+				$arActions[] = array('SEPARATOR' => 'Y');
 			}
 
 			if (
@@ -2817,7 +2821,9 @@ foreach($arRows as $f_ID => $row)
 				"ONCLICK" => "",
 			);
 			$arActions[] = $arActive;
+			$arActions[] = array('SEPARATOR' => 'Y');
 			$arActions[] = $clearCounter;
+			$arActions[] = array('SEPARATOR' => 'Y');
 
 			$arActions[] = array(
 				"ICON" => "copy",
@@ -2868,7 +2874,9 @@ foreach($arRows as $f_ID => $row)
 				"ONCLICK" => "",
 			);
 			$arActions[] = $arActive;
+			$arActions[] = array('SEPARATOR' => 'Y');
 			$arActions[] = $clearCounter;
+			$arActions[] = array('SEPARATOR' => 'Y');
 		}
 
 		if ($boolIBlockElementAdd && isset($arElementOps[$f_ID])
@@ -3091,9 +3099,9 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 if((!isset($_REQUEST["mode"]) || $_REQUEST["mode"]=='list' || $_REQUEST["mode"]=='frame') && $bCatalog && $bCurrency)
 {
 	?><script type="text/javascript">
-		top.arCatalogShowedGroups = new Array();
-		top.arExtra = new Array();
-		top.arCatalogGroups = new Array();
+		top.arCatalogShowedGroups = [];
+		top.arExtra = [];
+		top.arCatalogGroups = [];
 		top.BaseIndex = '';
 	<?
 	if (!empty($arCatGroup) && is_array($arCatGroup))
@@ -3437,7 +3445,7 @@ foreach($arProps as $arProp):
 		<?elseif($arProp["PROPERTY_TYPE"]=='L'):?>
 			<select name="find_el_property_<?=$arProp["ID"]?>">
 				<option value=""><?echo GetMessage("IBLOCK_VALUE_ANY")?></option>
-				<option value="NOT_REF"><?echo GetMessage("IBLOCK_ELEMENT_EDIT_NOT_SET")?></option><?
+				<option value="NOT_REF"<?if(${"find_el_property_".$arProp["ID"]} == "NOT_REF")echo " selected"?>><?echo GetMessage("IBLOCK_ELEMENT_EDIT_NOT_SET")?></option><?
 				$dbrPEnum = CIBlockPropertyEnum::GetList(Array("SORT"=>"ASC", "NAME"=>"ASC"), Array("PROPERTY_ID"=>$arProp["ID"]));
 				while($arPEnum = $dbrPEnum->GetNext()):
 				?>

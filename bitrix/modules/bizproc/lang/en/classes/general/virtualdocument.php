@@ -2,7 +2,7 @@
 $MESS["BPVDX_FIELD_ID"] = "Element ID";
 $MESS["BPVDX_FIELD_TIMESTAMP_X"] = "Element Last Modified On";
 $MESS["BPVDX_FIELD_MODYFIED"] = "Modified by";
-$MESS["BPVDX_FIELD_MODIFIED_BY_USER_PRINTABLE"] = "Modified By";
+$MESS["BPVDX_FIELD_MODIFIED_BY_USER_PRINTABLE"] = "Modified By (name)";
 $MESS["BPVDX_FIELD_DATE_CREATE"] = "Element Created On";
 $MESS["BPVDX_FIELD_IBLOCK_ID"] = "Information Block ID";
 $MESS["BPVDX_FIELD_ACTIVE"] = "Element Is Active";
@@ -21,7 +21,7 @@ $MESS["BPVDX_FIELD_DETAIL_TEXT_TYPE"] = "Full Text Type";
 $MESS["BPVDX_FIELD_CODE"] = "Mnemonic Code";
 $MESS["BPVDX_FIELD_XML_ID"] = "External ID";
 $MESS["BPVDX_FIELD_CREATED"] = "Created By";
-$MESS["BPVDX_FIELD_CREATED_BY_USER_PRINTABLE"] = "Created By";
+$MESS["BPVDX_FIELD_CREATED_BY_USER_PRINTABLE"] = "Created By (name)";
 $MESS["BPVDX_OPERATION_READ"] = "Read";
 $MESS["BPVDX_OPERATION_WRITE"] = "Write";
 $MESS["BPVDX_DOCUMENT_AUTHOR"] = "Author";
@@ -58,5 +58,5 @@ $MESS["BPCGWTL_INVALID1N"] = "The field value is not integer.";
 $MESS["BPCGWTL_INVALID3N"] = "The field value is incorrect.";
 $MESS["BPCGWTL_INVALID4N"] = "The field value does not resolve to \"true\" or \"false\".";
 $MESS["BPCGWTL_INVALID9N"] = "Unable to load the file.";
-$MESS["BPVDX_FIELD_USERNAME_PROPERTY"] = "(name)";
+$MESS["BPVDX_FIELD_USERNAME_PROPERTY"] = " (name)";
 ?>

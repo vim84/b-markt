@@ -63,6 +63,8 @@ $MESS["SC_T_CACHE"] = "Using cache files";
 $MESS["SC_T_AUTH"] = "HTTP authorization";
 $MESS["SC_T_EXEC"] = "File creation and execution";
 $MESS["SC_T_DBCONN"] = "Redundant output in configuration files";
+$MESS["SC_T_DBCONN_SETTINGS"] = "Database connection parameters";
+$MESS["SC_ERR_CONN_DIFFER"] = "in .settings.php and dbconn.php are different.";
 $MESS["SC_T_MYSQL_VER"] = "MySQL version";
 $MESS["SC_T_TIME"] = "Database and web server times";
 $MESS["SC_T_SQL_MODE"] = "MySQL Mode";
@@ -173,6 +175,12 @@ All the websites that share the same Bitrix system instance must use the same en
 $MESS["SC_HELP_CHECK_SOCKET"] = "This will set the web server to establish a connection to itself which is required to verify networking functions and for other subsequent tests.
 
 If this test fails, the subsequent tests requiring a child PHP process cannot be performed. This problem is usually caused by a firewall, restricted  IP access or HTTP/NTLM authorization. Disable these functions while performing the test.";
+$MESS["SC_HELP_CHECK_DBCONN_SETTINGS"] = "This test will compare database connection parameters specified in <i>/bitrix/php_interface/dbconn.php</i> with those in <i>/bitrix/.settings.php</i>. 
+These settings must be the same in both files. Otherwise, some SQL queries may divert to another database which will entail unpredictable consequences.
+
+The new D7 kernel uses parameters in <i>.settings.php</i>. Due to backward compatibility issues, the use of <i>dbconn.php</i> cannot be avoided.
+
+However, if <i>.settings.php</i> does not specify connection parameters at all, the new kernel uses those in <i>dbconn.php</i>.";
 $MESS["SC_HELP_CHECK_DBCONN"] = "This will check the text output in the configuration files <i>dbconn.php</i> and <i>init.php</i>.
 
 Even an excess space or newline may cause a compressed page to be unpackable and unreadable by a client browser.
@@ -297,7 +305,7 @@ To change the collation, add the code <b>after the charset declaration</b>:
 ";
 $MESS["SC_READ_MORE_ANC"] = "See the details in <a href=\"#LINK#\" target=_blank>system check log</a>.";
 $MESS["SC_CHARSET_CONN_VS_RES"] = "The connection charset (#CONN#) is different than the result charset (#RES#).";
-$MESS["SC_STRLEN_FAIL"] = "String functions return invalid results.";
+$MESS["SC_STRLEN_FAIL_PHP56"] = "String functions work incorrectly. Issue may occur due to PHP 5.6 bug (<a href=\"https://bugs.php.net/bug.php?id=68644\" target=_blank>https://bugs.php.net/bug.php?id=68644</a>). It is recommended to use earlier or newer versions of PHP.  ";
 $MESS["SC_T_RECURSION"] = "Stack size; pcre.recursion_limit";
 $MESS["SC_HELP_CHECK_PCRE_RECURSION"] = "The parameter <i>pcre.recursion_limit</i> is set to 100000 by default. If recursion eats more memory than the system stack size can provide (commonly 8 MB), PHP will error out on complex regular expressions showing a <i>Segmentation fault</i> error message.
 
@@ -523,16 +531,11 @@ $MESS["MAIN_SC_METHOD_NOT_SUP"] = "The server does not support the method #METHO
 $MESS["MAIN_SC_SEARCH_INCORRECT"] = "Document contents indexing does not function properly.";
 $MESS["MAIN_SC_NO_CONNECTTO"] = "Cannot connect to #HOST#";
 $MESS["MAIN_SC_UNKNOWN_ANSWER"] = "Unknown response from #HOST#";
+$MESS["MAIN_SC_WARN_EXPAND_SESSION"] = "If the Instant Messenger module is installed, disable the session keep alive feature in the <a href='/bitrix/admin/settings.php?mid=main' target=_blank>kernel settings</a> to reduce server load.";
 $MESS["MAIN_SC_NO_EXTERNAL_CONNECT_WARN"] = "Cannot connect to the Intranet externally. The mobile application will not function.";
 $MESS["MAIN_SC_EXTERNAL_ANSWER_INCORRECT"] = "External connection to the Intranet was a success, but the server returned an incorrect status.";
 $MESS["MAIN_SC_NO_PULL_EXTERNAL"] = "External connection to the Intranet was a success but the nginx-push-stream message read port is unavailable. Mobile instant messaging is unavailable.";
-$MESS["MAIN_SC_WARN_EXPAND_SESSION"] = "If the Instant Messenger module is installed, disable the session keep alive feature in the <a href='/bitrix/admin/settings.php?mid=main' target=_blank>kernel settings</a> to reduce server load.";
-$MESS["SC_T_DBCONN_SETTINGS"] = "Database connection parameters";
-$MESS["SC_ERR_CONN_DIFFER"] = "in .settings.php and dbconn.php are different.";
-$MESS["SC_HELP_CHECK_DBCONN_SETTINGS"] = "This test will compare database connection parameters specified in <i>/bitrix/php_interface/dbconn.php</i> with those in <i>/bitrix/.settings.php</i>. 
-These settings must be the same in both files. Otherwise, some SQL queries may divert to another database which will entail unpredictable consequences.
-
-The new D7 kernel uses parameters in <i>.settings.php</i>. Due to backward compatibility issues, the use of <i>dbconn.php</i> cannot be avoided.
-
-However, if <i>.settings.php</i> does not specify connection parameters at all, the new kernel uses those in <i>dbconn.php</i>.";
+$MESS["MAIN_CATDOC_WARN"] = "Bad catdoc version: #VERSION#<br>
+Details: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=679877<br>
+Install an earlier catdoc version or a newer version with fixes. ";
 ?>

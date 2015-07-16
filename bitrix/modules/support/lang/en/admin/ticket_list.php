@@ -146,4 +146,17 @@ $MESS["SUP_SITE_ID_SHORT"] = "Site";
 $MESS["SUP_SITE_ID"] = "Site";
 $MESS["SUP_F_TITLE_MESSAGE"] = "Message subject and text";
 $MESS["SUP_DEADLINE"] = "Deadline";
+$MESS["MAIN_ADMIN_LIST_SELECTED"] = "Selected:";
+$MESS["MAIN_ADD"] = "Add";
+$MESS["MAIN_ADMIN_LIST_CHECKED"] = "Checked:";
+$MESS["MAIN_FIND"] = "Find";
+$MESS["MAIN_FIND_TITLE"] = "Enter text to search for";
+$MESS["SUP_EXACT_MATCH"] = "Use exact match";
+$MESS["SUP_ADD"] = "Add";
+$MESS["SUP_TICKET_STATUS"] = "Ticket status";
+$MESS["SUP_RED_ALT"] = "your counterpart replied to the ticket last time (you are responsible)";
+$MESS["SUP_YELLOW_ALT"] = "your counterpart replied to the ticket last time (you are not responsible)";
+$MESS["SUP_GREEN_ALT"] = "you who replied to the ticket last time";
+$MESS["SUP_GREEN_S_ALT"] = "helpdesk staff member answered the ticket last time";
+$MESS["SUP_GREY_ALT"] = "ticket closed";
 ?>

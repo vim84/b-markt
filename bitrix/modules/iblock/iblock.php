@@ -28,6 +28,7 @@ $arClasses = array(
 	"CAllIBlockRSS" => "classes/general/iblockrss.php",
 	"CIBlockRSS" => "classes/".$DBType."/iblockrss.php",
 	"CIBlockPropertyDateTime" => "classes/general/prop_datetime.php",
+	"CIBlockPropertyDate" => "classes/general/prop_date.php",
 	"CIBlockPropertyXmlID" => "classes/general/prop_xmlid.php",
 	"CIBlockPropertyFileMan" => "classes/general/prop_fileman.php",
 	"CIBlockPropertyHTML" => "classes/general/prop_html.php",

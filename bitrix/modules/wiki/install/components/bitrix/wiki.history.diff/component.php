@@ -104,6 +104,12 @@ if (empty($arParams['IBLOCK_ID']))
 	return;
 }
 
+if (array_key_exists('SOCNET_GROUP_ID', $arParams) && empty($arParams['SOCNET_GROUP_ID']))
+{
+	ShowError(GetMessage('WIKI_ACCESS_DENIED'));
+	return;
+}
+
 if (CWikiSocnet::isEnabledSocnet() && !empty($arParams['SOCNET_GROUP_ID']))
 {
 	if(!CModule::IncludeModule('socialnetwork'))
@@ -190,6 +196,13 @@ if($this->StartResultCache(false, array($USER->GetGroups(), $arCache), false))
 
 		$this->AbortResultCache();
 		ShowError($arResult['FATAL_MESSAGE']);
+		return;
+	}
+
+	if (!($arHistoryResult['DOCUMENT_ID'] == $documentId && $arDiffResult['DOCUMENT_ID'] == $documentId))
+	{
+		$this->AbortResultCache();
+		ShowError(GetMessage('WIKI_ACCESS_DENIED'));
 		return;
 	}
 

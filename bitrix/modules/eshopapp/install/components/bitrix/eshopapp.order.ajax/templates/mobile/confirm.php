@@ -30,9 +30,6 @@ if (!empty($arResult["ORDER"]))
 			{
 				$orderID = ($arParams["SHOW_ACCOUNT_NUMBER"] == "Y") ? urlencode(urlencode($arResult["ORDER"]["ACCOUNT_NUMBER"])) : $arResult["ORDER_ID"];
 				?>
-				<script language="JavaScript">
-					window.open('<?=$arParams["PATH_TO_PAYMENT"]?>?ORDER_ID=<?=$orderID ?>');
-				</script>
 				<p><?= GetMessage("SOA_TEMPL_PAY_LINK", Array("#LINK#" => $arParams["PATH_TO_PAYMENT"]."?ORDER_ID=".$orderID)) ?></p>
 				<?
 			}

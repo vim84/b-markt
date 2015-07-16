@@ -32,6 +32,7 @@ $MESS["CATALOG_SC_WIDTH"] = "Ширина";
 $MESS["CATALOG_SC_BLOG_USE"] = "Использовать комментарии";
 $MESS["CATALOG_SC_FB_USE"] = "Использовать Facebook";
 $MESS["CATALOG_SC_VK_USE"] = "Использовать Вконтакте";
+$MESS["CATALOG_SC_SHOW_DEACTIVATED"] = "Показывать комментарии к деактивированным товарам";
 $MESS["RATING_TYPE"] = "Вид кнопок рейтинга";
 $MESS["RATING_TYPE_CONFIG"] = "по умолчанию";
 $MESS["RATING_TYPE_STANDART_TEXT"] = "Нравится / Не нравится (текстовый)";

@@ -36,6 +36,7 @@ $arAllOptions = array(
 	array("1C_SALE_ACCOUNT_NUMBER_SHOP_PREFIX", GetMessage("SALE_1C_SALE_ACCOUNT_NUMBER_SHOP_PREFIX"), "", Array("text")),
 	array("1C_EXPORT_PAYED_ORDERS", GetMessage("SALE_1C_EXPORT_PAYED_ORDERS"), "", Array("checkbox")),
 	array("1C_EXPORT_ALLOW_DELIVERY_ORDERS", GetMessage("SALE_1C_EXPORT_ALLOW_DELIVERY_ORDERS"), "", Array("checkbox")),
+	array("1C_CHANGE_STATUS_FROM_1C", GetMessage("SALE_1C_CHANGE_STATUS_FROM_1C"), "", Array("checkbox")),
 	array("1C_EXPORT_FINAL_ORDERS", GetMessage("SALE_1C_EXPORT_FINAL_ORDERS"), "", Array("list", $arStatuses)),
 	array("1C_FINAL_STATUS_ON_DELIVERY", GetMessage("SALE_1C_FINAL_STATUS_ON_DELIVERY"), "F", Array("list", $arStatuses)),
 	array("1C_REPLACE_CURRENCY", GetMessage("SALE_1C_REPLACE_CURRENCY"), GetMessage("SALE_1C_RUB"), Array("text")),

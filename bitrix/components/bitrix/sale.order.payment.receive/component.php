@@ -26,6 +26,9 @@ if ($arPaySysAction = $dbPaySysAction->Fetch())
 		$GLOBALS["SALE_CORRESPONDENCE"] = CSalePaySystemAction::UnSerializeParams($arPaySysAction["PARAMS"]);
 		$pathToAction = $_SERVER["DOCUMENT_ROOT"].$arPaySysAction["ACTION_FILE"];
 
+		if(!isset($GLOBALS["SALE_INPUT_PARAMS"]))
+			$GLOBALS["SALE_INPUT_PARAMS"] = array();
+
 		$pathToAction = str_replace("\\", "/", $pathToAction);
 		while (substr($pathToAction, strlen($pathToAction) - 1, 1) == "/")
 			$pathToAction = substr($pathToAction, 0, strlen($pathToAction) - 1);

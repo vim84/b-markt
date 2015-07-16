@@ -423,7 +423,6 @@ class CSaleBasket extends CAllSaleBasket
 		if (!CSaleBasket::CheckFields("ADD", $arFields))
 			return false;
 
-
 		if (!array_key_exists('IGNORE_CALLBACK_FUNC', $arFields) || 'Y' != $arFields['IGNORE_CALLBACK_FUNC'])
 		{
 			if ((array_key_exists("CALLBACK_FUNC", $arFields) && !empty($arFields["CALLBACK_FUNC"]))
@@ -473,7 +472,7 @@ class CSaleBasket extends CAllSaleBasket
 		$bFound = false;
 		$bEqAr = false;
 
-		$boolProps = (array_key_exists('PROPS', $arFields) && !empty($arFields["PROPS"]) && is_array($arFields["PROPS"]));
+		$boolProps = (!empty($arFields["PROPS"]) && is_array($arFields["PROPS"]));
 
 		// check if this item is already in the basket
 		$arDuplicateFilter = array(
@@ -509,7 +508,7 @@ class CSaleBasket extends CAllSaleBasket
 				{
 					foreach($arFields["PROPS"] as &$arProp)
 					{
-						if (array_key_exists('VALUE', $arProp)&& '' != $arProp["VALUE"])
+						if (array_key_exists('VALUE', $arProp) && '' != $arProp["VALUE"])
 						{
 							$propID = '';
 							if (array_key_exists('CODE', $arProp) && '' != $arProp["CODE"])
@@ -590,9 +589,9 @@ class CSaleBasket extends CAllSaleBasket
 			$ID = intval($DB->LastID());
 
 			$boolOrder = false;
-			if (array_key_exists('ORDER_ID', $arFields))
+			if (isset($arFields['ORDER_ID']))
 			{
-				$boolOrder = (0 < intval($arFields['ORDER_ID']));
+				$boolOrder = (0 < (int)$arFields['ORDER_ID']);
 			}
 
 			if (!$boolOrder && !CSaleBasketHelper::isSetItem($arFields))
@@ -629,7 +628,7 @@ class CSaleBasket extends CAllSaleBasket
 					{
 						if (method_exists($productProvider, "GetSetItems"))
 						{
-							$arSets = $productProvider::GetSetItems($arFields["PRODUCT_ID"], CSaleBasket::TYPE_SET);
+							$arSets = $productProvider::GetSetItems($arFields["PRODUCT_ID"], CSaleBasket::TYPE_SET, array('BASKET_ID' => $ID));
 
 							if (is_array($arSets))
 							{
@@ -640,7 +639,7 @@ class CSaleBasket extends CAllSaleBasket
 										$setItem["SET_PARENT_ID"] = $ID;
 										$setItem["LID"] = $arFields["LID"];
 										$setItem["QUANTITY"] = $setItem["QUANTITY"] * $arFields["QUANTITY"];
-
+										$setItem['FUSER_ID'] = $arFields['FUSER_ID'];
 										CSaleBasket::Add($setItem);
 									}
 								}

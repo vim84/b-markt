@@ -9,8 +9,10 @@ class CBPApproveActivity
 	private $subscriptionId = 0;
 
 	private $isInEventActivityMode = false;
+	private $taskStatus = false;
 
 	private $arApproveResults = array();
+	private $arApproveOriginalResults = array();
 
 	public function __construct($name)
 	{
@@ -46,6 +48,7 @@ class CBPApproveActivity
 			"TaskButton2Message" => "",
 			"CommentLabelMessage" => "",
 			"ShowComment" => "Y",
+			'AccessControl' => 'N',
 		);
 	}
 
@@ -103,6 +106,7 @@ class CBPApproveActivity
 		$arParameters["ShowComment"] = $this->IsPropertyExists("ShowComment") ? $this->ShowComment : "Y";
 		if ($arParameters["ShowComment"] != "Y" && $arParameters["ShowComment"] != "N")
 			$arParameters["ShowComment"] = "Y";
+		$arParameters["AccessControl"] = $this->IsPropertyExists("AccessControl") && $this->AccessControl == 'Y' ? 'Y' : 'N';
 
 		$taskService = $this->workflow->GetService("TaskService");
 		$this->taskId = $taskService->CreateTask(
@@ -115,6 +119,8 @@ class CBPApproveActivity
 				"NAME" => $this->Name,
 				"DESCRIPTION" => $this->Description,
 				"PARAMETERS" => $arParameters,
+				'IS_INLINE' => $arParameters["ShowComment"] == "Y" ? 'N' : 'Y',
+				'DOCUMENT_NAME' => $documentService->GetDocumentName($documentId)
 			)
 		);
 
@@ -161,7 +167,16 @@ class CBPApproveActivity
 			throw new Exception("eventHandler");
 
 		$taskService = $this->workflow->GetService("TaskService");
-		$taskService->DeleteTask($this->taskId);
+		if ($this->taskStatus === false)
+		{
+			$taskService->DeleteTask($this->taskId);
+		}
+		else
+		{
+			$taskService->Update($this->taskId, array(
+				'STATUS' => $this->taskStatus
+			));
+		}
 
 		$timeoutDuration = $this->CalculateTimeoutDuration();
 		if ($timeoutDuration > 0)
@@ -173,6 +188,7 @@ class CBPApproveActivity
 		$this->workflow->RemoveEventHandler($this->name, $eventHandler);
 
 		$this->taskId = 0;
+		$this->taskStatus = false;
 		$this->subscriptionId = 0;
 	}
 
@@ -237,6 +253,7 @@ class CBPApproveActivity
 			if (array_key_exists("SchedulerService", $arEventParameters) && $arEventParameters["SchedulerService"] == "OnAgent")
 			{
 				$this->IsTimeout = 1;
+				$this->taskStatus = CBPTaskStatus::Timeout;
 				$this->Unsubscribe($this);
 				$this->ExecuteOnNonApprove();
 				return;
@@ -248,6 +265,9 @@ class CBPApproveActivity
 		if (!array_key_exists("APPROVE", $arEventParameters))
 			return;
 
+		if (empty($arEventParameters["REAL_USER_ID"]))
+			$arEventParameters["REAL_USER_ID"] = $arEventParameters["USER_ID"];
+
 		$approve = ($arEventParameters["APPROVE"] ? true : false);
 
 		$rootActivity = $this->GetRootActivity();
@@ -257,47 +277,35 @@ class CBPApproveActivity
 		$arUsers = CBPHelper::ExtractUsers($arUsersTmp, $documentId, false);
 
 		$arEventParameters["USER_ID"] = intval($arEventParameters["USER_ID"]);
+		$arEventParameters["REAL_USER_ID"] = intval($arEventParameters["REAL_USER_ID"]);
 		if (!in_array($arEventParameters["USER_ID"], $arUsers))
 			return;
 
 		if ($this->IsPropertyExists("LastApprover"))
-			$this->LastApprover = "user_".$arEventParameters["USER_ID"];
+			$this->LastApprover = "user_".$arEventParameters["REAL_USER_ID"];
 
 		$taskService = $this->workflow->GetService("TaskService");
-		$taskService->MarkCompleted($this->taskId, $arEventParameters["USER_ID"]);
+		$taskService->MarkCompleted($this->taskId, $arEventParameters["REAL_USER_ID"], $approve? CBPTaskUserStatus::Yes : CBPTaskUserStatus::No);
 
-		$dbUser = CUser::GetById($arEventParameters["USER_ID"]);
+		$dbUser = CUser::GetById($arEventParameters["REAL_USER_ID"]);
 		if($arUser = $dbUser->Fetch())
 			$this->Comments = $this->Comments.
 				CUser::FormatName(COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID), $arUser)." (".$arUser["LOGIN"]."): ".($approve?GetMessage("BPAA_LOG_Y"):GetMessage("BPAA_LOG_N"))."\n".
 				(strlen($arEventParameters["COMMENT"]) > 0 ? GetMessage("BPAA_LOG_COMMENTS").": ".$arEventParameters["COMMENT"] : "")."\n";
 
-		if ($approve)
-		{
-			$this->WriteToTrackingService(
-				str_replace(
-					array("#PERSON#", "#COMMENT#"),
-					array("{=user:user_".$arEventParameters["USER_ID"]."}", (strlen($arEventParameters["COMMENT"]) > 0 ? ": ".$arEventParameters["COMMENT"] : "")),
-					GetMessage("BPAA_ACT_APPROVE_TRACK")
-				),
-				$arEventParameters["USER_ID"]
-			);
-		}
-		else
-		{
-			$this->WriteToTrackingService(
-				str_replace(
-					array("#PERSON#", "#COMMENT#"),
-					array("{=user:user_".$arEventParameters["USER_ID"]."}", (strlen($arEventParameters["COMMENT"]) > 0 ? ": ".$arEventParameters["COMMENT"] : "")),
-					GetMessage("BPAA_ACT_NONAPPROVE_TRACK")
-				),
-				$arEventParameters["USER_ID"]
-			);
-		}
+		$this->WriteToTrackingService(
+			str_replace(
+				array("#PERSON#", "#COMMENT#"),
+				array("{=user:user_".$arEventParameters["REAL_USER_ID"]."}", (strlen($arEventParameters["COMMENT"]) > 0 ? ": ".$arEventParameters["COMMENT"] : "")),
+				GetMessage($approve ? "BPAA_ACT_APPROVE_TRACK" : "BPAA_ACT_NONAPPROVE_TRACK")
+			),
+			$arEventParameters["REAL_USER_ID"]
+		);
 
 		$result = "Continue";
 
-		$this->arApproveResults[$arEventParameters["USER_ID"]] = $approve;
+		$this->arApproveOriginalResults[$arEventParameters["USER_ID"]] = $approve;
+		$this->arApproveResults[$arEventParameters["REAL_USER_ID"]] = $approve;
 
 		if($approve)
 			$this->ApprovedCount = $this->ApprovedCount + 1;
@@ -324,7 +332,7 @@ class CBPApproveActivity
 				$allAproved = true;
 				foreach ($arUsers as $userId)
 				{
-					if (!isset($this->arApproveResults[$userId]))	// && $this->arApproveResults[$userId]!==true
+					if (!isset($this->arApproveOriginalResults[$userId]))
 						$allAproved = false;
 				}
 
@@ -383,6 +391,7 @@ class CBPApproveActivity
 
 		if ($result != "Continue")
 		{
+			$this->taskStatus = $result == "Approve"? CBPTaskStatus::CompleteYes : CBPTaskStatus::CompleteNo;
 			$this->Unsubscribe($this);
 
 			if ($rejecters == "")
@@ -452,6 +461,7 @@ class CBPApproveActivity
 		parent::ReInitialize();
 
 		$this->arApproveResults = array();
+		$this->arApproveOriginalResults = array();
 		$this->ApprovedCount = 0;
 		$this->NotApprovedCount = 0;
 
@@ -485,7 +495,29 @@ class CBPApproveActivity
 		return array($form, $buttons);
 	}
 
-	public static function PostTaskForm($arTask, $userId, $arRequest, &$arErrors, $userName = "")
+	public static function getTaskControls($arTask)
+	{
+		return array(
+			'BUTTONS' => array(
+				array(
+					'TYPE'  => 'submit',
+					'TARGET_USER_STATUS' => CBPTaskUserStatus::Yes,
+					'NAME'  => 'approve',
+					'VALUE' => 'Y',
+					'TEXT'  => strlen($arTask["PARAMETERS"]["TaskButton1Message"]) > 0 ? $arTask["PARAMETERS"]["TaskButton1Message"] : GetMessage("BPAA_ACT_BUTTON1")
+				),
+				array(
+					'TYPE'  => 'submit',
+					'TARGET_USER_STATUS' => CBPTaskUserStatus::No,
+					'NAME'  => 'nonapprove',
+					'VALUE' => 'Y',
+					'TEXT'  => strlen($arTask["PARAMETERS"]["TaskButton2Message"]) > 0 ? $arTask["PARAMETERS"]["TaskButton2Message"] : GetMessage("BPAA_ACT_BUTTON2")
+				)
+			)
+		);
+	}
+
+	public static function PostTaskForm($arTask, $userId, $arRequest, &$arErrors, $userName = "", $realUserId = null)
 	{
 		$arErrors = array();
 
@@ -497,13 +529,16 @@ class CBPApproveActivity
 
 			$arEventParameters = array(
 				"USER_ID" => $userId,
+				"REAL_USER_ID" => $realUserId,
 				"USER_NAME" => $userName,
-				"COMMENT" => $arRequest["task_comment"],
+				"COMMENT" => isset($arRequest["task_comment"]) ? $arRequest["task_comment"] : '',
 			);
 
-			if (strlen($arRequest["approve"]) > 0)
+			if (isset($arRequest['approve']) && strlen($arRequest["approve"]) > 0
+				|| isset($arRequest['INLINE_USER_STATUS']) && $arRequest['INLINE_USER_STATUS'] == CBPTaskUserStatus::Yes)
 				$arEventParameters["APPROVE"] = true;
-			elseif (strlen($arRequest["nonapprove"]) > 0)
+			elseif (isset($arRequest['nonapprove']) && strlen($arRequest["nonapprove"]) > 0
+				|| isset($arRequest['INLINE_USER_STATUS']) && $arRequest['INLINE_USER_STATUS'] == CBPTaskUserStatus::No)
 				$arEventParameters["APPROVE"] = false;
 			else
 				throw new CBPNotSupportedException(GetMessage("BPAA_ACT_NO_ACTION"));
@@ -618,6 +653,7 @@ class CBPApproveActivity
 			"TaskButton2Message" => "task_button2_message",
 			"CommentLabelMessage" => "comment_label_message",
 			"ShowComment" => "show_comment",
+			"AccessControl" => "access_control",
 		);
 
 		if (!is_array($arWorkflowParameters))
@@ -737,6 +773,7 @@ class CBPApproveActivity
 			"task_button2_message" => "TaskButton2Message",
 			"comment_label_message" => "CommentLabelMessage",
 			"show_comment" => "ShowComment",
+			"access_control" => "AccessControl",
 		);
 
 		$arProperties = array();
@@ -765,4 +802,3 @@ class CBPApproveActivity
 		return true;
 	}
 }
-?>

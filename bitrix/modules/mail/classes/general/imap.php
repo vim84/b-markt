@@ -12,9 +12,12 @@ class CMailImap
 		$this->counter = 0;
 	}
 
-	public function connect($host, $port, $timeout = 1)
+	public function connect($host, $port, $timeout = 1, $allow_selfcert = false)
 	{
-		$imap_stream = @fsockopen($host, $port, $errno, $errstr, $timeout);
+		$imap_stream = @stream_socket_client(
+			sprintf('%s:%s', $host, $port), $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT,
+			stream_context_create(array('ssl' => array('allow_self_signed' => $allow_selfcert)))
+		);
 
 		if ($imap_stream === false)
 			throw new Exception(GetMessage('MAIL_IMAP_ERR_CONNECT'));

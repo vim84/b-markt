@@ -3,7 +3,7 @@
  * Bitrix Framework
  * @package bitrix
  * @subpackage main
- * @copyright 2001-2013 Bitrix
+ * @copyright 2001-2015 Bitrix
  */
 
 /**
@@ -87,7 +87,7 @@ if($header["sort"] <> ''):
 	}
 ?>
 		<td class="bx-sortable<?=($header["sort_state"] <> ''? ' bx-sorted':'')?>"
-			onclick="bxGrid_<?=$arParams["GRID_ID"]?>.Sort('<?=CUtil::addslashes($header["sort_url"])?>', '<?=$header["sort_state"]?>', '<?=$header["order"]?>', arguments);"
+			onclick="bxGrid_<?=$arParams["GRID_ID"]?>.Sort('<?=CUtil::addslashes($header["sort_url"])?>', '<?=$header["sort"]?>', '<?=$header["sort_state"]?>', '<?=$header["order"]?>', arguments);"
 			oncontextmenu="return [{'TEXT': '<?=CUtil::JSEscape(GetMessage("interface_grid_sort_asc"))?>', 'ONCLICK':'bxGrid_<?=$arParams["GRID_ID"]?>.Sort(\'<?=CUtil::addslashes($header["sort_url"])?>\', \'desc\')', 'ICONCLASS':'grid-sort-asc'}, {'TEXT': '<?=CUtil::JSEscape(GetMessage("interface_grid_sort_desc"))?>', 'ONCLICK':'bxGrid_<?=$arParams["GRID_ID"]?>.Sort(\'<?=CUtil::addslashes($header["sort_url"])?>\', \'asc\')', 'ICONCLASS':'grid-sort-desc'}, {'TEXT': '<?=CUtil::JSEscape(GetMessage("interface_grid_hide_col"))?>', 'ONCLICK':'bxGrid_<?=$arParams["GRID_ID"]?>.HideColumn(\'<?=CUtil::JSEscape($id)?>\')', 'DISABLED':<?=($USER->IsAuthorized()? 'false':'true')?>}]"
 			title="<?=$order_title?>"
 		>
@@ -321,17 +321,18 @@ if($arParams["~ACTIONS"]["custom_html"] <> ''):
 						</select>
 					</td>
 					<td style="background-image:none">
-						<div style="margin-bottom:5px"><input type="button" name="add_btn" value="&gt;" title="<?echo GetMessage("interface_grid_view_add_col")?>" style="width:30px;" disabled onclick="jsSelectUtils.addSelectedOptions(this.form.view_all_cols, this.form.view_cols, false); jsSelectUtils.deleteSelectedOptions(this.form.view_all_cols); "></div>
-						<div style="margin-bottom:5px"><input type="button" name="del_btn" value="&lt;" title="<?echo GetMessage("interface_grid_view_del_col")?>" style="width:30px;" disabled onclick="jsSelectUtils.addSelectedOptions(this.form.view_cols, this.form.view_all_cols, false, true); jsSelectUtils.deleteSelectedOptions(this.form.view_cols);"></div>
+						<div style="margin-bottom:5px"><input type="button" name="add_btn" value="&gt;" title="<?echo GetMessage("interface_grid_view_add_col")?>" style="width:30px;" onclick="jsSelectUtils.addSelectedOptions(this.form.view_all_cols, this.form.view_cols, false); jsSelectUtils.deleteSelectedOptions(this.form.view_all_cols); "></div>
+						<div style="margin-bottom:5px"><input type="button" name="del_btn" value="&lt;" title="<?echo GetMessage("interface_grid_view_del_col")?>" style="width:30px;" onclick="jsSelectUtils.addSelectedOptions(this.form.view_cols, this.form.view_all_cols, false, true); jsSelectUtils.deleteSelectedOptions(this.form.view_cols);"></div>
 					</td>
 					<td style="background-image:none" nowrap>
 						<div style="margin-bottom:5px"><?echo GetMessage("interface_grid_view_sel_col")?></div>
-						<select style="min-width:150px;" name="view_cols" multiple size="12" ondblclick="this.form.del_btn.onclick()" onchange="this.form.del_btn.disabled = this.form.up_btn.disabled = this.form.down_btn.disabled = (this.selectedIndex == -1)">
+						<select style="min-width:150px;" name="view_cols" multiple size="12" ondblclick="this.form.del_btn.onclick()" onchange="this.form.del_btn.disabled = this.form.up_btn.disabled = this.form.down_btn.disabled = this.form.rename_btn.disabled = (this.selectedIndex == -1)">
 						</select>
 					</td>
 					<td style="background-image:none">
-						<div style="margin-bottom:5px"><input type="button" name="up_btn" value="<?echo GetMessage("interface_grid_view_up")?>" title="<?echo GetMessage("interface_grid_view_up_title")?>" class="bx-grid-btn" style="width:60px;" disabled onclick="jsSelectUtils.moveOptionsUp(this.form.view_cols)"></div>
-						<div style="margin-bottom:5px"><input type="button" name="down_btn" value="<?echo GetMessage("interface_grid_view_down")?>" title="<?echo GetMessage("interface_grid_view_down_title")?>" class="bx-grid-btn" style="width:60px;" disabled onclick="jsSelectUtils.moveOptionsDown(this.form.view_cols)"></div>
+						<div style="margin-bottom:5px"><input type="button" name="up_btn" value="<?echo GetMessage("interface_grid_view_up")?>" title="<?echo GetMessage("interface_grid_view_up_title")?>" class="bx-grid-btn" style="width:100px;" onclick="jsSelectUtils.moveOptionsUp(this.form.view_cols)"></div>
+						<div style="margin-bottom:5px"><input type="button" name="down_btn" value="<?echo GetMessage("interface_grid_view_down")?>" title="<?echo GetMessage("interface_grid_view_down_title")?>" class="bx-grid-btn" style="width:100px;" onclick="jsSelectUtils.moveOptionsDown(this.form.view_cols)"></div>
+						<div style="margin-bottom:5px"><input type="button" name="rename_btn" value="<?echo GetMessage("interface_grid_name_btn")?>" title="<?echo GetMessage("interface_grid_name_btn_title")?>" class="bx-grid-btn" style="width:100px;" onclick="bxGrid_<?=$arParams["GRID_ID"]?>.RenameColumn()"></div>
 					</td>
 				</tr>
 			</table>
@@ -389,12 +390,25 @@ endforeach;
 		<td colspan="2"><?echo GetMessage("interface_grid_common")?></td>
 	</tr>
 	<tr>
-		<td colspan="2"><input type="checkbox" name="set_default_settings" id="set_default_settings_<?=$arParams["GRID_ID"]?>" onclick="BX('delete_users_settings_<?=$arParams["GRID_ID"]?>').disabled = !this.checked;"><label for="set_default_settings_<?=$arParams["FORM_ID"]?>"><?echo GetMessage("interface_grid_common_default")?></label></td>
+		<td colspan="2"><input type="checkbox" name="set_default_settings" id="set_default_settings_<?=$arParams["GRID_ID"]?>" onclick="document['settings_' + '<?=$arParams["GRID_ID"]?>'].delete_users_settings.disabled = !this.checked;"><label for="set_default_settings_<?=$arParams["GRID_ID"]?>"><?echo GetMessage("interface_grid_common_default")?></label></td>
 	</tr>
 	<tr>
 		<td colspan="2"><input type="checkbox" name="delete_users_settings" id="delete_users_settings_<?=$arParams["GRID_ID"]?>" disabled><label for="delete_users_settings_<?=$arParams["GRID_ID"]?>"><?echo GetMessage("interface_grid_common_default_apply")?></label></td>
 	</tr>
 <?endif;?>
+</table>
+</div>
+
+<div id="rename_column_<?=$arParams["GRID_ID"]?>">
+<table width="100%">
+	<tr>
+		<td align="right" width="50%"><?echo GetMessage("interface_grid_name_def")?></td>
+		<td><input type="text" name="col_name_def" value="" size="35" disabled="disabled"></td>
+	</tr>
+	<tr>
+		<td align="right" width="50%"><?echo GetMessage("interface_grid_name_new")?></td>
+		<td><input type="text" name="col_name" value="" size="35"></td>
+	</tr>
 </table>
 </div>
 
@@ -591,6 +605,7 @@ $variables = array(
 		"filterHide"=>GetMessage("interface_grid_to_head_1"),
 		"filterShow"=>GetMessage("interface_grid_from_head_1"),
 		"filterApplyTitle"=>GetMessage("interface_grid_filter_apply"),
+		"renameTitle"=>GetMessage("interface_grid_name_title"),
 	),
 	"ajax"=>array(
 		"AJAX_ID"=>$arParams["AJAX_ID"],
@@ -600,6 +615,7 @@ $variables = array(
 	"viewsWndSize"=>CUtil::GetPopupSize("InterfaceGridViewsWnd", array('height' => 350, 'width' => 500)),
 	"filtersWndSize"=>CUtil::GetPopupSize("InterfaceGridFiltersWnd", array('height' => 350, 'width' => 500)),
 	"filterSettingWndSize"=>CUtil::GetPopupSize("InterfaceGridFilterSettingWnd"),
+	"renameWndSize"=>CUtil::GetPopupSize("InterfaceGridRenameWnd", array('height' => 150, 'width' => 500)),
 	"calendar_image"=>$this->GetFolder()."/images/calendar.gif",
 	"server_time"=>(time()+date("Z")+CTimeZone::GetOffset()),
 	"component_path"=>$component->GetRelativePath(),

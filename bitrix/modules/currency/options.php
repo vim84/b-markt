@@ -1,4 +1,5 @@
 <?
+/** @global CMain $APPLICATION */
 use Bitrix\Main\Loader;
 use Bitrix\Main\Type\DateTime;
 use Bitrix\Main\Localization\Loc;
@@ -24,7 +25,12 @@ if ($moduleAccessLevel >= 'R')
 	);
 	$systemTabControl = new CAdminTabControl("currencyProcTabControl", $systemTabs, true, true);
 
-	if ($_SERVER['REQUEST_METHOD'] == "GET" && isset($_GET['RestoreDefaults']) && !empty($_GET['RestoreDefaults']) && $moduleAccessLevel=="W" && check_bitrix_sessid())
+	if (
+		$_SERVER['REQUEST_METHOD'] == "GET"
+		&& !empty($_GET['RestoreDefaults'])
+		&& $moduleAccessLevel == "W"
+		&& check_bitrix_sessid()
+	)
 	{
 		COption::RemoveOption("currency");
 		$v1="id";
@@ -36,7 +42,7 @@ if ($moduleAccessLevel >= 'R')
 		LocalRedirect($APPLICATION->GetCurPage().'?lang='.LANGUAGE_ID.'&mid='.$module_id);
 	}
 
-	if ($_SERVER['REQUEST_METHOD'] == 'POST' && $moduleAccessLevel=="W" && check_bitrix_sessid())
+	if ($_SERVER['REQUEST_METHOD'] == 'POST' && $moduleAccessLevel == "W" && check_bitrix_sessid())
 	{
 		if (isset($_POST['Update']) && $_POST['Update'] === 'Y')
 		{
@@ -44,9 +50,7 @@ if ($moduleAccessLevel >= 'R')
 			if (isset($_POST['BASE_CURRENCY']))
 				$newBaseCurrency = (string)$_POST['BASE_CURRENCY'];
 			if ($newBaseCurrency != '')
-			{
 				$res = CCurrency::SetBaseCurrency($newBaseCurrency);
-			}
 
 			ob_start();
 			require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/admin/group_rights.php');
@@ -96,20 +100,18 @@ if ($moduleAccessLevel >= 'R')
 	?><tr>
 	<td width="40%"><? echo Loc::getMessage('BASE_CURRENCY'); ?></td>
 	<td width="60%"><select name="BASE_CURRENCY"><?
-	$currencyIterator = Currency\CurrencyTable::getList(array(
-		'select' => array('CURRENCY', 'BASE', 'FULL_NAME' => 'LANG_FORMAT.FULL_NAME'),
-		'filter' => array('=LANG_FORMAT.LID' => LANGUAGE_ID),
-		'order' => array('SORT' => 'ASC', 'CURRENCY' => 'ASC')
-	));
-	while ($currency = $currencyIterator->fetch())
+	$currencyList = Currency\CurrencyManager::getCurrencyList();
+	if (!empty($currencyList))
 	{
-		$currency['FULL_NAME'] = (string)$currency['FULL_NAME'];
-		?><option value="<? echo $currency['CURRENCY']; ?>"<? echo ($currency['CURRENCY'] == $baseCurrency ? ' selected' : ''); ?>><?
-			echo $currency['CURRENCY'];
-			if ($currency['FULL_NAME'] != '')
-				echo ' ('.htmlspecialcharsex($currency['FULL_NAME']).')';
-		?></option><?
+		foreach ($currencyList as $currency => $title)
+		{
+			?><option value="<? echo $currency; ?>"<? echo ($currency == $baseCurrency ? ' selected' : ''); ?>><?
+				echo htmlspecialcharsex($title);
+			?></option><?
+		}
+		unset($title, $currency);
 	}
+	unset($currencyList);
 	?></select></td>
 	</tr>
 	<?
@@ -125,10 +127,10 @@ function RestoreDefaults()
 		window.location = "<?echo $APPLICATION->GetCurPage()?>?lang=<? echo LANGUAGE_ID; ?>&mid=<? echo $module_id; ?>&RestoreDefaults=Y&<?=bitrix_sessid_get()?>";
 }
 </script>
-	<input type="submit" <?if ($moduleAccessLevel<"W") echo "disabled" ?> name="Update" value="<?echo Loc::getMessage("CUR_OPTIONS_BTN_SAVE")?>">
+	<input type="submit" <?if ($moduleAccessLevel < "W") echo "disabled" ?> name="Update" value="<?echo Loc::getMessage("CUR_OPTIONS_BTN_SAVE")?>">
 	<input type="hidden" name="Update" value="Y">
 	<input type="reset" name="reset" value="<?echo Loc::getMessage("CUR_OPTIONS_BTN_RESET")?>">
-	<input type="button" <?if ($moduleAccessLevel<"W") echo "disabled" ?> title="<?echo Loc::getMessage("CUR_OPTIONS_BTN_HINT_RESTORE_DEFAULT")?>" onclick="RestoreDefaults();" value="<?echo Loc::getMessage("CUR_OPTIONS_BTN_RESTORE_DEFAULT")?>">
+	<input type="button" <?if ($moduleAccessLevel < "W") echo "disabled" ?> title="<?echo Loc::getMessage("CUR_OPTIONS_BTN_HINT_RESTORE_DEFAULT")?>" onclick="RestoreDefaults();" value="<?echo Loc::getMessage("CUR_OPTIONS_BTN_RESTORE_DEFAULT")?>">
 	</form>
 	<?$tabControl->End();
 
@@ -152,9 +154,7 @@ function RestoreDefaults()
 		array('MODULE_ID' => 'currency','=NAME' => '\Bitrix\Currency\CurrencyTable::currencyBaseRateAgent();')
 	);
 	if ($agentIterator)
-	{
 		$currencyAgent = $agentIterator->Fetch();
-	}
 	if (!empty($currencyAgent))
 	{
 		$currencyAgent['LAST_EXEC'] = (string)$currencyAgent['LAST_EXEC'];
@@ -199,4 +199,3 @@ function RestoreDefaults()
 	</form><?
 	$systemTabControl->End();
 }
-?>

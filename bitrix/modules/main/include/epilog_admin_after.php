@@ -23,7 +23,17 @@ foreach(GetModuleEvents("main", "OnEpilog", true) as $arEvent)
 
 $r = $APPLICATION->EndBufferContentMan();
 $main_exec_time = round((getmicrotime()-START_EXEC_TIME), 4);
-echo $r;
+
+//it's possible to have no response on update
+$response = \Bitrix\Main\Context::getCurrent()->getResponse();
+if($response)
+{
+	$response->flush($r);
+}
+else
+{
+	echo $r;
+}
 
 $arAllEvents = GetModuleEvents("main", "OnAfterEpilog", true);
 

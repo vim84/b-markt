@@ -63,7 +63,7 @@ class CBPFieldCondition
 		}
 		elseif ($type == "select")
 		{
-			if (is_array($field))
+			if (is_array($field) && CBPHelper::IsAssociativeArray($field))
 				$field = array_keys($field);
 		}
 
@@ -86,8 +86,31 @@ class CBPFieldCondition
 			return $result;
 		}
 
+		if ($operation == "contain")
+		{
+			if (!is_array($value))
+				$value = array($value);
+			foreach ($value as $v)
+			{
+				foreach ($field as $f)
+				{
+					if (is_array($f))
+						$result = in_array($v, $f);
+					else
+						$result = (strpos($f, $v) !== false);
+
+					if (!$result)
+						break 2;
+				}
+			}
+
+			return $result;
+		}
+
 		if (!is_array($value))
 			$value = array($value);
+		if (CBPHelper::IsAssociativeArray($value))
+			$value = array_keys($value);
 
 		$i = 0;
 		$fieldCount = count($field);
@@ -98,7 +121,7 @@ class CBPFieldCondition
 			$f1 = ($fieldCount > $i) ? $field[$i] : $field[$fieldCount - 1];
 			$v1 = ($valueCount > $i) ? $value[$i] : $value[$valueCount - 1];
 
-			if ($type == "datetime")
+			if ($type == "datetime" || $type == "date")
 			{
 				if (($f1Tmp = MakeTimeStamp($f1, FORMAT_DATETIME)) === false)
 				{

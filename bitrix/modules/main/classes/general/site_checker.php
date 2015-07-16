@@ -402,6 +402,7 @@ class CSiteCheckerTest
 			'imagecreatefromjpeg' => GetMessage("SC_MOD_GD_JPEG"),
 			'json_encode' => GetMessage("SC_MOD_JSON"),
 			'mcrypt_encrypt' => GetMessage("MAIN_SC_MCRYPT").' MCrypt',
+			'hash' => 'Hash',
 			'highlight_file' => 'PHP Syntax Highlight'
 		);
 
@@ -439,7 +440,9 @@ class CSiteCheckerTest
 			'magic_quotes_runtime' => 0,
 			'magic_quotes_sybase' => 0,
 			'magic_quotes_gpc' => 0,
-			'arg_separator.output' => '&'
+			'arg_separator.output' => '&',
+			'register_globals' => 0,
+			'zend.multibyte' => 0
 		);
 
 		foreach($arRequiredParams as $param => $val)
@@ -458,11 +461,8 @@ class CSiteCheckerTest
 		if (($cur = ini_get($param)) < 60)
 			$strError .= GetMessage('SC_ERR_PHP_PARAM', array('#PARAM#' => $param, '#CUR#' => htmlspecialcharsbx($cur), '#REQ#' => '60'))."<br>";
 
-		if (version_compare(phpversion(), '5.3.9', '>='))
-		{
-			if (($m = ini_get('max_input_vars')) && $m < 10000)
-				$strError .= GetMessage('ERR_MAX_INPUT_VARS',array('#MIN#' => 10000,'#CURRENT#' => $m))."<br>";
-		}
+		if (($m = ini_get('max_input_vars')) && $m < 10000)
+			$strError .= GetMessage('ERR_MAX_INPUT_VARS',array('#MIN#' => 10000,'#CURRENT#' => $m))."<br>";
 
 		if (($vm = getenv('BITRIX_VA_VER')) && version_compare($vm, '4.2.0','<'))
 			$strError .= GetMessage('ERR_OLD_VM')."<br>";
@@ -665,6 +665,8 @@ class CSiteCheckerTest
 			return $this->Result(null, GetMessage("MAIN_SC_NO_LDAP_MODULE"));
 		if (COption::GetOptionString('ldap', 'use_ntlm', 'N') != 'Y')
 			return $this->Result(null, GetMessage("MAIN_SC_OPTION_SWITCHED_OFF"));
+		if (COption::GetOptionString('ldap', 'bitrixvm_auth_support', 'N') == 'Y')
+			return true;
 		if (($ntlm_varname = COption::GetOptionString('ldap', 'ntlm_varname', 'REMOTE_USER')) && ($user = trim($_SERVER[$ntlm_varname])))
 			return $this->Result(true, GetMessage("MAIN_SC_NTLM_SUCCESS").$user);
 		return $this->Result(null, GetMessage("MAIN_SC_NO_NTLM"));
@@ -967,7 +969,7 @@ class CSiteCheckerTest
 		{
 			$l = strlen("\xd0\xa2");
 			if (!($retVal = $bUtf && $l == 1 || !$bUtf && $l == 2))
-				$text = GetMessage('SC_STRLEN_FAIL');
+				$text = GetMessage('SC_STRLEN_FAIL_PHP56');
 		}
 
 		return $this->Result($retVal, ($retVal ? GetMessage("MAIN_SC_CORRECT").'. ':'').$text);
@@ -1292,7 +1294,19 @@ class CSiteCheckerTest
 		if (is_array($res) && strpos($res['CONTENT'], 'SUCCESS') !== false)
 			return true;
 
-		return $this->Result(false, GetMessage("MAIN_SC_SEARCH_INCORRECT"));
+		$strError = GetMessage("MAIN_SC_SEARCH_INCORRECT")."<br>\n";
+		if ($res === false && function_exists('exec'))
+		{
+			exec('catdoc -V', $output, $return_var);
+			if ($return_var === 0)
+			{
+				$version = $output[0];
+				if (strpos($version, '0.94.4') !== false || strpos($version, '0.94.3') !== false)
+					$strError .= GetMessage('MAIN_CATDOC_WARN', array('#VERSION#' => $version));
+			}
+		}
+
+		return $this->Result(false, $strError);
 	}
 
 	function check_fast_download()
@@ -1397,14 +1411,26 @@ class CSiteCheckerTest
 			if (!$res = $this->ConnectToHost())
 				return false;
 
+			if (IsModuleInstalled('security'))
+			{
+				$file = COption::GetOptionString("security", "ipcheck_disable_file", "");
+				COption::SetOptionString("security", "ipcheck_disable_file", $this->LogFile);
+			}
 			$strRequest = "GET "."/bitrix/admin/site_checker.php?test_type=perf&unique_id=".checker_get_unique_id()."&i=".$i." HTTP/1.1\r\n";
 			$strRequest.= "Host: ".$this->host."\r\n";
 			$strRequest.= "\r\n";
 
 			$strRes = GetHttpResponse($res, $strRequest, $strHeaders);
 
+			if (IsModuleInstalled('security'))
+				COption::SetOptionString("security", "ipcheck_disable_file", $file);
+
+
 			if (!is_numeric($strRes))
-				return false;
+			{
+				PrintHTTP($strRequest, $strHeaders, $strRes);
+				return $this->Result(false, GetMessage('SC_TEST_FAIL'));
+			}
 
 			$arTime[] = doubleval($strRes);
 		}
@@ -1994,7 +2020,8 @@ class CSiteCheckerTest
 						$this->arTestVars['iErrorAutoFix']++;
 					}
 					else
-						$arFix[] = ' MODIFY `' . $f0['Field'] . '` ' . $f0['Type'] . ' COLLATE ' . $collation . ($f0['Null'] == 'YES' ? ' NULL' : ' NOT NULL') . ($f0['Default'] === NULL ? ($f0['Null'] == 'YES' ? ' DEFAULT NULL ' : '') : ' DEFAULT "' . $DB->ForSQL($f0['Default']) . '" ');
+						$arFix[] = ' MODIFY `'.$f0['Field'].'` '.$f0['Type'].' COLLATE '.$collation.($f0['Null'] == 'YES' ? ' NULL' : ' NOT NULL').
+							($f0['Default'] === NULL ? ($f0['Null'] == 'YES' ? ' DEFAULT NULL ' : '') : ' DEFAULT '.($f0['Type'] == 'timestamp' && $f0['Default'] == 'CURRENT_TIMESTAMP' ? $f0['Default'] : '"'.$DB->ForSQL($f0['Default']).'"')).' '.$f0['Extra'];
 				}
 			}
 
@@ -2336,8 +2363,10 @@ class CSiteCheckerTest
 
 	function CommonTest()
 	{
-		if (!IsModuleInstalled('intranet') || defined('BX_CRONTAB')) // can't get real HTTP server vars from cron
+		if (!IsModuleInstalled('intranet') || defined('BX_CRONTAB') || (defined('CHK_EVENT') && CHK_EVENT === true)) // can't get real HTTP server vars from cron
 			return "CSiteCheckerTest::CommonTest();";
+		if (($ntlm_varname = COption::GetOptionString('ldap', 'ntlm_varname', 'REMOTE_USER')) && ($user = trim($_SERVER[$ntlm_varname])))
+			return "CSiteCheckerTest::CommonTest();"; // Server NTLM is enabled, no way to connect through a socket
 
 		IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/admin/site_checker.php');
 
@@ -2633,12 +2662,12 @@ function InitPureDB()
 function TableFieldConstruct($f0)
 {
 	global $DB;
-	return $f0['Type'].($f0['Null'] == 'YES' ? ' NULL' : ' NOT NULL').($f0['Default'] === NULL ? ($f0['Null'] == 'YES' ? ' DEFAULT NULL ' : '') : ' DEFAULT "'.$DB->ForSQL($f0['Default']).'" ').' '.$f0['Extra'];
+	return $f0['Type'].($f0['Null'] == 'YES' ? ' NULL' : ' NOT NULL').($f0['Default'] === NULL ? ($f0['Null'] == 'YES' ? ' DEFAULT NULL ' : '') : ' DEFAULT '.($f0['Type'] == 'timestamp' && $f0['Default'] == 'CURRENT_TIMESTAMP' ? $f0['Default'] : '"'.$DB->ForSQL($f0['Default']).'"')).' '.$f0['Extra'];
 }
 
 function TableFieldCanBeAltered($f, $f_tmp)
 {
-	if ($f['Type'] == str_replace('long', '', $f_tmp['Type']) || defined('SITE_CHECKER_FORCE_REPAIR') && SITE_CHECKER_FORCE_REPAIR === true)
+	if ($f['Type'] == str_replace(array('long','medium'), '', $f_tmp['Type']) || defined('SITE_CHECKER_FORCE_REPAIR') && SITE_CHECKER_FORCE_REPAIR === true)
 		return true;
 	if (
 		preg_match('#^([a-z]+)\(([0-9]+)\)(.*)$#i',$f['Type'],$regs)

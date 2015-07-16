@@ -95,7 +95,7 @@ if ($bCols && $exParams['arCountPerm']['new_item'] > 0)
 
 	$aContext[] = Array(
 		"TEXT" => GetMessage("FM_ML_MASS_UPLOAD"),
-		//"ICON" => "btn_mass_upload",
+		"ICON" => "btn_mass_upl",
 		"LINK" => "fileman_medialib_upload.php?lang=".LANGUAGE_ID."&type=".$curType['id']."&".bitrix_sessid_get(),
 		"TITLE" => GetMessage("FM_ML_MASS_UPLOAD_TITLE")
 	);
@@ -104,7 +104,7 @@ if ($bCols && $exParams['arCountPerm']['new_item'] > 0)
 $aContext[] = array(
 	"HTML" => '<div class="bxml-search-controll"><span>'.GetMessage('FM_ML_SEARCH').':</span>'.
 		'<input type="text" id="ml_search_input" size="25" />'.
-		'<input type="button"  id="ml_search_button" value="'.GetMessage('FM_ML_SEARCH_BUT').'" title="'.GetMessage('FM_ML_SEARCH_BUT_TITLE').'" />'.
+		'<input type="button"  style="margin-left:3px;" id="ml_search_button" value="'.GetMessage('FM_ML_SEARCH_BUT').'" title="'.GetMessage('FM_ML_SEARCH_BUT_TITLE').'" />'.
 		'</div>'
 );
 
@@ -184,7 +184,7 @@ BX.ready(function()
 			var
 				btn_new_collection = BX('btn_new_collection'),
 				btn_new_item = BX('btn_new_item'),
-				btn_mass_upload = BX('btn_mass_upload');
+				btn_mass_upload = BX('btn_mass_upl');
 
 			if (btn_new_collection)
 				btn_new_collection.onclick = function()

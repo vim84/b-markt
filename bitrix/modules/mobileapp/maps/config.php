@@ -39,7 +39,8 @@ $map = array(
 		'controller_settings/navigation_bar_background/image_large' => ParameterType::IMAGE,
 
 
-		'controller_settings/loading_text_color' => ParameterType::COLOR,
+		'controller_settings/loading_text_color' => ParameterType::COLOR,//iOS only
+		'controller_settings/progressbar_color' => ParameterType::COLOR,//Android only
 		'controller_settings/title_color' => ParameterType::COLOR,
 
 		//buttons
@@ -74,6 +75,7 @@ $map = array(
 		'pull_down/text_color' => ParameterType::COLOR,
 		'pull_down/icon' => ParameterType::IMAGE,
 		'pull_down/text_style' => ParameterType::VALUE_LIST,
+		'pull_down/arrow_color' => ParameterType::COLOR,//android only
 		//sliding panel
 		'sliding_panel/text_color' => ParameterType::COLOR,
 		'sliding_panel/background/color' => ParameterType::COLOR,
@@ -107,10 +109,10 @@ $map = array(
 		"table/row_height"=>array(
 			"min"=>50
 		),
-		"statusBar/opacity"=>array(
-			"min"=>1,
-			"max"=>10,
-		),
+//		"statusBar/opacity"=>array(
+//			"min"=>1,
+//			"max"=>10,
+//		),
 		"table/row_height_large" => array(
 			"min" => 50
 		),

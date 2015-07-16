@@ -147,7 +147,7 @@ endif;
 
 				$arEditorParams = array(
 					'id' => "POST_MESSAGE",
-					'content' => isset($arResult['POST_VALUES']["POST_MESSAGE"]) ? $arResult['POST_VALUES']["POST_MESSAGE"] : "",
+					'content' => (isset($arResult['POST_VALUES']["~POST_MESSAGE"]) ? $arResult['POST_VALUES']["~POST_MESSAGE"] : $arResult['POST_VALUES']["POST_MESSAGE"]),
 					'inputName' => "POST_MESSAGE",
 					'inputId' => "",
 					'width' => "100%",

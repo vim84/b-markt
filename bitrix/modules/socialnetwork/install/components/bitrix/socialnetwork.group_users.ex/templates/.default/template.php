@@ -170,7 +170,7 @@ else
 							}
 						?></span><?
 						?><span class="sonet-members-member-text"><?
-							?><span class="sonet-members-member-title"><?
+							?><span class="sonet-members-member-title<?=($arMember["USER_IS_EXTRANET"] == "Y" ? " sonet-members-member-title-extranet" : "")?>"><?
 							if ($arMember["SHOW_PROFILE_LINK"])
 							{
 								?><a id="anchor_<?=$tooltip_id?>" href="<?=htmlspecialcharsback($arMember["USER_PROFILE_URL"])?>" class="sonet-members-membet-link"><?=CUser::FormatName(str_replace(array("#NOBR#", "#/NOBR#"), array("", ""), $arParams["NAME_TEMPLATE"]), $arUserTmp, $arParams["SHOW_LOGIN"] != "N")?></a><?
@@ -254,7 +254,7 @@ else
 							}
 						?></span><?
 						?><span class="sonet-members-member-text"><?
-							?><span class="sonet-members-member-title"><?
+							?><span class="sonet-members-member-title<?=($arMember["USER_IS_EXTRANET"] == "Y" ? " sonet-members-member-title-extranet" : "")?>"><?
 							if ($arMember["SHOW_PROFILE_LINK"])
 							{
 								?><a id="anchor_<?=$tooltip_id?>" href="<?=htmlspecialcharsback($arMember["USER_PROFILE_URL"])?>" class="sonet-members-membet-link"><?=CUser::FormatName(str_replace(array("#NOBR#", "#/NOBR#"), array("", ""), $arParams["NAME_TEMPLATE"]), $arUserTmp, $arParams["SHOW_LOGIN"] != "N")?></a><?
@@ -331,7 +331,7 @@ else
 							}
 						?></span><?
 						?><span class="sonet-members-member-text"><?
-							?><span class="sonet-members-member-title"><?
+							?><span class="sonet-members-member-title<?=($arMember["USER_IS_EXTRANET"] == "Y" ? " sonet-members-member-title-extranet" : "")?>"><?
 							if ($arMember["SHOW_PROFILE_LINK"])
 							{
 								?><a id="anchor_<?=$tooltip_id?>" href="<?=htmlspecialcharsback($arMember["USER_PROFILE_URL"])?>" class="sonet-members-membet-link"><?=CUser::FormatName(str_replace(array("#NOBR#", "#/NOBR#"), array("", ""), $arParams["NAME_TEMPLATE"]), $arUserTmp, $arParams["SHOW_LOGIN"] != "N")?></a><?

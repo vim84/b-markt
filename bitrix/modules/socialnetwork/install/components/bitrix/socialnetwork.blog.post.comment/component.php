@@ -165,7 +165,7 @@ if(is_numeric($arParams["NO_URL_IN_COMMENTS_AUTHORITY"]))
 	}
 }
 $arParams["COMMENT_PROPERTY"] = array("UF_BLOG_COMMENT_DOC");
-if(CModule::IncludeModule("webdav"))
+if(CModule::IncludeModule("webdav") || CModule::IncludeModule("disk"))
 {
 	$arParams["COMMENT_PROPERTY"][] = "UF_BLOG_COMMENT_FILE";
 	$arParams["COMMENT_PROPERTY"][] = "UF_BLOG_COMMENT_FH";
@@ -192,22 +192,29 @@ if(IntVal($_REQUEST["comment_post_id"]) > 0)
 	else
 	{
 		$arResult["PostPerm"] = CBlogPost::GetSocNetPostPerms($arParams["ID"]);
-		if($arResult["PostPerm"] > BLOG_PERMS_DENY)
+		if ($arResult["PostPerm"] > BLOG_PERMS_DENY)
+		{
 			$arResult["Perm"] = CBlogComment::GetSocNetUserPerms($arParams["ID"], $arPost["AUTHOR_ID"]);
+		}
 	}
 
 	$arResult["is_ajax_post"] = "Y";
 }
 else
 {
-	if(strlen($arParams["POST_DATA"]["perms"]) <= 0)
-		$arResult["PostPerm"] = CBlogPost::GetSocNetPostPerms($arParams["ID"]);
-	else
-		$arResult["PostPerm"] = $arParams["POST_DATA"]["perms"];
+	$arResult["PostPerm"] = (
+		strlen($arParams["POST_DATA"]["perms"]) <= 0
+			? CBlogPost::GetSocNetPostPerms($arParams["ID"])
+			: $arParams["POST_DATA"]["perms"]
+	);
 
 	if($arResult["PostPerm"] > BLOG_PERMS_DENY)
 	{
-		if($bIntranetInstalled && IsModuleInstalled("bitrix24") && $arParams["POST_DATA"]["HAVE_ALL_IN_ADR"] == "Y")
+		if (
+			$bIntranetInstalled
+			&& IsModuleInstalled("bitrix24")
+			&& $arParams["POST_DATA"]["HAVE_ALL_IN_ADR"] == "Y"
+		)
 		{
 			if($arPost["AUTHOR_ID"] != $user_id)
 				$arResult["Perm"] = BLOG_PERMS_WRITE;
@@ -236,13 +243,22 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 		else
 		{
 			$arComment = CBlogComment::GetByID(IntVal($_GET["delete_comment_id"]));
-			if(($arResult["Perm"]>=BLOG_PERMS_MODERATE || (IntVal($user_id) > 0 && $arComment["AUTHOR_ID"] == $user_id)) && !empty($arComment))
+			if (
+				(
+					$arResult["Perm"]>=BLOG_PERMS_MODERATE
+					|| (
+						IntVal($user_id) > 0
+						&& $arComment["AUTHOR_ID"] == $user_id
+					)
+				)
+				&& !empty($arComment)
+			)
 			{
 				if(check_bitrix_sessid())
 				{
 					if(CBlogComment::Delete(IntVal($_GET["delete_comment_id"])))
 					{
-						BXClearCache(true, "/blog/comment/".$arParams["ID"]."/");
+						BXClearCache(true, "/blog/comment/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/");
 						CBlogComment::DeleteLog(IntVal($_GET["delete_comment_id"]));
 
 						$arResult["ajax_comment"] = IntVal($_GET["delete_comment_id"]);
@@ -250,16 +266,26 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 					}
 				}
 				else
+				{
 					$arResult["ERROR_MESSAGE"] = GetMessage("B_B_PC_MES_ERROR_SESSION");
+				}
 			}
-			if(IntVal($arResult["ajax_comment"]) <= 0 && strlen($arResult["ERROR_MESSAGE"]) <= 0)
+			if (
+				IntVal($arResult["ajax_comment"]) <= 0
+				&& strlen($arResult["ERROR_MESSAGE"]) <= 0
+			)
+			{
 				$arResult["ERROR_MESSAGE"] = GetMessage("B_B_PC_MES_ERROR_DELETE");
+			}
 		}
 	}
-	elseif(IntVal($_GET["show_comment_id"])>0)
+	elseif (IntVal($_GET["show_comment_id"]) > 0)
 	{
 		$arComment = CBlogComment::GetByID(IntVal($_GET["show_comment_id"]));
-		if($arResult["Perm"]>=BLOG_PERMS_MODERATE && !empty($arComment))
+		if (
+			$arResult["Perm"] >= BLOG_PERMS_MODERATE
+			&& !empty($arComment)
+		)
 		{
 			if($arComment["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_READY)
 			{
@@ -271,7 +297,7 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 				{
 					if($commentID = CBlogComment::Update($arComment["ID"], Array("PUBLISH_STATUS" => BLOG_PUBLISH_STATUS_PUBLISH)))
 					{
-						BXClearCache(true, "/blog/comment/".$arParams["ID"]."/");
+						BXClearCache(true, "/blog/comment/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/");
 						$parserBlog = new blogTextParser(false, $arParams["PATH_TO_SMILE"]);
 						$arFil = array("EVENT_ID" => "blog_post", "SOURCE_ID" => $arComment["POST_ID"]);
 
@@ -294,7 +320,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							$arImages = Array();
 							$res = CBlogImage::GetList(array("ID"=>"ASC"), array("POST_ID"=>$arPost["ID"], "BLOG_ID"=>$arPost["BLOG_ID"], "IS_COMMENT" => "Y", "COMMENT_ID" => $arComment["ID"]));
 							while ($arImage = $res->Fetch())
+							{
 								$arImages[$arImage["ID"]] = $arImage["FILE_ID"];
+							}
 
 							$arAllow = array("HTML" => "N", "ANCHOR" => "N", "BIU" => "N", "IMG" => "N", "QUOTE" => "N", "CODE" => "N", "FONT" => "N", "TABLE" => "N", "LIST" => "N", "SMILES" => "N", "NL2BR" => "N", "VIDEO" => "N");
 							$text4message = $parserBlog->convert($arComment["POST_TEXT"], false, $arImages, $arAllow, array("isSonetLog"=>true));
@@ -318,7 +346,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							);
 
 							if (intval($arComment["AUTHOR_ID"]) > 0)
+							{
 								$arFieldsForSocnet["USER_ID"] = $arComment["AUTHOR_ID"];
+							}
 
 							$log_comment_id = CSocNetLogComments::Add($arFieldsForSocnet, false, false);
 							CSocNetLog::CounterIncrement(
@@ -333,11 +363,15 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 					}
 				}
 				else
+				{
 					$arResult["ERROR_MESSAGE"] = GetMessage("B_B_PC_MES_ERROR_SESSION");
+				}
 			}
 		}
-		if(IntVal($arResult["ajax_comment"]) <= 0)
+		if (IntVal($arResult["ajax_comment"]) <= 0)
+		{
 			$arResult["ERROR_MESSAGE"] = GetMessage("B_B_PC_MES_ERROR_SHOW");
+		}
 	}
 	elseif(IntVal($_GET["hide_comment_id"])>0)
 	{
@@ -354,17 +388,24 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 				{
 					if($commentID = CBlogComment::Update($arComment["ID"], Array("PUBLISH_STATUS" => BLOG_PUBLISH_STATUS_READY)))
 					{
-						BXClearCache(true, "/blog/comment/".$arParams["ID"]."/");
+						BXClearCache(true, "/blog/comment/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/");
 						CBlogComment::DeleteLog($arComment["ID"]);
 						$arResult["ajax_comment"] = $arComment["ID"];
 					}
 				}
 				else
+				{
 					$arResult["ERROR_MESSAGE"] = GetMessage("B_B_PC_MES_ERROR_SESSION");
+				}
 			}
 		}
-		if(IntVal($arResult["ajax_comment"]) <= 0 && strlen($arResult["ERROR_MESSAGE"]) <= 0)
+		if (
+			IntVal($arResult["ajax_comment"]) <= 0
+			&& strlen($arResult["ERROR_MESSAGE"]) <= 0
+		)
+		{
 			$arResult["ERROR_MESSAGE"] = GetMessage("B_B_PC_MES_ERROR_HIDE");
+		}
 	}
 	elseif(IntVal($_GET["hidden_add_comment_id"])>0)
 	{
@@ -380,8 +421,11 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 	{
 		$arResult["CanUserComment"] = true;
 	}
-	if($arResult["Perm"] >= BLOG_PERMS_MODERATE)
+
+	if ($arResult["Perm"] >= BLOG_PERMS_MODERATE)
+	{
 		$arResult["canModerate"] = true;
+	}
 
 	if(IntVal($user_id)>0)
 	{
@@ -405,32 +449,41 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 				}
 				else
 				{
-					if(empty($arBlog))
+					if (empty($arBlog))
+					{
 						$arBlog = CBlog::GetByID($arPost["BLOG_ID"]);
+					}
 					$GLOBALS["BLOG_POST"]["BLOG_PC_".$arPost["BLOG_ID"]] = $arBlog;
 				}
 			}
 
 			$useCaptcha = COption::GetOptionString("blog", "captcha_choice", "U");
 			if($useCaptcha == "U")
-				$arResult["use_captcha"] = ($arBlog["ENABLE_IMG_VERIF"]=="Y")? true : false;
+			{
+				$arResult["use_captcha"] = ($arBlog["ENABLE_IMG_VERIF"] == "Y") ? true : false;
+			}
 			elseif($useCaptcha == "A")
+			{
 				$arResult["use_captcha"] = true;
+			}
 			else
+			{
 				$arResult["use_captcha"] = false;
+			}
 		}
 	}
 
 	if(strlen($arPost["ID"])>0 && $_SERVER["REQUEST_METHOD"]=="POST" && strlen($_POST["post"]) > 0)
 	{
 		if ($_POST["decode"] == "Y")
+		{
 			CUtil::JSPostUnescape();
+		}
 
 		if($arResult["Perm"] >= BLOG_PERMS_PREMODERATE)
 		{
 			if(check_bitrix_sessid())
 			{
-
 				if(!empty($arBlog))
 				{
 					$GLOBALS["BLOG_POST"]["BLOG_PC_".$arPost["BLOG_ID"]] = $arBlog;
@@ -443,8 +496,10 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 					}
 					else
 					{
-						if(empty($arBlog))
+						if (empty($arBlog))
+						{
 							$arBlog = CBlog::GetByID($arPost["BLOG_ID"]);
+						}
 						$GLOBALS["BLOG_POST"]["BLOG_PC_".$arPost["BLOG_ID"]] = $arBlog;
 					}
 				}
@@ -485,7 +540,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 						else
 						{
 							if ($ex = $APPLICATION->GetException())
+							{
 								$arResult["ERROR_MESSAGE"] = $ex->GetString();
+							}
 						}
 						$this->IncludeComponentTemplate();
 						return;
@@ -504,10 +561,14 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 						if (strlen($captcha_code) > 0)
 						{
 							if (!$cpt->CheckCodeCrypt($captcha_word, $captcha_code, $captchaPass))
+							{
 								$strErrorMessage .= GetMessage("B_B_PC_CAPTCHA_ERROR")."<br />";
+							}
 						}
 						else
+						{
 							$strErrorMessage .= GetMessage("B_B_PC_CAPTCHA_ERROR")."<br />";
+						}
 					}
 
 					if(isset($_POST['webdav_history']) && $_POST['webdav_history'] == 'Y' && !empty($_POST['comment']))
@@ -517,38 +578,50 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 
 					$UserIP = CBlogUser::GetUserIP();
 					$arFields = Array(
-								"POST_ID" => $arPost["ID"],
-								"BLOG_ID" => $arBlog["ID"],
-								"TITLE" => trim($_POST["subject"]),
-								"POST_TEXT" => trim($_POST["comment"]),
-								"DATE_CREATE" => ConvertTimeStamp(time() + $arResult["TZ_OFFSET"], "FULL"),
-								"AUTHOR_IP" => $UserIP[0],
-								"AUTHOR_IP1" => $UserIP[1],
-								"URL" => $arBlog["URL"],
-								"PARENT_ID" => false,
-								);
+						"POST_ID" => $arPost["ID"],
+						"BLOG_ID" => $arBlog["ID"],
+						"TITLE" => trim($_POST["subject"]),
+						"POST_TEXT" => trim($_POST["comment"]),
+						"DATE_CREATE" => ConvertTimeStamp(time() + $arResult["TZ_OFFSET"], "FULL"),
+						"AUTHOR_IP" => $UserIP[0],
+						"AUTHOR_IP1" => $UserIP[1],
+						"URL" => $arBlog["URL"],
+						"PARENT_ID" => false,
+					);
 
-					if($arResult["Perm"] == BLOG_PERMS_PREMODERATE)
+					if ($arResult["Perm"] == BLOG_PERMS_PREMODERATE)
+					{
 						$arFields["PUBLISH_STATUS"] = BLOG_PUBLISH_STATUS_READY;
+					}
 
-					if(IntVal($user_id)>0)
+					if (IntVal($user_id) > 0)
+					{
 						$arFields["AUTHOR_ID"] = $user_id;
+					}
 					else
 					{
 						$arFields["AUTHOR_NAME"] = trim($_POST["user_name"]);
-						if(strlen(trim($_POST["user_email"]))>0)
+						if (strlen(trim($_POST["user_email"])) > 0)
+						{
 							$arFields["AUTHOR_EMAIL"] = trim($_POST["user_email"]);
-						if(strlen($arFields["AUTHOR_NAME"])<=0)
+						}
+						if (strlen($arFields["AUTHOR_NAME"]) <= 0)
+						{
 							$strErrorMessage .= GetMessage("B_B_PC_NO_ANAME")."<br />";
+						}
 						$_SESSION["blog_user_name"] = $_POST["user_name"];
 						$_SESSION["blog_user_email"] = $_POST["user_email"];
 					}
 
-					if(strlen($arFields["POST_TEXT"])<=0)
+					if (strlen($arFields["POST_TEXT"]) <= 0)
+					{
 						$strErrorMessage .= GetMessage("B_B_PC_NO_COMMENT")."<br />";
+					}
 
-					if (IntVal($_REQUEST["as"])>0)
+					if (IntVal($_REQUEST["as"]) > 0)
+					{
 						$arParams["AVATAR_SIZE_COMMENT"] = IntVal($_REQUEST["as"]);
+					}
 
 					if(strlen($strErrorMessage)<=0)
 					{
@@ -571,20 +644,25 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							foreach($GLOBALS[$fieldName] as $fileID)
 							{
 								$fileID = intval($fileID);
-								if ($fileID <= 0 || !in_array($fileID, $_SESSION["MFI_UPLOADED_FILES_".$_POST["blog_upload_cid"]]))
+								if (
+									$fileID <= 0
+									|| !in_array($fileID, $_SESSION["MFI_UPLOADED_FILES_".$_POST["blog_upload_cid"]])
+								)
+								{
 									continue;
+								}
 
 								$arFile = CFile::GetFileArray($fileID);
 								if (CFile::CheckImageFile(CFile::MakeFileArray($fileID)) === null)
 								{
 									$arImgFields = array(
-										"BLOG_ID"	=> $arBlog["ID"],
-										"POST_ID"	=> $arPost["ID"],
-										"USER_ID"	=> $user_id,
+										"BLOG_ID" => $arBlog["ID"],
+										"POST_ID" => $arPost["ID"],
+										"USER_ID" => $user_id,
 										"COMMENT_ID" => 0,
-										"=TIMESTAMP_X"	=> $DB->GetNowFunction(),
-										"TITLE"		=> $arFile["FILE_NAME"],
-										"IMAGE_SIZE"	=> $arFile["FILE_SIZE"],
+										"=TIMESTAMP_X" => $DB->GetNowFunction(),
+										"TITLE" => $arFile["FILE_NAME"],
+										"IMAGE_SIZE" => $arFile["FILE_SIZE"],
 										"FILE_ID" => $fileID,
 										"IS_COMMENT" => "Y",
 										"URL" => $arBlog["URL"],
@@ -610,20 +688,19 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 						}
 
 						if (count($arParams["COMMENT_PROPERTY"]) > 0)
+						{
 							$GLOBALS["USER_FIELD_MANAGER"]->EditFormAddFields("BLOG_COMMENT", $arFields);
+						}
 
 						$commentUrl = CComponentEngine::MakePathFromTemplate(htmlspecialcharsBack($arParams["PATH_TO_POST"]), array("blog" => $arBlog["URL"], "post_id"=> CBlogPost::GetPostID($arPost["ID"], $arPost["CODE"], $arParams["ALLOW_POST_CODE"]), "user_id" => $arBlog["OWNER_ID"], "group_id" => $arParams["SOCNET_GROUP_ID"]));
 
 						$arFields["PATH"] = $commentUrl;
-						if(strpos($arFields["PATH"], "?") !== false)
-							$arFields["PATH"] .= "&";
-						else
-							$arFields["PATH"] .= "?";
+						$arFields["PATH"] .= (strpos($arFields["PATH"], "?") !== false ? "&" : "?");
 						$arFields["PATH"] .= $arParams["COMMENT_ID_VAR"]."=#comment_id###comment_id#";
 
 						if($commentId = CBlogComment::Add($arFields))
 						{
-							BXClearCache(true, "/blog/comment/".$arParams["ID"]."/");
+							BXClearCache(true, "/blog/comment/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/");
 							$images = Array();
 
 							$DB->Query("UPDATE b_blog_image SET COMMENT_ID=".IntVal($commentId)." WHERE BLOG_ID=".IntVal($arBlog["ID"])." AND POST_ID=".IntVal($arPost["ID"])." AND IS_COMMENT = 'Y' AND (COMMENT_ID = 0 OR COMMENT_ID is null) AND USER_ID=".IntVal($user_id)."", true);
@@ -634,12 +711,14 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 								"imageHeight" => $arParams["IMAGE_MAX_HEIGHT"],
 							);
 
-							if(strpos($commentUrl, "?") !== false)
-								$commentUrl .= "&";
-							else
-								$commentUrl .= "?";
-							if(strlen($arFields["PUBLISH_STATUS"]) > 0 && $arFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH)
+							$commentUrl .= (strpos($commentUrl, "?") !== false ? "&" : "?");
+							if (
+								strlen($arFields["PUBLISH_STATUS"]) > 0
+								&& $arFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH
+							)
+							{
 								$commentAddedUrl = $commentUrl.$arParams["COMMENT_ID_VAR"]."=".$commentId."&hidden_add_comment_id=".$commentId;
+							}
 							$commentUrl .= $arParams["COMMENT_ID_VAR"]."=".$commentId."#".$commentId;
 
 							if($arFields["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH || strlen($arFields["PUBLISH_STATUS"]) <= 0)
@@ -654,7 +733,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 									array("ID", "TMP_ID")
 								);
 								if ($arRes = $dbRes->Fetch())
+								{
 									$log_id = $arRes["ID"];
+								}
 								else
 								{
 									$arParamsNotify = Array(
@@ -668,14 +749,16 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 										"user_id" => $user_id,
 										"NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"],
 										"SHOW_LOGIN" => $arParams["SHOW_LOGIN"],
-										);
+									);
 									$log_id = CBlogPost::Notify($arPost, $arBlog, $arParamsNotify);
 								}
 
 								$arImages = Array();
 								$res = CBlogImage::GetList(array("ID"=>"ASC"), array("POST_ID"=>$arPost["ID"], "BLOG_ID"=>$arBlog["ID"], "IS_COMMENT" => "Y", "COMMENT_ID" => $commentId));
 								while ($arImage = $res->Fetch())
-										$arImages[$arImage["ID"]] = $arImage["FILE_ID"];
+								{
+									$arImages[$arImage["ID"]] = $arImage["FILE_ID"];
+								}
 								$arAllow = array("HTML" => "N", "ANCHOR" => "N", "BIU" => "N", "IMG" => "N", "QUOTE" => "N", "CODE" => "N", "FONT" => "N", "TABLE" => "N", "LIST" => "N", "SMILES" => "N", "NL2BR" => "N", "VIDEO" => "N");
 								$text4mail = $parserBlog->convert4mail($_POST['comment'], $arImages);
 
@@ -699,7 +782,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 									);
 
 									if (intval($user_id) > 0)
+									{
 										$arFieldsForSocnet["USER_ID"] = $user_id;
+									}
 
 									$log_comment_id = CSocNetLogComments::Add($arFieldsForSocnet, false, false);
 									CSocNetLog::CounterIncrement(
@@ -715,7 +800,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 								$arUsrS = array();
 								if(!empty($arPSR["U"]))
 								foreach($arPSR["U"] as $k => $v)
+								{
 									$arUsrS[] = "U".$k;
+								}
 
 								preg_match_all("/\[user\s*=\s*([^\]]*)\](.+?)\[\/user\]/is".BX_UTF_PCRE_MODIFIER, $_POST['comment'], $arMention);
 
@@ -734,13 +821,10 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 									"AUTHOR_ID" => $arPost["AUTHOR_ID"],
 									"BODY" => $text4mail,
 								);
-								//if(!empty($arMentionOld))
-								//	$arFieldsIM["MENTION_ID_OLD"] = $arMentionOld[1];
-								if(!empty($arMention))
+								if (!empty($arMention))
+								{
 									$arFieldsIM["MENTION_ID"] = $arMention[1];
-
-								// if(CModule::IncludeModule("pull"))
-									// $arFieldsIM["EXCLUDE_USERS"] = CPullWatch::GetUserList("BLOG_POST_".$arPost["ID"]);
+								}
 
 								$arFieldsIM["EXCLUDE_USERS"] = array();
 
@@ -753,25 +837,37 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 								);
 
 								while ($arUnFollower = $rsUnFollower->Fetch())
+								{
 									$arFieldsIM["EXCLUDE_USERS"][$arUnFollower["USER_ID"]] = $arUnFollower["USER_ID"];
+								}
 
 								CBlogPost::NotifyIm($arFieldsIM);
 							}
 
 							$res = CBlogImage::GetList(array(), array("POST_ID"=>$arPost["ID"], "BLOG_ID" => $arBlog["ID"], "IS_COMMENT" => "Y", "COMMENT_ID" => false, "<=TIMESTAMP_X" => ConvertTimeStamp(AddToTimeStamp(Array("HH" => -3)), "FULL")));
-							while($aImg = $res->Fetch())
+							while ($aImg = $res->Fetch())
+							{
 								CBlogImage::Delete($aImg["ID"]);
+							}
 
-							if(strlen($arFields["PUBLISH_STATUS"]) > 0 && $arFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH)
+							if (
+								strlen($arFields["PUBLISH_STATUS"]) > 0
+								&& $arFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH
+							)
+							{
 								$arResult["MESSAGE"] = GetMessage("B_B_PC_MES_HIDDEN_ADDED");
+							}
+
 							$arResult["ajax_comment"] = $commentId;
 
 							$bHasImg = false;
 							$bHasProps = false;
 
 							$dbImg = CBlogImage::GetList(Array(), Array("BLOG_ID" => $arBlog["ID"], "POST_ID" => $arPost["ID"], "IS_COMMENT" => "Y"), false, false, Array("ID"));
-							if($dbImg->Fetch())
+							if ($dbImg->Fetch())
+							{
 								$bHasImg = true;
+							}
 
 							$arPostFields = $GLOBALS["USER_FIELD_MANAGER"]->GetUserFields("BLOG_COMMENT", $commentId, LANGUAGE_ID);
 							foreach ($arPostFields as $FIELD_NAME => $arPostField)
@@ -784,16 +880,17 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							}
 
 							$arFieldsHave = array(
-									"HAS_PROPS" => ($bHasProps ? "Y" : "N"),
-								);
+								"HAS_PROPS" => ($bHasProps ? "Y" : "N"),
+							);
 							CBlogComment::Update($commentId, $arFieldsHave, false);
 
 							$arFieldsHave = array(
-									"HAS_COMMENT_IMAGES" => ($bHasImg ? "Y" : "N"),
-								);
-							if($arFieldsHave["HAS_COMMENT_IMAGES"] != $arPost["HAS_COMMENT_IMAGES"])
+								"HAS_COMMENT_IMAGES" => ($bHasImg ? "Y" : "N"),
+							);
+							if ($arFieldsHave["HAS_COMMENT_IMAGES"] != $arPost["HAS_COMMENT_IMAGES"])
+							{
 								CBlogPost::Update($arPost["ID"], $arFieldsHave, false);
-
+							}
 						}
 						else
 						{
@@ -803,26 +900,33 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 					}
 					else
 					{
-						if(strlen($strErrorMessage)>0)
-							$arResult["COMMENT_ERROR"] = $strErrorMessage;
-						else
-							$arResult["COMMENT_ERROR"] = GetMessage("B_B_PC_COM_ERROR");
+						$arResult["COMMENT_ERROR"] = (strlen($strErrorMessage) > 0 ? $strErrorMessage : GetMessage("B_B_PC_COM_ERROR"));
 					}
 				}
 				else //update comment
 				{
 					$commentID = IntVal($_POST["edit_id"]);
 					$arOldComment = CBlogComment::GetByID($commentID);
-					if($commentID <= 0 || empty($arOldComment))
+					if (
+						$commentID <= 0
+						|| empty($arOldComment)
+					)
+					{
 						$arResult["COMMENT_ERROR"] = "<b>".GetMessage("B_B_PC_COM_ERROR_EDIT")."</b><br />".GetMessage("B_B_PC_COM_ERROR_LOST");
-					elseif($arOldComment["AUTHOR_ID"] == $user_id || $arResult["Perm"] >= BLOG_PERMS_FULL)
+					}
+					elseif (
+						$arOldComment["AUTHOR_ID"] == $user_id
+						|| $arResult["Perm"] >= BLOG_PERMS_FULL
+					)
 					{
 						$arFields = Array(
-								"POST_TEXT" => $_POST["comment"],
-								"URL" => $arBlog["URL"],
-							);
+							"POST_TEXT" => $_POST["comment"],
+							"URL" => $arBlog["URL"],
+						);
 						if($arResult["Perm"] == BLOG_PERMS_PREMODERATE)
+						{
 							$arFields["PUBLISH_STATUS"] = BLOG_PUBLISH_STATUS_READY;
+						}
 
 						$fieldName = 'UF_BLOG_COMMENT_DOC';
 						$arPostFields = $GLOBALS["USER_FIELD_MANAGER"]->GetUserFields("BLOG_COMMENT", $commentID, LANGUAGE_ID);
@@ -836,8 +940,13 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							foreach($GLOBALS[$fieldName] as $fileID)
 							{
 								$fileID = intval($fileID);
-								if ($fileID <= 0 || !in_array($fileID, $checkArray))
+								if (
+									$fileID <= 0
+									|| !in_array($fileID, $checkArray)
+								)
+								{
 									continue;
+								}
 
 								$arFile = CFile::GetFileArray($fileID);
 								if (CFile::CheckImageFile(CFile::MakeFileArray($fileID)) === null)
@@ -872,16 +981,18 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							}
 							$GLOBALS[$fieldName] = $arAttachedFiles;
 						}
+
+						CSocNetLogComponent::checkEmptyUFValue('UF_BLOG_COMMENT_FILE');
+
 						if (count($arParams["COMMENT_PROPERTY"]) > 0)
+						{
 							$GLOBALS["USER_FIELD_MANAGER"]->EditFormAddFields("BLOG_COMMENT", $arFields);
+						}
 
 						$commentUrl = CComponentEngine::MakePathFromTemplate(htmlspecialcharsBack($arParams["PATH_TO_POST"]), array("blog" => $arBlog["URL"], "post_id"=> CBlogPost::GetPostID($arPost["ID"], $arPost["CODE"], $arParams["ALLOW_POST_CODE"]), "user_id" => $arBlog["OWNER_ID"], "group_id" => $arParams["SOCNET_GROUP_ID"]));
 
 						$arFields["PATH"] = $commentUrl;
-						if(strpos($arFields["PATH"], "?") !== false)
-							$arFields["PATH"] .= "&";
-						else
-							$arFields["PATH"] .= "?";
+						$arFields["PATH"] .= (strpos($arFields["PATH"], "?") !== false ? "&" : "?");
 						$arFields["PATH"] .= $arParams["COMMENT_ID_VAR"]."=".$commentID."#".$commentID;
 
 						$dbComment = CBlogComment::GetList(array(), Array("POST_ID" => $arPost["ID"], "BLOG_ID" => $arBlog["ID"], ">ID" => $commentID));
@@ -891,13 +1002,32 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 						}
 						else
 						{
+							if (
+								!empty($_POST["attachedFilesRaw"])
+								&& is_array($_POST["attachedFilesRaw"])
+							)
+							{
+								CSocNetLogComponent::saveRawFilesToUF(
+									$_POST["attachedFilesRaw"],
+									(
+										IsModuleInstalled("webdav")
+										|| IsModuleInstalled("disk")
+											? "UF_BLOG_COMMENT_FILE"
+											: "UF_BLOG_COMMENT_DOC"
+									),
+									$arFields
+								);
+							}
+
 							if($commentID = CBlogComment::Update($commentID, $arFields))
 							{
-								BXClearCache(true, "/blog/comment/".$arParams["ID"]."/");
+								BXClearCache(true, "/blog/comment/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/");
 								$images = Array();
 								$res = CBlogImage::GetList(array(), array("POST_ID"=>$arPost["ID"], "BLOG_ID" => $arBlog["ID"], "COMMENT_ID" => $commentID, "IS_COMMENT" => "Y"));
-								while($aImg = $res->Fetch())
+								while ($aImg = $res->Fetch())
+								{
 									$images[$aImg["ID"]] = $aImg["FILE_ID"];
+								}
 
 								$arParamsUpdateLog = array(
 									"PATH_TO_SMILE" => $arParams["PATH_TO_SMILE"],
@@ -917,24 +1047,31 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 
 								$res = CBlogImage::GetList(array(), array("POST_ID"=>$arPost["ID"], "BLOG_ID" => $arBlog["ID"], "IS_COMMENT" => "Y", "COMMENT_ID" => false, "<=TIMESTAMP_X" => ConvertTimeStamp(AddToTimeStamp(Array("HH" => -3)), "FULL")));
 								while($aImg = $res->Fetch())
+								{
 									CBlogImage::Delete($aImg["ID"]);
+								}
 
 								$commentUrl = CComponentEngine::MakePathFromTemplate(htmlspecialcharsBack($arParams["PATH_TO_POST"]), array("post_id" => CBlogPost::GetPostID($arPost["ID"], $arPost["CODE"], $arParams["ALLOW_POST_CODE"]), "user_id" => $arBlog["OWNER_ID"]));
-								if(strpos($commentUrl, "?") !== false)
-									$commentUrl .= "&";
-								else
-									$commentUrl .= "?";
+								$commentUrl .= (strpos($commentUrl, "?") !== false ? "&" : "?");
 
-								if(strlen($arFields["PUBLISH_STATUS"]) > 0 && $arFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH)
+								if (
+									strlen($arFields["PUBLISH_STATUS"]) > 0
+									&& $arFields["PUBLISH_STATUS"] != BLOG_PUBLISH_STATUS_PUBLISH
+								)
+								{
 									$arResult["MESSAGE"] = GetMessage("B_B_PC_MES_HIDDEN_EDITED");
+								}
+
 								$arResult["ajax_comment"] = $commentID;
 
 								$bHasImg = false;
 								$bHasProps = false;
 
 								$dbImg = CBlogImage::GetList(Array(), Array("BLOG_ID" => $arBlog["ID"], "POST_ID" => $arPost["ID"], "IS_COMMENT" => "Y"), false, false, Array("ID"));
-								if($dbImg->Fetch())
+								if ($dbImg->Fetch())
+								{
 									$bHasImg = true;
+								}
 
 								$arPostFields = $GLOBALS["USER_FIELD_MANAGER"]->GetUserFields("BLOG_COMMENT", $commentID, LANGUAGE_ID);
 
@@ -947,20 +1084,24 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 									}
 								}
 								$arFieldsHave = array(
-										"HAS_PROPS" => ($bHasProps ? "Y" : "N"),
-									);
+									"HAS_PROPS" => ($bHasProps ? "Y" : "N"),
+								);
 								CBlogComment::Update($commentID, $arFieldsHave, false);
 
 								$arFieldsHave = array(
-										"HAS_COMMENT_IMAGES" => ($bHasImg ? "Y" : "N"),
-									);
-								if($arFieldsHave["HAS_COMMENT_IMAGES"] != $arPost["HAS_COMMENT_IMAGES"])
+									"HAS_COMMENT_IMAGES" => ($bHasImg ? "Y" : "N"),
+								);
+								if ($arFieldsHave["HAS_COMMENT_IMAGES"] != $arPost["HAS_COMMENT_IMAGES"])
+								{
 									CBlogPost::Update($arPost["ID"], $arFieldsHave, false);
+								}
 							}
 							else
 							{
 								if ($e = $APPLICATION->GetException())
+								{
 									$arResult["COMMENT_ERROR"] = "<b>".GetMessage("B_B_PC_COM_ERROR_EDIT")."</b><br />".$e->GetString();
+								}
 							}
 						}
 					}
@@ -971,10 +1112,14 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 				}
 			}
 			else
+			{
 				$arResult["COMMENT_ERROR"] = GetMessage("B_B_PC_MES_ERROR_SESSION");
+			}
 		}
 		else
+		{
 			$arResult["COMMENT_ERROR"] = GetMessage("B_B_PC_NO_RIGHTS");
+		}
 	}
 
 	//Comments output
@@ -991,8 +1136,10 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 		}
 		else
 		{
-			if(IntVal($_REQUEST["new_comment_id"]) > 0) // for push&pull
+			if (IntVal($_REQUEST["new_comment_id"]) > 0) // for push&pull
+			{
 				$arResult["ajax_comment"] = IntVal($_REQUEST["new_comment_id"]);
+			}
 
 			if(IntVal($arParams["ID"]) > 0 && IntVal($arPost["NUM_COMMENTS"]) > 0 || $arResult["ajax_comment"] > 0)
 			{
@@ -1019,26 +1166,26 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 				);
 				foreach($arKeys as $param_key)
 				{
-					if (array_key_exists($param_key, $arParams))
-						$arCacheID[$param_key] = $arParams[$param_key];
-					else
-						$arCacheID[$param_key] = false;
+					$arCacheID[$param_key] = (array_key_exists($param_key, $arParams) ? $arParams[$param_key] : false);
 				}
 
 				$cache_id = "blog_comment_".$USER->IsAuthorized()."_".md5(serialize($arCacheID))."_".LANGUAGE_ID."_".$arParams["DATE_TIME_FORMAT"];
-				if($arResult["TZ_OFFSET"] <> 0)
+				if ($arResult["TZ_OFFSET"] <> 0)
+				{
 					$cache_id .= "_".$arResult["TZ_OFFSET"];
-				$cache_path = "/blog/comment/".$arParams["ID"]."/";
+				}
+				$cache_path = "/blog/comment/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/";
 
 				if(IntVal($arResult["ajax_comment"]) > 0)
 				{
 					$arResult["is_ajax_post"] = "Y";
 					$cache_id .= $arResult["ajax_comment"];
-					// if(IntVal($_REQUEST["new_comment_id"]) <= 0) // for push&pull
-						// $arParams["CACHE_TIME"] = 0;
 				}
 
-				if ($arParams["CACHE_TIME"] > 0 && $cache->InitCache($arParams["CACHE_TIME"], $cache_id, $cache_path))
+				if (
+					$arParams["CACHE_TIME"] > 0 
+					&& $cache->InitCache($arParams["CACHE_TIME"], $cache_id, $cache_path)
+				)
 				{
 					$Vars = $cache->GetVars();
 					$arResult = array_merge($Vars["arResult"], $arResult);
@@ -1058,7 +1205,6 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 					$arResult["CommentsResult"] = Array();
 					$arResult["IDS"] = Array();
 
-
 					$arOrder = Array("DATE_CREATE" => "ASC", "ID" => "ASC");
 					$arFilter = Array("POST_ID" => $arParams["ID"], "BLOG_ID" => $arPost["BLOG_ID"]);
 					if($arResult["is_ajax_post"] == "Y" && IntVal($arResult["ajax_comment"]) > 0)
@@ -1068,19 +1214,23 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 					$arSelectedFields = Array("ID", "BLOG_ID", "POST_ID", "AUTHOR_ID", "AUTHOR_NAME", "AUTHOR_EMAIL", "POST_TEXT", "DATE_CREATE", "PUBLISH_STATUS", "HAS_PROPS", "SHARE_DEST");
 
 					if ($GLOBALS["DB"]->type == "MYSQL")
+					{
 						$arSelectedFields[] = "DATE_CREATE_TS";
+					}
 
 					$dbComment = CBlogComment::GetList($arOrder, $arFilter, false, false, $arSelectedFields);
 					$resComments = Array();
 
 					if($arComment = $dbComment->Fetch())
 					{
-
 						$p = new blogTextParser(false, $arParams["PATH_TO_SMILE"]);
+						$p->LAZYLOAD = (isset($arParams["LAZYLOAD"]) && $arParams["LAZYLOAD"] == "Y" ? "Y" : "N");
+						$p->bMobile = (isset($arParams["MOBILE"]) && $arParams["MOBILE"] == "Y");
+
 						$arParserParams = Array(
 							"imageWidth" => $arParams["IMAGE_MAX_WIDTH"],
 							"imageHeight" => $arParams["IMAGE_MAX_HEIGHT"],
-							"pathToUser" => $arParams["PATH_TO_USER"],
+							"pathToUser" => $arParams["PATH_TO_USER"]
 						);
 
 						$bHasImg = false;
@@ -1113,19 +1263,24 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 									"small" => "/bitrix/components/bitrix/blog/show_file.php?fid=".$aImg['ID']."&width=".$arParams["ATTACHED_IMAGE_MAX_WIDTH_SMALL"]."&height=".$arParams["ATTACHED_IMAGE_MAX_HEIGHT_SMALL"]."&type=square"
 								);
 
-								if ($arParams["MOBILE"] == "Y")
-									$arResult["arImages"][$aImg["COMMENT_ID"]][$aImg['ID']]["full"] = SITE_DIR."mobile/log/blog_image.php?bfid=".$aImg['ID']."&fid=".$aImg['FILE_ID']."&width=".$arParams["ATTACHED_IMAGE_MAX_WIDTH_FULL"]."&height=".$arParams["ATTACHED_IMAGE_MAX_HEIGHT_FULL"];
-								else
-									$arResult["arImages"][$aImg["COMMENT_ID"]][$aImg['ID']]["full"] = "/bitrix/components/bitrix/blog/show_file.php?fid=".$aImg['ID']."&width=".$arParams["ATTACHED_IMAGE_MAX_WIDTH_FULL"]."&height=".$arParams["ATTACHED_IMAGE_MAX_HEIGHT_FULL"];
+								$arResult["arImages"][$aImg["COMMENT_ID"]][$aImg['ID']]["full"] = (
+									$arParams["MOBILE"] == "Y"
+										? SITE_DIR."mobile/log/blog_image.php?bfid=".$aImg['ID']."&fid=".$aImg['FILE_ID']."&width=".$arParams["ATTACHED_IMAGE_MAX_WIDTH_FULL"]."&height=".$arParams["ATTACHED_IMAGE_MAX_HEIGHT_FULL"]
+										: "/bitrix/components/bitrix/blog/show_file.php?fid=".$aImg['ID']."&width=".$arParams["ATTACHED_IMAGE_MAX_WIDTH_FULL"]."&height=".$arParams["ATTACHED_IMAGE_MAX_HEIGHT_FULL"]
+								);
 							}
 						}
 
 						$arFieldsHave = array();
-						if($arPost["HAS_COMMENT_IMAGES"] == "")
+						if ($arPost["HAS_COMMENT_IMAGES"] == "")
+						{
 							$arFieldsHave["HAS_COMMENT_IMAGES"] = ($bHasImg ? "Y" : "N");
+						}
 
-						if(!empty($arFieldsHave))
+						if (!empty($arFieldsHave))
+						{
 							CBlogPost::Update($arPost["ID"], $arFieldsHave, false);
+						}
 
 						do
 						{
@@ -1137,12 +1292,12 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 									$arComment["AuthorIsPostAuthor"] = "Y";
 
 								$arTmpUser = array(
-										"NAME" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~NAME"],
-										"LAST_NAME" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~LAST_NAME"],
-										"SECOND_NAME" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~SECOND_NAME"],
-										"LOGIN" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~LOGIN"],
-										"NAME_LIST_FORMATTED" => "",
-									);
+									"NAME" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~NAME"],
+									"LAST_NAME" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~LAST_NAME"],
+									"SECOND_NAME" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~SECOND_NAME"],
+									"LOGIN" => $arResult["userCache"][$arComment["AUTHOR_ID"]]["~LOGIN"],
+									"NAME_LIST_FORMATTED" => "",
+								);
 								$arResult["userCache"][$arComment["AUTHOR_ID"]]["NAME_FORMATED"] = CUser::FormatName($arParams["NAME_TEMPLATE"], $arTmpUser, ($arParams["SHOW_LOGIN"] != "N" ? true : false));
 								$p->authorName = $arResult["userCache"][$arComment["AUTHOR_ID"]]["NAME_FORMATED"];
 
@@ -1203,12 +1358,14 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							}
 
 							if (is_array($arComment["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]))
+							{
 								$p->arUserfields = array("UF_BLOG_COMMENT_FILE" => array_merge($arComment["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"], array("TAG" => "DOCUMENT ID")));
+							}
+
 							$arComment["TextFormated"] = $p->convert($arComment["POST_TEXT"], false, $arImages, $arAllow, $arParserParams);
 							if (is_array($arComment["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]))
 							{
-								$arComment["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]["~VALUE"] =
-									$arComment["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]["VALUE"];
+								$arComment["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]["~VALUE"] = $arComment["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]["VALUE"];
 							}
 							$arComment["showedImages"] = $p->showedImages;
 							if(!empty($p->showedImages))
@@ -1216,7 +1373,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 								foreach($p->showedImages as $val)
 								{
 									if(!empty($arResult["arImages"][$arComment["ID"]][$val]))
+									{
 										unset($arResult["arImages"][$arComment["ID"]][$val]);
+									}
 								}
 							}
 
@@ -1371,7 +1530,9 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 							$arDest[] = GetMessage("B_B_SHARE_HIDDEN_1");
 							$destText = GetMessage("B_B_SHARE_1");
 							if(count($arDest) > 1)
+							{
 								$destText = GetMessage("B_B_SHARE");
+							}
 							$destText .= implode(", ", $arDest);
 
 							if(!$p)
@@ -1384,7 +1545,6 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 								);
 								$arAllow = array("HTML" => "N", "ANCHOR" => "Y", "BIU" => "Y", "IMG" => "Y", "QUOTE" => "Y", "CODE" => "Y", "FONT" => "Y", "LIST" => "Y", "SMILES" => "Y", "NL2BR" => "N", "VIDEO" => "Y", "SHORT_ANCHOR" => "Y");
 							}
-
 							$arResult["CommentsResult"][$k1]["TextFormated"] = $p->convert($destText, false, array(), $arAllow, $arParserParams);
 						}
 					}
@@ -1460,42 +1620,45 @@ if(!empty($arPost) && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH &
 						}
 					}
 
-					if (
-						IntVal($arResult["ajax_comment"]) > 0
-						&& $v1["ID"] == $arResult["ajax_comment"]
-					) // push, for mobile
+					if (isset($arResult["CommentsResult"][$k1]))
 					{
-						$p = new blogTextParser(false, $arParams["PATH_TO_SMILE"]);
-						$p->bMobile = true;
-
-						$arParserParams = Array(
-							"pathToUser" => "/mobile/users/?user_id=#user_id#",
-						);
-
-						if (is_array($v1["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]))
+						if (
+							IntVal($arResult["ajax_comment"]) > 0
+							&& $v1["ID"] == $arResult["ajax_comment"]
+						) // push, for mobile
 						{
-							$p->arUserfields = array("UF_BLOG_COMMENT_FILE" => array_merge($v1["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"], array("TAG" => "DOCUMENT ID")));
-						}
+							$p = new blogTextParser(false, $arParams["PATH_TO_SMILE"]);
+							$p->bMobile = true;
 
-						$arAllow = array(
-							"HTML" => "N", 
-							"ANCHOR" => "Y", 
-							"BIU" => "Y", 
-							"IMG" => "Y", 
-							"QUOTE" => "Y", 
-							"CODE" => "Y", 
-							"FONT" => "Y", 
-							"LIST" => "Y", 
-							"SMILES" => "Y", 
-							"NL2BR" => "N", 
-							"VIDEO" => (COption::GetOptionString("blog","allow_video", "Y") != "Y" || $arParams["ALLOW_VIDEO"] != "Y" ? "N" : "Y"),
-							"SHORT_ANCHOR" => "Y"
-						);
-						$arResult["CommentsResult"][$k1]["TextFormatedMobile"] = $p->convert($v1["POST_TEXT"], false, array(), $arAllow, $arParserParams);
-					}
-					else
-					{
-						$arResult["CommentsResult"][$k1]["TextFormatedMobile"] = "";
+							$arParserParams = Array(
+								"pathToUser" => "/mobile/users/?user_id=#user_id#",
+							);
+
+							if (is_array($v1["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"]))
+							{
+								$p->arUserfields = array("UF_BLOG_COMMENT_FILE" => array_merge($v1["COMMENT_PROPERTIES"]["DATA"]["UF_BLOG_COMMENT_FILE"], array("TAG" => "DOCUMENT ID")));
+							}
+
+							$arAllow = array(
+								"HTML" => "N", 
+								"ANCHOR" => "Y", 
+								"BIU" => "Y", 
+								"IMG" => "Y", 
+								"QUOTE" => "Y", 
+								"CODE" => "Y", 
+								"FONT" => "Y", 
+								"LIST" => "Y", 
+								"SMILES" => "Y", 
+								"NL2BR" => "N", 
+								"VIDEO" => (COption::GetOptionString("blog","allow_video", "Y") != "Y" || $arParams["ALLOW_VIDEO"] != "Y" ? "N" : "Y"),
+								"SHORT_ANCHOR" => "Y"
+							);
+							$arResult["CommentsResult"][$k1]["TextFormatedMobile"] = $p->convert($v1["POST_TEXT"], false, array(), $arAllow, $arParserParams);
+						}
+						else
+						{
+							$arResult["CommentsResult"][$k1]["TextFormatedMobile"] = "";
+						}					
 					}
 				}
 			}

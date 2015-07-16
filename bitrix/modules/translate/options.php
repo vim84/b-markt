@@ -16,12 +16,12 @@ if ($REQUEST_METHOD=="GET" && $TRANS_RIGHT=="W" && strlen($RestoreDefaults)>0 &&
 		$APPLICATION->DelGroupRight($module_id, array($zr["ID"]));
 }
 
-$arAllOptions =	Array(
-	Array("INIT_FOLDERS", GetMessage("TRANS_INIT_FOLDERS"), "/bitrix/", Array("text", 50)),
-	Array("AUTO_CALCULATE", GetMessage("TRANS_AUTO_CALCULATE"), "N", Array("checkbox")),
-	Array("ONLY_ERRORS", GetMessage("TRANS_SHOW_ONLY_ERRORS"), "Y", Array("checkbox")),
-	Array("BUTTON_LANG_FILES", GetMessage("TRANS_BUTTON_LANG_FILES"), "N", Array("checkbox")),
-	Array("BACKUP_FILES", GetMessage("TRANS_BACKUP_FILES"), "N", Array("checkbox")),
+$arAllOptions = array(
+	array("INIT_FOLDERS", GetMessage("TRANS_INIT_FOLDERS"), "/bitrix/", array("text", 50)),
+	array("AUTO_CALCULATE", GetMessage("TRANS_AUTO_CALCULATE"), "N", array("checkbox")),
+	array("ONLY_ERRORS", GetMessage("TRANS_SHOW_ONLY_ERRORS"), "Y", array("checkbox")),
+	array("BUTTON_LANG_FILES", GetMessage("TRANS_BUTTON_LANG_FILES"), "N", array("checkbox")),
+	array("BACKUP_FILES", GetMessage("TRANS_BACKUP_FILES"), "N", array("checkbox")),
 	);
 
 $aTabs = array(
@@ -90,7 +90,7 @@ $tabControl->BeginNextTab();?>
 		<input <?if ($TRANS_RIGHT<"W") echo "disabled" ?> type="button" name="Cancel" value="<?=GetMessage("MAIN_OPT_CANCEL")?>" title="<?=GetMessage("MAIN_OPT_CANCEL_TITLE")?>" onclick="window.location='<?echo htmlspecialcharsbx(CUtil::addslashes($_REQUEST["back_url_settings"]))?>'">
 		<input type="hidden" name="back_url_settings" value="<?=htmlspecialcharsbx($_REQUEST["back_url_settings"])?>">
 	<?endif?>
-	<input <?if ($TRANS_RIGHT<"W") echo "disabled" ?> type="submit" name="RestoreDefaults" title="<?echo GetMessage("MAIN_HINT_RESTORE_DEFAULTS")?>" OnClick="confirm('<?echo AddSlashes(GetMessage("MAIN_HINT_RESTORE_DEFAULTS_WARNING"))?>')" value="<?echo GetMessage("MAIN_RESTORE_DEFAULTS")?>">
+	<input <?if ($TRANS_RIGHT<"W") echo "disabled" ?> type="submit" name="RestoreDefaults" title="<?echo GetMessage("MAIN_HINT_RESTORE_DEFAULTS")?>" onclick="return confirm('<?echo AddSlashes(GetMessage("MAIN_HINT_RESTORE_DEFAULTS_WARNING"))?>')" value="<?echo GetMessage("MAIN_RESTORE_DEFAULTS")?>">
 	<?=bitrix_sessid_post();?>
 <?$tabControl->End();?>
 </form>

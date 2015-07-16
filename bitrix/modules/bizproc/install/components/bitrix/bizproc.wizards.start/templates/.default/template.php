@@ -11,7 +11,7 @@ else
 	if (strlen($arResult["ErrorMessage"]) > 0)
 	{
 		?>
-		<span class='errortext'><?= $arResult["ErrorMessage"] ?></span><br /><br />
+		<font class='errortext'><?= $arResult["ErrorMessage"] ?></font><br /><br />
 		<?
 	}
 

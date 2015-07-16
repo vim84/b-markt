@@ -18,7 +18,7 @@ if(!empty($arResult["STORES"]) && $arParams["MAIN_TITLE"] != ''):?>
 	<?if(!empty($arResult["STORES"])):?>
 	<hr><ul id="c_store_amount">
 		<?foreach($arResult["STORES"] as $pid => $arProperty):?>
-			<li>
+			<li style="display: <? echo ($arParams['SHOW_EMPTY_STORE'] == 'N' && $arProperty['AMOUNT'] <= 0 ? 'none' : ''); ?>;">
 				<?if (isset($arProperty["TITLE"])):?>
 					<a href="<?=$arProperty["URL"]?>"> <?=$arProperty["TITLE"]?></a><br />
 				<?endif;?>
@@ -65,7 +65,7 @@ if(!empty($arResult["STORES"]) && $arParams["MAIN_TITLE"] != ''):?>
 </div>
 <?if (isset($arResult["IS_SKU"]) && $arResult["IS_SKU"] == 1):?>
 	<script type="text/javascript">
-		var obStoreAmount = new JCCatalogStoreSKU(<? echo CUtil::PhpToJSObject($arResult['JS']); ?>);
+		var obStoreAmount = new JCCatalogStoreSKU(<? echo CUtil::PhpToJSObject($arResult['JS'], false, true, true); ?>);
 	</script>
 	<?
 endif;?>

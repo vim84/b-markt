@@ -8,44 +8,35 @@ if ($arParams["CONVERT"] == "Y")
 	$arParams["URL"] = htmlspecialcharsEx($arParams["URL"]);
 // *************************/BASE **********************************************************************
 // ************************* ADDITIONAL ****************************************************************
-$arParams["IMG_WIDTH"] = (array_key_exists("IMG_WIDTH", $arParams) ? intval($arParams["IMG_WIDTH"]) : 0);
-$arParams["IMG_HEIGHT"] = (array_key_exists("IMG_HEIGHT", $arParams) ? intval($arParams["IMG_HEIGHT"]) : 0);
-
-if (is_array($arParams["MAX_SIZE"]))
+// True image size For example 1024x768
+$img = array("width" => 0, "height" => 0);
+if (array_key_exists("IMG_WIDTH", $arParams))
+	$img = array("width" => intval($arParams["IMG_WIDTH"]), "height" => intval($arParams["IMG_HEIGHT"]));
+else if (array_key_exists("WIDTH", $arParams))
+	$img = array("width" => intval($arParams["WIDTH"]), "height" => intval($arParams["HEIGHT"]));
+$img = array_merge($img, array("~width" => $img["width"], "~height" => $img["height"]));
+// user size from image parameters [IMG URL='bla-bla' WIDTH=100 HEIGHT=100] to resize image on client
+$arParams["SIZE"] = (is_array($arParams["SIZE"]) ? array_change_key_case($arParams["SIZE"], CASE_LOWER) : null);
+if ($arParams["SIZE"] !== null && ($arParams["SIZE"]["width"] > 0 || $arParams["SIZE"]["height"] > 0))
 {
-	$arParams["WIDTH"] = ($arParams["MAX_SIZE"]["width"] > 0 ? $arParams["MAX_SIZE"]["width"] : $arParams["MAX_SIZE"]["WIDTH"]);
-	$arParams["HEIGHT"] = ($arParams["MAX_SIZE"]["height"] > 0 ? $arParams["MAX_SIZE"]["height"] : $arParams["MAX_SIZE"]["HEIGHT"]);
+	if ($arParams["SIZE"]["width"] > 0)
+		$img["width"] = $arParams["SIZE"]["width"];
+	if ($arParams["SIZE"]["height"] > 0)
+		$img["height"] = $arParams["SIZE"]["height"];
 }
-$arParams["WIDTH"] = intval($arParams["WIDTH"]);
-$arParams["HEIGHT"] = intval($arParams["HEIGHT"]);
-$arParams["MAX_SIZE"] = array(
-	"width" => ($arParams["WIDTH"] > 0 && $arParams["WIDTH"] != $arParams["IMG_WIDTH"] ? $arParams["WIDTH"] : 0),
-	"height" => ($arParams["HEIGHT"] > 0 && $arParams["HEIGHT"] != $arParams["IMG_HEIGHT"] ? $arParams["HEIGHT"] : 0));
-if ($arParams["MAX_SIZE"]["width"] > 0 && $arParams["MAX_SIZE"]["height"] <= 0)
-	$arParams["MAX_SIZE"]["height"] = $arParams["IMG_HEIGHT"];
-else if ($arParams["MAX_SIZE"]["width"] <= 0 && $arParams["MAX_SIZE"]["height"] > 0)
-	$arParams["MAX_SIZE"]["width"] = $arParams["IMG_WIDTH"];
-//$arParams["HTML_SIZE"] html resize for image. This is helpful for disk space economy.
-$arParams["HTML_SIZE"] = (is_array($arParams["HTML_SIZE"]) ? $arParams["HTML_SIZE"] : array("width" => $arParams["HTML_SIZE"], "height" => $arParams["HTML_SIZE"]));
-$arParams["HTML_SIZE"] = array(
-	"width" => intval($arParams["HTML_SIZE"]["width"] > 0 ? $arParams["HTML_SIZE"]["width"] : $arParams["HTML_SIZE"]["WIDTH"]),
-	"height" => intval($arParams["HTML_SIZE"]["height"] > 0 ? $arParams["HTML_SIZE"]["height"] : $arParams["HTML_SIZE"]["HEIGHT"]));
-foreach($arParams["HTML_SIZE"] as $k => $v)
-	$arParams["HTML_SIZE"][$k] = ((0 < $v && $v < $arParams["MAX_SIZE"][$k]) ? $v : $arParams["MAX_SIZE"][$k]);
-if ($arParams["HTML_SIZE"]["width"] > 0 && $arParams["HTML_SIZE"]["height"] <= 0)
-	$arParams["HTML_SIZE"]["height"] = $arParams["IMG_HEIGHT"];
-else if ($arParams["HTML_SIZE"]["width"] <= 0 && $arParams["HTML_SIZE"]["height"] > 0)
-	$arParams["HTML_SIZE"]["width"] = $arParams["IMG_WIDTH"];
-if ($arParams["HTML_SIZE"]["width"] <= 0 || $arParams["HTML_SIZE"]["height"] <= 0)
-	$arParams["HTML_SIZE"] = false;
 
-$arParams["SIZE"] = is_array($arParams["SIZE"]) ? $arParams["SIZE"] : array();
-$arParams["SIZE"]["width"] = intval(!!$arParams["SIZE"]["width"] ? $arParams["SIZE"]["width"] : $arParams["SIZE"]["WIDTH"]);
-$arParams["SIZE"]["height"] = intval(!!$arParams["SIZE"]["height"] ? $arParams["SIZE"]["height"] : $arParams["SIZE"]["HEIGHT"]);
-$bExactly = ($arParams["SIZE"]["width"] > 0 && $arParams["SIZE"]["height"] > 0);
+// size to resize image on server
+$arParams["MAX_SIZE"] = (is_array($arParams["MAX_SIZE"]) ? array_change_key_case($arParams["MAX_SIZE"], CASE_LOWER) : null);
 
-//$arParams["SIZE"] user data in img tag <img width=... height=...> Has not been realized yet.
-
+// size to resize image on client in browser only. It's helpful for space economy
+$arParams["HTML_SIZE"] = ($arParams["HTML_SIZE"] > 0 ?
+	array("width" => $arParams["HTML_SIZE"], "height" => $arParams["HTML_SIZE"]) :
+	(is_array($arParams["HTML_SIZE"]) ? array_change_key_case($arParams["HTML_SIZE"], CASE_LOWER) : $arParams["MAX_SIZE"]));
+if ($arParams["HTML_SIZE"] !== null && $arParams["MAX_SIZE"] !== null)
+{
+	$arParams["HTML_SIZE"]["width"] = min($arParams["HTML_SIZE"]["width"], $arParams["MAX_SIZE"]["width"]);
+	$arParams["HTML_SIZE"]["height"] = min($arParams["HTML_SIZE"]["height"], $arParams["MAX_SIZE"]["height"]);
+}
 $arParams["FAMILY"] = trim($arParams["FAMILY"]);
 $arParams["FAMILY"] = strtolower(empty($arParams["FAMILY"]) ? "forum" : $arParams["FAMILY"]);
 $arParams["FAMILY"] = preg_replace("/[^a-z]/is", "", $arParams["FAMILY"]);
@@ -53,72 +44,56 @@ $arParams["RETURN"] = ($arParams["RETURN"] == "Y" ? "Y" : "N");
 $arParams["MODE"] = trim($arParams["MODE"]);
 // *************************/ADDITIONAL ****************************************************************
 // *************************/Input params***************************************************************
-$img = array(
-	"~src" => $arParams["URL"],
-	"src_download" => $arParams["URL"].(strpos($arParams["URL"], '?') !== false ? '&' : '?')."action=download",
-	"src" => $arParams["URL"].(strpos($arParams["URL"], '?') !== false ? '&' : '?').http_build_query($arParams["MAX_SIZE"]),
-	"~width" => $arParams["IMG_WIDTH"],
-	"width" => $arParams["IMG_WIDTH"],
-	"~height" => $arParams["IMG_HEIGHT"],
-	"height" => $arParams["IMG_HEIGHT"]
-);
-CFile::ScaleImage(
-	$arParams["IMG_WIDTH"], $arParams["IMG_HEIGHT"],
-	$arParams["MAX_SIZE"], BX_RESIZE_IMAGE_PROPORTIONAL,
-	$bNeedCreatePicture, $arSourceSize, $arDestinationSize);
-$circumscribed = $arParams["MAX_SIZE"];
-if ($arParams["HTML_SIZE"])
-{
-	CFile::ScaleImage(
-		$arParams["IMG_WIDTH"], $arParams["IMG_HEIGHT"],
-		$arParams["HTML_SIZE"], BX_RESIZE_IMAGE_PROPORTIONAL,
-		$bNeedCreatePicture1, $arSourceSize, $arDestinationSize1);
-	if ($bNeedCreatePicture1 && ($arDestinationSize1["width"] < $arDestinationSize["width"] ||
-		$arDestinationSize1["height"] < $arDestinationSize["height"]) )
-	{
-		$bNeedCreatePicture = true;
-		$circumscribed = $arParams["HTML_SIZE"];
-		$arDestinationSize = $arDestinationSize1;
-	}
-}
-if ($bExactly)
-{
-	CFile::ScaleImage(
-		$arParams["SIZE"]["width"], $arParams["SIZE"]["height"],
-		$circumscribed, BX_RESIZE_IMAGE_PROPORTIONAL,
-		$bNeedCreatePicture1, $arSourceSize, $arDestinationSize1);
-	if ($bNeedCreatePicture1)
-	{
-		$bNeedCreatePicture = true;
-		$arDestinationSize = $arDestinationSize1;
-	}
-}
-if ($bNeedCreatePicture)
-{
-	$img["width"] = $arDestinationSize["width"];
-	$img["height"] = $arDestinationSize["height"];
-}
 
-if ($arParams['MODE'] == 'RSS')
+$img["~src"] = $arParams["URL"];
+$img["src_download"] = $arParams["URL"].(strpos($arParams["URL"], '?') !== false ? '&' : '?')."action=download";
+$img["src"] = $arParams["URL"].(strpos($arParams["URL"], '?') !== false ? '&' : '?').($arParams["MAX_SIZE"] !== null ? http_build_query($arParams["MAX_SIZE"]) : "");
+
+// HTML size
+$bNeedCreatePicture = false;
+$props =
+	($img["width"] > 0 ? 'width="'.$img["width"].'" ' : '').
+	($img["height"] > 0 ? 'height="'.$img["height"].'" ' : '');
+if ($arParams["HTML_SIZE"] !== null)
 {
-	ob_start();
-	if (!$bNeedCreatePicture)
+	if ($arParams["HTML_SIZE"]["width"] > 0 && $arParams["HTML_SIZE"]["height"] > 0 &&
+		$img["width"] > 0 && $img["height"] > 0)
 	{
-		?><img src="<?=$img["src"]?>" width="<?=$img["width"]?>" height="<?=$img["height"]?>" /><?
+		CFile::ScaleImage(
+			$img["width"], $img["height"],
+			$arParams["HTML_SIZE"], BX_RESIZE_IMAGE_PROPORTIONAL,
+			$bNeedCreatePicture, $arSourceSize, $arDestinationSize);
+		if ($bNeedCreatePicture)
+			$props = 'width="'.$arDestinationSize["width"].'" height="'.$arDestinationSize["height"].'" ';
 	}
 	else
 	{
-		?><a href="<?=$img["~src"]?>" target="_blank"><?
-			?><img src="<?=$img["src"]?>" width="<?=$img["width"]?>" height="<?=$img["height"]?>" /><?
-		?></a><?
+		$style = array();
+		if ($arParams["HTML_SIZE"]["width"] > 0)
+			$style[] = 'max-width:'.$arParams["HTML_SIZE"]["width"].'px;';
+		if ($arParams["HTML_SIZE"]["height"] > 0)
+			$style[] = 'max-height:'.$arParams["HTML_SIZE"]["height"].'px;';
+		if (!empty($style))
+			$props = 'style="'.implode($style, "").'"';
 	}
-	$arParams["RETURN_DATA"] = ob_get_clean();
+
+}
+if ($arParams['MODE'] == 'RSS')
+{
+	$arParams["RETURN_DATA"] = <<<HTML
+<img src="{$img["src"]}" {$props} />
+HTML;
+	if ($bNeedCreatePicture)
+	{
+$arParams["RETURN_DATA"] = <<<HTML
+<a href="{$img["~src"]}" target="_blank">{$arParams["RETURN_DATA"]}</a>
+HTML;
+	}
 }
 elseif ($arParams['MODE'] == 'SHOW2IMAGES')
 {
 $arParams["RETURN_DATA"] = <<<HTML
-<img style="border:none;" src="{$img["src"]}" width="{$img["width"]}"
-	height="{$img["height"]}"
+<img src="{$img["src"]}" {$props}
 	data-bx-viewer="image"
 	data-bx-src="{$img["~src"]}"
 	data-bx-download="{$img["src_download"]}"
@@ -127,29 +102,20 @@ $arParams["RETURN_DATA"] = <<<HTML
 	data-bx-title="{$arParams["IMG_NAME"]}"
 	data-bx-size="{$arParams["IMG_SIZE"]}" />
 HTML;
-	$arParams["RETURN_DATA"] = str_replace(array("\n", "\t", "  "), " ", $arParams["RETURN_DATA"]);
 }
 else
 {
-	if ($arParams["HTML_SIZE"])
-	{
-		$arParams["WIDTH"] = $arParams["HTML_SIZE"]["width"];
-		$arParams["HEIGHT"] = $arParams["HTML_SIZE"]["height"];
-	}
 	CUtil::InitJSCore();
 	do {
 		$id = "popup_".rand();
 	} while(ForumGetEntity($id) !== false);
 
-	$style = "" . ($arParams["HEIGHT"] > 0 ? "max-height:".$arParams["HEIGHT"]."px;" : "") . ($arParams["WIDTH"] > 0 ? "max-width:".$arParams["WIDTH"]."px;" : "");
-	if ($style !== "")
-		$style = "style=\"$style\"";
 $arParams["RETURN_DATA"] = <<<HTML
-<img src="{$arParams["URL"]}" id="{$id}" border="0" {$style} data-bx-viewer="image" data-bx-src="{$arParams["URL"]}" />
+<img src="{$img["~src"]}" id="{$id}" border="0" {$props} data-bx-viewer="image" data-bx-src="{$img["~src"]}" />
 HTML;
-
-	$arParams["RETURN_DATA"] = str_replace(array("\n", "\t"), "", $arParams["RETURN_DATA"]);
 }
+$arParams["RETURN_DATA"] = str_replace(array("\n", "\t", "  "), " ", $arParams["RETURN_DATA"]);
+
 if ($arParams["RETURN"] == "Y")
 	$this->__component->arParams["RETURN_DATA"] = $arParams["RETURN_DATA"];
 else

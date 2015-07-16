@@ -5,4 +5,5 @@ $MESS ['SEARCH_FORUM'] = "Forum";
 $MESS ['SEARCH_BLOG'] = "Blogs";
 $MESS ['SEARCH_SOCIALNETWORK'] = "Social network";
 $MESS ['SEARCH_INTRANET'] = "Users";
+$MESS ['SEARCH_CRM'] = "CRM";
 ?>

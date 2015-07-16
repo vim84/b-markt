@@ -150,6 +150,21 @@ CREATE TABLE if not exists b_seo_adv_link
 	PRIMARY KEY (LINK_TYPE,LINK_ID,BANNER_ID)
 );
 
+CREATE TABLE if not exists b_seo_adv_order
+(
+	ID int(11) NOT NULL auto_increment,
+	ENGINE_ID int(11) NOT NULL,
+	TIMESTAMP_X timestamp NOT NULL,
+	CAMPAIGN_ID int(11) NOT NULL,
+	BANNER_ID int(11) NOT NULL,
+	ORDER_ID int(11) NOT NULL,
+	SUM FLOAT NULL DEFAULT 0,
+	PROCESSED char(1) NULL DEFAULT 'N',
+	PRIMARY KEY (ID),
+	UNIQUE INDEX ux_b_seo_adv_order (ENGINE_ID, CAMPAIGN_ID, BANNER_ID, ORDER_ID),
+	INDEX ix_b_seo_adv_order1 (ORDER_ID, PROCESSED)
+);
+
 CREATE TABLE if not exists b_seo_adv_log
 (
 	ID int(11) NOT NULL AUTO_INCREMENT,

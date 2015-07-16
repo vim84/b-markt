@@ -1005,6 +1005,12 @@ class CAllBlogPost
 			}
 		}
 
+		BXClearCache(true, "/blog/getsocnetperms/".$ID."/");
+		if(defined("BX_COMP_MANAGED_CACHE"))
+		{
+			$GLOBALS["CACHE_MANAGER"]->ClearByTag("blog_post_getsocnetperms_".$ID);
+		}
+
 		return $arResult;
 	}
 
@@ -1105,25 +1111,39 @@ class CAllBlogPost
 		if($ID <= 0)
 			return false;
 
-		$arResult = Array();
-		if (isset($GLOBALS["BLOG_POST"]["GetSocNetPerms_".$ID]) && !empty($GLOBALS["BLOG_POST"]["GetSocNetPerms_".$ID]))
+		$arResult = array();
+
+		$cacheTtl = defined("BX_COMP_MANAGED_CACHE") ? 3153600 : 3600*4;
+		$cacheId = 'blog_post_getsocnetperms_'.$ID;
+		$cacheDir = '/blog/getsocnetperms/'.$ID;
+
+		$obCache = new CPHPCache;
+		if($obCache->InitCache($cacheTtl, $cacheId, $cacheDir))
 		{
-			$arResult = $GLOBALS["BLOG_POST"]["GetSocNetPerms_".$ID];
+			$arResult = $obCache->GetVars();
 		}
 		else
 		{
+			$obCache->StartDataCache();
+
 			$strSql = "SELECT SR.ENTITY_ID, SR.ENTITY_TYPE, SR.ENTITY FROM b_blog_socnet_rights SR
 				INNER JOIN b_blog_post P ON (P.ID = SR.POST_ID)
 				WHERE SR.POST_ID=".$ID." ORDER BY SR.ENTITY ASC";
-				/*."
-				AND SR.ENTITY <> CONCAT('US', P.AUTHOR_ID)";*/
 			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			while($arRes = $dbRes->Fetch())
 			{
 				$arResult[$arRes["ENTITY_TYPE"]][$arRes["ENTITY_ID"]][] = $arRes["ENTITY"];
 			}
-			$GLOBALS["BLOG_POST"]["GetSocNetPerms_".$ID] = $arResult;
+
+			if(defined("BX_COMP_MANAGED_CACHE"))
+			{
+				$GLOBALS["CACHE_MANAGER"]->StartTagCache($cacheDir);
+				$GLOBALS["CACHE_MANAGER"]->RegisterTag("blog_post_getsocnetperms_".$ID);
+				$GLOBALS["CACHE_MANAGER"]->EndTagCache();
+			}
+			$obCache->EndDataCache($arResult);
 		}
+
 		return $arResult;
 	}
 
@@ -1289,20 +1309,20 @@ class CAllBlogPost
 			}
 			else
 			{
-				$dbA = CAccess::GetUserCodes($userId);
-				while($arA = $dbA->Fetch())
+				$arCodes = CAccess::GetUserCodesArray($userId);
+				foreach($arCodes as $code)
 				{
-					if($arA["PROVIDER_ID"] == "intranet")
+					if (
+						preg_match('/^DR([0-9]+)/', $code, $match)
+						|| preg_match('/^D([0-9]+)/', $code, $match)
+						|| preg_match('/^IU([0-9]+)/', $code, $match)
+					)
 					{
-						$arEntities["DR"][$arA["ACCESS_CODE"]] = $arA["ACCESS_CODE"];
+						$arEntities["DR"][$code] = $code;
 					}
-					elseif($arA["PROVIDER_ID"] == "socnetgroup")
+					elseif (preg_match('/^SG([0-9]+)_([A-Z])/', $code, $match))
 					{
-						$g = substr($arA["ACCESS_CODE"], 2);
-						$gId = IntVal($g);
-						$gR = substr($g, strpos($g, "_")+1);
-
-						$arEntities["SG"][$gId][$gR] = $gR;
+						$arEntities["SG"][$match[1]][$match[2]] = $match[2];
 					}
 				}
 				$GLOBALS["BLOG_POST"]["UAC_CACHE_".$userId] = $arEntities;

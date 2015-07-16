@@ -550,7 +550,8 @@ if (!empty($arResult["MESSAGE_LIST"]))
 {
 	$res = array_keys($arResult["MESSAGE_LIST"]);
 	$arFilterProps = $arFilter;
-	$arFilterProps[">ID"] = $arFilter[">MESSAGE_ID"] = intVal($res[0]) - 1;
+	if ($res[0] > 1)
+		$arFilterProps[">ID"] = $arFilter[">MESSAGE_ID"] = intVal($res[0]) - 1;
 	$arFilterProps["<ID"] = $arFilter["<MESSAGE_ID"] = intVal($res[count($res) - 1]) + 1;
 
 	$db_files = CForumFiles::GetList(array("MESSAGE_ID" => "ASC"), $arFilter);
@@ -569,7 +570,7 @@ if (!empty($arResult["MESSAGE_LIST"]))
 	{
 		do
 		{
-			$res["SRC"] = CFile::GetFileSRC($res["FILE_NAME"]);
+			$res["SRC"] = CFile::GetFileSRC($res);
 			if ($arResult["MESSAGE_LIST"][$res["MESSAGE_ID"]]["~ATTACH_IMG"] == $res["FILE_ID"])
 			{
 			// attach for custom

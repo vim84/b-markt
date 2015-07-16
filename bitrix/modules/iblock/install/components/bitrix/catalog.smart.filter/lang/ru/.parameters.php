@@ -14,4 +14,6 @@ $MESS["CP_BCSF_XML_EXPORT"] = "Включить поддержку Яндекс 
 $MESS["CP_BCSF_SECTION_TITLE"] = "Заголовок";
 $MESS["CP_BCSF_SECTION_DESCRIPTION"] = "Описание";
 $MESS["CP_BCSF_HIDE_NOT_AVAILABLE"] = "Не отображать товары, которых нет на складах";
+$MESS["CP_BCSF_CONVERT_CURRENCY"] = "Показывать цены в одной валюте";
+$MESS["CP_BCSF_CURRENCY_ID"] = "Валюта, в которую будут сконвертированы цены";
 ?>

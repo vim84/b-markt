@@ -3,6 +3,7 @@ global $MESS;
 
 $MESS["SBLP_DTITLE"] = "Invoice (English)";
 $MESS["SBLP_DDESCR"] = "Print version of invoice. Will open in a new window.";
+
 $MESS["SBLP_DATE"] = "Order date";
 $MESS["SBLP_DATE_DESC"] = "Date when the order was created";
 $MESS["SBLP_PAY_BEFORE"] = "Pay by";
@@ -13,6 +14,7 @@ $MESS["SBLP_ADRESS_SUPPLI"] = "Seller's address";
 $MESS["SBLP_ADRESS_SUPPLI_DESC"] = "Physical address of seller";
 $MESS["SBLP_PHONE_SUPPLI"] = "Seller telephone";
 $MESS["SBLP_PHONE_SUPPLI_DESC"] = "Telephone number of seller";
+
 $MESS["SBLP_BANK_ACCNO_SUPPLI"] = "Seller's bank account number";
 $MESS["SBLP_BANK_ACCNO_SUPPLI_DESC"] = "Seller's bank account number";
 $MESS["SBLP_BANK_ACCNO_SUPPLI_VAL"] = "Seller's bank account number";
@@ -80,4 +82,10 @@ $MESS["SBLP_MARGIN_LEFT"] = "Left margin (mm)";
 
 $MESS["SBLP_COMMENT1"] = "Comment 1 for Invoice";
 $MESS["SBLP_COMMENT2"] = "Comment 2 for Invoice";
-?>
+
+$MESS["SBLP_LOGO_DPI"] = "Logo scale";
+$MESS["SBLP_LOGO_DPI_72"] = "133% (72 dpi)";
+$MESS["SBLP_LOGO_DPI_96"] = "100% (96 dpi)";
+$MESS["SBLP_LOGO_DPI_150"] = "64% (150 dpi)";
+$MESS["SBLP_LOGO_DPI_300"] = "32% (300 dpi)";
+$MESS["SBLP_LOGO_DPI_600"] = "16% (600 dpi)";

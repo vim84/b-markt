@@ -16,7 +16,6 @@ drop table if exists b_sale_order_props_variant;
 drop table if exists b_sale_pay_system;
 drop table if exists b_sale_pay_system_action;
 drop table if exists b_sale_delivery;
-
 drop table if exists b_sale_location_zip;
 drop table if exists b_sale_location_country;
 drop table if exists b_sale_location_country_lang;
@@ -24,7 +23,6 @@ drop table if exists b_sale_location_city;
 drop table if exists b_sale_location_city_lang;
 drop table if exists b_sale_location_region;
 drop table if exists b_sale_location_region_lang;
-
 drop table if exists b_sale_location;
 drop table if exists b_sale_loc_name;
 drop table if exists b_sale_loc_ext_srv;
@@ -38,8 +36,10 @@ drop table if exists b_sale_location_group_lang;
 drop table if exists b_sale_location2location_group;
 drop table if exists b_sale_delivery2location;
 drop table if exists b_sale_discount;
+drop table if exists b_sale_discount_coupon;
 drop table if exists b_sale_discount_group;
 drop table if exists b_sale_discount_module;
+drop table if exists b_sale_discount_entities;
 drop table if exists b_sale_user_props;
 drop table if exists b_sale_user_props_value;
 drop table if exists b_sale_status;

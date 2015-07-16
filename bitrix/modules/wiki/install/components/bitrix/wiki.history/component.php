@@ -114,6 +114,12 @@ if (CWikiSocnet::isEnabledSocnet() && !empty($arParams['SOCNET_GROUP_ID']))
 	}
 }
 
+if (array_key_exists('SOCNET_GROUP_ID', $arParams) && empty($arParams['SOCNET_GROUP_ID']))
+{
+	ShowError(GetMessage('WIKI_ACCESS_DENIED'));
+	return;
+}
+
 $arResult['SOCNET'] = false;
 if (CWikiSocnet::isEnabledSocnet() && !empty($arParams['SOCNET_GROUP_ID']))
 {

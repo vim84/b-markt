@@ -33,7 +33,6 @@ class CSaleOrderPropsValue extends CAllSaleOrderPropsValue
 				"ORDER_ID" => array("FIELD" => "V.ORDER_ID", "TYPE" => "int"),
 				"ORDER_PROPS_ID" => array("FIELD" => "V.ORDER_PROPS_ID", "TYPE" => "int"),
 				"NAME" => array("FIELD" => "V.NAME", "TYPE" => "string"),
-				"VALUE" => array("FIELD" => "V.VALUE", "TYPE" => "string"),
 				"CODE" => array("FIELD" => "V.CODE", "TYPE" => "string"),
 				"PROP_ID" => array("FIELD" => "P.ID", "TYPE" => "int", "FROM" => "LEFT JOIN b_sale_order_props P ON (V.ORDER_PROPS_ID = P.ID)"),
 				"PROP_PERSON_TYPE_ID" => array("FIELD" => "P.PERSON_TYPE_ID", "TYPE" => "int", "FROM" => "LEFT JOIN b_sale_order_props P ON (V.ORDER_PROPS_ID = P.ID)"),
@@ -58,6 +57,8 @@ class CSaleOrderPropsValue extends CAllSaleOrderPropsValue
 				"PROP_UTIL" => array("FIELD" => "P.UTIL", "TYPE" => "char", "FROM" => "LEFT JOIN b_sale_order_props P ON (V.ORDER_PROPS_ID = P.ID)"),
 			);
 		// <-- FIELDS
+
+		CSaleOrderPropsValue::addPropertyValueField('V', $arFields, $arSelectFields);
 
 		$arSqls = CSaleOrder::PrepareSql($arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields);
 
@@ -145,6 +146,9 @@ class CSaleOrderPropsValue extends CAllSaleOrderPropsValue
 		if (!CSaleOrderPropsValue::CheckFields("ADD", $arFields, 0))
 			return false;
 
+		// translate here
+		$arFields['VALUE'] = self::translateLocationIDToCode($arFields['VALUE'], $arFields['ORDER_PROPS_ID']);
+
 		$arInsert = $DB->PrepareInsert("b_sale_order_props_value", $arFields);
 
 		$strSql =
@@ -164,12 +168,13 @@ class CSaleOrderPropsValue extends CAllSaleOrderPropsValue
 		$ORDER_ID = IntVal($ORDER_ID);
 
 		$strSql =
-			"SELECT PV.ID, PV.ORDER_ID, PV.ORDER_PROPS_ID, PV.NAME, PV.VALUE, PV.CODE, ".
+			"SELECT PV.ID, PV.ORDER_ID, PV.ORDER_PROPS_ID, PV.NAME, ".self::getPropertyValueFieldSelectSql().", PV.CODE, ".
 			"	P.NAME as PROPERTY_NAME, P.TYPE, P.PROPS_GROUP_ID, P.INPUT_FIELD_LOCATION, PG.NAME as GROUP_NAME, ".
 			"	P.IS_LOCATION, P.IS_EMAIL, P.IS_PROFILE_NAME, P.IS_PAYER, PG.SORT as GROUP_SORT, P.ACTIVE, P.UTIL ".
 			"FROM b_sale_order_props_value PV ".
 			"	LEFT JOIN b_sale_order_props P ON (PV.ORDER_PROPS_ID = P.ID) ".
 			"	LEFT JOIN b_sale_order_props_group PG ON (P.PROPS_GROUP_ID = PG.ID) ".
+			self::getLocationTableJoinSql().
 			"WHERE PV.ORDER_ID = ".$ORDER_ID." ".
 			"ORDER BY PG.SORT, PG.NAME, P.SORT, P.NAME, P.ID ";
 
@@ -203,13 +208,17 @@ class CSaleOrderPropsValue extends CAllSaleOrderPropsValue
 		if (strlen($strWhere) > 0)
 			$strWhere = " AND (".$strWhere.") ";
 
+		// locations kept in CODEs, but must be shown as IDs
+		$lMig = CSaleLocation::isLocationProMigrated();
+
 		$strSql =
-			"SELECT DISTINCT PV.ID, PV.ORDER_ID, PV.ORDER_PROPS_ID, PV.NAME, PV.VALUE, PV.CODE, ".
+			"SELECT DISTINCT PV.ID, PV.ORDER_ID, PV.ORDER_PROPS_ID, PV.NAME, ".self::getPropertyValueFieldSelectSql().", PV.CODE, ".
 			"	P.NAME as PROPERTY_NAME, P.TYPE, P.PROPS_GROUP_ID, P.INPUT_FIELD_LOCATION, PG.NAME as GROUP_NAME, ".
 			"	P.IS_LOCATION, P.IS_EMAIL, P.IS_PROFILE_NAME, P.IS_PAYER, PG.SORT as GROUP_SORT, P.ACTIVE, P.UTIL ".
 			"FROM b_sale_order_props_value PV ".
 			"	LEFT JOIN b_sale_order_props P ON (PV.ORDER_PROPS_ID = P.ID) ".
 			"	LEFT JOIN b_sale_order_props_group PG ON (P.PROPS_GROUP_ID = PG.ID) ".
+			self::getLocationTableJoinSql().
 			$strJoin.
 			"WHERE PV.ORDER_ID = ".$ORDER_ID." ".
 			$strWhere.

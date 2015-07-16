@@ -1,4 +1,6 @@
-<?
+<?php
+use Bitrix\Main\Context;
+
 IncludeModuleLangFile(__FILE__);
 
 require_once(dirname(__FILE__)."/descriptions.php");
@@ -78,6 +80,9 @@ class CSocServAuthManager
 				if(is_callable(array($cl, "GetFormHtml")))
 					$service["FORM_HTML"] = call_user_func_array(array($cl, "GetFormHtml"), array($arParams));
 
+				if(is_callable(array($cl, "GetOnClickJs")))
+					$service["ONCLICK"] = call_user_func_array(array($cl, "GetOnClickJs"), array($arParams));
+
 				$aServ[$key] = $service;
 			}
 		}
@@ -86,6 +91,8 @@ class CSocServAuthManager
 
 	public function GetProfileUrl($service, $uid, $arService = false)
 	{
+		global $USER;
+
 		if(isset(self::$arAuthServices[$service]))
 		{
 			if(!is_array($arService))
@@ -93,7 +100,7 @@ class CSocServAuthManager
 				$dbSocservUser = \CSocServAuthDB::getList(
 					array(),
 					array(
-						'USER_ID' => $GLOBALS['USER']->GetID(),
+						'USER_ID' => $USER->GetID(),
 						'EXTERNAL_AUTH_ID' => $service,
 					)
 				);
@@ -106,6 +113,7 @@ class CSocServAuthManager
 				&& self::$arAuthServices[$service]["DISABLED"] !== true
 			)
 			{
+				/** @var \CSocServFacebook $cl */
 				$cl = new self::$arAuthServices[$service]["CLASS"];
 				if(is_callable(array($cl, "getProfileUrl")))
 				{
@@ -119,12 +127,14 @@ class CSocServAuthManager
 
 	public function GetFriendsList($service, $limit, &$next)
 	{
+		global $USER;
+
 		if(isset(self::$arAuthServices[$service]))
 		{
 			$dbSocservUser = \CSocServAuthDB::getList(
 				array(),
 				array(
-					'USER_ID' => $GLOBALS['USER']->GetID(),
+					'USER_ID' => $USER->GetID(),
 					'EXTERNAL_AUTH_ID' => $service,
 				)
 			);
@@ -136,6 +146,7 @@ class CSocServAuthManager
 				&& self::$arAuthServices[$service]["DISABLED"] !== true
 			)
 			{
+				/** @var \CSocServFacebook $cl */
 				$cl = new self::$arAuthServices[$service]["CLASS"];
 				if(is_callable(array($cl, "getFriendsList")))
 				{
@@ -161,6 +172,7 @@ class CSocServAuthManager
 						$arOptions[] = $opt;
 			}
 		}
+
 		return $arOptions;
 	}
 
@@ -170,6 +182,7 @@ class CSocServAuthManager
 		{
 			CSocServBitrixOAuth::gadgetAuthorize();
 		}
+
 		if(isset(self::$arAuthServices[$service_id]))
 		{
 			$service = self::$arAuthServices[$service_id];
@@ -241,7 +254,9 @@ class CSocServAuthManager
 
 	function CleanParam()
 	{
-		$redirect_url = $GLOBALS['APPLICATION']->GetCurPageParam('', array("auth_service_id", "check_key"), false);
+		global $APPLICATION;
+
+		$redirect_url = $APPLICATION->GetCurPageParam('', array("auth_service_id", "check_key"), false);
 		LocalRedirect($redirect_url);
 	}
 
@@ -294,7 +309,8 @@ class CSocServAuthManager
 	 * @static
 	 * @param $arUserTwit
 	 * @param $lastTwitId
-	 * @param $siteId
+	 * @param $arSiteId
+	 * @return int|null
 	 */
 	public static function PostIntoBuzz($arUserTwit, $lastTwitId, $arSiteId=array())
 	{
@@ -317,6 +333,7 @@ class CSocServAuthManager
 			}
 			return $lastTwitId;
 		}
+		return null;
 	}
 
 	public static function PostIntoBuzzAsBlog($userTwit, $arSiteId=array(), $userLogin = '')
@@ -337,6 +354,7 @@ class CSocServAuthManager
 		}
 		else
 			$arParams["USER_ID"] = $userTwit['kp_user_id'];
+		$siteId = null;
 		if(isset($arSiteId[$userTwit['kp_user_id']]))
 			$siteId = $arSiteId[$userTwit['kp_user_id']];
 		if(strlen($siteId) <= 0)
@@ -530,19 +548,18 @@ class CSocServAuthManager
 					}
 				}*/
 
+			$newID = null;
+			$socnetRightsOld = Array("U" => Array());
 			if(!$bError)
 			{
-				preg_match_all("/\[user\s*=\s*([^\]]*)\](.+?)\[\/user\]/ies".BX_UTF_PCRE_MODIFIER, $userTwit['text'], $arMention);
+				preg_match_all("/\\[user\\s*=\\s*([^\\]]*)\\](.+?)\\[\\/user\\]/ies".BX_UTF_PCRE_MODIFIER, $userTwit['text'], $arMention);
 
 				$arFields["=DATE_CREATE"] = $DB->GetNowFunction();
 				$arFields["AUTHOR_ID"] = $arParams["USER_ID"];
 				$arFields["BLOG_ID"] = $arBlog["ID"];
 
 				$newID = CBlogPost::Add($arFields);
-				$socnetRightsOld = Array("U" => Array());
 
-				$bAdd = true;
-				$bNeedMail = false;
 				if($newID)
 				{
 					$arFields["ID"] = $newID;
@@ -700,10 +717,11 @@ class CSocServAuthManager
 		$cache_id = 'socserv_ar_user';
 		$obCache = new CPHPCache;
 		$cache_dir = '/bx/socserv_ar_user';
-		$arResult = array();
 
 		if($obCache->InitCache($ttl, $cache_id, $cache_dir))
+		{
 			$arResult = $obCache->GetVars();
+		}
 		else
 		{
 			$arUserXmlId = $arOaToken = $arOaSecret = $arSiteId = array();
@@ -761,6 +779,8 @@ class CSocServAuth
 
 	protected function CheckFields($action, &$arFields)
 	{
+		global $USER;
+
 		if($action === 'ADD')
 		{
 			if(isset($arFields["EXTERNAL_AUTH_ID"]) && strlen($arFields["EXTERNAL_AUTH_ID"])<=0)
@@ -775,7 +795,7 @@ class CSocServAuth
 
 			if(!isset($arFields["USER_ID"]))
 			{
-				$arFields["USER_ID"] = $GLOBALS["USER"]->GetID();
+				$arFields["USER_ID"] = $USER->GetID();
 			}
 
 			$dbCheck = CSocServAuthDB::GetList(array(), array("USER_ID" => $arFields["USER_ID"], "EXTERNAL_AUTH_ID" => $arFields["EXTERNAL_AUTH_ID"]), false, false, array("ID"));
@@ -912,7 +932,14 @@ class CSocServAuth
 				if($enabledEndDaySend == 'Y')
 				{
 					$arResult['MESSAGE'] = str_replace('#event#', $eventCounter, str_replace('#task#', $taskCounter, CUserOptions::GetOption("socialservices", "user_socserv_end_text", GetMessage("JS_CORE_SS_WORKDAY_START"), $arResult['USER_ID'])));
-					$arSocServUser['SOCSERVARRAY'] = unserialize(CUserOptions::GetOption("socialservices", "user_socserv_array", "a:0:{}", $arResult['USER_ID']));
+
+					$socServArray = CUserOptions::GetOption("socialservices", "user_socserv_array", "a:0:{}", $arResult['USER_ID']);
+					if(!CheckSerializedData($socServArray))
+					{
+						$socServArray = "a:0:{}";
+					}
+
+					$arSocServUser['SOCSERVARRAY'] = unserialize($socServArray);
 
 					if(is_array($arSocServUser['SOCSERVARRAY']) && count($arSocServUser['SOCSERVARRAY']) > 0)
 					{
@@ -944,7 +971,14 @@ class CSocServAuth
 				if($enabledEndDaySend == 'Y')
 				{
 					$arResult['MESSAGE'] = CUserOptions::GetOption("socialservices", "user_socserv_start_text", GetMessage("JS_CORE_SS_WORKDAY_START"), $arResult['USER_ID']);
-					$arSocServUser['SOCSERVARRAY'] = unserialize(CUserOptions::GetOption("socialservices", "user_socserv_array", "a:0:{}", $arResult['USER_ID']));
+
+					$socServArray = CUserOptions::GetOption("socialservices", "user_socserv_array", "a:0:{}", $arResult['USER_ID']);
+					if(!CheckSerializedData($socServArray))
+					{
+						$socServArray = "a:0:{}";
+					}
+
+					$arSocServUser['SOCSERVARRAY'] = unserialize($socServArray);
 
 					if(is_array($arSocServUser['SOCSERVARRAY']) && count($arSocServUser['SOCSERVARRAY']) > 0)
 					{
@@ -1037,7 +1071,7 @@ class CSocServAuth
 
 	public function AuthorizeUser($arFields)
 	{
-		global $USER;
+		global $USER, $APPLICATION;
 
 		if(!isset($arFields['XML_ID']) || $arFields['XML_ID'] == '')
 			return false;
@@ -1142,7 +1176,11 @@ class CSocServAuth
 					{
 						$USER_ID = $arUser["ID"];
 					}
-					elseif(COption::GetOptionString("main", "new_user_registration", "N") == "Y")
+					elseif
+					(
+						COption::GetOptionString("main", "new_user_registration", "N") == "Y"
+						&& COption::GetOptionString("socialservices", "allow_registration", "Y") == "Y"
+					)
 					{
 						$arFields['PASSWORD'] = randString(30); //not necessary but...
 						$arFields['LID'] = SITE_ID;
@@ -1153,6 +1191,7 @@ class CSocServAuth
 							$arFields['GROUP_ID'] = explode(',', $def_group);
 						}
 
+
 						if(!empty($arFields['GROUP_ID']) && self::isAuthDenied($arFields['GROUP_ID']))
 						{
 							$errorCode = SOCSERV_REGISTRATION_DENY;
@@ -1161,6 +1200,15 @@ class CSocServAuth
 						{
 							$arFieldsUser = $arFields;
 							$arFieldsUser["EXTERNAL_AUTH_ID"] = "socservices";
+
+							if(isset($arFieldsUser['PERSONAL_PHOTO']) && is_array($arFieldsUser['PERSONAL_PHOTO']))
+							{
+								$res = CFile::CheckImageFile($arFieldsUser["PERSONAL_PHOTO"]);
+								if($res <> '')
+								{
+									unset($arFieldsUser['PERSONAL_PHOTO']);
+								}
+							}
 
 							$USER_ID = $USER->Add($arFieldsUser);
 							if($USER_ID <= 0)
@@ -1214,7 +1262,7 @@ class CSocServAuth
 			}
 
 			// possible redirect after authorization, so no spreading. Store cookies in the session for next hit
-			$GLOBALS['APPLICATION']->StoreCookies();
+			$APPLICATION->StoreCookies();
 		}
 
 		return true;
@@ -1246,6 +1294,8 @@ class CSocServUtil
 
 	public static function GetCurUrl($addParam="", $removeParam=false, $checkOAuthProxy=true)
 	{
+		global $APPLICATION;
+
 		$arRemove = array("logout", "auth_service_error", "auth_service_id", "MUL_MODE", "SEF_APPLICATION_CUR_PAGE_URL");
 
 		if($removeParam !== false)
@@ -1270,15 +1320,23 @@ class CSocServUtil
 				$addParam .= ($addParam == "" ? "" : "&").self::packOAuthProxyString($proxyString);
 			}
 		}
-		return self::ServerName().$GLOBALS['APPLICATION']->GetCurPageParam($addParam, $arRemove);
+		return self::ServerName().$APPLICATION->GetCurPageParam($addParam, $arRemove);
 	}
 
-	public static function ServerName()
+	public static function ServerName($forceHttps = false)
 	{
-		$protocol = (CMain::IsHTTPS() ? "https" : "http");
-		$port = ($_SERVER['SERVER_PORT'] > 0 && $_SERVER['SERVER_PORT'] <> 80 && $_SERVER['SERVER_PORT'] <> 443? ':'.$_SERVER['SERVER_PORT']:'');
+		$request = Context::getCurrent()->getRequest();
 
-		return $protocol.'://'.$_SERVER['SERVER_NAME'].$port;
+		$protocol = ($forceHttps || $request->isHttps()) ? "https" : "http";
+		$serverName = $request->getHttpHost();
+
+		// :-(
+		if($protocol == "https")
+		{
+			$serverName = str_replace(":443", "", $serverName);
+		}
+
+		return $protocol.'://'.$serverName;
 	}
 
 	public static function packOAuthProxyString($proxyString)
@@ -1366,4 +1424,3 @@ class CSocServAllMessage
 	}
 
 }
-?>

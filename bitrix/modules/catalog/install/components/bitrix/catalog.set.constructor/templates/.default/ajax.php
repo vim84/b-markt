@@ -41,11 +41,11 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && strlen($_POST["action"])>0 && check_bi
 			{
 				$arPices = array("formatSum" => "", "formatOldSum" => "", "formatDiscDiffSum" => "");
 				if ($_POST["sumPrice"])
-					$arPices["formatSum"] = FormatCurrency($_POST["sumPrice"], $_POST["currency"]);
+					$arPices["formatSum"] = CCurrencyLang::CurrencyFormat($_POST["sumPrice"], $_POST["currency"], true);
 				if ($_POST["sumOldPrice"] && $_POST["sumOldPrice"] != $_POST["sumPrice"])
-					$arPices["formatOldSum"] = FormatCurrency($_POST["sumOldPrice"], $_POST["currency"]);
+					$arPices["formatOldSum"] = CCurrencyLang::CurrencyFormat($_POST["sumOldPrice"], $_POST["currency"], true);
 				if ($_POST["sumDiffDiscountPrice"])
-					$arPices["formatDiscDiffSum"] = FormatCurrency($_POST["sumDiffDiscountPrice"], $_POST["currency"]);
+					$arPices["formatDiscDiffSum"] = CCurrencyLang::CurrencyFormat($_POST["sumDiffDiscountPrice"], $_POST["currency"], true);
 
 				if (SITE_CHARSET != "utf-8")
 					$arPices = $APPLICATION->ConvertCharsetArray($arPices, SITE_CHARSET, "utf-8");

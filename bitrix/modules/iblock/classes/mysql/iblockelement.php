@@ -323,6 +323,7 @@ class CIBlockElement extends CAllIBlockElement
 				"IBLOCK_EXTERNAL_ID"=>"B.XML_ID",
 				"DETAIL_PAGE_URL"=>"B.DETAIL_PAGE_URL",
 				"LIST_PAGE_URL"=>"B.LIST_PAGE_URL",
+				"CANONICAL_PAGE_URL"=>"B.CANONICAL_PAGE_URL",
 				"CREATED_DATE"=>$DB->DateFormatToDB("YYYY.MM.DD", "BE.DATE_CREATE"),
 				"BP_PUBLISHED"=>"if(BE.WF_STATUS_ID = 1, 'Y', 'N')",
 			);
@@ -547,6 +548,7 @@ class CIBlockElement extends CAllIBlockElement
 		if(strlen($arJoinProps["FC"]))
 		{
 			$sFrom .= "\t\t\t".$arJoinProps["FC"]."\n";
+			$bDistinct = $bDistinct || (isset($arJoinProps["FC_DISTINCT"]) && $arJoinProps["FC_DISTINCT"] == "Y");
 		}
 
 		if($arJoinProps["RV"])
@@ -613,7 +615,8 @@ class CIBlockElement extends CAllIBlockElement
 			}
 		}
 
-		if(strlen(trim($sSelect))<=0)
+		$sSelect = trim($sSelect, ", \t\n\r");
+		if(strlen($sSelect) <= 0)
 			$sSelect = "0 as NOP ";
 
 		$bDistinct = $bDistinct || (isset($arFilter["INCLUDE_SUBSECTIONS"]) && $arFilter["INCLUDE_SUBSECTIONS"] == "Y");
@@ -977,7 +980,15 @@ class CIBlockElement extends CAllIBlockElement
 				{
 					$arNewPreview = $arFields["DETAIL_PICTURE"];
 					$arNewPreview["COPY_FILE"] = "Y";
-					$arNewPreview["description"] = $arFields["PREVIEW_PICTURE"]["description"];
+					if (
+						isset($arFields["PREVIEW_PICTURE"])
+						&& is_array($arFields["PREVIEW_PICTURE"])
+						&& isset($arFields["PREVIEW_PICTURE"]["description"])
+					)
+					{
+						$arNewPreview["description"] = $arFields["PREVIEW_PICTURE"]["description"];
+					}
+
 					$arFields["PREVIEW_PICTURE"] = $arNewPreview;
 				}
 			}
@@ -1580,8 +1591,7 @@ class CIBlockElement extends CAllIBlockElement
 		foreach (GetModuleEvents("iblock", "OnAfterIBlockElementUpdate", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arFields));
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$GLOBALS["CACHE_MANAGER"]->ClearByTag("iblock_id_".$arIBlock["ID"]);
+		CIBlock::clearIblockTagCache($arIBlock['ID']);
 
 		return $Result;
 	}

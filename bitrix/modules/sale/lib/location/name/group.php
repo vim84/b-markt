@@ -87,6 +87,13 @@ class GroupTable extends NameEntity
 					'=this.LOCATION_GROUP_ID' => 'ref.ID'
 				)
 			),
+
+			'CNT' => array(
+				'data_type' => 'integer',
+				'expression' => array(
+					'count(*)'
+				)
+			),
 		);
 	}
 }

@@ -22,9 +22,7 @@ class CBPSaveHistoryActivity
 		$historyService = $this->workflow->GetService("HistoryService");
 		$documentService = $this->workflow->GetService("DocumentService");
 
-		$userId = $this->UserId;
-		if (is_string($userId) && strpos($userId, "user_") !== false)
-			$userId = intval(substr($userId, strlen("user_")));
+		$userId = CBPHelper::ExtractUsers($this->UserId, $documentId, true);
 		if ($userId == null || intval($userId) <= 0)
 			$userId = 1;
 

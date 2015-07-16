@@ -39,7 +39,7 @@ $arPSCorrespondence = array(
  				"VALUE" => "SHOULD_PAY",
  				"TYPE" => "ORDER",
 			),
-		"CURRRENCY" => Array(
+		"CURRENCY" => Array(
 				"NAME" => GetMessage("SWMWP_VALUTE"),
 				"DESCR" => "",
  				"VALUE" => "CURRENCY",

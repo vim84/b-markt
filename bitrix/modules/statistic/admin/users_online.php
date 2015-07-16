@@ -293,7 +293,7 @@ while($arRes = $rsData->Fetch())
 	{
 		$str .= '[<a target="_blank" title="'.GetMessage("STAT_EDIT_USER").'" href="'.htmlspecialcharsbx(CHTTP::urlAddParams("user_edit.php", array(
 				'lang' => LANGUAGE_ID,
-				'ID=' => $arRes["LAST_USER_ID"],
+				'ID' => $arRes["LAST_USER_ID"],
 			), array("encode" => true))).'">'.htmlspecialcharsEx($arRes["LAST_USER_ID"]).'</a>]';
 
 		if (!array_key_exists($arRes["LAST_USER_ID"], $arrUsers))

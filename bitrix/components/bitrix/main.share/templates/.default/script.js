@@ -37,3 +37,4 @@ function __function_exists(function_name)
 		return (function_name instanceof Function);
 	}
 }
+

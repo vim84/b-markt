@@ -111,4 +111,5 @@ $MESS["IBEL_CATALOG_MEASURE_RATIO"] = "Коэф.";
 $MESS["IBEL_CATALOG_MEASURE_RATIO_TITLE"] = "Коэффициент единицы измерения";
 $MESS["IBEL_A_CLEAR_COUNTER"] = "Сбросить счетчик просмотров";
 $MESS["IBEL_A_CLEAR_COUNTER_TITLE"] = "Обнулить счетчик и дату начала просмотров элемента";
+$MESS["IBLOCK_CLEAR_COUNTER_CONFIRM"] = "Вы уверены, что хотите обнулить счетчик и дату начала просмотров элемента?";
 ?>

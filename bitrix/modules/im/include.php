@@ -1,7 +1,7 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
-define("IM_REVISION", 48);
+define("IM_REVISION", 54);
 define("IM_MOBILE_REVISION", 2);
 
 define("IM_MESSAGE_SYSTEM", "S");
@@ -71,14 +71,26 @@ CModule::AddAutoloadClasses(
 CJSCore::RegisterExt('im_common', array(
 	'js' => '/bitrix/js/im/common.js',
 	'lang' => '/bitrix/modules/im/lang/'.LANGUAGE_ID.'/js_common.php',
-	'rel' => array('ls', 'ajax', 'date', 'uploader')
+	'rel' => array('ls', 'ajax', 'date')
 ));
 
-$jsCoreRel = array('im_common', 'popup', 'fx', 'json', 'webrtc');
+$jsCoreRel = array('im_common', 'popup', 'fx', 'json');
 if (IsModuleInstalled('voximplant'))
+{
 	$jsCoreRel[] = 'voximplant';
+}
 if (IsModuleInstalled('disk'))
+{
 	$jsCoreRel[] = 'file_dialog';
+}
+if (IsModuleInstalled('pull'))
+{
+	$jsCoreRel[] = 'webrtc';
+}
+if (IsModuleInstalled('pull') || IsModuleInstalled('disk'))
+{
+	$jsCoreRel[] = 'uploader';
+}
 
 CJSCore::RegisterExt('im', array(
 	'js' => '/bitrix/js/im/im.js',
@@ -90,7 +102,7 @@ CJSCore::RegisterExt('im', array(
 CJSCore::RegisterExt('im_mobile', array(
 	'js' => '/bitrix/js/im/mobile.js',
 	'lang' => '/bitrix/modules/im/lang/'.LANGUAGE_ID.'/js_mobile.php',
-	'rel' => array('im_common')
+	'rel' => array('im_common', 'uploader')
 ));
 
 CJSCore::RegisterExt('im_desktop', array(

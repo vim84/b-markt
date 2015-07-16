@@ -6,22 +6,6 @@ $arYesNo = Array(
 	"N" => GetMessage("SPOD_DESC_NO"),
 );
 
-// functions for custom columns view
-if (!function_exists("getIblockNames"))
-{
-	function getIblockNames($arIblockIDs, $arIblockNames)
-	{
-		$str = "";
-		foreach ($arIblockIDs as $iblockID)
-		{
-			$str .= "\"".$arIblockNames[$iblockID]."\", ";
-		}
-		$str .= "#";
-
-		return str_replace(", #", "", $str);
-	}
-}
-
 $arColumns = array(
 	"PICTURE" => GetMessage("SPOD_BPICTURE"),
 	"NAME" => GetMessage("SPOD_BNAME"),
@@ -97,9 +81,25 @@ if (CModule::IncludeModule("catalog"))
 			$name = $arProperty["NAME"];
 
 		if (array_key_exists("PROPERTY_".$arProperty["CODE"], $arColumns))
-			$arColumns["PROPERTY_".$arProperty["CODE"]] = $name." (".getIblockNames($arTmpProperty2Iblock["PROPERTY_".$arProperty["CODE"]], $arIblockNames).")";
+		{
+			$iblockNames = array();
+			foreach ($arTmpProperty2Iblock["PROPERTY_".$arProperty["CODE"]] as $iblockID)
+			{
+				if(count($iblockNames) == 2)
+				{
+					$iblockNames[] = "... ";
+					break;
+				}
+
+				$iblockNames[] = '"' . $arIblockNames[$iblockID] . '"';
+			}
+			$iblockNames = implode(", ", $iblockNames);
+			$arColumns["PROPERTY_".$arProperty["CODE"]] = $name." (".$iblockNames.")";
+		}
 		else
+		{
 			$arColumns["PROPERTY_".$arProperty["CODE"]] = $name;
+		}
 	}
 }
 // end of custom columns view functions

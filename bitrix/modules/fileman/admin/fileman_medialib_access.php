@@ -53,9 +53,7 @@ $arTasks = Array();
 $res = CTask::GetList(Array('LETTER' => 'asc'), Array('MODULE_ID' => 'fileman', 'BINDING' => 'medialib'));
 while($arRes = $res->Fetch())
 {
-	$name = '';
-	if ($arRes['SYS'])
-		$name = GetMessage('TASK_NAME_'.strtoupper($arRes['NAME']));
+	$name = $arRes['TITLE'];
 	if (strlen($name) == 0)
 		$name = $arRes['NAME'];
 

@@ -27,6 +27,9 @@ use Bitrix\Seo\Engine;
 
 class OrderTable extends Entity\DataManager
 {
+	const PROCESSED = 'Y';
+	const NOT_PROCESSED = 'N';
+
 	/**
 	 * Returns DB table name for entity.
 	 *
@@ -72,6 +75,10 @@ class OrderTable extends Entity\DataManager
 			),
 			'SUM' => array(
 				'data_type' => 'float',
+			),
+			'PROCESSED' => array(
+				'data_type' => 'boolean',
+				'values' => array(static::NOT_PROCESSED, static::PROCESSED),
 			),
 			'CAMPAIGN' => array(
 				'data_type' => 'Bitrix\Seo\Adv\YandexCampaignTable',

@@ -74,14 +74,14 @@ $arParams["ALLOW_POST_CODE"] = $arParams["ALLOW_POST_CODE"] !== "N";
 
 if(!is_array($arParams["POST_PROPERTY_LIST"]))
 {
-	if(CModule::IncludeModule("webdav"))
+	if(CModule::IncludeModule("webdav") || CModule::IncludeModule("disk"))
 		$arParams["POST_PROPERTY_LIST"] = array("UF_BLOG_POST_FILE");
 	else
 		$arParams["POST_PROPERTY_LIST"] = array("UF_BLOG_POST_DOC");
 }
 else
 {
-	if(CModule::IncludeModule("webdav"))
+	if(CModule::IncludeModule("webdav") || CModule::IncludeModule("disk"))
 		$arParams["POST_PROPERTY_LIST"][] = "UF_BLOG_POST_FILE";
 	else
 		$arParams["POST_PROPERTY_LIST"][] = "UF_BLOG_POST_DOC";

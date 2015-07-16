@@ -57,7 +57,7 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 	 * Function checks if required modules installed. If not, throws an exception
 	 * @return void
 	 */
-	protected static function checkRequiredModules()
+	protected function checkRequiredModules()
 	{
 		if (!Loader::includeModule('sale'))
 			$this->errors['FATAL'][] = Loc::getMessage("SALE_SLS_SALE_MODULE_NOT_INSTALL");
@@ -121,8 +121,6 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 	 */
 	protected function processRequest()
 	{
-		//_dump_r($_REQUEST);
-		//_dump_r($_SERVER);
 	}
 
 	protected function checkParameters()
@@ -217,16 +215,6 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 	}
 
 	/**
-	 * Function checks if it`s argument is a legal array for foreach() construction
-	 * @param mixed $arr data to check
-	 * @return boolean
-	 */
-	protected static function isNonemptyArray($arr)
-	{
-		return is_array($arr) && !empty($arr);
-	}
-
-	/**
 	 * Fetches all required data from database. Everyting that connected with data fetch lies here.
 	 * @return void
 	 */
@@ -292,6 +280,7 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 
 		$this->dbResult['PATH'] = array();
 		$this->dbResult['LOCATION'] = array();
+		$this->dbResult['PRECACHED_POOL'] = array();
 
 		$toBeFound = false;
 		$res = false;
@@ -313,7 +302,10 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 				$res->addReplacedAliases(array('LNAME' => 'NAME'));
 
 				while($item = $res->Fetch())
+				{
 					$this->dbResult['PATH'][intval($item['ID'])] = $this->forceToType($item);
+					$this->dbResult['PRECACHED_POOL'][$item['PARENT_ID']][$item['ID']] = $item;
+				}
 
 				end($this->dbResult['PATH']);
 				$this->dbResult['LOCATION'] = current($this->dbResult['PATH']);
@@ -439,7 +431,11 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 			$linkTypeMap = Location\SiteLocationTable::getLinkStatusForMultipleNodes(array($this->dbResult['LOCATION']), $this->arParams['FILTER_SITE_ID'], $this->dbResult['TEMP']['CONNECTORS']);
 
 			if(!in_array($linkTypeMap[$this->dbResult['LOCATION']['ID']], array(Location\Connector::LSTAT_IS_CONNECTOR, Location\Connector::LSTAT_BELOW_CONNECTOR)))
-				$this->errors['NONFATAL'][] = Loc::getMessage('SALE_SLS_SELECTED_NODE_UNCHOOSABLE');
+			{
+				$this->dbResult['PATH'] = array();
+				$this->dbResult['LOCATION'] = array();
+				$this->errors['NONFATAL'][] = Loc::getMessage('SALE_SLS_SELECTED_NODE_NOT_FOUND');
+			}
 		}
 	}
 
@@ -495,48 +491,6 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 		return $node;
 	}
 
-	protected static function getPathToNodes($list)
-	{
-		$res = Location\LocationTable::getPathToMultipleNodes(
-			$list, 
-			array(
-				'select' => array('ID', 'LNAME' => 'NAME.NAME'),
-				'filter' => array('=NAME.LANGUAGE_ID' => LANGUAGE_ID)
-			)
-		);
-
-		$pathNames = array();
-		$result = array();
-
-		while($path = $res->fetch())
-		{
-			// format path as required for JSON responce
-			$chain = array();
-			$itemId = false;
-
-			$i = -1;
-			foreach($path['PATH'] as $id => $pItem)
-			{
-				$i++;
-
-				if(!$i) // we dont need for an item itself in the path chain
-				{
-					$itemId = $id;
-					continue;
-				}
-
-				$pathNames[$pItem['ID']] = $pItem['LNAME'];
-				$chain[] = intval($pItem['ID']);
-			}
-
-			$result['PATH'][$itemId] = $chain;
-		}
-
-		$result['PATH_NAMES'] = $pathNames;
-
-		return $result;
-	}
-
 	/**
 	 * Move data read from database to a specially formatted $arResult
 	 * @return void
@@ -578,174 +532,319 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 	//////////////////////////////////////////
 	// static functions for external usage
 
-	public static function processSearchRequest()
+	protected static $allowedLocationFields = array(
+
+		// entity
+		'ID' => 'i',
+		'CODE' => 's',
+		'TYPE_ID' => 'i',
+		'SORT' => 'i',
+		'LEFT_MARGIN' => 'i',
+		'RIGHT_MARGIN' => 'i',
+		'PARENT_ID' => 'i',
+		'CNT' => 'i',
+		'CHILD_CNT' => 'i',
+		'IS_PARENT' => 'i',
+		'NAME.NAME' => 's',
+		'NAME.LANGUAGE_ID' => 's',
+		'GROUPLOCATION.LOCATION_GROUP_ID' => 'i',
+
+		// special (filter only)
+		'PHRASE' => 's',
+		'SITE_ID' => 's'
+	);
+
+	protected static $allowedAdditionals = array(
+		'PATH' => true
+	);
+
+	protected static function processSearchRequestV2CheckQuery($parameters)
 	{
-		static::checkRequiredModules();
+		// strict check of what came in request
 
-		$parameters = static::processSearchGetParameters();
-
-		$result = static::processSearchGetList($parameters);
-		$result = static::processSearchGetAdditional($result);
-
-		// drop unwanted data
-		foreach($result['ITEMS'] as &$item)
-		{
-			unset($item['LEFT_MARGIN']);
-			unset($item['RIGHT_MARGIN']);
-		}
-
-		return $result;
-	}
-
-	protected static function processSearchGetParameters()
-	{
-		$parameters = array(
-			'select' => static::processSearchGetSelect(),
-			'filter' => static::processSearchGetFilter()
+		// only select, filter, PAGE and PAGE_SIZE allowed in $parameters
+		$safe = array(
+			'select' => isset($parameters['select']) ? $parameters['select'] : array('ID')
 		);
+		if(isset($parameters['filter']))
+			$safe['filter'] = $parameters['filter'];
+		if(isset($parameters['additionals']))
+			$safe['additionals'] = $parameters['additionals'];
+		if(isset($parameters['PAGE']))
+			$safe['PAGE'] = intval($parameters['PAGE']);
+		if(isset($parameters['PAGE_SIZE']))
+			$safe['PAGE_SIZE'] = intval($parameters['PAGE_SIZE']);
 
-		if($pageSize = intval($_REQUEST['PAGE_SIZE']))
+		$parameters = $safe;
+
+		// check select
+		if(!is_array($parameters['select']))
+			throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+
+		foreach($parameters['select'] as $alias => $field)
 		{
-			$page = intval($_REQUEST['PAGE']);
+			if(!isset(static::$allowedLocationFields[$field]))
+				throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
 
-			$parameters['limit'] = $pageSize;
-			$parameters['offset'] = ($page ? $page * $pageSize : 0);
+			// only simple aliasing allowed: numbers or words
+			if(((string) $alias !== (string) intval($alias)) && !preg_match('#^[a-zA-Z0-9_]+$#', $alias))
+				throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
 		}
+
+		// check filter
+		if(isset($parameters['filter']) && !is_array($parameters['filter']))
+			throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+
+		//if(!isset($parameters['filter']['=PARENT_ID']) && !isset($parameters['filter']['=PHRASE']))
+		//	throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+
+		// phrase should be string and longer than static::START_SEARCH_LEN
+		if(isset($parameters['filter']['=PHRASE']) && (!is_string($parameters['filter']['=PHRASE']) || strlen($parameters['filter']['=PHRASE']) < static::START_SEARCH_LEN))
+			throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+
+		foreach($parameters['filter'] as $field => $value)
+		{
+			// only '=' modifier allowed
+			$field = preg_replace('#^=#', '', $field);
+
+			if(!isset(static::$allowedLocationFields[$field]))
+				throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+
+			// check value
+			$type = static::$allowedLocationFields[$field];
+			if(
+				($type == 'i' && !((string) $value === (string) intval($value)))
+				||
+				($type == 's' && !is_string($value))
+			)
+				throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+		}
+
+		// check limitation, if searching by PHRASE
+		if((isset($parameters['filter']['PHRASE']) || isset($parameters['filter']['=PHRASE'])) && (!isset($parameters['PAGE_SIZE']) || !isset($parameters['PAGE'])))
+			throw new Main\ArgumentException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
 
 		return $parameters;
 	}
 
-	protected static function processSearchRequestGetLang()
+	protected static function processSearchRequestV2AfterSearchFormatResult(&$data, $parameters)
 	{
-		return strlen($_REQUEST['BEHAVIOUR']['LANGUAGE_ID']) ? $_REQUEST['BEHAVIOUR']['LANGUAGE_ID'] : LANGUAGE_ID;
+		if(is_array($data['ITEMS']))
+		{
+			$selectFlip = array_flip($parameters['select']);
+
+			// drop unwanted data in the result
+			foreach($data['ITEMS'] as &$item)
+			{
+				foreach($item as $fld => $value)
+				{
+					if(isset(static::$allowedAdditionals[$fld])) // it`s a special field
+						continue;
+
+					if(isset($parameters['select'][$fld])) // it`s an alias
+						continue;
+
+					if(isset($selectFlip[$fld]) && ((string) $selectFlip[$fld] === (string) intval($selectFlip[$fld]))) // it`s an un-aliased field
+						continue;
+
+					unset($item[$fld]);
+				}
+			}
+		}
 	}
 
-	protected static function processSearchGetFilter()
+	protected static function processSearchRequestV2ModifyParameters($parameters)
 	{
-		if(!isset($_REQUEST['FILTER']['PARENT_ID']) && !isset($_REQUEST['FILTER']['QUERY'])) // ddos protection
-			throw new Main\SystemException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+		// drop data that should not go to find()
+		$clean = $parameters;
 
-		$rFilter = $_REQUEST['FILTER'];
-		$langId = static::processSearchRequestGetLang();
+		// dont get NAME if there is PATH, kz we`ll get NAMES after all
+		if(is_array($clean['select']) && is_array($parameters['additionals']) && in_array('PATH', $parameters['additionals']))
+		{
+			//unset($clean['filter']['=NAME.LANGUAGE_ID']);
+			//unset($clean['filter']['NAME.LANGUAGE_ID']);
 
-		// filter
+			foreach($clean['select'] as $alias => $field)
+			{
+				if($field == 'NAME.NAME')
+				{
+					unset($clean['select'][$alias]);
+				}
+			}
+		}
 
-		$filter = array(
-			'LANGUAGE_ID' => $langId
+		if(intval($clean['filter']['=GROUPLOCATION.LOCATION_GROUP_ID']))
+		{
+			$clean['runtime']['GROUPLOCATION'] = array(
+				'data_type' => 'Bitrix\Sale\Location\GroupLocationTable',
+				'reference' => array(
+					'=this.ID' => 'ref.LOCATION_ID'
+				)
+			);
+		}
+
+		unset($clean['additionals']);
+
+		$clean['select'][] = 'LEFT_MARGIN';
+		$clean['select'][] = 'RIGHT_MARGIN';
+		$clean['select'][] = 'ID';
+
+		return $clean;
+	}
+
+	protected static function processSearchRequestV2GetFinderBehaviour()
+	{
+		return array();
+	}
+
+	public static function processSearchRequestV2($parameters)
+	{
+		static::checkRequiredModules();
+		$parameters = static::processSearchRequestV2CheckQuery($parameters);
+
+		// map page & page_size => limit & offset
+		if($pageSize = intval($parameters['PAGE_SIZE']))
+		{
+			$page = intval($parameters['PAGE']);
+
+			$parameters['limit'] = $pageSize;
+			$parameters['offset'] = ($page ? $page * $pageSize : 0);
+		}
+		unset($parameters['PAGE_SIZE']);
+		unset($parameters['PAGE']);
+
+		// do request
+		$data = array(
+			'ITEMS' => array(),
+			'ETC' => array()
 		);
 
-		if(strlen($rFilter['SITE_ID']))
-			$filter['SITE_ID'] = $rFilter['SITE_ID'];
-
-		if($_REQUEST['BEHAVIOUR']['EXPECT_EXACT'])
+		$result = Location\Search\Finder::find(static::processSearchRequestV2ModifyParameters($parameters), static::processSearchRequestV2GetFinderBehaviour());
+		while($item = $result->fetch())
 		{
-			###################################
-			# exact search
-			###################################
+			// hack to repair ORM
+			if(!isset($item['ID']))
+				$item['ID'] = $item['VALUE'];
 
-			// EXPECT_EXACT assumes presence of QUERY key in query. in this case QUERY is being treated as an exact value for ID
-			if(!strlen($rFilter['QUERY']))
-				throw new Main\SystemException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
-
-			$filter['ID'] = intval($rFilter['QUERY']);
+			$data['ITEMS'][] = $item;
 		}
-		else
+
+		static::processSearchRequestV2GetAdditional($data, $parameters);
+		static::processSearchRequestV2AfterSearchFormatResult($data, $parameters);
+
+		return $data;
+	}
+
+	protected static function processSearchRequestV2GetNameAlias($parameters)
+	{
+		if(is_array($parameters['select']))
 		{
-			###################################
-			# Non-exact search, there could be a set of matched elements
-			###################################
-
-			if(strlen($rFilter['QUERY']))
+			foreach($parameters['select'] as $alias => $field)
 			{
-				if(strlen($rFilter['QUERY']) >= static::START_SEARCH_LEN)
-					$filter['NAME'] = $rFilter['QUERY'];
+				if($field == 'NAME.NAME')
+				{
+					if((string) $alias === (string) intval($alias)) // numeric alias
+						return 'NAME';
+					else
+						return $alias;
+				}
+			}
+		}
 
-				if($_REQUEST['BEHAVIOUR']['SEARCH_BY_PRIMARY'])
-					$filter['PRIMARY'] = $rFilter['QUERY'];
+		return false;
+	}
+
+	protected static function getPathNodesSelect()
+	{
+		return array('ID', 'DISPLAY' => 'NAME.NAME');
+	}
+
+	protected static function getPathToNodesV2($list, $parameters)
+	{
+		$select = static::getPathNodesSelect();
+		if(is_array($parameters['select']))
+		{
+			$select = $parameters['select'];
+
+			// orm wont return a correct result in case of array("ID", "VALUE" => "ID") select passed, so orm fix required
+			unset($select['VALUE']);
+			$select[] = 'ID';
+		}
+
+		$res = Location\LocationTable::getPathToMultipleNodes(
+			$list, 
+			array(
+				'select' => $select,
+				'filter' => array('=NAME.LANGUAGE_ID' => (string) $parameters['filter']['=NAME.LANGUAGE_ID'] != '' ? $parameters['filter']['=NAME.LANGUAGE_ID'] : LANGUAGE_ID)
+			)
+		);
+
+		$pathItems = array();
+		$result = array('ITEM_NAMES' => array());
+
+		while($path = $res->fetch())
+		{
+			// format path as required for JSON responce
+			$chain = array();
+			$itemId = false;
+
+			$i = -1;
+			foreach($path['PATH'] as $id => $pItem)
+			{
+				$i++;
+
+				if(!$i) // we dont need for an item itself in the path chain
+				{
+					$itemId = $id;
+					$result['ITEM_NAMES'][$id] = $pItem['DISPLAY'];
+					continue;
+				}
+
+				// orm fix, return everything back
+				if(isset($pItem['ID']))
+					$pItem['VALUE'] = intval($pItem['ID']);
+
+				$chain[] = intval($pItem['VALUE']);
+				$id = $pItem['VALUE'];
+				unset($pItem['ID']);
+
+				$pathItems[$id] = $pItem;
 			}
 
-			if(isset($rFilter['PARENT_ID']) && intval($rFilter['PARENT_ID']) >= 0)
-				$filter['PARENT_ID'] = intval($rFilter['PARENT_ID']);
-
-			if($typeId = intval($rFilter['TYPE_ID']))
-				$filter['TYPE_ID'] = $typeId;
+			$result['PATH'][$itemId] = $chain;
 		}
 
-		return $filter;
-	}
-
-	protected static function processSearchGetSelect()
-	{
-		$select = array();
-		if($_REQUEST['SHOW']['CHILD_EXISTENCE'])
-			$select[] = 'CHILD_CNT';
-
-		if($_REQUEST['SHOW']['TYPE_ID'])
-			$select[] = 'TYPE_ID';
-
-		return $select;
-	}
-
-	protected static function processSearchGetList($parameters)
-	{
-		$res = Location\LocationTable::getListFast($parameters);
-		
-		$result = array();
-		while($item = $res->fetch())
-			$result[] = $item;
+		$result['PATH_ITEMS'] = $pathItems;
 
 		return $result;
 	}
 
-	protected static function processSearchGetAdditionalPathNodes(&$data)
+	protected static function processSearchRequestV2GetAdditionalPathNodes(&$data, $parameters)
 	{
-		if($_REQUEST['SHOW']['PATH'])
+		$pathes = static::getPathToNodesV2($data['ITEMS'], $parameters);
+		$nameAlias = static::processSearchRequestV2GetNameAlias($parameters);
+
+		foreach($data['ITEMS'] as &$item)
 		{
-			$pathes = static::getPathToNodes($data['ITEMS']);
+			$item['PATH'] = $pathes['PATH'][$item['ID']];
 
-			foreach($data['ITEMS'] as &$item)
-				$item['PATH'] = $pathes['PATH'][$item['ID']];
-
-			$data['ETC']['PATH_NAMES'] = $pathes['PATH_NAMES'];
+			if(isset($pathes['ITEM_NAMES'][$item['ID']]) && $nameAlias !== false)
+			{
+				$item[$nameAlias] = $pathes['ITEM_NAMES'][$item['ID']];
+			}
 		}
+
+		$data['ETC']['PATH_ITEMS'] = $pathes['PATH_ITEMS'];
 	}
 
-	protected static function processSearchGetAdditional($result)
+	protected static function processSearchRequestV2GetAdditional(&$data, $parameters)
 	{
-		$data = array(
-			'ITEMS' => $result,
-			'ETC' => array()
-		);
-
-		if(!empty($result))
+		if(!empty($data['ITEMS']))
 		{
-			###################################
-			# Additional extras
-			###################################
-
-			// show path to each found node
-			static::processSearchGetAdditionalPathNodes($data);
-
-			// show item count based on filter, but only when the first page called (it may be useful for calculating client-side pager)
-			if(intval($_REQUEST['PAGE_SIZE']) && !intval($_REQUEST['PAGE']) && $_REQUEST['SHOW']['ITEM_COUNT'])
+			if(is_array($parameters['additionals']) && in_array('PATH', $parameters['additionals']))
 			{
-				$filter = static::processSearchGetFilter();
-				// spike! spike! spike!
-				// we hope we can make filter compatible with ORM by replacing getListFast with smth cleverer, but for now we got only option:
-				unset($filter['LANGUAGE_ID']);
-
-				$res = Location\LocationTable::getList(array(
-					'runtime' => array(
-						'CNT' => array(
-							'data_type' => 'integer',
-							'expression' => array('COUNT(*)')
-						)
-					),
-					'select' => array('CNT'),
-					'filter' => $filter
-				))->fetch();
-
-				$data['ETC']['TOTAL_ITEM_COUNT'] = intval($res['CNT']);
+				// show path to each found node
+				static::processSearchRequestV2GetAdditionalPathNodes($data, $parameters);
 			}
 		}
 
@@ -857,5 +956,262 @@ class CBitrixLocationSelectorSearchComponent extends CBitrixComponent
 			$cacheId['SITE_TEMPLATE_ID'] = SITE_TEMPLATE_ID;
 
 		return implode('|', $cacheId);
+	}
+
+	////////////////////////////////////////////////////////
+	// DEPRECATED methods to support DEPRECATED query method
+
+	//////////////////////////////////////////
+	// static functions for external usage
+
+	/**
+	 * @deprecated
+	 */
+	protected static function getPathToNodes($list)
+	{
+		$res = Location\LocationTable::getPathToMultipleNodes(
+			$list, 
+			array(
+				'select' => array('ID', 'LNAME' => 'NAME.NAME'),
+				'filter' => array('=NAME.LANGUAGE_ID' => LANGUAGE_ID)
+			)
+		);
+
+		$pathNames = array();
+		$result = array();
+
+		while($path = $res->fetch())
+		{
+			// format path as required for JSON responce
+			$chain = array();
+			$itemId = false;
+
+			$i = -1;
+			foreach($path['PATH'] as $id => $pItem)
+			{
+				$i++;
+
+				if(!$i) // we dont need for an item itself in the path chain
+				{
+					$itemId = $id;
+					continue;
+				}
+
+				$pathNames[$pItem['ID']] = $pItem['LNAME'];
+				$chain[] = intval($pItem['ID']);
+			}
+
+			$result['PATH'][$itemId] = $chain;
+		}
+
+		$result['PATH_NAMES'] = $pathNames;
+
+		return $result;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	public static function processSearchRequest()
+	{
+		static::checkRequiredModules();
+
+		$parameters = static::processSearchGetParameters();
+
+		$result = static::processSearchGetList($parameters);
+		$result = static::processSearchGetAdditional($result);
+
+		// drop unwanted data
+		foreach($result['ITEMS'] as &$item)
+		{
+			unset($item['LEFT_MARGIN']);
+			unset($item['RIGHT_MARGIN']);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function processSearchGetParameters()
+	{
+		$parameters = array(
+			'select' => static::processSearchGetSelect(),
+			'filter' => static::processSearchGetFilter()
+		);
+
+		if($pageSize = intval($_REQUEST['PAGE_SIZE']))
+		{
+			$page = intval($_REQUEST['PAGE']);
+
+			$parameters['limit'] = $pageSize;
+			$parameters['offset'] = ($page ? $page * $pageSize : 0);
+		}
+
+		return $parameters;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function processSearchRequestGetLang()
+	{
+		return strlen($_REQUEST['BEHAVIOUR']['LANGUAGE_ID']) ? $_REQUEST['BEHAVIOUR']['LANGUAGE_ID'] : LANGUAGE_ID;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function processSearchGetFilter()
+	{
+		if(!isset($_REQUEST['FILTER']['PARENT_ID']) && !isset($_REQUEST['FILTER']['QUERY'])) // ddos protection
+			throw new Main\SystemException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+
+		$rFilter = $_REQUEST['FILTER'];
+		$langId = static::processSearchRequestGetLang();
+
+		// filter
+
+		$filter = array(
+			'LANGUAGE_ID' => $langId
+		);
+
+		if(strlen($rFilter['SITE_ID']))
+			$filter['SITE_ID'] = $rFilter['SITE_ID'];
+
+		if($_REQUEST['BEHAVIOUR']['EXPECT_EXACT'])
+		{
+			###################################
+			# exact search
+			###################################
+
+			// EXPECT_EXACT assumes presence of QUERY key in query. in this case QUERY is being treated as an exact value for ID
+			if(!strlen($rFilter['QUERY']))
+				throw new Main\SystemException(Loc::getMessage('SALE_SLS_BAD_QUERY'));
+
+			$filter['ID'] = intval($rFilter['QUERY']);
+		}
+		else
+		{
+			###################################
+			# Non-exact search, there could be a set of matched elements
+			###################################
+
+			if(strlen($rFilter['QUERY']))
+			{
+				if(strlen($rFilter['QUERY']) >= static::START_SEARCH_LEN)
+					$filter['NAME'] = $rFilter['QUERY'];
+
+				if($_REQUEST['BEHAVIOUR']['SEARCH_BY_PRIMARY'])
+					$filter['PRIMARY'] = $rFilter['QUERY'];
+			}
+
+			if(isset($rFilter['PARENT_ID']) && intval($rFilter['PARENT_ID']) >= 0)
+				$filter['PARENT_ID'] = intval($rFilter['PARENT_ID']);
+
+			if($typeId = intval($rFilter['TYPE_ID']))
+				$filter['TYPE_ID'] = $typeId;
+		}
+
+		return $filter;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function processSearchGetSelect()
+	{
+		$select = array();
+		if($_REQUEST['SHOW']['CHILD_EXISTENCE'])
+			$select[] = 'CHILD_CNT';
+
+		if($_REQUEST['SHOW']['TYPE_ID'])
+			$select[] = 'TYPE_ID';
+
+		return $select;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function processSearchGetList($parameters)
+	{
+		$res = Location\LocationTable::getListFast($parameters);
+
+		$result = array();
+		while($item = $res->fetch())
+			$result[] = $item;
+
+		return $result;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function processSearchGetAdditionalPathNodes(&$data)
+	{
+		if($_REQUEST['SHOW']['PATH'] && is_array($data['ITEMS']))
+		{
+			$pathes = static::getPathToNodes($data['ITEMS']);
+
+			foreach($data['ITEMS'] as &$item)
+				$item['PATH'] = $pathes['PATH'][$item['ID']];
+
+			$data['ETC']['PATH_NAMES'] = $pathes['PATH_NAMES'];
+		}
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function processSearchGetAdditional($result)
+	{
+		$data = array(
+			'ITEMS' => $result,
+			'ETC' => array()
+		);
+
+		if(!empty($result))
+		{
+			###################################
+			# Additional extras
+			###################################
+
+			// show path to each found node
+			static::processSearchGetAdditionalPathNodes($data);
+
+			// show item count based on filter, but only when the first page called (it may be useful for calculating client-side pager)
+			if(intval($_REQUEST['PAGE_SIZE']) && !intval($_REQUEST['PAGE']) && $_REQUEST['SHOW']['ITEM_COUNT'])
+			{
+				$filter = static::processSearchGetFilter();
+				// spike! spike! spike!
+				// we hope we can make filter compatible with ORM by replacing getListFast with smth cleverer, but for now we got only option:
+				unset($filter['LANGUAGE_ID']);
+
+				$res = Location\LocationTable::getList(array(
+					'runtime' => array(
+						'CNT' => array(
+							'data_type' => 'integer',
+							'expression' => array('COUNT(*)')
+						)
+					),
+					'select' => array('CNT'),
+					'filter' => $filter
+				))->fetch();
+
+				$data['ETC']['TOTAL_ITEM_COUNT'] = intval($res['CNT']);
+			}
+		}
+
+		return $data;
+	}
+
+	/**
+	 * @deprecated
+	 */
+	protected static function isNonemptyArray($arr)
+	{
+		return is_array($arr) && !empty($arr);
 	}
 }

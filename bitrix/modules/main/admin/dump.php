@@ -566,6 +566,9 @@ if($_REQUEST['process'] == "Y")
 				$file_name = $NS['BUCKET_ID'] == -1 ? basename($NS['arc_name']) : substr($NS['arc_name'],strlen(DOCUMENT_ROOT));
 				$obUpload = new CCloudStorageUpload($file_name);
 
+				if (!$NS['upload_start_time'])
+					$NS['upload_start_time'] = START_EXEC_TIME;
+
 				if ($NS['BUCKET_ID'] == -1)
 				{
 					if (!$bBitrixCloud)
@@ -693,7 +696,8 @@ if($_REQUEST['process'] == "Y")
 						$pos += $NS['pos'];
 
 						$status_title = GetMessage("MAIN_DUMP_FILE_SENDING");
-						$status_details = GetMessage('CURRENT_POS').' <b>'.CFile::FormatSize($pos).'</b>  '.GetMessage('MAIN_DUMP_FROM').' <b>'.CFile::FormatSize($NS["arc_size"])."</b>";
+						$status_details = GetMessage('CURRENT_POS').' <b>'.CFile::FormatSize($pos).'</b>  '.GetMessage('MAIN_DUMP_FROM').' <b>'.CFile::FormatSize($NS["arc_size"])."</b>".
+							GetMessage('TIME_LEFT', array('#TIME#' => HumanTime(($NS['arc_size'] - $pos) / $pos * (microtime(true) - $NS['upload_start_time']))));
 						$step_done = $pos / $NS['arc_size'];
 					}
 					else
@@ -993,7 +997,7 @@ BX.ready(
 			if ($_REQUEST['from'] == 'bitrixcloud')
 				echo 'StartDump();';
 			elseif ($_REQUEST['action'] == 'cloud_send' && check_bitrix_sessid())
-				echo "AjaxSend('?process=Y&action=cloud_send   &f_id=".CUtil::JSEscape($_REQUEST['f_id'])."&dump_encrypt_key=".CUtil::JSEscape($_REQUEST['dump_encrypt_key'])."&dump_bucket_id=".CUtil::JSEscape($_REQUEST['dump_bucket_id'])."&".bitrix_sessid_get()."');";
+				echo "AjaxSend('?process=Y&action=cloud_send&f_id=".CUtil::JSEscape($_REQUEST['f_id'])."&dump_encrypt_key=".CUtil::JSEscape($_REQUEST['dump_encrypt_key'])."&dump_bucket_id=".CUtil::JSEscape($_REQUEST['dump_bucket_id'])."&".bitrix_sessid_get()."');";
 			elseif ($_REQUEST['action'] == 'check_archive' && check_bitrix_sessid())
 				echo "AjaxSend('?process=Y&action=check_archive&f_id=".CUtil::JSEscape($_REQUEST['f_id'])."&dump_encrypt_key=".CUtil::JSEscape($_REQUEST['dump_encrypt_key'])."&".bitrix_sessid_get()."');";
 		?>

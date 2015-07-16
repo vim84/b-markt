@@ -11,11 +11,26 @@ $templateData = array(
 	'TEMPLATE_CLASS' => 'bx_'.$arParams['TEMPLATE_THEME']
 );
 
+$injectId = 'bigdata_recommeded_products_'.rand();
+
+?>
+
+<script type="application/javascript">
+	BX.cookie_prefix = '<?=CUtil::JSEscape(COption::GetOptionString("main", "cookie_name", "BITRIX_SM"))?>';
+	BX.cookie_domain = '<?=$APPLICATION->GetCookieDomain()?>';
+	BX.current_server_time = '<?=time()?>';
+
+	BX.ready(function(){
+		bx_rcm_recommendation_event_attaching(BX('<?=$injectId?>_items'));
+	});
+
+</script>
+
+<?
+
 if (isset($arResult['REQUEST_ITEMS']))
 {
 	CJSCore::Init(array('ajax'));
-
-	$injectId = 'bigdata_recommeded_products_'.rand();
 
 	// component parameters
 	$signer = new \Bitrix\Main\Security\Sign\Signer;
@@ -30,69 +45,17 @@ if (isset($arResult['REQUEST_ITEMS']))
 	<span id="<?=$injectId?>" class="bigdata_recommended_products_container"></span>
 
 	<script type="application/javascript">
-
-		BX.cookie_prefix = '<?=CUtil::JSEscape(COption::GetOptionString("main", "cookie_name", "BITRIX_SM"))?>';
-		BX.cookie_domain = '<?=$APPLICATION->GetCookieDomain()?>';
-		BX.current_server_time = '<?=time()?>';
-
 		BX.ready(function(){
-
-			var params = <?=CUtil::PhpToJSObject($arResult['RCM_PARAMS'])?>;
-			var url = 'https://analytics.bitrix.info/crecoms/v1_0/recoms.php';
-			var data = BX.ajax.prepareData(params);
-
-			if (data)
-			{
-				url += (url.indexOf('?') !== -1 ? "&" : "?") + data;
-				data = '';
-			}
-
-			var onready = function(response) {
-
-				if (!response.items)
+			bx_rcm_get_from_cloud(
+				'<?=CUtil::JSEscape($injectId)?>',
+				<?=CUtil::PhpToJSObject($arResult['RCM_PARAMS'])?>,
 				{
-					response.items = [];
+					'parameters':'<?=CUtil::JSEscape($signedParameters)?>',
+					'template': '<?=CUtil::JSEscape($signedTemplate)?>',
+					'site_id': '<?=CUtil::JSEscape(SITE_ID)?>',
+					'rcm': 'yes'
 				}
-				BX.ajax({
-					url: '/bitrix/components/bitrix/catalog.bigdata.products/ajax.php?'+BX.ajax.prepareData({'AJAX_ITEMS': response.items, 'RID': response.id}),
-					method: 'POST',
-					data: {'parameters':'<?=CUtil::JSEscape($signedParameters)?>', 'template': '<?=CUtil::JSEscape($signedTemplate)?>', 'rcm': 'yes'},
-					dataType: 'html',
-					processData: false,
-					start: true,
-					onsuccess: function (html) {
-						var ob = BX.processHTML(html);
-
-						// inject
-						BX('<?=$injectId?>').innerHTML = ob.HTML;
-						BX.ajax.processScripts(ob.SCRIPT);
-
-						// set detail view event - set up recommendation id
-						var detailLinks = BX.findChildren(BX('<?=$injectId?>'), {'className':'bx_rcm_view_link'}, true);
-						if (detailLinks)
-						{
-							for (i in detailLinks)
-							{
-								BX.bind(detailLinks[i], 'click', function(e){
-									window.JCCatalogBigdataProducts.prototype.RememberRecommendation(
-										BX(this),
-										BX(this).getAttribute('data-product-id')
-									);
-								});
-							}
-						}
-					}
-				});
-			};
-
-			BX.ajax({
-				'method': 'GET',
-				'dataType': 'json',
-				'url': url,
-				'timeout': 3,
-				'onsuccess': onready,
-				'onfailure': onready
-			});
+			);
 		});
 	</script>
 
@@ -104,9 +67,27 @@ if (isset($arResult['REQUEST_ITEMS']))
 
 if (!empty($arResult['ITEMS']))
 {
+	?><script type="text/javascript">
+	BX.message({
+		CBD_MESS_BTN_BUY: '<? echo ('' != $arParams['MESS_BTN_BUY'] ? CUtil::JSEscape($arParams['MESS_BTN_BUY']) : GetMessageJS('CVP_TPL_MESS_BTN_BUY')); ?>',
+		CBD_MESS_BTN_ADD_TO_BASKET: '<? echo ('' != $arParams['MESS_BTN_ADD_TO_BASKET'] ? CUtil::JSEscape($arParams['MESS_BTN_ADD_TO_BASKET']) : GetMessageJS('CVP_TPL_MESS_BTN_ADD_TO_BASKET')); ?>',
 
-	?>
-		<input type="hidden" name="bigdata_recommendation_id" value="<?=htmlspecialcharsbx($arResult['RID'])?>">
+		CBD_MESS_BTN_DETAIL: '<? echo ('' != $arParams['MESS_BTN_DETAIL'] ? CUtil::JSEscape($arParams['MESS_BTN_DETAIL']) : GetMessageJS('CVP_TPL_MESS_BTN_DETAIL')); ?>',
+
+		CBD_MESS_NOT_AVAILABLE: '<? echo ('' != $arParams['MESS_BTN_DETAIL'] ? CUtil::JSEscape($arParams['MESS_BTN_DETAIL']) : GetMessageJS('CVP_TPL_MESS_BTN_DETAIL')); ?>',
+		CBD_BTN_MESSAGE_BASKET_REDIRECT: '<? echo GetMessageJS('CVP_CATALOG_BTN_MESSAGE_BASKET_REDIRECT'); ?>',
+		BASKET_URL: '<? echo $arParams["BASKET_URL"]; ?>',
+		CBD_ADD_TO_BASKET_OK: '<? echo GetMessageJS('CVP_ADD_TO_BASKET_OK'); ?>',
+		CBD_TITLE_ERROR: '<? echo GetMessageJS('CVP_CATALOG_TITLE_ERROR') ?>',
+		CBD_TITLE_BASKET_PROPS: '<? echo GetMessageJS('CVP_CATALOG_TITLE_BASKET_PROPS') ?>',
+		CBD_TITLE_SUCCESSFUL: '<? echo GetMessageJS('CVP_ADD_TO_BASKET_OK'); ?>',
+		CBD_BASKET_UNKNOWN_ERROR: '<? echo GetMessageJS('CVP_CATALOG_BASKET_UNKNOWN_ERROR') ?>',
+		CBD_BTN_MESSAGE_SEND_PROPS: '<? echo GetMessageJS('CVP_CATALOG_BTN_MESSAGE_SEND_PROPS'); ?>',
+		CBD_BTN_MESSAGE_CLOSE: '<? echo GetMessageJS('CVP_CATALOG_BTN_MESSAGE_CLOSE') ?>'
+	});
+	</script>
+	<span id="<?=$injectId?>_items" class="bigdata_recommended_products_items">
+	<input type="hidden" name="bigdata_recommendation_id" value="<?=htmlspecialcharsbx($arResult['RID'])?>">
 	<?
 
 	$arSkuTemplate = array();
@@ -233,6 +214,8 @@ if (!empty($arResult['ITEMS']))
 			'QUANTITY_UP' => $strMainID . '_quant_up',
 			'QUANTITY_MEASURE' => $strMainID . '_quant_measure',
 			'BUY_LINK' => $strMainID . '_buy_link',
+			'BASKET_ACTIONS' => $strMainID.'_basket_actions',
+			'NOT_AVAILABLE_MESS' => $strMainID.'_not_avail',
 			'SUBSCRIBE_LINK' => $strMainID . '_subscribe',
 
 			'PRICE' => $strMainID . '_price',
@@ -680,30 +663,9 @@ if (!empty($arResult['ITEMS']))
 	<div style="clear: both;"></div>
 
 	</div>
-
 	</div>
-
 	</div>
-
-	<script type="text/javascript">
-		BX.message({
-			MESS_BTN_BUY: '<? echo ('' != $arParams['MESS_BTN_BUY'] ? CUtil::JSEscape($arParams['MESS_BTN_BUY']) : GetMessageJS('CVP_TPL_MESS_BTN_BUY')); ?>',
-			MESS_BTN_ADD_TO_BASKET: '<? echo ('' != $arParams['MESS_BTN_ADD_TO_BASKET'] ? CUtil::JSEscape($arParams['MESS_BTN_ADD_TO_BASKET']) : GetMessageJS('CVP_TPL_MESS_BTN_ADD_TO_BASKET')); ?>',
-
-			MESS_BTN_DETAIL: '<? echo ('' != $arParams['MESS_BTN_DETAIL'] ? CUtil::JSEscape($arParams['MESS_BTN_DETAIL']) : GetMessageJS('CVP_TPL_MESS_BTN_DETAIL')); ?>',
-
-			MESS_NOT_AVAILABLE: '<? echo ('' != $arParams['MESS_BTN_DETAIL'] ? CUtil::JSEscape($arParams['MESS_BTN_DETAIL']) : GetMessageJS('CVP_TPL_MESS_BTN_DETAIL')); ?>',
-			BTN_MESSAGE_BASKET_REDIRECT: '<? echo GetMessageJS('CVP_CATALOG_BTN_MESSAGE_BASKET_REDIRECT'); ?>',
-			BASKET_URL: '<? echo $arParams["BASKET_URL"]; ?>',
-			ADD_TO_BASKET_OK: '<? echo GetMessageJS('CVP_ADD_TO_BASKET_OK'); ?>',
-			TITLE_ERROR: '<? echo GetMessageJS('CVP_CATALOG_TITLE_ERROR') ?>',
-			TITLE_BASKET_PROPS: '<? echo GetMessageJS('CVP_CATALOG_TITLE_BASKET_PROPS') ?>',
-			TITLE_SUCCESSFUL: '<? echo GetMessageJS('CVP_ADD_TO_BASKET_OK'); ?>',
-			BASKET_UNKNOWN_ERROR: '<? echo GetMessageJS('CVP_CATALOG_BASKET_UNKNOWN_ERROR') ?>',
-			BTN_MESSAGE_SEND_PROPS: '<? echo GetMessageJS('CVP_CATALOG_BTN_MESSAGE_SEND_PROPS'); ?>',
-			BTN_MESSAGE_CLOSE: '<? echo GetMessageJS('CVP_CATALOG_BTN_MESSAGE_CLOSE') ?>'
-		});
-	</script>
+	</span>
 <?
 }
 

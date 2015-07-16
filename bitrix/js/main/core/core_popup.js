@@ -1047,7 +1047,7 @@ BX.PopupMenuWindow.prototype.__createItem = function(item, position)
 	{
 		item.layout.item = BX.create(!!item.href ? "a" : "span", {
 			props : { className: "menu-popup-item" +  (BX.type.isNotEmptyString(item.className) ? " " + item.className : " menu-popup-no-icon")},
-			attrs : { title : item.title ? item.title : "", onclick: item.onclick && BX.type.isString(item.onclick) ? item.onclick : "" },
+			attrs : { title : item.title ? item.title : "", onclick: item.onclick && BX.type.isString(item.onclick) ? item.onclick : "", target : item.target ? item.target : "" },
 			events : item.onclick && BX.type.isFunction(item.onclick) ? { click : BX.proxy(this.onItemClick, {obj : this, item : item }) } : null,
 			children : [
 				BX.create("span", { props : { className: "menu-popup-item-left"} }),
@@ -1478,3 +1478,4 @@ function _checkEscPressed(zIndex, callback)
 
 
 })(window);
+

@@ -263,6 +263,12 @@ $arComponentParameters = array(
 			"DEFAULT" => "-",
 			"VALUES" => array_merge(Array("-"=>" ", "NAME" => GetMessage("IBLOCK_FIELD_NAME")), $arProperty_LNS),
 		),
+		"DETAIL_SET_CANONICAL_URL" => array(
+			"PARENT" => "DETAIL_SETTINGS",
+			"NAME" => GetMessage("CP_BN_DETAIL_SET_CANONICAL_URL"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
 		"DETAIL_ACTIVE_DATE_FORMAT" => CIBlockParameters::GetDateFormat(GetMessage("T_IBLOCK_DESC_ACTIVE_DATE_FORMAT"), "DETAIL_SETTINGS"),
 		"DETAIL_FIELD_CODE" => CIBlockParameters::GetFieldCode(GetMessage("IBLOCK_FIELD"), "DETAIL_SETTINGS"),
 		"DETAIL_PROPERTY_CODE" => array(

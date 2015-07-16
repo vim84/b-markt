@@ -31,8 +31,7 @@ $this->setFrameMode(true);
 		
 		<?if ($arParams["SHOW_RATING"] == "Y"):?>
 			<div class="faq-rating" style="float: right">
-			<?
-			$GLOBALS["APPLICATION"]->IncludeComponent(
+			<?$GLOBALS["APPLICATION"]->IncludeComponent(
 				"bitrix:rating.vote", $arParams["RATING_TYPE"],
 				Array(
 					"ENTITY_TYPE_ID" => "IBLOCK_ELEMENT",

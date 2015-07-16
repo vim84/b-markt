@@ -17,6 +17,8 @@ class CSiteTemplate
 
 		if(isset($arFilter["ID"]) && !is_array($arFilter["ID"]))
 			$arFilter["ID"] = array($arFilter["ID"]);
+		if(isset($arFilter["TYPE"]) && !is_array($arFilter["TYPE"]))
+			$arFilter["TYPE"] = array($arFilter["TYPE"]);
 
 		$folders = array(
 			"/local/templates",
@@ -54,6 +56,10 @@ class CSiteTemplate
 
 						if(file_exists(($fname = $path."/".$file."/description.php")))
 							include($fname);
+
+						if(!isset($arTemplate["TYPE"])) $arTemplate["TYPE"] = '';
+						if(isset($arFilter["TYPE"]) && !in_array($arTemplate["TYPE"], $arFilter["TYPE"]))
+							continue;
 
 						$arTemplate["ID"] = $file;
 						$arTemplate["PATH"] = $folder."/".$file;
@@ -215,6 +221,7 @@ class CSiteTemplate
 				'	"NAME" => "'.EscapePHPString($arFields['NAME']).'",'."\n".
 				'	"DESCRIPTION" => "'.EscapePHPString($arFields['DESCRIPTION']).'",'."\n".
 				'	"SORT" => '.(intval($arFields['SORT']) > 0? intval($arFields['SORT']) : '""').','."\n".
+				'	"TYPE" => "'.(strlen($arFields['TYPE']) > 0? ($arFields['TYPE']) : '').'",'."\n".
 				');'."\n".
 				'?'.'>'
 			);
@@ -268,7 +275,7 @@ class CSiteTemplate
 			$APPLICATION->SaveFileContent($_SERVER["DOCUMENT_ROOT"].$path."/template_styles.css", $arFields["TEMPLATE_STYLES"]);
 		}
 
-		if(isset($arFields["NAME"]) || isset($arFields["DESCRIPTION"]) || isset($arFields["SORT"]))
+		if(isset($arFields["NAME"]) || isset($arFields["DESCRIPTION"]) || isset($arFields["SORT"]) || isset($arFields["TYPE"]))
 		{
 			$db_t = CSiteTemplate::GetList(array(), array("ID" => $ID), array("NAME", "DESCRIPTION", "SORT"));
 			$ar_t = $db_t->Fetch();
@@ -279,6 +286,8 @@ class CSiteTemplate
 				$arFields["DESCRIPTION"] = $ar_t["DESCRIPTION"];
 			if(!isset($arFields["SORT"]))
 				$arFields["SORT"] = $ar_t["SORT"];
+			if(!isset($arFields["TYPE"]))
+				$arFields["TYPE"] = $ar_t["TYPE"];
 
 			$APPLICATION->SaveFileContent($_SERVER["DOCUMENT_ROOT"].$path."/description.php",
 				'<'.'?'.
@@ -286,6 +295,7 @@ class CSiteTemplate
 				'	"NAME" => "'.EscapePHPString($arFields['NAME']).'",'."\n".
 				'	"DESCRIPTION" => "'.EscapePHPString($arFields['DESCRIPTION']).'",'."\n".
 				'	"SORT" => '.(intval($arFields['SORT']) > 0? intval($arFields['SORT']) : '""').','."\n".
+				'	"TYPE" => "'.(strlen($arFields['TYPE']) > 0? ($arFields['TYPE']) : '').'",'."\n".
 				');'."\n".
 				'?'.'>'
 			);

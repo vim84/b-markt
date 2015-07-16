@@ -28,7 +28,16 @@ $arDefaultUrlTemplates404 = array(
 	"bizproc_workflow_admin" => "#list_id#/bp_list/",
 	"bizproc_workflow_edit" => "#list_id#/bp_edit/#ID#/",
 	"bizproc_workflow_vars" => "#list_id#/bp_vars/#ID#/",
+	"bizproc_workflow_constants" => "#list_id#/bp_constants/#ID#/",
+	"list_export_excel" => "#list_id#/excel/",
 );
+
+$processes = false;
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+{
+	$processes = true;
+	$arDefaultUrlTemplates404["catalog_processes"] = "catalog_processes/";
+}
 
 $arDefaultVariableAliases404 = array();
 
@@ -46,6 +55,25 @@ $arComponentVariables = array(
 	"ID",
 );
 
+/* We set the option on the component, as well as accounting for multiple sites */
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+{
+	if($arParams["SEF_FOLDER"] != COption::GetOptionString('lists', 'livefeed_url'))
+	{
+		$sitDirTrim = trim(SITE_DIR, '/');
+		if(!empty($sitDirTrim))
+		{
+			$setOptions = str_replace(SITE_DIR, '/', $arParams["SEF_FOLDER"]);
+			COption::SetOptionString("lists", "livefeed_url", $setOptions);
+		}
+		else
+		{
+			COption::SetOptionString("lists", "livefeed_url", $arParams["SEF_FOLDER"]);
+		}
+
+	}
+}
+
 if($arParams["SEF_MODE"] == "Y")
 {
 	$arVariables = array();
@@ -53,11 +81,28 @@ if($arParams["SEF_MODE"] == "Y")
 	$arUrlTemplates = CComponentEngine::MakeComponentUrlTemplates($arDefaultUrlTemplates404, $arParams["SEF_URL_TEMPLATES"]);
 	$arVariableAliases = CComponentEngine::MakeComponentVariableAliases($arDefaultVariableAliases404, $arParams["VARIABLE_ALIASES"]);
 
-	$componentPage = CComponentEngine::ParseComponentPath(
-		$arParams["SEF_FOLDER"],
-		$arUrlTemplates,
-		$arVariables
-	);
+	if($_GET['livefeed'] == 'y')
+	{
+		$componentPage = 'list_element_edit';
+		$arVariables = array('list_id' => $_GET['list_id'], 'element_id' => $_GET['element_id'], 'section_id' => 0);
+	}
+	elseif($_GET['bp_constants'] == 'y')
+	{
+		$componentPage = "bizproc_workflow_constants";
+		$arVariables = array('list_id' => $_GET['list_id'], 'ID' => $_GET['id']);
+	}
+	elseif($processes && $_GET["bp_catalog"] == "y")
+	{
+		$componentPage = "catalog_processes";
+	}
+	else
+	{
+		$componentPage = CComponentEngine::ParseComponentPath(
+			$arParams["SEF_FOLDER"],
+			$arUrlTemplates,
+			$arVariables
+		);
+	}
 
 	if(!$componentPage)
 		$componentPage = "lists";
@@ -79,9 +124,26 @@ else
 	$arVariableAliases = CComponentEngine::MakeComponentVariableAliases($arDefaultVariableAliases, $arParams["VARIABLE_ALIASES"]);
 	if(!isset($arVariableAliases["file_id"]))
 		$arVariableAliases["file_id"] = "file_id";
-	CComponentEngine::InitComponentVariables(false, $arComponentVariables, $arVariableAliases, $arVariables);
 
-	$componentPage = "lists"; //default page
+	if($_GET['livefeed'] == 'y')
+	{
+		$componentPage = 'list_element_edit';
+		$arVariables = array('list_id' => $_GET['list_id'], 'element_id' => $_GET['element_id'], 'section_id' => 0);
+	}
+	elseif($_GET['bp_constants'] == 'y')
+	{
+		$componentPage = "bizproc_workflow_constants";
+		$arVariables = array('list_id' => $_GET['list_id'], 'ID' => $_GET['id']);
+	}
+	elseif($processes && $_GET["bp_catalog"] == "y")
+	{
+		$componentPage = "catalog_processes";
+	}
+	else
+	{
+		CComponentEngine::InitComponentVariables(false, $arComponentVariables, $arVariableAliases, $arVariables);
+		$componentPage = "lists"; //default page
+	}
 
 	if(isset($arVariables["list_id"]) && isset($arVariables["mode"]))
 	{
@@ -119,12 +181,29 @@ else
 		case "bp_vars":
 			$componentPage = "bizproc_workflow_vars";
 			break;
+		case "bp_constants":
+			$componentPage = "bizproc_workflow_constants";
+			break;
 		case "view":
 			if(isset($arVariables["file_id"]))
 				$componentPage = "list_file";
 			else
 				$componentPage = "list";
 			break;
+		}
+	}
+
+	if($processes)
+	{
+		if(isset($arVariables["mode"]))
+		{
+			switch($arVariables["mode"])
+			{
+				case "catalog":
+					if($processes)
+						$componentPage = "catalog_processes";
+					break;
+			}
 		}
 	}
 
@@ -190,6 +269,11 @@ else
 				."&".$arVariableAliases["list_id"]."=#list_id#"
 				."&".$arVariableAliases["ID"]."=#ID#"
 			,
+			"bizproc_workflow_constants" => $APPLICATION->GetCurPage()
+				."?mode=bp_constants"
+				."&".$arVariableAliases["list_id"]."=#list_id#"
+				."&".$arVariableAliases["ID"]."=#ID#"
+		,
 			"list_file" => $APPLICATION->GetCurPage()
 				."?mode=view"
 				."&".$arVariableAliases["list_id"]."=#list_id#"
@@ -209,6 +293,8 @@ else
 		"VARIABLES" => $arVariables,
 		"ALIASES" => $arVariableAliases
 	);
+	if($processes)
+		$arResult["URL_TEMPLATES"]["catalog_processes"] = $APPLICATION->GetCurPage()."?mode=catalog";
 }
 
 $p = strpos($arResult["URL_TEMPLATES"]["bizproc_workflow_delete"], "?");

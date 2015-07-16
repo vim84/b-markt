@@ -26,8 +26,18 @@ if (!CModule::IncludeModule("im"))
 	die();
 }
 
+if(!$USER->IsAuthorized())
+{
+	$USER->LoginByCookies();
+}
+
 if (intval($USER->GetID()) <= 0)
 {
+	// TODO need change AUTHORIZE ERROR callbacks
+	//header("HTTP/1.0 401 Not Authorized");
+	//header("Content-Type: application/x-javascript");
+	//header("BX-Authorize: ".bitrix_sessid());
+	
 	echo CUtil::PhpToJsObject(Array(
 		'ERROR' => 'AUTHORIZE_ERROR',
 		'BITRIX_SESSID' => bitrix_sessid()
@@ -889,6 +899,7 @@ if (check_bitrix_sessid())
 			'USER_ID' => $USER->GetId(),
 			'USERS' => $arContactList['users'],
 			'GROUPS' => $arContactList['groups'],
+			'CHATS' => $arContactList['chats'],
 			'USER_IN_GROUP' => $arContactList['userInGroup'],
 			'WO_GROUPS' => $arContactList['woGroups'],
 			'WO_USER_IN_GROUP' => $arContactList['woUserInGroup'],
@@ -1186,6 +1197,7 @@ if (check_bitrix_sessid())
 								"CONTROLS_COLOR" => "000000",
 								"CONTROLS_OVER_COLOR" => "000000",
 								"SCREEN_COLOR" => "000000",
+								//"FILE_DURATION" => "30",
 								"AUTOSTART" => "N",
 								"REPEAT" => "N",
 								"VOLUME" => "90",
@@ -1202,7 +1214,7 @@ if (check_bitrix_sessid())
 									'NUM' => false,
 									'HEIGHT_CORRECT' => false,
 								),
-								"PLAYER_ID" => "bitrix_vi_record_".$history["ID"]
+								"PLAYER_ID" => "bitrix_vi_record_".$arResult['HISTORY_ID']
 							),
 							false,
 							Array("HIDE_ICONS" => "Y")
@@ -1246,6 +1258,7 @@ if (check_bitrix_sessid())
 				'USER_ID' => $userId,
 				'RECIPIENT_ID' => $_POST['CHAT'] != 'Y'? intval($_POST['CHAT_ID']): 0,
 				'VIDEO' => $_POST['VIDEO'],
+				'MOBILE' => $_POST['MOBILE'],
 			));
 			if (!$arCallData)
 			{
@@ -1287,6 +1300,7 @@ if (check_bitrix_sessid())
 				'CHAT_ID' => $chatId,
 				'USER_ID' => $userId,
 				'CALL_TO_GROUP' => $_POST['CALL_TO_GROUP'] == 'Y',
+				'MOBILE' => $_POST['MOBILE'],
 			));
 		}
 		else if ($_POST['COMMAND'] == 'start')
@@ -1360,6 +1374,35 @@ if (check_bitrix_sessid())
 			echo CUtil::PhpToJsObject(Array(
 				'CHAT_ID' => $chatId,
 				'ERROR' => $errorMessage
+			));
+		}
+	}
+	else if ($_POST['IM_SHARING'] == 'Y' && intval($_POST['USER_ID']) > 0)
+	{
+		if (!CModule::IncludeModule("pull"))
+			return false;
+
+		if ($_POST['COMMAND'] == 'signaling')
+		{
+			CPullStack::AddByUser(intval($_POST['USER_ID']), Array(
+				'module_id' => 'im',
+				'command' => 'screenSharing',
+				'params' => Array(
+					'senderId' => $USER->GetID(),
+					'command' => 'signaling',
+					'peer' => $_POST['PEER'],
+				),
+			));
+		}
+		else
+		{
+			CPullStack::AddByUser(intval($_POST['USER_ID']), Array(
+				'module_id' => 'im',
+				'command' => 'screenSharing',
+				'params' => Array(
+					'senderId' => $USER->GetID(),
+					'command' => $_POST['COMMAND']
+				),
 			));
 		}
 	}

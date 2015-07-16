@@ -188,7 +188,8 @@ class TotpAlgorithm
 	{
 		return array(
 			'type' => static::$type,
-			'title' => Loc::getMessage('SECURITY_TOTP_TITLE')
+			'title' => Loc::getMessage('SECURITY_TOTP_TITLE'),
+			'required_two_code' => false
 		);
 	}
 }

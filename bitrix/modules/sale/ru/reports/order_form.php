@@ -99,7 +99,7 @@ if ($page<=0) $page = 1;
 					$priceTotal = 0;
 					$bUseVat = false;
 					$arBasketOrder = array();
-					for ($i = 0; $i < count($arBasketIDs); $i++)
+					for ($i = 0, $countBasketIds = count($arBasketIDs); $i < $countBasketIds; $i++)
 					{
 						$arBasketTmp = CSaleBasket::GetByID($arBasketIDs[$i]);
 
@@ -171,8 +171,7 @@ if ($page<=0) $page = 1;
 						elseif(!$bUseVat)
 						{
 							$basket_tax = CSaleOrderTax::CountTaxes($b_AMOUNT*$arQuantities[$i], $arTaxList, $arOrder["CURRENCY"]);
-
-							for ($mi = 0; $mi < count($arTaxList); $i++)
+							for ($mi = 0, $countTaxList = count($arTaxList); $mi < $countTaxList; $mi++)
 							{
 								if ($arTaxList[$mi]["IS_IN_PRICE"] == "Y")
 								{

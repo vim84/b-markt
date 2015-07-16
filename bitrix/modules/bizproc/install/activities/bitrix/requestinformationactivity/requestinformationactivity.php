@@ -7,6 +7,7 @@ class CBPRequestInformationActivity
 {
 	private $taskId = 0;
 	private $isInEventActivityMode = false;
+	private $taskStatus = false;
 
 	public function __construct($name)
 	{
@@ -26,6 +27,7 @@ class CBPRequestInformationActivity
 			"ShowComment" => "Y",
 			"StatusMessage" => "",
 			"SetStatusMessage" => "Y",
+			"AccessControl" => "N",
 			"InfoUser" => null
 		);
 	}
@@ -80,6 +82,7 @@ class CBPRequestInformationActivity
 		$arParameters["ShowComment"] = $this->IsPropertyExists("ShowComment") ? $this->ShowComment : "Y";
 		if ($arParameters["ShowComment"] != "Y" && $arParameters["ShowComment"] != "N")
 			$arParameters["ShowComment"] = "Y";
+		$arParameters["AccessControl"] = $this->IsPropertyExists("AccessControl") && $this->AccessControl == 'Y' ? 'Y' : 'N';
 
 		$requestedInformation = $this->RequestedInformation;
 		if ($requestedInformation && is_array($requestedInformation) && count($requestedInformation) > 0)
@@ -99,6 +102,7 @@ class CBPRequestInformationActivity
 				"NAME" => $this->Name,
 				"DESCRIPTION" => $this->Description,
 				"PARAMETERS" => $arParameters,
+				'DOCUMENT_NAME' => $documentService->GetDocumentName($documentId)
 			)
 		);
 
@@ -117,11 +121,21 @@ class CBPRequestInformationActivity
 			throw new Exception("eventHandler");
 
 		$taskService = $this->workflow->GetService("TaskService");
-		$taskService->DeleteTask($this->taskId);
+		if ($this->taskStatus === false)
+		{
+			$taskService->DeleteTask($this->taskId);
+		}
+		else
+		{
+			$taskService->Update($this->taskId, array(
+				'STATUS' => $this->taskStatus
+			));
+		}
 
 		$this->workflow->RemoveEventHandler($this->name, $eventHandler);
 
 		$this->taskId = 0;
+		$this->taskStatus = false;
 	}
 
 	public function HandleFault(Exception $exception)
@@ -152,39 +166,39 @@ class CBPRequestInformationActivity
 		if (!array_key_exists("USER_ID", $arEventParameters) || intval($arEventParameters["USER_ID"]) <= 0)
 			return;
 
+		if (empty($arEventParameters["REAL_USER_ID"]))
+			$arEventParameters["REAL_USER_ID"] = $arEventParameters["USER_ID"];
+
 		$rootActivity = $this->GetRootActivity();
-		$documentId = $rootActivity->GetDocumentId();
-
-		$runtime = CBPRuntime::GetRuntime();
-		$documentService = $runtime->GetService("DocumentService");
-
 		$arUsers = CBPHelper::ExtractUsers($this->Users, $this->GetDocumentId(), false);
 
 		$arEventParameters["USER_ID"] = intval($arEventParameters["USER_ID"]);
+		$arEventParameters["REAL_USER_ID"] = intval($arEventParameters["REAL_USER_ID"]);
 		if (!in_array($arEventParameters["USER_ID"], $arUsers))
 			return;
 
 		$taskService = $this->workflow->GetService("TaskService");
-		$taskService->MarkCompleted($this->taskId, $arEventParameters["USER_ID"]);
+		$taskService->MarkCompleted($this->taskId, $arEventParameters["REAL_USER_ID"], CBPTaskUserStatus::Ok);
 
 		$this->Comments = $arEventParameters["COMMENT"];
 
 		if ($this->IsPropertyExists("InfoUser"))
-			$this->InfoUser = "user_".$arEventParameters["USER_ID"];
+			$this->InfoUser = "user_".$arEventParameters["REAL_USER_ID"];
 
 		$this->WriteToTrackingService(
 			str_replace(
 				array("#PERSON#", "#COMMENT#"),
-				array("{=user:user_".$arEventParameters["USER_ID"]."}", (strlen($arEventParameters["COMMENT"]) > 0 ? ": ".$arEventParameters["COMMENT"] : "")),
+				array("{=user:user_".$arEventParameters["REAL_USER_ID"]."}", (strlen($arEventParameters["COMMENT"]) > 0 ? ": ".$arEventParameters["COMMENT"] : "")),
 				GetMessage("BPRIA_ACT_APPROVE_TRACK")
 			),
-			$arEventParameters["USER_ID"]
+			$arEventParameters["REAL_USER_ID"]
 		);
 
 		$this->ResponcedInformation = $arEventParameters["RESPONCE"];
 		//$rootActivity->SetVariablesTypes($arEventParameters["RESPONCE_TYPES"]);
 		$rootActivity->SetVariables($arEventParameters["RESPONCE"]);
 
+		$this->taskStatus = CBPTaskStatus::CompleteOk;
 		$this->Unsubscribe($this);
 		//$this->SetStatusTitle();
 
@@ -214,7 +228,7 @@ class CBPRequestInformationActivity
 					continue;
 
 				$form .=
-					'<tr><td valign="top" width="40%" align="right" class="bizproc-field-name">'.($parameter["Required"] ? '<span class="adm-required-field">'.$parameter["Title"].':</span>' : $parameter["Title"].":").'</td>'.
+					'<tr><td valign="top" width="40%" align="right" class="bizproc-field-name">'.($parameter["Required"] ? '<span class="required">*</span><span class="adm-required-field">'.$parameter["Title"].':</span>' : $parameter["Title"].":").'</td>'.
 					'<td valign="top" width="60%" class="bizproc-field-value">';
 
 				if ($arRequest === null)
@@ -250,7 +264,22 @@ class CBPRequestInformationActivity
 		return array($form, $buttons);
 	}
 
-	public static function PostTaskForm($arTask, $userId, $arRequest, &$arErrors, $userName = "")
+	public static function getTaskControls($arTask)
+	{
+		return array(
+			'BUTTONS' => array(
+				array(
+					'TYPE'  => 'submit',
+					'TARGET_USER_STATUS' => CBPTaskUserStatus::Ok,
+					'NAME'  => 'approve',
+					'VALUE' => 'Y',
+					'TEXT'  => strlen($arTask["PARAMETERS"]["TaskButtonMessage"]) > 0 ? $arTask["PARAMETERS"]["TaskButtonMessage"] : GetMessage("BPAA_ACT_BUTTON1")
+				)
+			)
+		);
+	}
+
+	public static function PostTaskForm($arTask, $userId, $arRequest, &$arErrors, $userName = "", $realUserId = null)
 	{
 		$arErrors = array();
 
@@ -266,6 +295,7 @@ class CBPRequestInformationActivity
 
 			$arEventParameters = array(
 				"USER_ID" => $userId,
+				"REAL_USER_ID" => $realUserId,
 				"USER_NAME" => $userName,
 				"COMMENT" => $arRequest["task_comment"],
 				"RESPONCE" => array(),
@@ -398,6 +428,7 @@ class CBPRequestInformationActivity
 			"ShowComment" => "show_comment",
 			"StatusMessage" => "status_message",
 			"SetStatusMessage" => "set_status_message",
+			'AccessControl' => 'access_control',
 		);
 
 		if (!is_array($arWorkflowParameters))
@@ -494,6 +525,7 @@ class CBPRequestInformationActivity
 			"show_comment" => "ShowComment",
 			"status_message" => "StatusMessage",
 			"set_status_message" => "SetStatusMessage",
+			'access_control' => 'AccessControl',
 		);
 
 		$arProperties = array();

@@ -11,11 +11,12 @@ BX.message({
 	author : ' <?=GetMessageJS("JQOUTE_AUTHOR_WRITES")?>:\n',
 	vote_drop_answer_confirm : '<?=GetMessageJS("F_VOTE_DROP_ANSWER_CONFIRM")?>',
 	vote_drop_question_confirm : '<?=GetMessageJS("F_VOTE_DROP_QUESTION_CONFIRM")?>',
-	MPL_HAVE_WRITTEN : '<?=GetMessageJS('MPL_HAVE_WRITTEN')?>'
+	MPL_HAVE_WRITTEN : ' <?=GetMessageJS('MPL_HAVE_WRITTEN')?>'
 });
 BX.Forum.Init({
 	formID : '<?=$arParams["FORM_ID"]?>',
 	captcha : '<?=($arParams["FORUM"]["USE_CAPTCHA"]=="Y" && !$USER->IsAuthorized() ? "Y" : "N")?>',
+	bVarsFromForm : '<?=$arParams["bVarsFromForm"]?>',
 	ajaxPost : '<?=$arParams["AJAX_POST"]?>'
 });
 </script>

@@ -21,4 +21,13 @@ $MESS["SUP_NO_LIMITS"] = "< no limits >";
 $MESS["SUP_SITE"] = "Site";
 $MESS["SUP_RESPONSIBLE"] = "Responsible person";
 $MESS["SUP_SHEDULE_S"] = "Schedule";
+$MESS["MAIN_ADMIN_MENU_EDIT"] = "Edit";
+$MESS["SUP_EDIT"] = "Modify";
+$MESS["MAIN_ADMIN_LIST_SELECTED"] = "Selected:";
+$MESS["SUP_DELETE"] = "Delete";
+$MESS["MAIN_ADMIN_LIST_CHECKED"] = "Checked:";
+$MESS["MAIN_ADMIN_LIST_DELETE"] = "delete";
+$MESS["SUP_ADD"] = "Add";
+$MESS["SUP_EXACT_MATCH"] = "Use exact match";
+$MESS["SUP_ALL"] = "(all)";
 ?>

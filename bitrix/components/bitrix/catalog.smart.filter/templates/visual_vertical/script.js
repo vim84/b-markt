@@ -3,6 +3,8 @@ function JCSmartFilter(ajaxURL, viewMode)
 	this.ajaxURL = ajaxURL;
 	this.form = null;
 	this.timer = null;
+	this.cacheKey = '';
+	this.cache = [];
 	this.viewMode = viewMode;
 }
 
@@ -14,7 +16,7 @@ JCSmartFilter.prototype.keyup = function(input)
 	}
 	this.timer = setTimeout(BX.delegate(function(){
 		this.reload(input);
-	}, this), 1000);
+	}, this), 500);
 };
 
 JCSmartFilter.prototype.click = function(checkbox)
@@ -23,92 +25,129 @@ JCSmartFilter.prototype.click = function(checkbox)
 	{
 		clearTimeout(this.timer);
 	}
+
 	this.timer = setTimeout(BX.delegate(function(){
 		this.reload(checkbox);
-	}, this), 1000);
+	}, this), 500);
 };
 
 JCSmartFilter.prototype.reload = function(input)
 {
-	var values = [];
+	if (this.cacheKey !== '')
+	{
+		//Postprone backend query
+		if(!!this.timer)
+		{
+			clearTimeout(this.timer);
+		}
+		this.timer = setTimeout(BX.delegate(function(){
+			this.reload(input);
+		}, this), 1000);
+		return;
+	}
+	this.cacheKey = '|';
 
 	this.position = BX.pos(input, true);
 	this.form = BX.findParent(input, {'tag':'form'});
 	if (this.form)
 	{
+		var values = [];
 		values[0] = {name: 'ajax', value: 'y'};
 		this.gatherInputsValues(values, BX.findChildren(this.form, {'tag': new RegExp('^(input|select)$', 'i')}, true));
 
-		this.curFilterinput = input;
-		BX.ajax.loadJSON(
-			this.ajaxURL,
-			this.values2post(values),
-			BX.delegate(this.postHandler, this)
-		);
+		for (var i = 0; i < values.length; i++)
+			this.cacheKey += values[i].name + ':' + values[i].value + '|';
+
+		if (this.cache[this.cacheKey])
+		{
+			this.curFilterinput = input;
+			this.postHandler(this.cache[this.cacheKey], true);
+		}
+		else
+		{
+			this.curFilterinput = input;
+			BX.ajax.loadJSON(
+				this.ajaxURL,
+				this.values2post(values),
+				BX.delegate(this.postHandler, this)
+			);
+		}
 	}
 };
 
-JCSmartFilter.prototype.postHandler = function (result)
+JCSmartFilter.prototype.updateItem = function (PID, arItem)
 {
-	var PID, arItem, i, ar, control, hrefFILTER, url, curProp, trackBar;
+	if (arItem.PROPERTY_TYPE === 'N' || arItem.PRICE)
+	{
+		var trackBar = window['trackBar' + PID];
+		if (!trackBar && arItem.ENCODED_ID)
+			trackBar = window['trackBar' + arItem.ENCODED_ID];
+
+		if (trackBar && arItem.VALUES)
+		{
+			if (arItem.VALUES.MIN && arItem.VALUES.MIN.FILTERED_VALUE)
+			{
+				trackBar.setMinFilteredValue(arItem.VALUES.MIN.FILTERED_VALUE);
+			}
+
+			if (arItem.VALUES.MAX && arItem.VALUES.MAX.FILTERED_VALUE)
+			{
+				trackBar.setMaxFilteredValue(arItem.VALUES.MAX.FILTERED_VALUE);
+			}
+		}
+	}
+	else if (arItem.VALUES)
+	{
+		for (var i in arItem.VALUES)
+		{
+			if (arItem.VALUES.hasOwnProperty(i))
+			{
+				var value = arItem.VALUES[i];
+				var control = BX(value.CONTROL_ID);
+
+				if (!!control)
+				{
+					var label = document.querySelector('[data-role="label_'+value.CONTROL_ID+'"]');
+					if (value.DISABLED)
+					{
+						if (label)
+							BX.addClass(label, 'disabled');
+						else
+							BX.addClass(control.parentNode, 'disabled');
+					}
+					else
+					{
+						if (label)
+							BX.removeClass(label, 'disabled');
+						else
+							BX.removeClass(control.parentNode, 'disabled');
+					}
+
+					if (value.hasOwnProperty('ELEMENT_COUNT'))
+					{
+						label = document.querySelector('[data-role="count_'+value.CONTROL_ID+'"]');
+						if (label)
+							label.innerHTML = value.ELEMENT_COUNT;
+					}
+				}
+			}
+		}
+	}
+};
+
+JCSmartFilter.prototype.postHandler = function (result, fromCache)
+{
+	var hrefFILTER, url, curProp;
 	var modef = BX('modef');
 	var modef_num = BX('modef_num');
 
 	if (!!result && !!result.ITEMS)
 	{
-		for(PID in result.ITEMS)
+		for(var PID in result.ITEMS)
 		{
 			if (result.ITEMS.hasOwnProperty(PID))
 			{
-				arItem = result.ITEMS[PID];
-				if (arItem.PROPERTY_TYPE === 'N' || arItem.PRICE)
-				{
-					trackBar = window['trackBar' + PID];
-					if (!trackBar && arItem.ENCODED_ID)
-						trackBar = window['trackBar' + arItem.ENCODED_ID];
-
-					if (trackBar && arItem.VALUES)
-					{
-						if (arItem.VALUES.MIN && arItem.VALUES.MIN.FILTERED_VALUE)
-						{
-							trackBar.setMinFilteredValue(arItem.VALUES.MIN.FILTERED_VALUE);
-						}
-
-						if (arItem.VALUES.MAX && arItem.VALUES.MAX.FILTERED_VALUE)
-						{
-							trackBar.setMaxFilteredValue(arItem.VALUES.MAX.FILTERED_VALUE);
-						}
-					}
-				}
-				else if (arItem.VALUES)
-				{
-					for (i in arItem.VALUES)
-					{
-						if (arItem.VALUES.hasOwnProperty(i))
-						{
-							ar = arItem.VALUES[i];
-							control = BX(ar.CONTROL_ID);
-							if (!!control)
-							{
-								var label = document.querySelector('[data-role="label_'+ar.CONTROL_ID+'"]');
-								if (ar.DISABLED)
-								{
-									if (label)
-										BX.addClass(label, 'disabled');
-									else
-										BX.addClass(control.parentNode, 'disabled');
-								}
-								else
-								{
-									if (label)
-										BX.removeClass(label, 'disabled');
-									else
-										BX.removeClass(control.parentNode, 'disabled');
-								}
-							}
-						}
-					}
-				}
+				this.updateItem(PID, result.ITEMS[PID]);
 			}
 		}
 
@@ -126,7 +165,7 @@ JCSmartFilter.prototype.postHandler = function (result)
 			{
 				BX.bind(hrefFILTER[0], 'click', function(e)
 				{
-					var url = BX.util.htmlspecialcharsback(result.FILTER_AJAX_URL);
+					url = BX.util.htmlspecialcharsback(result.FILTER_AJAX_URL);
 					BX.ajax.insertToNode(url, result.COMPONENT_CONTAINER_ID);
 					return BX.PreventDefault(e);
 				});
@@ -150,7 +189,14 @@ JCSmartFilter.prototype.postHandler = function (result)
 				}
 			}
 		}
+
 	}
+
+	if (!fromCache && this.cacheKey !== '')
+	{
+		this.cache[this.cacheKey] = result;
+	}
+	this.cacheKey = '';
 };
 
 JCSmartFilter.prototype.gatherInputsValues = function (values, elements)
@@ -194,9 +240,10 @@ JCSmartFilter.prototype.gatherInputsValues = function (values, elements)
 
 JCSmartFilter.prototype.values2post = function (values)
 {
-	var post = new Array;
+	var post = [];
 	var current = post;
 	var i = 0;
+
 	while(i < values.length)
 	{
 		var p = values[i].name.indexOf('[');
@@ -211,7 +258,7 @@ JCSmartFilter.prototype.values2post = function (values)
 			var name = values[i].name.substring(0, p);
 			var rest = values[i].name.substring(p+1);
 			if(!current[name])
-				current[name] = new Array;
+				current[name] = [];
 
 			var pp = rest.indexOf(']');
 			if(pp == -1)
@@ -605,7 +652,7 @@ BX.Iblock.SmartFilter = (function()
 
 	SmartFilter.prototype.countNewLeft = function(event)
 	{
-		pageX = this.getPageX(event);
+		var pageX = this.getPageX(event);
 
 		var trackerXCoord = this.getXCoord(this.trackerWrap);
 		var rightEdge = this.trackerWrap.offsetWidth;

@@ -4,6 +4,7 @@ $MESS["IBLOCK_ADM_HEADER_EL"] = "Элементов";
 $MESS["IBLOCK_ADM_HEADER_SECT"] = "Разделов";
 $MESS["IBLOCK_ADM_HEADER_LIST_URL"] = "URL страницы инфоблока";
 $MESS["IBLOCK_ADM_HEADER_DETAIL_URL"] = "URL страницы элемента";
+$MESS["IBLOCK_ADM_HEADER_CANONICAL_PAGE_URL"] = "Канонический URL элемента";
 $MESS["IBLOCK_ADM_HEADER_TOINDEX"] = "Индексировать элементы";
 $MESS["IBLOCK_ADM_TO_EL_LIST"] = "Перейти к списку элементов";
 $MESS["IBLOCK_ADM_TO_EDIT"] = "Перейти в редактирование информационного блока";

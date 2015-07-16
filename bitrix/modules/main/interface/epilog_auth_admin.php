@@ -27,7 +27,10 @@ foreach ($arPreload['JS'] as $key=>$file)
 ?>
 
 	//preload admin scripts&styles
-	setTimeout("BX.loadCSS(['<?=implode("','",$arPreload['CSS'])?>']); BX.ajax.loadScriptAjax(['<?=implode("','",$arPreload['JS'])?>'], null, true);", 2000);
+	setTimeout(function() {
+		BX.load(['<?=implode("','",$arPreload['CSS'])?>']);
+		BX.load(['<?=implode("','",$arPreload['JS'])?>']);
+	}, 2000);
 }));
 
 new BX.COpener({DIV: 'login_lang_button', ACTIVE_CLASS: 'login-language-btn-active', MENU: <?=CUtil::PhpToJsObject($arLangButton['MENU'])?>});

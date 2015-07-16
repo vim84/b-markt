@@ -299,6 +299,7 @@ class CAllSaleExport
 					false,
 					array("ID", "CODE", "VALUE", "ORDER_PROPS_ID", "PROP_TYPE")
 				);
+			$locationStreetPropertyValue = '';
 			while ($arOrderPropVals = $dbOrderPropVals->Fetch())
 			{
 				if ($arOrderPropVals["PROP_TYPE"] == "CHECKBOX")
@@ -330,7 +331,39 @@ class CAllSaleExport
 				elseif ($arOrderPropVals["PROP_TYPE"] == "LOCATION")
 				{
 					$arVal = CSaleLocation::GetByID($arOrderPropVals["VALUE"], LANGUAGE_ID);
-					$arProp["PROPERTY"][$arOrderPropVals["ORDER_PROPS_ID"]] =  ($arVal["COUNTRY_NAME"].((strlen($arVal["COUNTRY_NAME"])<=0 || strlen($arVal["REGION_NAME"])<=0) ? "" : " - ").$arVal["REGION_NAME"].((strlen($arVal["COUNTRY_NAME"])<=0 || strlen($arVal["CITY_NAME"])<=0) ? "" : " - ").$arVal["CITY_NAME"]);
+
+					if(CSaleLocation::isLocationProEnabled())
+					{
+						if(intval($arVal['ID']))
+						{
+							try
+							{
+								$res = \Bitrix\Sale\Location\LocationTable::getPathToNode($arVal['ID'], array('select' => array('LNAME' => 'NAME.NAME', 'TYPE_ID'), 'filter' => array('=NAME.LANGUAGE_ID' => LANGUAGE_ID)));
+								$types = \Bitrix\Sale\Location\Admin\TypeHelper::getTypeCodeIdMapCached();
+								$path = array();
+								while($item = $res->fetch())
+								{
+									// copy street to STREET property
+									if($types['ID2CODE'][$item['TYPE_ID']] == 'STREET')
+										$locationStreetPropertyValue = $item['LNAME'];
+									$path[] = $item['LNAME'];
+								}
+
+								$locationString = implode(' - ', $path);
+							}
+							catch(\Bitrix\Main\SystemException $e)
+							{
+								$locationString = '';
+							}
+						}
+						else
+							$locationString = '';
+					}
+					else
+						$locationString =  ($arVal["COUNTRY_NAME"].((strlen($arVal["COUNTRY_NAME"])<=0 || strlen($arVal["REGION_NAME"])<=0) ? "" : " - ").$arVal["REGION_NAME"].((strlen($arVal["COUNTRY_NAME"])<=0 || strlen($arVal["CITY_NAME"])<=0) ? "" : " - ").$arVal["CITY_NAME"]);
+
+					$arProp["PROPERTY"][$arOrderPropVals["ORDER_PROPS_ID"]] = $locationString;
+
 					$arProp["PROPERTY"][$arOrderPropVals["ORDER_PROPS_ID"]."_CITY"] = $arVal["CITY_NAME"];
 					$arProp["PROPERTY"][$arOrderPropVals["ORDER_PROPS_ID"]."_COUNTRY"] = $arVal["COUNTRY_NAME"];
 					$arProp["PROPERTY"][$arOrderPropVals["ORDER_PROPS_ID"]."_REGION"] = $arVal["REGION_NAME"];
@@ -369,6 +402,9 @@ class CAllSaleExport
 							$agent[$k] = $v["VALUE"];
 						else
 							$agent[$k] = $arProp[$v["TYPE"]][$v["VALUE"]];
+
+						if($k == 'STREET' && strlen($locationStreetPropertyValue))
+							$agent[$k] = $locationStreetPropertyValue.(strlen($agent[$k]) ? ', ' : '').$agent[$k];
 					}
 				}
 			}
@@ -902,9 +938,9 @@ class CAllSaleExport
 		<<?=GetMessage("SALE_EXPORT_CONTRAGENTS")?>>
 			<<?=GetMessage("SALE_EXPORT_CONTRAGENT")?>><?
 		if ($bExportFromCrm): ?>
-				<<?=GetMessage("SALE_EXPORT_ID")?>><?=substr(htmlspecialcharsbx($arProp["CRM"]["CLIENT_ID"]."#".$arProp["CRM"]["CLIENT"]["LOGIN"]."#".$arProp["CRM"]["CLIENT"]["LAST_NAME"]." ".$arProp["CRM"]["CLIENT"]["NAME"]." ".$arProp["CRM"]["CLIENT"]["SECOND_NAME"]), 0, 80)?></<?=GetMessage("SALE_EXPORT_ID")?>><?
+				<<?=GetMessage("SALE_EXPORT_ID")?>><?=htmlspecialcharsbx(substr($arProp["CRM"]["CLIENT_ID"]."#".$arProp["CRM"]["CLIENT"]["LOGIN"]."#".$arProp["CRM"]["CLIENT"]["LAST_NAME"]." ".$arProp["CRM"]["CLIENT"]["NAME"]." ".$arProp["CRM"]["CLIENT"]["SECOND_NAME"], 0, 80))?></<?=GetMessage("SALE_EXPORT_ID")?>><?
 		else: ?>
-				<<?=GetMessage("SALE_EXPORT_ID")?>><?=substr(htmlspecialcharsbx($arOrder["USER_ID"]."#".$arProp["USER"]["LOGIN"]."#".$arProp["USER"]["LAST_NAME"]." ".$arProp["USER"]["NAME"]." ".$arProp["USER"]["SECOND_NAME"]), 0, 80)?></<?=GetMessage("SALE_EXPORT_ID")?>><?
+				<<?=GetMessage("SALE_EXPORT_ID")?>><?=htmlspecialcharsbx(substr($arOrder["USER_ID"]."#".$arProp["USER"]["LOGIN"]."#".$arProp["USER"]["LAST_NAME"]." ".$arProp["USER"]["NAME"]." ".$arProp["USER"]["SECOND_NAME"], 0, 80))?></<?=GetMessage("SALE_EXPORT_ID")?>><?
 		endif; ?>
 				<<?=GetMessage("SALE_EXPORT_ITEM_NAME")?>><?=htmlspecialcharsbx($agent["AGENT_NAME"])?></<?=GetMessage("SALE_EXPORT_ITEM_NAME")?>>
 				<?

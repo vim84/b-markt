@@ -80,7 +80,7 @@ class Updater
 			if (!$tableCheck)
 				throw new NotSupportedException("no CHECK TABLE found.");
 			return
-				"if (\$updater->CanUpdateDatabase() && \$DB->TableExists('".EscapePHPString($tableCheck->name)."'))\n".
+				"if (\$updater->CanUpdateDatabase() && \$updater->TableExists('".EscapePHPString($tableCheck->name)."'))\n".
 				"{\n".
 				"\tif (\$DB->type == \"".EscapePHPString($this->dbType)."\")\n".
 				"\t{\n".
@@ -145,12 +145,12 @@ class Updater
 		}
 		elseif ($object instanceof Table)
 		{
-			$this->conditions["\t\tif (!\$DB->TableExists(\"".EscapePHPString($object->name)."\"))\n"][] =
+			$this->conditions["\t\tif (!\$updater->TableExists(\"".EscapePHPString($object->name)."\"))\n"][] =
 				$this->multiLinePhp("\t\t\t\$DB->Query(\"\n\t\t\t\t", str_replace("\n", "\n\t\t\t\t", $object->getCreateDdl($this->dbType)), "\n\t\t\t\");\n");
 		}
 		elseif ($object instanceof Column)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
 				"\t\t\tif (!\$DB->Query(\"SELECT ".EscapePHPString($object->name)." FROM ".EscapePHPString($object->parent->name)." WHERE 1=0\", true))\n".
 				"\t\t\t{\n".
 				$this->multiLinePhp("\t\t\t\t\$DB->Query(\"", $object->getCreateDdl($this->dbType), "\");\n").
@@ -158,15 +158,15 @@ class Updater
 		}
 		elseif ($object instanceof Index)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
-				"\t\t\tif (!\$DB->IndexExists(\"".EscapePHPString($object->parent->name)."\", array(".$this->multiLinePhp("\"", $object->columns, "\", ")."))\n".
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
+				"\t\t\tif (!\$DB->IndexExists(\"".EscapePHPString($object->parent->name)."\", array(".$this->multiLinePhp("\"", $object->columns, "\", ").")))\n".
 				"\t\t\t{\n".
 				$this->multiLinePhp("\t\t\t\t\$DB->Query(\"", $object->getCreateDdl($this->dbType), "\");\n").
 				"\t\t\t}\n";
 		}
 		elseif ($object instanceof Trigger || $object instanceof Constraint)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
 				$this->multiLinePhp("\t\t\t\$DB->Query(\"", $object->getCreateDdl($this->dbType), "\", true);\n");
 		}
 		else
@@ -188,12 +188,12 @@ class Updater
 		}
 		elseif ($object instanceof Table)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($object->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($object->name)."\"))\n"][] =
 				$this->multiLinePhp("\t\t\t\$DB->Query(\"", $object->getDropDdl($this->dbType), "\");\n");
 		}
 		elseif ($object instanceof Column)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
 				"\t\t\tif (\$DB->Query(\"SELECT ".EscapePHPString($object->name)." FROM ".EscapePHPString($object->parent->name)." WHERE 1=0\", true))\n".
 				"\t\t\t{\n".
 				$this->multiLinePhp("\t\t\t\t\$DB->Query(\"", $object->getDropDdl($this->dbType), "\");\n").
@@ -201,7 +201,7 @@ class Updater
 		}
 		elseif ($object instanceof Index)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
 				"\t\t\tif (\$DB->IndexExists(\"".EscapePHPString($object->parent->name)."\", array(".$this->multiLinePhp("\"", $object->columns, "\", ").")))\n".
 				"\t\t\t{\n".
 				$this->multiLinePhp("\t\t\t\t\$DB->Query(\"", $object->getDropDdl($this->dbType), "\");\n").
@@ -209,7 +209,7 @@ class Updater
 		}
 		elseif ($object instanceof Trigger || $object instanceof Constraint)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($object->parent->name)."\"))\n"][] =
 				$this->multiLinePhp("\t\t\t\$DB->Query(\"", $object->getDropDdl($this->dbType), "\", true);\n");
 		}
 		else
@@ -232,9 +232,9 @@ class Updater
 				$this->multiLinePhp("\t\t\$DB->Query(\"", $source->getDropDdl($this->dbType), "\", true);\n").
 				$this->multiLinePhp("\t\t\$DB->Query(\"", $target->getCreateDdl($this->dbType), "\", true);\n");
 		}
-		elseif ($source instanceof Column)
+		elseif ($target instanceof Column)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($source->parent->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($source->parent->name)."\"))\n"][] =
 				"\t\t\tif (\$DB->Query(\"SELECT ".EscapePHPString($source->name)." FROM ".EscapePHPString($source->parent->name)." WHERE 1=0\", true))\n".
 				"\t\t\t{\n".
 				$this->multiLinePhp("\t\t\t\t\$DB->Query(\"", $source->getModifyDdl($target, $this->dbType), "\");\n").
@@ -242,8 +242,8 @@ class Updater
 		}
 		elseif ($source instanceof Index)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($source->parent->name)."\"))\n"][] =
-				"\t\t\tif (\$DB->IndexExists(\"".EscapePHPString($source->parent->name)."\", array(".$this->multiLinePhp("\"", $source->columns, "\", ")."))\n".
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($source->parent->name)."\"))\n"][] =
+				"\t\t\tif (\$DB->IndexExists(\"".EscapePHPString($source->parent->name)."\", array(".$this->multiLinePhp("\"", $source->columns, "\", ").")))\n".
 				"\t\t\t{\n".
 				$this->multiLinePhp("\t\t\t\t\$DB->Query(\"", $source->getDropDdl($this->dbType), "\");\n").
 				$this->multiLinePhp("\t\t\t\t\$DB->Query(\"", $target->getCreateDdl($this->dbType), "\");\n").
@@ -251,7 +251,7 @@ class Updater
 		}
 		elseif ($source instanceof Trigger || $source instanceof Constraint)
 		{
-			$this->conditions["\t\tif (\$DB->TableExists(\"".EscapePHPString($source->parent->name)."\"))\n"][] =
+			$this->conditions["\t\tif (\$updater->TableExists(\"".EscapePHPString($source->parent->name)."\"))\n"][] =
 				$this->multiLinePhp("\t\t\t\$DB->Query(\"", $source->getModifyDdl($target, $this->dbType), "\", true);\n");
 		}
 		else

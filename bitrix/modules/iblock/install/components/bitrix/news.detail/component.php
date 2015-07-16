@@ -179,6 +179,8 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams
 			|| $arParams["META_DESCRIPTION"] != "-";
 	if($bGetProperty)
 		$arSelect[]="PROPERTY_*";
+	if ($arParams['SET_CANONICAL_URL'] === 'Y')
+		$arSelect[] = 'CANONICAL_PAGE_URL';
 
 	$arFilter["ID"] = $arParams["ELEMENT_ID"];
 	$arFilter["SHOW_HISTORY"] = $WF_SHOW_HISTORY;
@@ -293,6 +295,7 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams
 			"IBLOCK",
 			"LIST_PAGE_URL", "~LIST_PAGE_URL",
 			"SECTION_URL",
+			"CANONICAL_PAGE_URL",
 			"SECTION",
 			"PROPERTIES",
 			"IPROPERTY_VALUES",
@@ -360,6 +363,11 @@ if(isset($arResult["ID"]))
 	}
 
 	$this->SetTemplateCachedData($arResult["NAV_CACHED_DATA"]);
+
+	if ($arParams['SET_CANONICAL_URL'] === 'Y' && $arResult["CANONICAL_PAGE_URL"])
+	{
+		$APPLICATION->AddHeadString('<link rel="canonical" href="'.$arResult["CANONICAL_PAGE_URL"].'" />');
+	}
 
 	if($arParams["SET_TITLE"])
 	{

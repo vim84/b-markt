@@ -49,6 +49,7 @@ $MESS["CC_BSC1_CANCELED"] = "ПометкаУдаления";
 $MESS["CC_BSC1_1C_PAYED_DATE"] = "Дата оплаты по 1С";
 $MESS["CC_BSC1_1C_PAYED_NUM"] = "Номер оплаты по 1С";
 $MESS["CC_BSC1_1C_DELIVERY_DATE"] = "Дата отгрузки по 1С";
+$MESS["CC_BSC1_1C_DELIVERY_NUM"] = "Номер отгрузки по 1С";
 $MESS["CC_BSC1_VERSION_1C"] = "НомерВерсии";
 $MESS["CC_BSC1_ID_1C"] = "Номер1С";
 $MESS["CC_BSC1_1C_DATE"] = "Дата1С";
@@ -77,4 +78,6 @@ $MESS["CC_BSC1_DI_PS"] = "ПлатежныеСистемы";
 $MESS["CC_BSC1_DI_ELEMENT"] = "Элемент";
 $MESS["CC_BSC1_DI_ID"] = "Ид";
 $MESS["CC_BSC1_DI_NAME"] = "Название";
+$MESS ['CP_BCI1_CHANGE_STATUS_FROM_1C'] = "Менять статусы заказов по информации из 1С";
+$MESS["CC_BSC1_1C_STATUS_ID"] = "Статуса заказа ИД";
 ?>

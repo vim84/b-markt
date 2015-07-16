@@ -47,6 +47,8 @@ class CCommentUFs
 				"APPROVED_AND_MINE" => $GLOBALS["USER"]->GetId(),
 				">ID" => intVal(min($res)) - 1,
 				"<ID" => intVal(max($res)) + 1);
+			if ($arFilter[">ID"] <= 0)
+				unset($arFilter[">ID"]);
 			if ($arResult["USER"]["RIGHTS"]["MODERATE"] == "Y")
 				unset($arFilter["APPROVED_AND_MINE"]);
 

@@ -62,15 +62,22 @@ BitrixSmallCart.prototype = {
 	{
 		if (this.cartClosed)
 		{
-			BX.removeClass(this.cartElement, 'close');
+			BX.removeClass(this.cartElement, 'bx-closed');
+			BX.addClass(this.cartElement, 'bx-opener');
 			this.statusElement.innerHTML = this.closeMessage;
 			this.cartClosed = false;
+			this.fixCart();
 		}
 		else // Opened
 		{
-			BX.addClass(this.cartElement, 'close');
+			BX.addClass(this.cartElement, 'bx-closed');
+			BX.removeClass(this.cartElement, 'bx-opener');
+			BX.removeClass(this.cartElement, 'bx-max-height');
 			this.statusElement.innerHTML = this.openMessage;
 			this.cartClosed = true;
+			var itemList = this.cartElement.querySelector("[data-role='basket-item-list']");
+			if (itemList)
+				itemList.style.top = "auto";
 		}
 		setTimeout(this.fixCartClosure, 100);
 	},
@@ -115,11 +122,14 @@ BitrixSmallCart.prototype = {
 		// toggle max height
 		if (this.productsElement)
 		{
+			var itemList = this.cartElement.querySelector("[data-role='basket-item-list']");
 			if (this.cartClosed)
 			{
 				if (this.maxHeight)
 				{
-					BX.removeClass(this.cartElement, 'max_height');
+					BX.removeClass(this.cartElement, 'bx-max-height');
+					if (itemList)
+						itemList.style.top = "auto";
 					this.maxHeight = false;
 				}
 			}
@@ -129,7 +139,9 @@ BitrixSmallCart.prototype = {
 				{
 					if (this.productsElement.scrollHeight == this.productsElement.clientHeight)
 					{
-						BX.removeClass(this.cartElement, 'max_height');
+						BX.removeClass(this.cartElement, 'bx-max-height');
+						if (itemList)
+							itemList.style.top = "auto";
 						this.maxHeight = false;
 					}
 				}
@@ -139,7 +151,9 @@ BitrixSmallCart.prototype = {
 					{
 						if (this.cartElement.offsetTop + this.cartElement.offsetHeight >= windowHeight)
 						{
-							BX.addClass(this.cartElement, 'max_height');
+							BX.addClass(this.cartElement, 'bx-max-height');
+							if (itemList)
+								itemList.style.top = 82+"px";
 							this.maxHeight = true;
 						}
 					}
@@ -147,7 +161,9 @@ BitrixSmallCart.prototype = {
 					{
 						if (this.cartElement.offsetHeight >= windowHeight)
 						{
-							BX.addClass(this.cartElement, 'max_height');
+							BX.addClass(this.cartElement, 'bx-max-height');
+							if (itemList)
+								itemList.style.top = 82+"px";
 							this.maxHeight = true;
 						}
 					}

@@ -67,4 +67,5 @@ $MESS["IBLOCK_PROP_L"] = "Список";
 $MESS["IBLOCK_PROP_F"] = "Файл";
 $MESS["IBLOCK_PROP_G"] = "Привязка к разделам";
 $MESS["IBLOCK_PROP_E"] = "Привязка к элементам";
+$MESS["BT_ADM_IEP_PROP_FILTER_HINT"] = "Подсказка в умном фильтре для посетителей";
 ?>

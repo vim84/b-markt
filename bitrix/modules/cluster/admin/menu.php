@@ -21,6 +21,12 @@ $arMenu = array(
 
 if($DB->type == "MYSQL")
 {
+	$arMenu["items"][] = array(
+		"text" => GetMessage("CLU_MENU_SLAVE_ITEM"),
+		"url" => "cluster_slave_list.php?lang=".LANGUAGE_ID."&group_id=all",
+		"title" => GetMessage("CLU_MENU_SLAVE_ITEM_TITLE"),
+	);
+
 	$rsGroups = $DB->Query("SELECT ID, NAME from b_cluster_group ORDER BY ID asc");
 	while($arGroup = $rsGroups->GetNext())
 	{

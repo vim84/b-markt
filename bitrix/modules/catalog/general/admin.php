@@ -1,4 +1,5 @@
 <?
+/** @global CAdminMenu $adminMenu */
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Config\Option;
@@ -412,19 +413,30 @@ class CCatalogAdmin
 	{
 		if (self::$catalogRead || self::$catalogDiscount)
 		{
-			$arResult = array();
-			$arResult[] = array(
-				"text" => Loc::getMessage("CM_DISCOUNTS3"),
-				"url" => "cat_discount_admin.php?lang=".LANGUAGE_ID,
-				"more_url" => array("cat_discount_edit.php"),
-				"title" => Loc::getMessage("CM_DISCOUNTS_ALT2"),
-				"readonly" => !self::$catalogDiscount,
+			$arItems[] = array(
+				"text" => GetMessage("CM_DISCOUNTS3"),
+				"title" => GetMessage("CM_DISCOUNTS_ALT2"),
+				"items_id" => "menu_sale_discount",
+				"items" => array(
+					array(
+						"text" => Loc::getMessage("CM_DISCOUNTS3"),
+						"url" => "cat_discount_admin.php?lang=".LANGUAGE_ID,
+						"more_url" => array("cat_discount_edit.php"),
+						"title" => Loc::getMessage("CM_DISCOUNTS_ALT2"),
+						"readonly" => !self::$catalogDiscount,
+					),
+					array(
+						"text" => Loc::getMessage("CM_COUPONS_EXT"),
+						"url" => "cat_discount_coupon.php?lang=".LANGUAGE_ID,
+						"more_url" => array("cat_discount_coupon_edit.php"),
+						"title" => Loc::getMessage("CM_COUPONS_TITLE"),
+						"readonly" => !self::$catalogDiscount,
+					)
+				)
 			);
-			if (!empty($arItems))
-				$arResult = array_merge($arResult, $arItems);
 			if (CBXFeatures::IsFeatureEnabled('CatDiscountSave'))
 			{
-				$arResult[] = array(
+				$arItems[] = array(
 					"text" => Loc::getMessage("CAT_DISCOUNT_SAVE"),
 					"url" => "cat_discsave_admin.php?lang=".LANGUAGE_ID,
 					"more_url" => array("cat_discsave_edit.php"),
@@ -432,16 +444,6 @@ class CCatalogAdmin
 					"readonly" => !self::$catalogDiscount,
 				);
 			}
-
-			$arResult[] = array(
-				"text" => Loc::getMessage("CM_COUPONS"),
-				"url" => "cat_discount_coupon.php?lang=".LANGUAGE_ID,
-				"more_url" => array("cat_discount_coupon_edit.php"),
-				"title" => Loc::getMessage("CM_COUPONS_ALT"),
-				"readonly" => !self::$catalogDiscount,
-			);
-
-			$arItems = $arResult;
 		}
 	}
 

@@ -416,7 +416,6 @@ function __logEventExpand(node)
 				fxStart = 300;
 				fxFinish = contentNode.offsetHeight;
 
-
 				(new BX.fx({
 					time: 1.0 * (contentNode.offsetHeight - fxStart) / (1200 - fxStart),
 					step: 0.05,
@@ -427,6 +426,7 @@ function __logEventExpand(node)
 					callback_complete: BX.delegate(function()
 					{
 						contentContrainer.style.maxHeight = 'none';
+						BX.LazyLoad.showImages(true);
 					})
 				})).start();
 			}

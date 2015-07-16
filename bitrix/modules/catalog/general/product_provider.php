@@ -1,6 +1,10 @@
 <?
+use Bitrix\Main;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Sale\DiscountCouponsManager;
+use Bitrix\Currency;
+use Bitrix\Catalog;
 
 if (!Loader::includeModule('sale'))
 	return false;
@@ -9,9 +13,10 @@ Loc::loadMessages(__FILE__);
 
 class CCatalogProductProvider implements IBXSaleProductProvider
 {
-	protected static $arOneTimeCoupons = array();
-	protected static $arCouponsType = array();
+	protected static $arOneTimeCoupons = array();	// unused variable, compatibilty only
 	protected static $clearAutoCache = array();
+	protected static $catalogList = array();
+	protected static $userCache = array();
 
 	/**
 	 * @param array $arParams
@@ -19,6 +24,8 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 	 */
 	public static function GetProductData($arParams)
 	{
+		$adminSection = (defined('ADMIN_SECTION') && ADMIN_SECTION === true);
+
 		if (!isset($arParams['QUANTITY']) || (float)$arParams['QUANTITY'] <= 0)
 			$arParams['QUANTITY'] = 0;
 
@@ -34,111 +41,121 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 		$arParams['SITE_ID'] = (isset($arParams['SITE_ID']) ? $arParams['SITE_ID'] : false);
 		$strSiteID = $arParams['SITE_ID'];
 
-		if (isset($arParams['CURRENCY']))
-			$arParams['CURRENCY'] = CCurrency::checkCurrencyID($arParams['CURRENCY']);
+		$arParams['CURRENCY'] = (isset($arParams['CURRENCY']) ? Currency\CurrencyManager::checkCurrencyID($arParams['CURRENCY']) : false);
 		if ($arParams['CURRENCY'] === false)
 			$arParams['CURRENCY'] = CSaleLang::GetLangCurrency($strSiteID ? $strSiteID : SITE_ID);
 
 		$productID = (int)$arParams['PRODUCT_ID'];
-		$quantity  = (float)$arParams['QUANTITY'];
-		$renewal   = $arParams['RENEWAL'];
+		$quantity = (float)$arParams['QUANTITY'];
 		$intUserID = (int)$arParams['USER_ID'];
 
 		global $USER, $APPLICATION;
 
 		$arResult = array();
 
-		static $arUserCache = array();
-		if (0 < $intUserID)
+		if ($adminSection)
 		{
-			if (!isset($arUserCache[$intUserID]))
-			{
-				$by = 'ID';
-				$order = 'DESC';
-				$rsUsers = CUser::GetList($by, $order, array("ID_EQUAL_EXACT"=>$intUserID),array('FIELDS' => array('ID')));
-				if ($arUser = $rsUsers->Fetch())
-				{
-					$arUser['ID'] = intval($arUser['ID']);
-					$arUserCache[$arUser['ID']] = CUser::GetUserGroup($arUser['ID']);
-				}
-				else
-				{
-					$intUserID = 0;
-					return $arResult;
-				}
-			}
+			$userGroups = self::getUserGroups($intUserID);
+			if (empty($userGroups))
+				return $arResult;
 
 			$dbIBlockElement = CIBlockElement::GetList(
 				array(),
 				array(
-					"ID" => $productID,
-					"ACTIVE" => "Y",
-					"ACTIVE_DATE" => "Y",
-					"CHECK_PERMISSIONS" => "N",
-					),
+					'ID' => $productID,
+					'ACTIVE' => 'Y',
+					'ACTIVE_DATE' => 'Y',
+					'CHECK_PERMISSIONS' => 'N'
+				),
 				false,
 				false,
 				array('ID', 'IBLOCK_ID', 'NAME', 'DETAIL_PAGE_URL')
-				);
-			if(!($arProduct = $dbIBlockElement->GetNext()))
+			);
+			if (!($arProduct = $dbIBlockElement->GetNext()))
 				return $arResult;
-			if ('E' == CIBlock::GetArrayByID($arProduct['IBLOCK_ID'], "RIGHTS_MODE"))
+
+			$extRights = CIBlock::GetArrayByID($arProduct['IBLOCK_ID'], 'RIGHTS_MODE') == 'E';
+			if ($intUserID == 0)
 			{
-				$arUserRights = CIBlockElementRights::GetUserOperations($productID, $intUserID);
-				if (empty($arUserRights))
+				if ($extRights)
 				{
-					return $arResult;
+					$elementRights = new CIBlockElementRights($arProduct['IBLOCK_ID'], $arProduct['ID']);
+					$readList = $elementRights->GetRights(array('operations' => array('element_read')));
+					$disable = true;
+					if (!empty($readList) && is_array($readList))
+					{
+						foreach ($readList as &$row)
+						{
+							if ($row['GROUP_CODE'] == 'G2')
+							{
+								$disable = false;
+								break;
+							}
+						}
+						unset($row);
+					}
+					unset($readList, $elementRights);
+					if ($disable)
+						return $arResult;
+					unset($disable);
 				}
-				elseif (!is_array($arUserRights) || !array_key_exists('element_read', $arUserRights))
+				else
 				{
-					return $arResult;
+					$groupRights = CIBlock::GetGroupPermissions($arProduct['IBLOCK_ID']);
+					if (empty($groupRights) || !isset($groupRights[2]) || $groupRights[2] < 'R')
+						return $arResult;
+					unset($groupRights);
 				}
 			}
 			else
 			{
-				if ('R' > CIBlock::GetPermission($arProduct['IBLOCK_ID'], $intUserID))
+				if ($extRights)
 				{
-					return $arResult;
+					$arUserRights = CIBlockElementRights::GetUserOperations($productID, $intUserID);
+					if (empty($arUserRights) || !isset($arUserRights['element_read']))
+						return $arResult;
+					unset($arUserRights);
+				}
+				else
+				{
+					if (CIBlock::GetPermission($arProduct['IBLOCK_ID'], $intUserID) < 'R')
+						return $arResult;
 				}
 			}
+			unset($extRights);
 		}
 		else
 		{
+			$userGroups = $USER->GetUserGroupArray();
 			$dbIBlockElement = CIBlockElement::GetList(
 				array(),
 				array(
-					"ID" => $productID,
-					"ACTIVE" => "Y",
-					"ACTIVE_DATE" => "Y",
-					"CHECK_PERMISSIONS" => "Y",
-					"MIN_PERMISSION" => "R",
-					),
+					'ID' => $productID,
+					'ACTIVE' => 'Y',
+					'ACTIVE_DATE' => 'Y',
+					'CHECK_PERMISSIONS' => 'Y',
+					'MIN_PERMISSION' => 'R'
+				),
 				false,
 				false,
 				array('ID', 'IBLOCK_ID', 'NAME', 'DETAIL_PAGE_URL')
-				);
-			if(!($arProduct = $dbIBlockElement->GetNext()))
+			);
+			if (!($arProduct = $dbIBlockElement->GetNext()))
 				return $arResult;
 		}
 
-		$rsCatalogs = CCatalog::GetList(
-			array(),
-			array('IBLOCK_ID' => $arProduct["IBLOCK_ID"]),
-			false,
-			false,
-			array(
-				'IBLOCK_ID',
-				'SUBSCRIPTION'
-			)
-		);
-		if (!($arCatalog = $rsCatalogs->Fetch()))
+		if (!isset(self::$catalogList[$arProduct['IBLOCK_ID']]))
 		{
+			$catalogIterator = Catalog\CatalogIblockTable::getList(array(
+				'select' => array('IBLOCK_ID', 'SUBSCRIPTION'),
+				'filter' => array('IBLOCK_ID' => $arProduct['IBLOCK_ID'])
+			));
+			self::$catalogList[$arProduct['IBLOCK_ID']] = $catalogIterator->fetch();
+		}
+		if (empty(self::$catalogList[$arProduct['IBLOCK_ID']]) || !is_array(self::$catalogList[$arProduct['IBLOCK_ID']]))
 			return $arResult;
-		}
-		if ('Y' == $arCatalog["SUBSCRIPTION"])
-		{
+		if (self::$catalogList[$arProduct['IBLOCK_ID']]['SUBSCRIPTION'] == 'Y')
 			$quantity = 1;
-		}
 
 		$dblQuantity = 0;
 		$boolQuantity = false;
@@ -181,130 +198,120 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 
 		if ($arParams["CHECK_PRICE"] == "Y")
 		{
-			$strBasketProductID = $productID.'_'.$arParams['BASKET_ID'];
+			$productHash = array(
+				'MODULE' => 'catalog',
+				'PRODUCT_ID' => $productID,
+				'BASKET_ID' => $arParams['BASKET_ID']
+			);
+
 			$arCoupons = array();
-			if (0 < $intUserID)
+			if ($arParams['CHECK_COUPONS'] == 'Y')
 			{
-				if ('Y' == $arParams['CHECK_COUPONS'])
-					$arCoupons = CCatalogDiscountCoupon::GetCouponsByManage($intUserID);
-
-				CCatalogDiscountSave::SetDiscountUserID($intUserID);
+				$arCoupons = DiscountCouponsManager::getForApply(array(), $productHash, true);
+				if (!empty($arCoupons))
+					$arCoupons = array_keys($arCoupons);
 			}
-			else
+			if ($adminSection)
 			{
-				if ('Y' == $arParams['CHECK_COUPONS'])
-					$arCoupons = CCatalogDiscountCoupon::GetCoupons();
+				if ($intUserID > 0)
+					CCatalogDiscountSave::SetDiscountUserID($intUserID);
+				else
+					CCatalogDiscountSave::Disable();
 			}
 
-
-			$boolChangeCoupons = false;
-			$arNewCoupons = array();
-			if (!empty($arCoupons) && is_array($arCoupons) && !empty(self::$arOneTimeCoupons))
-			{
-				foreach ($arCoupons as $key => $coupon)
-				{
-					if (isset(self::$arOneTimeCoupons[$coupon]))
-					{
-						if (self::$arOneTimeCoupons[$coupon] == $strBasketProductID)
-						{
-							$boolChangeCoupons = true;
-							$arNewCoupons[] = $coupon;
-						}
-						else
-						{
-							unset($arCoupons[$key]);
-						}
-					}
-				}
-			}
-			if ($boolChangeCoupons)
-				$arCoupons = $arNewCoupons;
-
-			$userGroups = ($intUserID > 0 ? $arUserCache[$intUserID] : $USER->GetUserGroupArray());
 			$currentVatMode = CCatalogProduct::getPriceVatIncludeMode();
 			$currentUseDiscount = CCatalogProduct::getUseDiscount();
 			CCatalogProduct::setUseDiscount($arParams['CHECK_DISCOUNT'] == 'Y');
 			CCatalogProduct::setPriceVatIncludeMode(true);
 			CCatalogProduct::setUsedCurrency($arParams['CURRENCY']);
-			$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $renewal, array(), (0 < $intUserID ? $strSiteID : false), $arCoupons);
+			$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $arParams['RENEWAL'], array(), ($adminSection ? $strSiteID : false), $arCoupons);
 
 			if (empty($arPrice))
 			{
 				if ($nearestQuantity = CCatalogProduct::GetNearestQuantityPrice($productID, $quantity, $userGroups))
 				{
 					$quantity = $nearestQuantity;
-					$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $renewal, array(), (0 < $intUserID ? $strSiteID : false), $arCoupons);
+					$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $arParams['RENEWAL'], array(), ($adminSection ? $strSiteID : false), $arCoupons);
 				}
 			}
 			CCatalogProduct::clearUsedCurrency();
 			CCatalogProduct::setPriceVatIncludeMode($currentVatMode);
 			CCatalogProduct::setUseDiscount($currentUseDiscount);
 			unset($userGroups, $currentUseDiscount, $currentVatMode);
-			if (0 < $intUserID)
+			if ($adminSection)
 			{
-				CCatalogDiscountSave::ClearDiscountUserID();
+				if ($intUserID > 0)
+					CCatalogDiscountSave::ClearDiscountUserID();
+				else
+					CCatalogDiscountSave::Enable();
 			}
 
 			if (empty($arPrice))
-			{
 				return $arResult;
-			}
 
 			$arDiscountList = array();
-
-			if (!empty($arPrice["DISCOUNT_LIST"]))
+			if (empty($arPrice['DISCOUNT_LIST']) && !empty($arPrice['DISCOUNT']) && is_array($arPrice['DISCOUNT']))
+				$arPrice['DISCOUNT_LIST'] = array($arPrice['DISCOUNT']);
+			if (!empty($arPrice['DISCOUNT_LIST']))
 			{
-				foreach ($arPrice["DISCOUNT_LIST"] as &$arOneDiscount)
+				$appliedCoupons = array();
+				foreach ($arPrice['DISCOUNT_LIST'] as &$arOneDiscount)
 				{
 					$arOneList = array(
 						'ID' => $arOneDiscount['ID'],
 						'NAME' => $arOneDiscount['NAME'],
 						'COUPON' => '',
 						'COUPON_TYPE' => '',
+						'USE_COUPONS' => (isset($arOneDiscount['USE_COUPONS']) ? $arOneDiscount['USE_COUPONS'] : 'N'),
 						'MODULE_ID' => (isset($oneDiscount['MODULE_ID']) ? $oneDiscount['MODULE_ID'] : 'catalog'),
 						'TYPE' => $arOneDiscount['TYPE'],
 						'VALUE' => $arOneDiscount['VALUE'],
 						'VALUE_TYPE' => $arOneDiscount['VALUE_TYPE'],
+						'MAX_VALUE' => (
+							$arOneDiscount['VALUE_TYPE'] == Catalog\DiscountTable::VALUE_TYPE_PERCENT
+							? $arOneDiscount['MAX_DISCOUNT']
+							: 0
+						),
 						'CURRENCY' => $arOneDiscount['CURRENCY'],
 						'HANDLERS' => (isset($arOneDiscount['HANDLERS']) ? $arOneDiscount['HANDLERS'] : array())
 					);
 
-					if ($arOneDiscount['COUPON'])
+					if (!empty($arOneDiscount['COUPON']))
 					{
+						$arOneList['USE_COUPONS'] = 'Y';
 						$arOneList['COUPON'] = $arOneDiscount['COUPON'];
 						$arOneList['COUPON_TYPE'] = $arOneDiscount['COUPON_ONE_TIME'];
-						if ($arOneDiscount['COUPON_ONE_TIME'] == CCatalogDiscountCoupon::TYPE_ONE_TIME)
-						{
-							self::$arOneTimeCoupons[$arOneDiscount['COUPON']] = $strBasketProductID;
-						}
+						$appliedCoupons[] = $arOneDiscount['COUPON'];
 					}
 					$arDiscountList[] = $arOneList;
 				}
 				unset($arOneList, $arOneDiscount);
+				if (!empty($appliedCoupons))
+					$resultApply = DiscountCouponsManager::setApplyByProduct($productHash, $appliedCoupons);
+				unset($resultApply, $appliedCoupons);
 			}
 
-			if (empty($arPrice["PRICE"]["CATALOG_GROUP_NAME"]))
+			if (empty($arPrice['PRICE']['CATALOG_GROUP_NAME']))
 			{
-				if (!empty($arPrice["PRICE"]["CATALOG_GROUP_ID"]))
+				if (!empty($arPrice['PRICE']['CATALOG_GROUP_ID']))
 				{
-					$rsCatGroups = CCatalogGroup::GetListEx(array(),array('ID' => $arPrice["PRICE"]["CATALOG_GROUP_ID"]),false,false,array('ID','NAME','NAME_LANG'));
-					if ($arCatGroup = $rsCatGroups->Fetch())
-					{
-						$arPrice["PRICE"]["CATALOG_GROUP_NAME"] = (!empty($arCatGroup['NAME_LANG']) ? $arCatGroup['NAME_LANG'] : $arCatGroup['NAME']);
-					}
+					$groupIterator = Catalog\GroupTable::getList(array(
+						'select' => array('ID', 'NAME', 'NAME_LANG' => 'CURRENT_LANG.NAME'),
+						'filter' => array('ID' => $arPrice['PRICE']['CATALOG_GROUP_ID'])
+					));
+					if ($group = $groupIterator->fetch())
+						$arPrice['PRICE']['CATALOG_GROUP_NAME'] = (!empty($group['NAME_LANG']) ? $group['NAME_LANG'] : $group['NAME']);
+					unset($group, $groupIterator);
 				}
 			}
 		}
 		else
 		{
+			$vatRate = 0.0;
 			$rsVAT = CCatalogProduct::GetVATInfo($productID);
 			if ($arVAT = $rsVAT->Fetch())
 			{
-				$vatRate = doubleval($arVAT['RATE'] * 0.01);
-			}
-			else
-			{
-				$vatRate = 0.0;
+				$vatRate = (float)$arVAT['RATE'] * 0.01;
 			}
 		}
 
@@ -313,7 +320,7 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 			"CAN_BUY" => "Y",
 			"DETAIL_PAGE_URL" => $arProduct['~DETAIL_PAGE_URL'],
 			"BARCODE_MULTI" => $arCatalogProduct["BARCODE_MULTI"],
-			"WEIGHT" => floatval($arCatalogProduct['WEIGHT']),
+			"WEIGHT" => (float)$arCatalogProduct['WEIGHT'],
 			"DIMENSIONS" => serialize(array(
 				"WIDTH" => $arCatalogProduct["WIDTH"],
 				"HEIGHT" => $arCatalogProduct["HEIGHT"],
@@ -330,30 +337,38 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 		if ($arParams["CHECK_QUANTITY"] == "Y" && $boolQuantity && $dblQuantity < $quantity)
 			$APPLICATION->ThrowException(Loc::getMessage("CATALOG_QUANTITY_NOT_ENOGH", array("#NAME#" => htmlspecialcharsbx($arProduct["~NAME"]), "#CATALOG_QUANTITY#" => $arCatalogProduct["QUANTITY"], "#QUANTITY#" => $quantity)), "CATALOG_QUANTITY_NOT_ENOGH");
 
-		if ($arParams["CHECK_PRICE"] == "Y")
+		if ($arParams['CHECK_PRICE'] == 'Y')
 		{
-			$arResult = array_merge($arResult, array(
-				"PRODUCT_PRICE_ID" => $arPrice["PRICE"]["ID"],
-				'BASE_PRICE' => $arPrice['RESULT_PRICE']['BASE_PRICE'],
-				"PRICE" => $arPrice['RESULT_PRICE']['DISCOUNT_PRICE'],
-				"CURRENCY" => $arPrice['RESULT_PRICE']['CURRENCY'],
-				"DISCOUNT_PRICE" => $arPrice['RESULT_PRICE']['DISCOUNT'],
-				"NOTES" => $arPrice["PRICE"]["CATALOG_GROUP_NAME"],
-				"VAT_RATE" => $arPrice["PRICE"]["VAT_RATE"],
-				"DISCOUNT_VALUE" => ($arPrice['RESULT_PRICE']['PERCENT'] > 0 ? $arPrice['RESULT_PRICE']['PERCENT'].'%' : 0),
-				"DISCOUNT_NAME" => '',
-				"DISCOUNT_COUPON" => '',
-				"DISCOUNT_LIST" => array()
-			));
+			$arResult['PRODUCT_PRICE_ID'] = $arPrice['PRICE']['ID'];
+			$arResult['NOTES'] = $arPrice['PRICE']['CATALOG_GROUP_NAME'];
+			$arResult['VAT_RATE'] = $arPrice['PRICE']['VAT_RATE'];
+			$arResult['DISCOUNT_NAME'] = '';
+			$arResult['DISCOUNT_COUPON'] = '';
+			$arResult['DISCOUNT_LIST'] = array();
+
+			if (empty($arPrice['RESULT_PRICE']) || !is_array($arPrice['RESULT_PRICE']))
+				$arPrice['RESULT_PRICE'] = CCatalogDiscount::calculateDiscountList($arPrice['PRICE'], $arParams['CURRENCY'], $arDiscountList, true);
+
+			$arResult['BASE_PRICE'] = $arPrice['RESULT_PRICE']['BASE_PRICE'];
+			$arResult['PRICE'] = $arPrice['RESULT_PRICE']['DISCOUNT_PRICE'];
+			$arResult['CURRENCY'] = $arPrice['RESULT_PRICE']['CURRENCY'];
+			$arResult['DISCOUNT_PRICE'] = $arPrice['RESULT_PRICE']['DISCOUNT'];
+			if (isset($arPrice['RESULT_PRICE']['PERCENT']))
+				$arResult['DISCOUNT_VALUE'] = ($arPrice['RESULT_PRICE']['PERCENT'] > 0 ? $arPrice['RESULT_PRICE']['PERCENT'].'%' : 0);
+			else
+				$arResult['DISCOUNT_VALUE'] = $arPrice['RESULT_PRICE']['DISCOUNT_VALUE'];
 
 			if (!empty($arDiscountList))
-			{
 				$arResult['DISCOUNT_LIST'] = $arDiscountList;
-				$arResult["DISCOUNT_NAME"] = "[".$arPrice["DISCOUNT"]["ID"]."] ".$arPrice["DISCOUNT"]["NAME"];
-				if (!empty($arPrice["DISCOUNT"]["COUPON"]))
+			if (!empty($arPrice['DISCOUNT']))
+			{
+				$arResult['DISCOUNT_NAME'] = '['.$arPrice['DISCOUNT']['ID'].'] '.$arPrice['DISCOUNT']['NAME'];
+				if (!empty($arPrice['DISCOUNT']['COUPON']))
 				{
-					$arResult["DISCOUNT_COUPON"] = $arPrice["DISCOUNT"]["COUPON"];
+					$arResult['DISCOUNT_COUPON'] = $arPrice['DISCOUNT']['COUPON'];
 				}
+				if (empty($arResult['DISCOUNT_LIST']))
+					$arResult['DISCOUNT_LIST'] = array($arPrice['DISCOUNT']);
 			}
 		}
 		else
@@ -370,6 +385,8 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 	 */
 	public static function OrderProduct($arParams)
 	{
+		$adminSection = (defined('ADMIN_SECTION') && ADMIN_SECTION === true);
+
 		$arParams['RENEWAL'] = (isset($arParams['RENEWAL']) && $arParams['RENEWAL'] == 'Y' ? 'Y' : 'N');
 		$arParams['CHECK_QUANTITY'] = (isset($arParams['CHECK_QUANTITY']) && $arParams['CHECK_QUANTITY'] == 'N' ? 'N' : 'Y');
 		$arParams['CHECK_DISCOUNT'] = (isset($arParams['CHECK_DISCOUNT']) && $arParams['CHECK_DISCOUNT'] == 'N' ? 'N' : 'Y');
@@ -380,8 +397,7 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 		$strSiteID = $arParams['SITE_ID'];
 		$arParams['BASKET_ID'] = (string)(isset($arParams['BASKET_ID']) ? $arParams['BASKET_ID'] : '0');
 
-		if (isset($arParams['CURRENCY']))
-			$arParams['CURRENCY'] = CCurrency::checkCurrencyID($arParams['CURRENCY']);
+		$arParams['CURRENCY'] = (isset($arParams['CURRENCY']) ? Currency\CurrencyManager::checkCurrencyID($arParams['CURRENCY']) : false);
 		if ($arParams['CURRENCY'] === false)
 			$arParams['CURRENCY'] = CSaleLang::GetLangCurrency($strSiteID ? $strSiteID : SITE_ID);
 
@@ -389,102 +405,82 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 
 		$productID = (int)$arParams['PRODUCT_ID'];
 		$quantity = (float)$arParams['QUANTITY'];
-		$renewal = $arParams['RENEWAL'];
-
 		$intUserID = (int)$arParams['USER_ID'];
 
 		$arResult = array();
 
-		static $arUserCache = array();
-		if (0 < $intUserID)
+		if ($adminSection)
 		{
-			if (!isset($arUserCache[$intUserID]))
-			{
-				$by = 'ID';
-				$order = 'DESC';
-				$rsUsers = CUser::GetList($by, $order, array("ID_EQUAL_EXACT"=>$intUserID),array('FIELDS' => array('ID')));
-				if ($arUser = $rsUsers->Fetch())
-				{
-					$arUser['ID'] = intval($arUser['ID']);
-					$arUserCache[$arUser['ID']] = CUser::GetUserGroup($arUser['ID']);
-				}
-				else
-				{
-					$intUserID = 0;
-					return $arResult;
-				}
-			}
-
-			$dbIBlockElement = CIBlockElement::GetList(
-				array(),
-				array(
-						"ID" => $productID,
-						"ACTIVE" => "Y",
-						"ACTIVE_DATE" => "Y",
-						"CHECK_PERMISSION" => "N",
-					),
-				false,
-				false,
-				array('ID', 'IBLOCK_ID', 'NAME', 'DETAIL_PAGE_URL')
-				);
-			if(!($arProduct = $dbIBlockElement->GetNext()))
+			if ($intUserID == 0)
+				return $arResult;
+			$userGroups = self::getUserGroups($intUserID);
+			if (empty($userGroups))
 				return $arResult;
 
-			if ('E' == CIBlock::GetArrayByID($arProduct['IBLOCK_ID'], "RIGHTS_MODE"))
-			{
-				$arUserRights = CIBlockElementRights::GetUserOperations($productID,$intUserID);
-				if (empty($arUserRights))
-				{
-					return $arResult;
-				}
-				elseif (!is_array($arUserRights) || !array_key_exists('element_read',$arUserRights))
-				{
-					return $arResult;
-				}
-			}
-			else
-			{
-				if ('R' > CIBlock::GetPermission($arProduct['IBLOCK_ID'], $intUserID))
-				{
-					return $arResult;
-				}
-			}
-		}
-		else
-		{
 			$dbIBlockElement = CIBlockElement::GetList(
 				array(),
 				array(
-					"ID" => $productID,
-					"ACTIVE" => "Y",
-					"ACTIVE_DATE" => "Y",
-					"CHECK_PERMISSIONS" => "Y",
-					"MIN_PERMISSION" => "R",
+					'ID' => $productID,
+					'ACTIVE' => 'Y',
+					'ACTIVE_DATE' => 'Y',
+					'CHECK_PERMISSION' => 'N'
 				),
 				false,
 				false,
 				array('ID', 'IBLOCK_ID', 'NAME', 'DETAIL_PAGE_URL')
 			);
-			if(!($arProduct = $dbIBlockElement->GetNext()))
+			if (!($arProduct = $dbIBlockElement->GetNext()))
+				return $arResult;
+
+			if (CIBlock::GetArrayByID($arProduct['IBLOCK_ID'], 'RIGHTS_MODE') == 'E')
+			{
+				$arUserRights = CIBlockElementRights::GetUserOperations($productID, $intUserID);
+				if (empty($arUserRights) || !isset($arUserRights['element_read']))
+					return $arResult;
+				unset($arUserRights);
+			}
+			else
+			{
+				if (CIBlock::GetPermission($arProduct['IBLOCK_ID'], $intUserID) < 'R')
+					return $arResult;
+			}
+		}
+		else
+		{
+			$userGroups = $USER->GetUserGroupArray();
+			$dbIBlockElement = CIBlockElement::GetList(
+				array(),
+				array(
+					'ID' => $productID,
+					'ACTIVE' => 'Y',
+					'ACTIVE_DATE' => 'Y',
+					'CHECK_PERMISSIONS' => 'Y',
+					'MIN_PERMISSION' => 'R'
+				),
+				false,
+				false,
+				array('ID', 'IBLOCK_ID', 'NAME', 'DETAIL_PAGE_URL')
+			);
+			if (!($arProduct = $dbIBlockElement->GetNext()))
 				return $arResult;
 		}
 
 		$rsProducts = CCatalogProduct::GetList(
-		array(),
-		array('ID' => $productID),
-		false,
-		false,
-		array(
-			'ID',
-			'CAN_BUY_ZERO',
-			'QUANTITY_TRACE',
-			'QUANTITY',
-			'WEIGHT',
-			'WIDTH',
-			'HEIGHT',
-			'LENGTH',
-			'BARCODE_MULTI',
-			'TYPE'
+			array(),
+			array('ID' => $productID),
+			false,
+			false,
+			array(
+				'ID',
+				'CAN_BUY_ZERO',
+				'QUANTITY_TRACE',
+				'QUANTITY',
+				'WEIGHT',
+				'WIDTH',
+				'HEIGHT',
+				'LENGTH',
+				'BARCODE_MULTI',
+				'TYPE'
 			)
 		);
 
@@ -508,95 +504,109 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 			return $arResult;
 		}
 
-		if (0 < $intUserID)
-		{
-			$arCoupons = CCatalogDiscountCoupon::GetCouponsByManage($intUserID);
+		if ($adminSection)
 			CCatalogDiscountSave::SetDiscountUserID($intUserID);
-		}
-		else
-		{
-			$arCoupons = CCatalogDiscountCoupon::GetCoupons();
-		}
 
-		$userGroups = ($intUserID > 0 ? $arUserCache[$intUserID] : $USER->GetUserGroupArray());
+		$productHash = array(
+			'MODULE' => 'catalog',
+			'PRODUCT_ID' => $productID,
+			'BASKET_ID' => $arParams['BASKET_ID']
+		);
+		$arCoupons = DiscountCouponsManager::getForApply(array(), $productHash, true);
+
+		if (!empty($arCoupons))
+			$arCoupons = array_keys($arCoupons);
+
 		$currentVatMode = CCatalogProduct::getPriceVatIncludeMode();
 		$currentUseDiscount = CCatalogProduct::getUseDiscount();
 		CCatalogProduct::setUseDiscount($arParams['CHECK_DISCOUNT'] == 'Y');
 		CCatalogProduct::setPriceVatIncludeMode(true);
 		CCatalogProduct::setUsedCurrency($arParams['CURRENCY']);
-		$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $renewal, array(), (0 < $intUserID ? $strSiteID : false), $arCoupons);
+		$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $arParams['RENEWAL'], array(), ($adminSection ? $strSiteID : false), $arCoupons);
 
 		if (empty($arPrice))
 		{
 			if ($nearestQuantity = CCatalogProduct::GetNearestQuantityPrice($productID, $quantity, $userGroups))
 			{
 				$quantity = $nearestQuantity;
-				$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $renewal, array(), (0 < $intUserID ? $strSiteID : false), $arCoupons);
+				$arPrice = CCatalogProduct::GetOptimalPrice($productID, $quantity, $userGroups, $arParams['RENEWAL'], array(), ($adminSection ? $strSiteID : false), $arCoupons);
 			}
 		}
 		CCatalogProduct::clearUsedCurrency();
 		CCatalogProduct::setPriceVatIncludeMode($currentVatMode);
 		CCatalogProduct::setUseDiscount($currentUseDiscount);
 		unset($userGroups, $currentUseDiscount, $currentVatMode);
-		if (0 < $intUserID)
-		{
+		if ($adminSection)
 			CCatalogDiscountSave::ClearDiscountUserID();
-		}
 
 		if (empty($arPrice))
-		{
 			return $arResult;
-		}
 
 		$arDiscountList = array();
-		$arCouponList = array();
-
-		if (!empty($arPrice["DISCOUNT_LIST"]))
+		if (empty($arPrice['DISCOUNT_LIST']) && !empty($arPrice['DISCOUNT']) && is_array($arPrice['DISCOUNT']))
+			$arPrice['DISCOUNT_LIST'] = array($arPrice['DISCOUNT']);
+		if (!empty($arPrice['DISCOUNT_LIST']))
 		{
-			foreach ($arPrice["DISCOUNT_LIST"] as &$arOneDiscount)
+			$appliedCoupons = array();
+			foreach ($arPrice['DISCOUNT_LIST'] as &$arOneDiscount)
 			{
 				$arOneList = array(
 					'ID' => $arOneDiscount['ID'],
 					'NAME' => $arOneDiscount['NAME'],
 					'COUPON' => '',
 					'COUPON_TYPE' => '',
+					'USE_COUPONS' => (isset($arOneDiscount['USE_COUPONS']) ? $arOneDiscount['USE_COUPONS'] : 'N'),
 					'MODULE_ID' => (isset($oneDiscount['MODULE_ID']) ? $oneDiscount['MODULE_ID'] : 'catalog'),
 					'TYPE' => $arOneDiscount['TYPE'],
 					'VALUE' => $arOneDiscount['VALUE'],
 					'VALUE_TYPE' => $arOneDiscount['VALUE_TYPE'],
+					'MAX_VALUE' => (
+						$arOneDiscount['VALUE_TYPE'] == Catalog\DiscountTable::VALUE_TYPE_PERCENT
+						? $arOneDiscount['MAX_DISCOUNT']
+						: 0
+					),
 					'CURRENCY' => $arOneDiscount['CURRENCY'],
 					'HANDLERS' => (isset($arOneDiscount['HANDLERS']) ? $arOneDiscount['HANDLERS'] : array())
 				);
 
-				if ($arOneDiscount['COUPON'])
+				if (!empty($arOneDiscount['COUPON']))
 				{
+					$arOneList['USE_COUPONS'] = 'Y';
 					$arOneList['COUPON'] = $arOneDiscount['COUPON'];
 					$arOneList['COUPON_TYPE'] = $arOneDiscount['COUPON_ONE_TIME'];
-					$arCouponList[] = $arOneDiscount['COUPON'];
+					$appliedCoupons[] = $arOneDiscount['COUPON'];
 				}
 
 				$arDiscountList[] = $arOneList;
 			}
 			unset($arOneList, $arOneDiscount);
+			if (!empty($appliedCoupons))
+				$resultApply = DiscountCouponsManager::setApplyByProduct($productHash, $appliedCoupons);
+			unset($resultApply, $appliedCoupons);
 		}
 
-		if (empty($arPrice["PRICE"]["CATALOG_GROUP_NAME"]))
+		if (empty($arPrice['PRICE']['CATALOG_GROUP_NAME']))
 		{
-			if (!empty($arPrice["PRICE"]["CATALOG_GROUP_ID"]))
+			if (!empty($arPrice['PRICE']['CATALOG_GROUP_ID']))
 			{
-				$rsCatGroups = CCatalogGroup::GetListEx(array(),array('ID' => $arPrice["PRICE"]["CATALOG_GROUP_ID"]),false,false,array('ID','NAME','NAME_LANG'));
-				if ($arCatGroup = $rsCatGroups->Fetch())
-				{
-					$arPrice["PRICE"]["CATALOG_GROUP_NAME"] = (!empty($arCatGroup['NAME_LANG']) ? $arCatGroup['NAME_LANG'] : $arCatGroup['NAME']);
-				}
+				$groupIterator = Catalog\GroupTable::getList(array(
+					'select' => array('ID', 'NAME', 'NAME_LANG' => 'CURRENT_LANG.NAME'),
+					'filter' => array('ID' => $arPrice['PRICE']['CATALOG_GROUP_ID'])
+				));
+				if ($group = $groupIterator->fetch())
+					$arPrice["PRICE"]["CATALOG_GROUP_NAME"] = (!empty($group['NAME_LANG']) ? $group['NAME_LANG'] : $group['NAME']);
+				unset($group, $groupIterator);
 			}
 		}
 
+		if (empty($arPrice['RESULT_PRICE']) || !is_array($arPrice['RESULT_PRICE']))
+			$arPrice['RESULT_PRICE'] = CCatalogDiscount::calculateDiscountList($arPrice['PRICE'], $arParams['CURRENCY'], $arDiscountList, true);
+
 		$arResult = array(
-			"PRODUCT_PRICE_ID" => $arPrice["PRICE"]["ID"],
+			'PRODUCT_PRICE_ID' => $arPrice['PRICE']['ID'],
 			'BASE_PRICE' => $arPrice['RESULT_PRICE']['BASE_PRICE'],
-			"PRICE" => $arPrice['RESULT_PRICE']['DISCOUNT_PRICE'],
-			"VAT_RATE" => $arPrice['PRICE']['VAT_RATE'],
+			'PRICE' => $arPrice['RESULT_PRICE']['DISCOUNT_PRICE'],
+			'VAT_RATE' => $arPrice['PRICE']['VAT_RATE'],
 			"CURRENCY" => $arPrice['RESULT_PRICE']['CURRENCY'],
 			"WEIGHT" => (float)$arCatalogProduct["WEIGHT"],
 			"DIMENSIONS" => serialize(array(
@@ -611,8 +621,8 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 			"DISCOUNT_PRICE" => $arPrice['RESULT_PRICE']['DISCOUNT'],
 			"TYPE" => ($arCatalogProduct["TYPE"] == CCatalogProduct::TYPE_SET) ? CCatalogProductSet::TYPE_SET : NULL,
 			"DISCOUNT_VALUE" => ($arPrice['RESULT_PRICE']['PERCENT'] > 0 ? $arPrice['RESULT_PRICE']['PERCENT'].'%' : 0),
-			"DISCOUNT_NAME" => "",
-			"DISCOUNT_COUPON" => "",
+			"DISCOUNT_NAME" => '',
+			"DISCOUNT_COUPON" => '',
 			"DISCOUNT_LIST" => array()
 		);
 
@@ -621,20 +631,17 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 		else
 			$arResult["QUANTITY"] = $arParams["QUANTITY"];
 
-		if (!empty($arPrice["DISCOUNT_LIST"]))
-		{
+		if (!empty($arDiscountList))
 			$arResult['DISCOUNT_LIST'] = $arDiscountList;
-			$arResult["DISCOUNT_NAME"] = "[".$arPrice["DISCOUNT"]["ID"]."] ".$arPrice["DISCOUNT"]["NAME"];
-
-			if (!empty($arPrice["DISCOUNT"]["COUPON"]))
+		if (!empty($arPrice['DISCOUNT']))
+		{
+			$arResult['DISCOUNT_NAME'] = '['.$arPrice['DISCOUNT']['ID'].'] '.$arPrice['DISCOUNT']['NAME'];
+			if (!empty($arPrice['DISCOUNT']['COUPON']))
 			{
-				$arResult["DISCOUNT_COUPON"] = $arPrice["DISCOUNT"]["COUPON"];
+				$arResult['DISCOUNT_COUPON'] = $arPrice['DISCOUNT']['COUPON'];
 			}
-
-			if (!empty($arCouponList))
-			{
-				$mxApply = CCatalogDiscountCoupon::CouponApply($intUserID, $arCouponList);
-			}
+			if (empty($arResult['DISCOUNT_LIST']))
+				$arResult['DISCOUNT_LIST'] = array($arPrice['DISCOUNT']);
 		}
 
 		return $arResult;
@@ -692,7 +699,7 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 		}
 
 		$disableReservation = (COption::GetOptionString("catalog", "enable_reservation") == "N"
-			&& COption::GetOptionString("sale", "product_reserve_condition", "O") != "S"
+			&& COption::GetOptionString("sale", "product_reserve_condition") != "S"
 			&& COption::GetOptionString('catalog','default_use_store_control') != "Y");
 
 		if ((string)$arParams["UNDO_RESERVATION"] != "Y")
@@ -869,7 +876,7 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 		$strUseStoreControl = COption::GetOptionString('catalog','default_use_store_control');
 
 		$disableReservation = (COption::GetOptionString("catalog", "enable_reservation") == "N"
-			&& COption::GetOptionString("sale", "product_reserve_condition", "O") != "S"
+			&& COption::GetOptionString("sale", "product_reserve_condition") != "S"
 			&& $strUseStoreControl != "Y");
 
 		if ($disableReservation)
@@ -1390,8 +1397,7 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 
 	private static function GetProductCatalogInfo($productID)
 	{
-		$productID = intval($productID);
-		$result = "";
+		$productID = (int)$productID;
 		if ($productID <= 0)
 			return array();
 
@@ -1527,8 +1533,6 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 
 	protected static function clearPublicCache($productID, $productInfo = array())
 	{
-		global $CACHE_MANAGER;
-
 		$productID = (int)$productID;
 		if ($productID <= 0)
 			return;
@@ -1537,7 +1541,8 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 			return;
 		if (defined('BX_COMP_MANAGED_CACHE') && !isset(self::$clearAutoCache[$iblockID]))
 		{
-			$CACHE_MANAGER->ClearByTag('iblock_id_'.$iblockID);
+			$taggedCache = \Bitrix\Main\Application::getInstance()->getTaggedCache();
+			$taggedCache->clearByTag('iblock_id_'.$iblockID);
 			self::$clearAutoCache[$iblockID] = true;
 		}
 
@@ -1545,9 +1550,35 @@ class CCatalogProductProvider implements IBXSaleProductProvider
 		$productInfo['ELEMENT_IBLOCK_ID'] = $iblockID;
 		$productInfo['IBLOCK_ID'] = $iblockID;
 		foreach (GetModuleEvents('catalog', 'OnProductQuantityTrace', true) as $arEvent)
-		{
 			ExecuteModuleEventEx($arEvent, array($productID, $productInfo));
+	}
+
+	protected static function getUserGroups($userId)
+	{
+		$userId = (int)$userId;
+		if ($userId < 0)
+			return false;
+		if (!isset(self::$userCache[$userId]))
+		{
+			if ($userId == 0)
+			{
+				self::$userCache[$userId] = array(2);
+			}
+			else
+			{
+				self::$userCache[$userId] = false;
+				$userIterator = Main\UserTable::getList(array(
+					'select' => array('ID'),
+					'filter' => array('=ID' => $userId)
+				));
+				if ($user = $userIterator->fetch())
+				{
+					$user['ID'] = (int)$user['ID'];
+					self::$userCache[$user['ID']] = CUser::GetUserGroup($user['ID']);
+				}
+				unset($user, $userIterator);
+			}
 		}
+		return self::$userCache[$userId];
 	}
 }
-?>

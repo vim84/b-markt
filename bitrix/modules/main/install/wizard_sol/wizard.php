@@ -681,7 +681,7 @@ class CDataInstallWizardStep extends CWizardStep
 			if (array_key_exists("STAGES", $arServices[$lastService]) && is_array($arServices[$lastService]))
 				$stepsCount += count($arServices[$lastService]["STAGES"])-1;
 			$percent = round($stepsComplete/$stepsCount * 100);
-			$response = "window.ajaxForm.SetStatus('".$percent."'); window.ajaxForm.Post('".$nextService."', '".$nextServiceStage."','".$status."');";
+			$response = ($percent ? "window.ajaxForm.SetStatus('".$percent."');" : "")." window.ajaxForm.Post('".$nextService."', '".$nextServiceStage."','".$status."');";
 		}
 		die("[response]".$response."[/response]");
 	}

@@ -1,4 +1,6 @@
 <?
+use Bitrix\Catalog;
+use Bitrix\Sale\DiscountCouponsManager;
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/general/discount_coupon.php");
 
 class CCatalogDiscountCoupon extends CAllCatalogDiscountCoupon
@@ -128,6 +130,14 @@ class CCatalogDiscountCoupon extends CAllCatalogDiscountCoupon
 		return false;
 	}
 
+	/**
+	 * @param array $arOrder
+	 * @param array $arFilter
+	 * @param bool|array $arGroupBy
+	 * @param bool|array $arNavStartParams
+	 * @param array $arSelectFields
+	 * @return bool|CDBResult
+	 */
 	public function GetList($arOrder = array(), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
@@ -216,88 +226,100 @@ class CCatalogDiscountCoupon extends CAllCatalogDiscountCoupon
 		return $dbRes;
 	}
 
+	/**
+	* @deprecated deprecated since catalog 15.0.4
+	* @see \Bitrix\Sale\DiscountCouponsManager
+	*/
 	public function CouponApply($intUserID, $strCoupon)
 	{
-		global $DB;
-
-		$mxResult = false;
-
-		$intUserID = intval($intUserID);
-		if (0 > $intUserID)
-			$intUserID = 0;
-
-		$arCouponList = array();
-		$arCheck = (is_array($strCoupon) ? $strCoupon : array($strCoupon));
-		foreach ($arCheck as &$strOneCheck)
+		if (self::$existCouponsManager === null)
+			self::initCouponManager();
+		if (self::$existCouponsManager)
 		{
-			$strOneCheck = strval($strOneCheck);
-			if ('' != $strOneCheck)
-				$arCouponList[] = $strOneCheck;
+			$couponList = (is_array($strCoupon) ? $strCoupon : array($strCoupon));
+			return DiscountCouponsManager::setApplyByProduct(array('MODULE' => 'catalog'), $couponList, true);
 		}
-		if (isset($strOneCheck))
-			unset($strOneCheck);
+		else
+		{
+			global $DB;
 
-		if (empty($arCouponList))
+			$mxResult = false;
+
+			$intUserID = (int)$intUserID;
+			if ($intUserID < 0)
+				$intUserID = 0;
+
+			$arCouponList = array();
+			$arCheck = (is_array($strCoupon) ? $strCoupon : array($strCoupon));
+			foreach ($arCheck as &$strOneCheck)
+			{
+				$strOneCheck = (string)$strOneCheck;
+				if ('' != $strOneCheck)
+					$arCouponList[] = $strOneCheck;
+			}
+			if (isset($strOneCheck))
+				unset($strOneCheck);
+
+			if (empty($arCouponList))
+				return $mxResult;
+
+			$strDateFunction = $DB->GetNowFunction();
+			$boolFlag = false;
+			$couponIterator = Catalog\DiscountCouponTable::getList(array(
+				'select' => array('ID', 'TYPE', 'COUPON'),
+				'filter' => array('=COUPON' => $arCouponList, '=ACTIVE' => 'Y')
+			));
+			while ($arCoupon = $couponIterator->fetch())
+			{
+				$arCoupon['ID'] = (int)$arCoupon['ID'];
+				$arFields = array(
+					"~DATE_APPLY" => $strDateFunction
+				);
+
+				if ($arCoupon['TYPE'] == Catalog\DiscountCouponTable::TYPE_ONE_ROW)
+				{
+					$arFields["ACTIVE"] = "N";
+					if (0 < $intUserID)
+					{
+						CCatalogDiscountCoupon::EraseCouponByManage($intUserID, $arCoupon['COUPON']);
+					}
+					else
+					{
+						CCatalogDiscountCoupon::EraseCoupon($arCoupon['COUPON']);
+					}
+				}
+				elseif ($arCoupon['TYPE'] == Catalog\DiscountCouponTable::TYPE_ONE_ORDER)
+				{
+					$boolFlag = true;
+					if (!isset(self::$arOneOrderCoupons[$arCoupon['ID']]))
+						self::$arOneOrderCoupons[$arCoupon['ID']] = array(
+							'COUPON' => $arCoupon['COUPON'],
+							'USER_ID' => $intUserID,
+						);
+				}
+
+				$strUpdate = $DB->PrepareUpdate("b_catalog_discount_coupon", $arFields);
+				if (!empty($strUpdate))
+				{
+					$strSql = "UPDATE b_catalog_discount_coupon SET ".$strUpdate." WHERE ID = ".$arCoupon['ID'];
+					$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+					$mxResult = true;
+				}
+			}
+			unset($arCoupon, $couponIterator);
+			if ($boolFlag)
+			{
+				AddEventHandler('sale', 'OnBasketOrder', array('CCatalogDiscountCoupon', 'CouponOneOrderDisable'));
+				AddEventHandler('sale', 'OnDoBasketOrder', array('CCatalogDiscountCoupon', 'CouponOneOrderDisable'));
+			}
 			return $mxResult;
-
-		$boolFlag = false;
-		$rsCoupons = CCatalogDiscountCoupon::GetList(
-			array(),
-			array('COUPON' => $arCouponList, 'ACTIVE' => 'Y'),
-			false,
-			false,
-			array('ID', 'ONE_TIME', 'COUPON')
-		);
-		$strDateFunction = $DB->GetNowFunction();
-		while ($arCoupon = $rsCoupons->Fetch())
-		{
-			$arCoupon['ID'] = intval($arCoupon['ID']);
-			$arFields = array(
-				"~DATE_APPLY" => $strDateFunction
-			);
-
-			if (self::TYPE_ONE_TIME == $arCoupon["ONE_TIME"])
-			{
-				$arFields["ACTIVE"] = "N";
-				if (0 < $intUserID)
-				{
-					CCatalogDiscountCoupon::EraseCouponByManage($intUserID, $arCoupon['COUPON']);
-				}
-				else
-				{
-					CCatalogDiscountCoupon::EraseCoupon($arCoupon['COUPON']);
-				}
-			}
-			elseif (self::TYPE_ONE_ORDER == $arCoupon["ONE_TIME"])
-			{
-				$boolFlag = true;
-				if (!array_key_exists($arCoupon['ID'], self::$arOneOrderCoupons))
-					self::$arOneOrderCoupons[$arCoupon['ID']] = array(
-						'COUPON' => $arCoupon['COUPON'],
-						'USER_ID' => $intUserID,
-					);
-			}
-
-			$strUpdate = $DB->PrepareUpdate("b_catalog_discount_coupon", $arFields);
-			if (!empty($strUpdate))
-			{
-				$strSql = "UPDATE b_catalog_discount_coupon SET ".$strUpdate." WHERE ID = ".$arCoupon['ID'];
-				$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-				$mxResult = true;
-			}
 		}
-		if ($boolFlag)
-		{
-			AddEventHandler('sale', 'OnBasketOrder', array('CCatalogDiscountCoupon', 'CouponOneOrderDisable'));
-			AddEventHandler('sale', 'OnDoBasketOrder', array('CCatalogDiscountCoupon', 'CouponOneOrderDisable'));
-		}
-		return $mxResult;
 	}
 
-/*
-* @deprecated deprecated since catalog 12.5.6
-* @see CCatalogDiscountCoupon::CouponOneOrderDisable()
-*/
+	/**
+	* @deprecated deprecated since catalog 12.5.6
+	* @see CCatalogDiscountCoupon::CouponOneOrderDisable()
+	*/
 	public function __CouponOneOrderDisable($arCoupons)
 	{
 		global $DB;
@@ -310,8 +332,17 @@ class CCatalogDiscountCoupon extends CAllCatalogDiscountCoupon
 		$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 	}
 
+	/**
+	* @deprecated deprecated since catalog 15.0.4
+	* @see \Bitrix\Sale\DiscountCouponsManager::saveApplied
+	*/
 	public function CouponOneOrderDisable($intOrderID = 0)
 	{
+		if (self::$existCouponsManager === null)
+			self::initCouponManager();
+		if (self::$existCouponsManager)
+			return;
+
 		global $DB;
 		if (!empty(self::$arOneOrderCoupons))
 		{
@@ -333,25 +364,40 @@ class CCatalogDiscountCoupon extends CAllCatalogDiscountCoupon
 			CatalogClearArray($arCouponID, false);
 			if (!empty($arCouponID))
 			{
-				$strSql = "UPDATE b_catalog_discount_coupon SET ACTIVE='N' WHERE ID IN (".implode(', ', $arCouponID).") AND ONE_TIME='".self::TYPE_ONE_ORDER."'";
+				$strSql = "UPDATE b_catalog_discount_coupon SET ACTIVE='N' WHERE ID IN (".implode(', ', $arCouponID).") AND ONE_TIME='".self::TYPE_ONE_ORDER."' AND ACTIVE='Y'";
 				$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			}
 			self::$arOneOrderCoupons = array();
 		}
 	}
 
+	/**
+	* @deprecated deprecated since catalog 15.0.4
+	* @see \Bitrix\Sale\DiscountCouponsManager::isExist
+	*/
 	public function IsExistCoupon($strCoupon)
 	{
-		global $DB;
-
-		if ('' == $strCoupon)
+		if (self::$existCouponsManager === null)
+			self::initCouponManager();
+		if (self::$existCouponsManager)
+		{
+			$result = DiscountCouponsManager::isExist($strCoupon);
+			if (!empty($result))
+				return true;
 			return false;
+		}
+		else
+		{
+			global $DB;
 
-		$strSql = "select ID, COUPON from b_catalog_discount_coupon where COUPON='".$DB->ForSql($strCoupon)."' limit 1";
-		$rsCoupons = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
-		if ($arCoupon = $rsCoupons->Fetch())
-			return true;
+			if ($strCoupon == '')
+				return false;
+
+			$strSql = "select ID, COUPON from b_catalog_discount_coupon where COUPON='".$DB->ForSql($strCoupon)."' limit 1";
+			$rsCoupons = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+			if ($arCoupon = $rsCoupons->Fetch())
+				return true;
+		}
 		return false;
 	}
 }
-?>

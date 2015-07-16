@@ -11,9 +11,12 @@ namespace Bitrix\Sale\Location\Import;
 use Bitrix\Main;
 use Bitrix\Main\Web\HttpClient;
 use Bitrix\Main\IO;
-use Bitrix\Sale\Location;
 
-final class ImportProcess extends Process
+use Bitrix\Sale\Location;
+use Bitrix\Sale\Location\DB\BlockInserter;
+use Bitrix\Sale\Location\Util\CSVReader;
+
+final class ImportProcess extends Location\Util\Process
 {
 	const DISTRIBUTOR_HOST = 				'www.1c-bitrix.ru';
 	const DISTRIBUTOR_PORT = 				80;
@@ -27,13 +30,15 @@ final class ImportProcess extends Process
 	const PACK_STANDARD = 					'standard';
 	const PACK_EXTENDED = 					'extended';
 
-	const LOCAL_PATH = 						'/upload/sale/location/';
 	const LOCAL_SETS_PATH = 				'bundles/';
 	const LOCAL_LOCATION_FILE = 			'%s.csv';
 	const LOCAL_LAYOUT_FILE = 				'layout.csv';
 	const LOCAL_TYPE_GROUP_FILE = 			'typegroup.csv';
 	const LOCAL_TYPE_FILE = 				'type.csv';
 	const LOCAL_EXTERNAL_SERVICE_FILE = 	'externalservice.csv';
+
+	const USER_FILE_DIRECTORY_SESSION_KEY = 'location_import_user_file';
+	const USER_FILE_TEMP_NAME = 			'userfile.csv';
 
 	const SOURCE_REMOTE = 					'remote';
 	const SOURCE_FILE = 					'file';
@@ -50,7 +55,7 @@ final class ImportProcess extends Process
 	const TREE_REBALANCE_TEMP_BLOCK_LEN_O = 9999;
 	const TREE_REBALANCE_TEMP_TABLE_NAME = 	'b_sale_location_rebalance';
 
-	const DEBUG_MODE = 						true;
+	const DEBUG_MODE = 						false;
 
 	protected $sessionKey = 				'location_import';
 	protected $rebalanceInserter = 			false;
@@ -82,7 +87,7 @@ final class ImportProcess extends Process
 				'SUBPERCENT_CALLBACK' => 'getSubpercentForStageDownloadFiles'
 			));
 
-			if($_REQUEST['OPTIONS']['DROP_ALL'])
+			if($options['REQUEST']['OPTIONS']['DROP_ALL'])
 			{
 				$this->addStage(array(
 					'PERCENT' => 7,
@@ -107,7 +112,7 @@ final class ImportProcess extends Process
 				'SUBPERCENT_CALLBACK' => 'getSubpercentForStageProcessFiles'
 			));
 
-			if($_REQUEST['OPTIONS']['INTEGRITY_PRESERVE'])
+			if($options['REQUEST']['OPTIONS']['INTEGRITY_PRESERVE'])
 			{
 				$this->addStage(array(
 					'PERCENT' => 65,
@@ -155,7 +160,12 @@ final class ImportProcess extends Process
 
 		if(!$this->data['inited'])
 		{
-			$opts = $_REQUEST['OPTIONS'];
+			if((string) $this->data['LOCAL_PATH'] == '')
+			{
+				list($this->data['LOCAL_PATH'], $created) = $this->getTemporalDirectory();
+			}
+
+			$opts = $this->options['REQUEST']['OPTIONS'];
 
 			if(!in_array($opts['SOURCE'], array(self::SOURCE_REMOTE, self::SOURCE_FILE)))
 				throw new Main\SystemException('Unknown import type');
@@ -163,16 +173,24 @@ final class ImportProcess extends Process
 			$sets = array();
 			if($opts['SOURCE'] == self::SOURCE_REMOTE)
 			{
-				$sets = $this->normalizeQueryArray($_REQUEST['LOCATION_SETS']);
+				$sets = $this->normalizeQueryArray($this->options['REQUEST']['LOCATION_SETS']);
 				if(empty($sets))
 					throw new Main\SystemException('Nothing to do (no sets selected)');
 			}
 
 			$this->data['settings'] = array(
 				'sets' => $sets,
-				'additional' => is_array($_REQUEST['ADDITIONAL']) ? array_flip(array_values($_REQUEST['ADDITIONAL'])) : array(),
 				'options' => $opts
 			);
+
+			if($opts['SOURCE'] == self::SOURCE_REMOTE)
+			{
+				$this->data['settings']['additional'] = is_array($this->options['REQUEST']['ADDITIONAL']) ? array_flip(array_values($this->options['REQUEST']['ADDITIONAL'])) : array();
+			}
+			elseif($this->checkSource(self::SOURCE_FILE))
+			{
+				$this->data['settings']['additional'] = false; // means ANY
+			}
 
 			$this->buildTypeTable();
 			$this->buildExternalSerivceTable();
@@ -191,12 +209,32 @@ final class ImportProcess extends Process
 	{
 		if($this->checkSource(self::SOURCE_FILE)) // user uploaded file
 		{
+			if((string) $_SESSION[static::USER_FILE_DIRECTORY_SESSION_KEY] == '')
+				throw new Main\SystemException('User file was not uploaded properly');
+
+			$srcFilePath = $_SESSION[static::USER_FILE_DIRECTORY_SESSION_KEY].'/'.static::USER_FILE_TEMP_NAME;
+			$dstFilePath = $this->data['LOCAL_PATH'].self::getFileNameByIndex(0);
+
+			// ensure directory exists
+			$this->createDirectory($this->data['LOCAL_PATH'].'/'.self::LOCAL_SETS_PATH);
+
+			if(!@copy($srcFilePath, $dstFilePath))
+			{
+				$lastError = error_get_last();
+				throw new Main\SystemException($lastError['message']);
+			}
+
 			$this->data['files'] = array(
 				array(
-					'size' => filesize($_SERVER['DOCUMENT_ROOT'].self::LOCAL_PATH.self::getFileNameByIndex(0)),
+					'size' => filesize($dstFilePath),
 					'memgroup' => 'static'
 				)
 			);
+
+			// commented out to have an ability to do is several times
+			//$this->deleteDirectory($_SESSION[static::USER_FILE_DIRECTORY_SESSION_KEY]);
+			//unset($_SESSION[static::USER_FILE_DIRECTORY_SESSION_KEY]);
+
 			$this->nextStage();
 		}
 		elseif($this->checkSource(self::SOURCE_REMOTE)) // get locations from remote server
@@ -238,7 +276,7 @@ final class ImportProcess extends Process
 				if($this->getStep() == 1) // get layout (root) file
 				{
 					$this->data['files'][0] = array(
-						'size' => $this->downloadFile(self::REMOTE_LAYOUT_FILE, self::getFileNameByIndex(0)),
+						'size' => static::downloadFile(self::REMOTE_LAYOUT_FILE, self::getFileNameByIndex(0), false, $this->data['LOCAL_PATH']),
 						'onlyThese' => array_flip($this->data['settings']['bundles']['allpoints']),
 						'memgroup' => 'static'
 					);
@@ -261,7 +299,7 @@ final class ImportProcess extends Process
 						try
 						{
 							$this->data['files'][$j] = array(
-								'size' => $this->downloadFile($file, $name),
+								'size' => static::downloadFile($file, $name, false, $this->data['LOCAL_PATH']),
 								'memgroup' => $ep
 							);
 							$j++;
@@ -325,7 +363,7 @@ final class ImportProcess extends Process
 
 		$this->nextStep();
 
-		if($this->step >= 4)
+		if($this->step >= 5)
 			$this->nextStage();
 	}
 
@@ -406,15 +444,16 @@ final class ImportProcess extends Process
 
 		if(!isset($this->hitData['csv']))
 		{
-			$file = $_SERVER['DOCUMENT_ROOT'].self::LOCAL_PATH.$fName;
+			$file = $this->data['LOCAL_PATH'].$fName;
 
 			if(!file_exists($file) || !is_readable($file))
 				throw new Main\SystemException('Cannot open file '.$file.' for reading');
 
-			$this->logMessage('Charging File: '.$fName);
+			$this->logMessage('Chargeing File: '.$fName);
 
 			$this->hitData['csv'] = new CSVReader();
 			$this->hitData['csv']->LoadFile($file);
+			$this->hitData['csv']->AddEventCallback('AFTER_ASSOC_LINE_READ', array($this, 'provideEnFromRu'));
 		}
 
 		$block = $this->hitData['csv']->ReadBlockLowLevel($this->data['current']['bytesRead'], 100);
@@ -461,9 +500,58 @@ final class ImportProcess extends Process
 
 		$gid = $this->getCurrentGid();
 
+		// here must decide, which languages to import
+		$langs = array_flip($this->getRequiredLanguages());
+
 		foreach($block as $i => $data)
 		{
 			$code = $data['CODE'];
+
+			// this spike is only for cutting off COUNTRY_DISTRICT
+			// strongly need for the more generalized mechanism for excluding certain types
+			if(!!($this->options['REQUEST']['OPTIONS']['EXCLUDE_COUNTRY_DISTRICT']))
+			{
+				if(!is_array($this->data['COUNTRY_2_DISTRICT']))
+					$this->data['COUNTRY_2_DISTRICT'] = array();
+
+				if($data['TYPE_CODE'] == 'COUNTRY')
+				{
+					$this->data['LAST_COUNTRY'] = $data['CODE'];
+				}
+				elseif($data['TYPE_CODE'] == 'COUNTRY_DISTRICT')
+				{
+					$this->data['COUNTRY_2_DISTRICT'][$code] = $this->data['LAST_COUNTRY'];
+					continue;
+				}
+				else
+				{
+					if(isset($this->data['COUNTRY_2_DISTRICT'][$data['PARENT_CODE']]))
+						$data['PARENT_CODE'] = $this->data['COUNTRY_2_DISTRICT'][$data['PARENT_CODE']];
+				}
+			}
+
+			// this spike is only for cutting off COUNTRY_DISTRICT
+			// strongly need for the more generalized mechanism for excluding certain types
+			if(!!($this->options['REQUEST']['OPTIONS']['EXCLUDE_COUNTRY_DISTRICT']))
+			{
+				if(!is_array($this->data['COUNTRY_2_DISTRICT']))
+					$this->data['COUNTRY_2_DISTRICT'] = array();
+
+				if($data['TYPE_CODE'] == 'COUNTRY')
+				{
+					$this->data['LAST_COUNTRY'] = $data['CODE'];
+				}
+				elseif($data['TYPE_CODE'] == 'COUNTRY_DISTRICT')
+				{
+					$this->data['COUNTRY_2_DISTRICT'][$code] = $this->data['LAST_COUNTRY'];
+					continue;
+				}
+				else
+				{
+					if(isset($this->data['COUNTRY_2_DISTRICT'][$data['PARENT_CODE']]))
+						$data['PARENT_CODE'] = $this->data['COUNTRY_2_DISTRICT'][$data['PARENT_CODE']];
+				}
+			}
 
 			if(isset($this->data['existedlocs']['static'][$code]) || isset($this->data['existedlocs'][$gid][$code])) // already exists
 				continue;
@@ -534,14 +622,17 @@ final class ImportProcess extends Process
 			// add names
 			if(is_array($names) && !empty($names))
 			{
-				foreach($names as $lid => $name)
+				if(is_array($langs))
 				{
-					if(strlen($name['NAME']))
+					foreach($langs as $lid => $f)
 					{
+						$lid = ToLower($lid);
+						$toAdd = static::getTranslatedName($names, $lid);
+
 						$this->hitData['HANDLES']['NAME']->insert(array(
-							'NAME' => $name['NAME'],
-							'NAME_UPPER' => ToUpper($name['NAME']),
-							'LANGUAGE_ID' => ToLower($lid),
+							'NAME' => $toAdd['NAME'],
+							'NAME_UPPER' => ToUpper($toAdd['NAME']),
+							'LANGUAGE_ID' => $lid,
 							'LOCATION_ID' => $locationId
 						));
 					}
@@ -589,7 +680,7 @@ final class ImportProcess extends Process
 		else
 			$mtu = self::INSERTER_MTU;
 
-		$this->hitData['HANDLES']['LOCATION'] = new Location\DBBlockInserter(array(
+		$this->hitData['HANDLES']['LOCATION'] = new BlockInserter(array(
 			'entityName' => '\Bitrix\Sale\Location\LocationTable',
 			'exactFields' => array('CODE', 'TYPE_ID', 'PARENT_ID', 'LATITUDE', 'LONGITUDE'),
 			'parameters' => array(
@@ -598,7 +689,7 @@ final class ImportProcess extends Process
 			)
 		));
 
-		$this->hitData['HANDLES']['NAME'] = new Location\DBBlockInserter(array(
+		$this->hitData['HANDLES']['NAME'] = new BlockInserter(array(
 			'entityName' => '\Bitrix\Sale\Location\Name\LocationTable',
 			'exactFields' => array('NAME', 'NAME_UPPER', 'LANGUAGE_ID', 'LOCATION_ID'),
 			'parameters' => array(
@@ -606,7 +697,7 @@ final class ImportProcess extends Process
 			)
 		));
 
-		$this->hitData['HANDLES']['EXTERNAL'] = new Location\DBBlockInserter(array(
+		$this->hitData['HANDLES']['EXTERNAL'] = new BlockInserter(array(
 			'entityName' => '\Bitrix\Sale\Location\ExternalTable',
 			'exactFields' => array('SERVICE_ID', 'XML_ID', 'LOCATION_ID'),
 			'parameters' => array(
@@ -676,7 +767,7 @@ final class ImportProcess extends Process
 	protected function getSubpercentForStageProcessFiles()
 	{
 		$pRange = $this->getStagePercent($this->stage) - $this->getStagePercent($this->stage - 1);
-		
+
 		$totalSize = 0;
 		$fileBytesRead = 0;
 
@@ -723,8 +814,9 @@ final class ImportProcess extends Process
 		$code2id = array();
 		while($item = $res->fetch())
 		{
-			if(isset($lay[$item['CODE']]))
+			if(isset($lay[$item['CODE']]) && ((string) $lay[$item['CODE']]['PARENT_CODE'] != '')/*except root*/)
 				$relations[$item['CODE']] = $lay[$item['CODE']]['PARENT_CODE'];
+			// relations is a match between codes from the layout file
 
 			$code2id[$item['CODE']] = $item['ID'];
 		}
@@ -733,7 +825,7 @@ final class ImportProcess extends Process
 
 		foreach($code2id as $code => $id)
 		{
-			if(isset($parentCode2id[$relations[$code]])) // parent really exists
+			if(isset($parentCode2id[$relations[$code]]) && ((string) $parentCode2id[$relations[$code]] != '')) // parent really exists
 			{
 				$res = Location\LocationTable::update($id, array('PARENT_ID' => $parentCode2id[$relations[$code]]));
 				if(!$res->isSuccess())
@@ -877,16 +969,24 @@ final class ImportProcess extends Process
 			'IX_B_SALE_LOC_TYPE',
 			'IX_B_SALE_LOC_NAME_NAME_U',
 			'IX_B_SALE_LOC_NAME_LI_LI',
-			'IX_B_SALE_LOC_EXT_LID_SID'
+			'IX_B_SALE_LOC_EXT_LID_SID',
+
+			// legacy
+			'IXS_LOCATION_COUNTRY_ID',
+			'IXS_LOCATION_REGION_ID',
+			'IXS_LOCATION_CITY_ID',
 		);
 
-		if(!isset($indexes[$this->getStep()]))
-			$this->nextStage();
-		else
+		if(isset($indexes[$this->getStep()]))
 		{
 			$this->restoreIndexes($indexes[$this->getStep()]);
 			$this->logMessage('Index restored: '.$indexes[$this->getStep()]);
 			$this->nextStep();
+		}
+		else
+		{
+			Location\LocationTable::resetLegacyPath(); // for backward compatibility
+			$this->nextStage();
 		}
 	}
 
@@ -895,19 +995,32 @@ final class ImportProcess extends Process
 		$pRange = $this->getCurrentPercentRange();
 		$step = $this->getStep();
 
-		$indexCount = 7;
+		$stepCount = 12;
 
-		if($step >= $indexCount)
+		if($step >= $stepCount)
+		{
 			return $pRange;
+		}
 		else
 		{
-			return round($pRange * ($step / $indexCount));
+			return round($pRange * ($step / $stepCount));
 		}
 	}
 
 	/////////////////////////////////////
 	// about stage util functions
 
+	protected function getLanguageId()
+	{
+		if(isset($this->options['LANGUAGE_ID']))
+			return $this->options['LANGUAGE_ID'];
+
+		return LANGUAGE_ID;
+	}
+
+	/**
+	 * @deprecated
+	 */
 	public function getTypes()
 	{
 		$result = array();
@@ -916,7 +1029,7 @@ final class ImportProcess extends Process
 				'CODE', 'TNAME' => 'NAME.NAME'
 			),
 			'filter' => array(
-				'NAME.LANGUAGE_ID' => LANGUAGE_ID
+				'NAME.LANGUAGE_ID' => $this->getLanguageId()
 			),
 			'order' => array(
 				'SORT' => 'asc',
@@ -940,24 +1053,12 @@ final class ImportProcess extends Process
 	{
 		if(empty($this->stat))
 		{
-			$types = $this->getTypes();
+			$types = \Bitrix\Sale\Location\Admin\TypeHelper::getTypes(array('LANGUAGE_ID' => $this->getLanguageId()));
 
 			$res = Location\LocationTable::getList(array(
-				'runtime' => array(
-					'CNT' => array(
-						'data_type' => 'integer',
-						'expression' => array(
-							'COUNT(*)'
-						)
-					)
-				),
 				'select' => array(
 					'CNT',
-					'TCODE' => 'TYPE.CODE',
-					'TNAME' => 'TYPE.NAME'
-				),
-				'filter' => array(
-					'TYPE.NAME.LANGUAGE_ID' => LANGUAGE_ID
+					'TCODE' => 'TYPE.CODE'
 				),
 				'group' => array(
 					'TYPE_ID'
@@ -971,10 +1072,10 @@ final class ImportProcess extends Process
 				$stat[$item['TCODE']] = $item['CNT'];
 			}
 
-			foreach($types as $code => $name)
+			foreach($types as $code => $data)
 			{
 				$this->stat[$code] = array(
-					'NAME' => $name,
+					'NAME' => $data['NAME_CURRENT'],
 					'CODE' => $code,
 					'CNT' => isset($stat[$code]) ? intval($stat[$code]) : 0,
 				);
@@ -1143,22 +1244,36 @@ final class ImportProcess extends Process
 	// download layout from server
 	public function getRemoteLayout($getFlat = false)
 	{
-		$this->downloadFile(self::REMOTE_LAYOUT_FILE, self::LOCAL_LAYOUT_FILE);
+		list($localPath, $tmpDirCreated) = $this->getTemporalDirectory();
+
+		static::downloadFile(self::REMOTE_LAYOUT_FILE, self::LOCAL_LAYOUT_FILE, false, $localPath);
 
 		$csv = new CSVReader();
-		$res = $csv->ReadBlock(self::LOCAL_PATH.self::LOCAL_LAYOUT_FILE);
+		$csv->AddEventCallback('AFTER_ASSOC_LINE_READ', array($this, 'provideEnFromRu'));
+		$res = $csv->ReadBlock($localPath.self::LOCAL_LAYOUT_FILE);
 
 		$result = array();
 		if($getFlat)
 		{
 			foreach($res as $line)
 				$result[$line['CODE']] = $line;
-
+			$csv->CloseFile();
 			return $result;
 		}
 
+		$lang = $this->getLanguageId();
+
 		foreach($res as $line)
+		{
+			$line['NAME'][ToUpper($lang)] = static::getTranslatedName($line['NAME'], $lang);
 			$result[$line['PARENT_CODE']][$line['CODE']] = $line;
+		}
+		$csv->CloseFile();
+
+		if($tmpDirCreated)
+		{
+			$this->deleteDirectory($localPath);
+		}
 
 		return $result;
 	}
@@ -1168,16 +1283,24 @@ final class ImportProcess extends Process
 	{
 		if(!$this->useCache || !isset($this->data['settings']['remote']['types']))
 		{
-			$this->downloadFile(self::REMOTE_TYPE_FILE, self::LOCAL_TYPE_FILE);
+			list($localPath, $tmpDirCreated) = $this->getTemporalDirectory();
+
+			static::downloadFile(self::REMOTE_TYPE_FILE, self::LOCAL_TYPE_FILE, false, $localPath);
 
 			$csv = new CSVReader();
-			$res = $csv->ReadBlock(self::LOCAL_PATH.self::LOCAL_TYPE_FILE);
+			$csv->AddEventCallback('AFTER_ASSOC_LINE_READ', array($this, 'provideEnFromRu'));
+			$res = $csv->ReadBlock($localPath.self::LOCAL_TYPE_FILE);
 
 			$result = array();
 			foreach($res as $line)
 				$result[$line['CODE']] = $line;
 
 			$this->data['settings']['remote']['types'] = $result;
+			$csv->CloseFile();
+			if($tmpDirCreated)
+			{
+				$this->deleteDirectory($localPath);
+			}
 		}
 
 		return $this->data['settings']['remote']['types'];
@@ -1188,16 +1311,23 @@ final class ImportProcess extends Process
 	{
 		if(!$this->useCache || !isset($this->data['settings']['remote']['external_services']))
 		{
-			$this->downloadFile(self::REMOTE_EXTERNAL_SERVICE_FILE, self::LOCAL_EXTERNAL_SERVICE_FILE);
+			list($localPath, $tmpDirCreated) = $this->getTemporalDirectory();
+
+			static::downloadFile(self::REMOTE_EXTERNAL_SERVICE_FILE, self::LOCAL_EXTERNAL_SERVICE_FILE, false, $localPath);
 
 			$csv = new CSVReader();
-			$res = $csv->ReadBlock(self::LOCAL_PATH.self::LOCAL_EXTERNAL_SERVICE_FILE);
+			$res = $csv->ReadBlock($localPath.self::LOCAL_EXTERNAL_SERVICE_FILE);
 
 			$result = array();
 			foreach($res as $line)
 				$result[$line['CODE']] = $line;
 
 			$this->data['settings']['remote']['external_services'] = $result;
+			$csv->CloseFile();
+			if($tmpDirCreated)
+			{
+				$this->deleteDirectory($localPath);
+			}
 		}
 
 		return $this->data['settings']['remote']['external_services'];
@@ -1208,10 +1338,12 @@ final class ImportProcess extends Process
 	{
 		if(!$this->useCache || !isset($this->data['settings']['remote']['typeGroups']))
 		{
-			$this->downloadFile(self::REMOTE_TYPE_GROUP_FILE, self::LOCAL_TYPE_GROUP_FILE);
+			list($localPath, $tmpDirCreated) = $this->getTemporalDirectory();
+
+			static::downloadFile(self::REMOTE_TYPE_GROUP_FILE, self::LOCAL_TYPE_GROUP_FILE, false, $localPath);
 
 			$csv = new CSVReader();
-			$res = $csv->ReadBlock(self::LOCAL_PATH.self::LOCAL_TYPE_GROUP_FILE);
+			$res = $csv->ReadBlock($localPath.self::LOCAL_TYPE_GROUP_FILE);
 
 			$result = array();
 			foreach($res as $line)
@@ -1220,6 +1352,11 @@ final class ImportProcess extends Process
 			}
 
 			$this->data['settings']['remote']['typeGroups'] = $result;
+			$csv->CloseFile();
+			if($tmpDirCreated)
+			{
+				$this->deleteDirectory($localPath);
+			}
 		}
 
 		return $this->data['settings']['remote']['typeGroups'];
@@ -1231,15 +1368,14 @@ final class ImportProcess extends Process
 		$levels = array();
 
 		if(!isset($langId))
-			$langId = LANGUAGE_ID;
-
-		$langId = ToUpper($langId);
+			$langId = $this->getLanguageId();
 
 		foreach($types as $type)
 		{
 			if($type['SELECTORLEVEL'] = intval($type['SELECTORLEVEL']))
 			{
-				$levels[$type['SELECTORLEVEL']]['NAMES'][] = $type['NAME'][$langId]['NAME'];
+				$name = static::getTranslatedName($type['NAME'], $langId);
+				$levels[$type['SELECTORLEVEL']]['NAMES'][] = $name['NAME'];
 				$levels[$type['SELECTORLEVEL']]['TYPES'][] = $type['CODE'];
 
 				if($type['DEFAULTSELECT'] == '1')
@@ -1253,6 +1389,31 @@ final class ImportProcess extends Process
 		ksort($levels, SORT_NUMERIC);
 
 		return $levels;
+	}
+
+	public static function getSiteLanguages()
+	{
+		static $langs;
+
+		if($langs == null)
+		{
+			$langs = array();
+
+			$res = \Bitrix\Main\SiteTable::getList(array('filter' => array('ACTIVE' => 'Y'), 'select' => array('LANGUAGE_ID'), 'group' => array('LANGUAGE_ID')));
+			while($item = $res->fetch())
+			{
+				$langs[ToUpper($item['LANGUAGE_ID'])] = true;
+			}
+
+			$langs = array_unique(array_keys($langs)); // all active sites languages
+		}
+
+		return $langs;
+	}
+
+	public function getRequiredLanguages()
+	{
+		return array_unique(array_merge(array(ToUpper($this->getLanguageId())), static::getSiteLanguages())); // current language plus for all active sites
 	}
 
 	// read type.csv and build type table
@@ -1299,7 +1460,13 @@ final class ImportProcess extends Process
 			}
 		}
 		elseif($this->checkSource(self::SOURCE_FILE))
-			$this->data['types']['allowed'] = array('COUNTRY', 'REGION', 'CITY');
+		{
+			$codes = array();
+			if(is_array($existed) && !empty($existed))
+				$codes = array_keys($existed);
+
+			$this->data['types']['allowed'] = $codes;
+		}
 
 		$this->data['types']['last'] = $this->data['types']['allowed'][count($this->data['types']['allowed']) - 1];
 		$this->data['types']['allowed'] = array_flip($this->data['types']['allowed']);
@@ -1310,26 +1477,32 @@ final class ImportProcess extends Process
 
 	protected function checkExternalServiceAllowed($code)
 	{
+		if($this->data['settings']['additional'] === false)
+			return true; // ANY
+
 		return isset($this->data['settings']['additional'][$code]);
 	}
 
 	protected function buildExternalSerivceTable()
 	{
-		if($this->data['external_processed'] || !$this->checkSource(self::SOURCE_REMOTE))
+		if($this->data['external_processed'])
 			return;
 
 		// read existed
 		$existed = static::getExistedServices();
 
-		$external = $this->getRemoteExternalServices();
-		foreach($external as $line)
+		if($this->checkSource(self::SOURCE_REMOTE))
 		{
-			if(!isset($existed[$line['CODE']]) && $this->checkExternalServiceAllowed($line['CODE']))
+			$external = $this->getRemoteExternalServices();
+			foreach($external as $line)
 			{
-				$existed[$line['CODE']] = static::createService($line);
+				if(!isset($existed[$line['CODE']]) && $this->checkExternalServiceAllowed($line['CODE']))
+				{
+					$existed[$line['CODE']] = static::createService($line);
+				}
 			}
+			unset($this->data['settings']['remote']['external_services']);
 		}
-		unset($this->data['settings']['remote']['external_services']);
 
 		$this->data['externalService']['code2id'] = $existed;
 		$this->data['external_processed'] = true;
@@ -1359,6 +1532,9 @@ final class ImportProcess extends Process
 
 	protected function getLocationCodeToIdMap($codes)
 	{
+		if(empty($codes))
+			return array();
+
 		$i = -1;
 		$buffer = array();
 		$result = array();
@@ -1374,7 +1550,8 @@ final class ImportProcess extends Process
 				$i = -1;
 			}
 
-			$buffer[] = $code;
+			if(strlen($code))
+				$buffer[] = $code;
 		}
 
 		// last iteration
@@ -1463,51 +1640,13 @@ final class ImportProcess extends Process
 		return true;
 	}
 
-	protected function dropIndexes($certainIndex = false)
-	{
-		$locationTable = Location\LocationTable::getTableName();
-		$locationNameTable = Location\Name\LocationTable::getTableName();
-
-		$map = array(
-			$locationTable => array(
-				'IX_B_SALE_LOC_MARGINS',
-				'IX_B_SALE_LOC_MARGINS_REV',
-				'IX_B_SALE_LOC_PARENT',
-				'IX_B_SALE_LOC_DL',
-				'IX_B_SALE_LOC_TYPE',
-
-				// old indexes
-				'IXS_LOCATION_COUNTRY_ID',
-				'IXS_LOCATION_REGION_ID',
-				'IXS_LOCATION_CITY_ID',
-
-				// for mssql, the same
-				'IX_B_SALE_LOCATION_1',
-				'IX_B_SALE_LOCATION_2',
-				'IX_B_SALE_LOCATION_3'
-			),
-			$locationNameTable => 	array('IX_B_SALE_LOC_NAME_NAME_U', 'IX_B_SALE_LOC_NAME_LI_LI')
-		);
-
-		foreach($map as $tableName => $indexes)
-		{
-			foreach($indexes as $index)
-			{
-				if($certainIndex !== false && $certainIndex != $index)
-					continue;
-
-				$this->dropIndexByName($index, $tableName);
-			}
-		}
-	}
-
-	public function restoreIndexes($certainIndex = false)
+	public static function getIndexMap()
 	{
 		$locationTable = Location\LocationTable::getTableName();
 		$locationNameTable = Location\Name\LocationTable::getTableName();
 		$locationExternalTable = Location\ExternalTable::getTableName();
 
-		$map = array(
+		return array(
 			'IX_B_SALE_LOC_MARGINS' => array('TABLE' => $locationTable, 'COLUMNS' => array('LEFT_MARGIN', 'RIGHT_MARGIN')),
 			'IX_B_SALE_LOC_MARGINS_REV' => array('TABLE' => $locationTable, 'COLUMNS' => array('RIGHT_MARGIN', 'LEFT_MARGIN')),
 			'IX_B_SALE_LOC_PARENT' => array('TABLE' => $locationTable, 'COLUMNS' => array('PARENT_ID')),
@@ -1516,10 +1655,41 @@ final class ImportProcess extends Process
 			'IX_B_SALE_LOC_NAME_NAME_U' => array('TABLE' => $locationNameTable, 'COLUMNS' => array('NAME_UPPER')),
 			'IX_B_SALE_LOC_NAME_LI_LI' => array('TABLE' => $locationNameTable, 'COLUMNS' => array('LOCATION_ID', 'LANGUAGE_ID')),
 			'IX_B_SALE_LOC_EXT_LID_SID' => array('TABLE' => $locationExternalTable, 'COLUMNS' => array('LOCATION_ID', 'SERVICE_ID')),
+
+			// legacy
+			'IXS_LOCATION_COUNTRY_ID' => array('TABLE' => $locationTable, 'COLUMNS' => array('COUNTRY_ID')),
+			'IXS_LOCATION_REGION_ID' => array('TABLE' => $locationTable, 'COLUMNS' => array('REGION_ID')),
+			'IXS_LOCATION_CITY_ID' => array('TABLE' => $locationTable, 'COLUMNS' => array('CITY_ID')),
+
+			// obsolete
+			'IX_B_SALE_LOCATION_1' => array('TABLE' => $locationTable, 'COLUMNS' => array('COUNTRY_ID'), 'DROP_ONLY' => true),
+			'IX_B_SALE_LOCATION_2' => array('TABLE' => $locationTable, 'COLUMNS' => array('REGION_ID'), 'DROP_ONLY' => true),
+			'IX_B_SALE_LOCATION_3' => array('TABLE' => $locationTable, 'COLUMNS' => array('CITY_ID'), 'DROP_ONLY' => true),
 		);
+	}
+
+	protected function dropIndexes($certainIndex = false)
+	{
+		$map = static::getIndexMap();
+
+		foreach($map as $index => $ixData)
+		{
+			if($certainIndex !== false && $certainIndex != $index)
+				continue;
+
+			$this->dropIndexByName($index, $ixData['TABLE']);
+		}
+	}
+
+	public function restoreIndexes($certainIndex = false)
+	{
+		$map = $this->getIndexMap();
 
 		foreach($map as $ixName => $ixData)
 		{
+			if($ixData['DROP_ONLY'] === true)
+				continue;
+
 			if($certainIndex !== false && $certainIndex != $ixName)
 				continue;
 
@@ -1576,7 +1746,7 @@ final class ImportProcess extends Process
 			else
 				$mtu = self::TREE_REBALANCE_TEMP_BLOCK_LEN;
 
-			$this->rebalanceInserter = new Location\DBBlockInserter(array(
+			$this->rebalanceInserter = new BlockInserter(array(
 				'tableName' => self::TREE_REBALANCE_TEMP_TABLE_NAME,
 				'exactFields' => array(
 					'I' => array('data_type' => 'integer'),
@@ -1637,36 +1807,6 @@ final class ImportProcess extends Process
 		$this->data['rebalance']['tableCreated'] = true;
 	}
 
-	/*
-	protected function readBlockFromCurrentFile(&$buffer, &$bufferSize)
-	{
-		$fIndex = 		$this->data['current']['fIndex'];
-		$fName = 		self::getFileNameByIndex($fIndex);
-		$onlyThese =& 	$this->data['files'][$fIndex]['onlyThese'];
-		$memGroup = 	$this->data['files'][$fIndex]['memgroup'];
-
-		//_dump_r('READ FROM File: '.$fName.' seek to '.$this->data['current']['bytesRead'].' stepsize: '.$this->getCurrStageStepSize());
-		//_dump_r('Block size '.$this->getCurrStageStepSize());
-
-		$csv = new CSVReader();
-		$block = $csv->ReadBlock(self::LOCAL_PATH.$fName, $this->data['current']['bytesRead'], $this->getCurrStageStepSize());
-
-		if($csv->CheckFileIsLegacy())
-			$block = self::convertBlock($block);
-
-		foreach($block as $item)
-		{
-			if(is_array($onlyThese) && !isset($onlyThese[$item['CODE']]))
-				continue;
-
-			$buffer[$memGroup][] = $item;
-			$bufferSize++;
-		}
-
-		//_dump_r('Bytes read: '.$this->data['current']['bytesRead']);
-	}
-	*/
-
 	protected function checkFileCompletelyRead()
 	{
 		return $this->data['current']['bytesRead'] >= $this->data['files'][$this->data['current']['fIndex']]['size'];
@@ -1674,8 +1814,6 @@ final class ImportProcess extends Process
 
 	protected function checkAllFilesRead()
 	{
-		//_dump_r('Check all read:');
-		//_dump_r($this->data['current']['fIndex'].' == '.(count($this->data['files']) - 1));
 		return $this->data['current']['fIndex'] >= count($this->data['files']);
 	}
 
@@ -1684,20 +1822,11 @@ final class ImportProcess extends Process
 		return $bufferSize >= $this->getCurrStageStepSize();
 	}
 
-	protected static function downloadFile($fileName, $storeAs, $skip404 = false)
+	protected static function downloadFile($fileName, $storeAs, $skip404 = false, $storeTo = false)
 	{
-		$storeTo = $_SERVER['DOCUMENT_ROOT'].self::LOCAL_PATH;
-
-		if(file_exists($storeTo))
-		{
-			if(!is_writable($storeTo))
-				throw new Main\SystemException('Temporal directory is not writable by the current user');
-		}
-		else
-		{
-			$dir = new IO\Directory($_SERVER['DOCUMENT_ROOT']);
-			$dir->createSubdirectory(self::LOCAL_PATH);
-		}
+		// useless thing
+		if(!$storeTo)
+			$storeTo = \CTempFile::GetDirectoryName(1);
 
 		$storeTo .= $storeAs;
 
@@ -1732,17 +1861,14 @@ final class ImportProcess extends Process
 		if(!$okay)
 			throw new Main\SystemException('File download failed: http error '.$status.' ('.$query.')');
 
-		// charset conversion here?
-
 		return filesize($storeTo);
 	}
 
+	/**
+	 * @deprecated
+	 */
 	protected static function cleanWorkDirectory()
 	{
-		$dir = $_SERVER['DOCUMENT_ROOT'].self::LOCAL_PATH.self::LOCAL_SETS_PATH;
-
-		IO\Directory::deleteDirectory($dir);
-		IO\Directory::createDirectory($dir);
 	}
 
 	protected function getFileNameByIndex($i)
@@ -1769,11 +1895,16 @@ final class ImportProcess extends Process
 
 			self::cleanWorkDirectory();
 
-			if(!copy($_FILES[$inputName]['tmp_name'], $_SERVER['DOCUMENT_ROOT'].self::LOCAL_PATH.self::getFileNameByIndex(0)))
+			list($localPath, $tmpDirCreated) = $this->getTemporalDirectory();
+			$fileName = $localPath.'/'.static::USER_FILE_TEMP_NAME;
+
+			if(!@copy($_FILES[$inputName]['tmp_name'], $fileName))
 			{
 				$lastError = error_get_last();
 				throw new Main\SystemException($lastError['message']);
 			}
+
+			$_SESSION[static::USER_FILE_DIRECTORY_SESSION_KEY] = $localPath;
 		}
 		else
 			throw new Main\SystemException('No file were uploaded');
@@ -1783,33 +1914,68 @@ final class ImportProcess extends Process
 	{
 		switch ($error)
 		{
-			case UPLOAD_ERR_INI_SIZE: 
-				$message = 'The uploaded file exceeds the upload_max_filesize directive in php.ini'; 
-				break; 
-			case UPLOAD_ERR_FORM_SIZE: 
-				$message = 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form'; 
-				break; 
-			case UPLOAD_ERR_PARTIAL: 
-				$message = 'The uploaded file was only partially uploaded'; 
-				break; 
-			case UPLOAD_ERR_NO_FILE: 
-				$message = 'No file were uploaded'; 
-				break; 
-			case UPLOAD_ERR_NO_TMP_DIR: 
-				$message = 'Missing a temporary folder'; 
-				break; 
-			case UPLOAD_ERR_CANT_WRITE: 
-				$message = 'Failed to write file to disk'; 
-				break; 
-			case UPLOAD_ERR_EXTENSION: 
-				$message = 'File upload stopped by extension'; 
-				break; 
+			case UPLOAD_ERR_INI_SIZE:
+				$message = 'The uploaded file exceeds the upload_max_filesize directive in php.ini';
+				break;
+			case UPLOAD_ERR_FORM_SIZE:
+				$message = 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form';
+				break;
+			case UPLOAD_ERR_PARTIAL:
+				$message = 'The uploaded file was only partially uploaded';
+				break;
+			case UPLOAD_ERR_NO_FILE:
+				$message = 'No file were uploaded';
+				break;
+			case UPLOAD_ERR_NO_TMP_DIR:
+				$message = 'Missing a temporary folder';
+				break;
+			case UPLOAD_ERR_CANT_WRITE:
+				$message = 'Failed to write file to disk';
+				break;
+			case UPLOAD_ERR_EXTENSION:
+				$message = 'File upload stopped by extension';
+				break;
 
-			default: 
-				$message = 'Unknown upload error'; 
-				break; 
-		} 
+			default:
+				$message = 'Unknown upload error';
+				break;
+		}
 		return $message;
+	}
+
+	// all this mess is only to get import work on Bitrix24 (which does not provide any temporal directory in a typical meaning)
+	protected function getTemporalDirectory()
+	{
+		$wasCreated = false;
+		if((string) $this->data['LOCAL_PATH'] != '' && \Bitrix\Main\IO\Directory::isDirectoryExists($this->data['LOCAL_PATH']))
+		{
+			$localPath = $this->data['LOCAL_PATH'];
+		}
+		else
+		{
+			$wasCreated = true;
+			$localPath = \CTempFile::GetDirectoryName(10);
+			if(!\Bitrix\Main\IO\Directory::isDirectoryExists($localPath))
+				\Bitrix\Main\IO\Directory::createDirectory($localPath);
+		}
+
+		return array($localPath, $wasCreated);
+	}
+
+	protected static function createDirectory($path)
+	{
+		if(!\Bitrix\Main\IO\Directory::isDirectoryExists($path))
+		{
+			\Bitrix\Main\IO\Directory::createDirectory($path);
+		}
+	}
+
+	protected static function deleteDirectory($path)
+	{
+		if(\Bitrix\Main\IO\Directory::isDirectoryExists($path))
+		{
+			\Bitrix\Main\IO\Directory::deleteDirectory($path);
+		}
 	}
 
 	protected function normalizeQueryArray($value)
@@ -1874,19 +2040,55 @@ final class ImportProcess extends Process
 		if($existed === false)
 			$existed = static::getExistedTypes();
 
+		// here we try to add type names for ALL languages
+		$langs = Location\Admin\NameHelper::getLanguageList();
+
 		foreach($types as $line)
 		{
+			// for sure
+			unset($line['SELECTORLEVEL']);
+			unset($line['DEFAULTSELECT']);
+
+			$names = array();
+
+			if(!is_array($line['NAME']))
+				$line['NAME'] = array();
+
+			if(is_array($langs))
+			{
+				foreach($langs as $lid => $f)
+				{
+					$names[ToUpper($lid)] = static::getTranslatedName($line['NAME'], $lid);
+				}
+			}
+
 			if(!isset($existed[$line['CODE']]))
 			{
-				// for sure
-				unset($line['SELECTORLEVEL']);
-				unset($line['DEFAULTSELECT']);
-
 				$existed[$line['CODE']] = static::createType($line);
+			}
+			else
+			{
+				// ensure it has all appropriate translations
+				// we can not use ::updateMultipleForOwner() here, because user may rename his types manually
+				Location\Name\TypeTable::addAbsentForOwner($existed[$line['CODE']], $names);
 			}
 		}
 
 		return $existed;
+	}
+
+	protected static function getTranslatedName($names, $languageId)
+	{
+		$languageIdMapped = 	ToUpper(Location\Admin\NameHelper::mapLanguage($languageId));
+		$languageId = 			ToUpper($languageId);
+
+		if(is_array($names[$languageId]) && (string) $names[$languageId]['NAME'] != '')
+			return $names[$languageId];
+
+		if(is_array($names[$languageIdMapped]) && (string) $names[$languageIdMapped]['NAME'] != '')
+			return $names[$languageIdMapped];
+
+		return $names['EN'];
 	}
 
 	public static function createType($type)
@@ -1913,12 +2115,18 @@ final class ImportProcess extends Process
 		$csvReader->LoadFile($file);
 
 		$types = array();
+		$i = 0;
 		while($type = $csvReader->FetchAssoc())
 		{
-			unset($type['SELECTORLEVEL']);
-			unset($type['DEFAULTSELECT']);
+			if($i) // fix for CSVReader parent class bug
+			{
+				unset($type['SELECTORLEVEL']);
+				unset($type['DEFAULTSELECT']);
 
-			$types[$type['CODE']] = $type;
+				$types[$type['CODE']] = $type;
+			}
+
+			$i++;
 		}
 
 		return $types;
@@ -1936,6 +2144,7 @@ final class ImportProcess extends Process
 		return $services;
 	}
 
+	// this is generally for e-shop installer
 	public static function importFile(&$descriptior)
 	{
 		$timeLimit = ini_get('max_execution_time');
@@ -1946,6 +2155,7 @@ final class ImportProcess extends Process
 		if($descriptior['STEP'] == 'rebalance')
 		{
 			Location\LocationTable::resort();
+			Location\LocationTable::resetLegacyPath();
 			$descriptior['STEP'] = 'done';
 		}
 
@@ -1959,11 +2169,11 @@ final class ImportProcess extends Process
 
 			if(!isset($descriptior['TYPES']))
 			{
-				$descriptior['TYPES'] = static::getExistedTypes();
-				$descriptior['SERVICES'] = static::getExistedServices();
-
 				$descriptior['TYPE_MAP'] = static::getTypeMap($descriptior['TYPE_FILE']);
+				$descriptior['TYPES'] = static::createTypes($descriptior['TYPE_MAP']);
+
 				$descriptior['SERVICE_MAP'] = static::getServiceMap($descriptior['SERVICE_FILE']);
+				$descriptior['SERVICES'] = static::getExistedServices();
 			}
 
 			$csvReader = new CSVReader();
@@ -1978,9 +2188,6 @@ final class ImportProcess extends Process
 
 				foreach($block as $item)
 				{
-					if(!isset($descriptior['TYPES'][$item['TYPE_CODE']]))
-						$descriptior['TYPES'][$item['TYPE_CODE']] = static::createType($descriptior['TYPE_MAP'][$item['TYPE_CODE']]);
-
 					if($descriptior['DO_SYNC'])
 					{
 						$id = static::checkLocationCodeExists($item['CODE']);
@@ -2034,7 +2241,7 @@ final class ImportProcess extends Process
 					}
 					unset($item['EXT']);
 
-					$res = Location\LocationTable::add($item, array('REBALANCE' => false));
+					$res = Location\LocationTable::add($item, array('REBALANCE' => false, 'RESET_LEGACY' => false));
 					if(!$res->isSuccess())
 						throw new Main\SystemException('Cannot create location');
 
@@ -2050,5 +2257,24 @@ final class ImportProcess extends Process
 		}
 
 		return $descriptior['STEP'] == 'done';
+	}
+
+	public function provideEnFromRu(&$data)
+	{
+		// restore at least "EN" translation
+		if(is_array($data))
+		{
+			if(is_array($data['NAME']) && is_array($data['NAME']['RU']))
+			{
+				if(!is_array($data['NAME']['EN']))
+					$data['NAME']['EN'] = array();
+
+				foreach($data['NAME']['RU'] as $k => $v)
+				{
+					if((string) $data['NAME']['EN'][$k] == '')
+						$data['NAME']['EN'][$k] = Location\Admin\NameHelper::translitFromUTF8($data['NAME']['RU'][$k]);
+				}
+			}
+		}
 	}
 }

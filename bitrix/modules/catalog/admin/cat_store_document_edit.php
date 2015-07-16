@@ -3,50 +3,54 @@
 /** @global CUser $USER */
 /** @global CDatabase $DB */
 use Bitrix\Main\Loader;
+use Bitrix\Main\SiteTable;
+use Bitrix\Main\Config\Option;
 use Bitrix\Currency\CurrencyTable;
 
-require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
-require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/prolog.php");
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/prolog_admin_before.php');
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/catalog/prolog.php');
 
-if(!($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_store')))
+if (!($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_store')))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 Loader::includeModule('catalog');
 $bReadOnly = !$USER->CanDoOperation('catalog_store');
 
 IncludeModuleLangFile(__FILE__);
 
-if ($ex = $APPLICATION->GetException())
+if (!isset($_REQUEST['AJAX_MODE']))
 {
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
-	ShowError($ex->GetString());
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-	die();
+	if ($ex = $APPLICATION->GetException())
+	{
+		require($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/prolog_admin_after.php');
+		ShowError($ex->GetString());
+		require($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/epilog_admin.php');
+		die();
+	}
 }
 
-$ID = 0;
-if (isset($_REQUEST['ID']))
-	$ID = (int)$_REQUEST['ID'];
+$ID = (isset($_REQUEST['ID']) ? (int)$_REQUEST['ID'] : 0);
 if ($ID < 0)
 	$ID = 0;
 
 $userId = (int)$USER->GetID();
-$docType = '';
-if (isset($_REQUEST["DOCUMENT_TYPE"]))
-{
-	$docType = (string)$_REQUEST['DOCUMENT_TYPE'];
-}
+$docType = (isset($_REQUEST["DOCUMENT_TYPE"]) ? (string)$_REQUEST['DOCUMENT_TYPE'] : '');
+
 $arSitesShop = array();
 $arSitesTmp = array();
-$rsSites = CSite::GetList($_REQUEST["by"] = "id", $_REQUEST["order"] = "asc", array("ACTIVE" => "Y"));
-while ($arSite = $rsSites->GetNext())
+
+$siteIterator = SiteTable::getList(array(
+	'select' => array('LID', 'NAME'),
+	'filter' => array('=ACTIVE' => 'Y'),
+	'order' => array('SORT' => 'ASC', 'LID' => 'ASC')
+));
+while ($site = $siteIterator->fetch())
 {
-	$site = COption::GetOptionString("sale", "SHOP_SITE_".$arSite["ID"], "");
-	if ($arSite["ID"] == $site)
-	{
-		$arSitesShop[] = array("ID" => $arSite["ID"], "NAME" => $arSite["NAME"]);
-	}
-	$arSitesTmp[] = array("ID" => $arSite["ID"], "NAME" => $arSite["NAME"]);
+	$saleSite = (string)Option::get('sale', 'SHOP_SITE_'.$site['LID']);
+	if ($site['LID'] == $saleSite)
+		$arSitesShop[] = array('ID' => $site['LID'], 'NAME' => $site['NAME']);
+	$arSitesTmp[] = array('ID' => $site['LID'], 'NAME' => $site['NAME']);
 }
+unset($saleSite, $site, $siteIterator);
 
 $rsCount = count($arSitesShop);
 if($rsCount <= 0)
@@ -72,12 +76,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 {
 	if (!$_REQUEST["cancellation"] && ($_REQUEST["save_document"] || $_REQUEST["save_and_conduct"]))
 	{
-		$contractorId = intval($_REQUEST["CONTRACTOR_ID"]);
+		$contractorId = (isset($_REQUEST['CONTRACTOR_ID']) ? (int)$_REQUEST['CONTRACTOR_ID'] : 0);
 		$currency = '';
 		$result = array();
 		$docId = 0;
-		if($_REQUEST["CAT_CURRENCY_STORE"])
-			$currency = $_REQUEST["CAT_CURRENCY_STORE"];
+		$currency = (!empty($_REQUEST["CAT_CURRENCY_STORE"]) ? (string)$_REQUEST["CAT_CURRENCY_STORE"] : '');
 
 		$arGeneral = array(
 			"DOC_TYPE" => $docType,
@@ -89,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 		);
 		if($contractorId > 0)
 			$arGeneral["CONTRACTOR_ID"] = $contractorId;
-		if(strlen($currency) > 0)
+		if($currency != '')
 			$arGeneral["CURRENCY"] = $currency;
 		if(strlen($_REQUEST["CAT_DOCUMENT_SUM"]) > 0)
 			$arGeneral["TOTAL"] = doubleval($_REQUEST["CAT_DOCUMENT_SUM"]);
@@ -152,7 +155,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 
 		if($_REQUEST["save_document"] && $docId)
 		{
-			LocalRedirect("/bitrix/admin/cat_store_document_edit.php?ID=".$docId."&lang=".LANGUAGE_ID."&".GetFilterParams("filter_", false));
+			LocalRedirect("/bitrix/admin/cat_store_document_edit.php?lang=".LANGUAGE_ID."&ID=".$docId.GetFilterParams("filter_", false));
 		}
 	}
 
@@ -192,7 +195,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 			$bVarsFromForm = true;
 		}
 		else
-			LocalRedirect("/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID."&".GetFilterParams("filter_", false));
+			LocalRedirect("/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID.GetFilterParams("filter_", false));
 	}
 }
 ClearVars();
@@ -222,7 +225,7 @@ if($ID > 0)
 $requiredFields = CCatalogStoreControlUtil::getFields($docType);
 if(!$requiredFields || $_REQUEST["dontsave"])
 {
-	LocalRedirect("/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID."&".GetFilterParams("filter_", false));
+	LocalRedirect("/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID.GetFilterParams("filter_", false));
 }
 
 $sTableID = "b_catalog_store_docs_".$docType;
@@ -568,8 +571,19 @@ if(is_array($arResult["ELEMENT"]))
 			$row->AddViewField("BARCODE", '<div id="CAT_BARCODE_DIV_BIND_'.$arRes['ID'].'" align="center">'.$inputBarcode.'</div>');
 		}
 		$arActions = array();
-		$arActions[] = array("ICON"=>"delete", "TEXT"=>GetMessage("CAT_DOC_DEL"), "ACTION"=>"if(confirm('".GetMessageJS('CAT_DOC_CONFIRM_DELETE')."')) deleteRow(".$arRes['ID'].")");
-		$arActions[] = array("ICON"=>"copy", "TEXT"=>GetMessage("CAT_DOC_COPY"), "ACTION"=>"addRow(null, ".CUtil::PhpToJSObject(array('id' => $value["ELEMENT_ID"], 'parent' => $arRes['ID'])).", null)");
+		if (!$bReadOnly)
+		{
+			$arActions[] = array(
+				"ICON" => "delete",
+				"TEXT" => GetMessage("CAT_DOC_DEL"),
+				"ACTION" => "if(confirm('".GetMessageJS('CAT_DOC_CONFIRM_DELETE')."')) deleteRow(".$arRes['ID'].")"
+			);
+			$arActions[] = array(
+				"ICON" => "copy",
+				"TEXT" => GetMessage("CAT_DOC_COPY"),
+				"ACTION" => "copyRow(null, ".CUtil::PhpToJSObject(array('id' => $value["ELEMENT_ID"], 'parent' => $arRes['ID'])).")"
+			);
+		}
 		$row->AddActions($arActions);
 		$row->bReadOnly = true;
 	}
@@ -650,492 +664,15 @@ unset($currencyFormat, $currency, $currencyIterator);
 
 CAdminMessage::ShowMessage($errorMessage);
 ?>
-<script type="text/javascript">
-	BX.Currency.setCurrencies(<? echo CUtil::PhpToJSObject($currencyList, false, true, true); ?>);
-if (typeof showTotalSum === 'undefined')
-{
-function showTotalSum()
-{
-	<?if(isset($requiredFields["TOTAL"])):?>
-	if(BX('<?=$sTableID?>'))
-	{
-		if(BX('<?=$sTableID?>'+'_footer'))
-		{
-			BX('<?=$sTableID?>'+'_footer').appendChild((BX.create('DIV', {
-				props : {
-					id : "CAT_DOCUMENT_SUMM"
-				},
-				style : {
-					paddingLeft: '30%',
-					marginTop: '5px',
-					verticalAlign: 'middle',
-					display: 'inline-block'
-				},
-				children : [
-					BX.create('span', {
-						props : {
-							id : "CAT_DOCUMENT_SUMM_SPAN"
-						},
-						text : '<?=GetMessageJS('CAT_DOC_TOTAL')?>',
-						style : {
-							fontSize: '14px',
-							fontWeight: 'bold'
-						}
-					}),
-					BX.create('input', {
-						props : {
-							type : "hidden",
-							name : "CAT_DOCUMENT_SUM",
-							id : "CAT_DOCUMENT_SUM",
-							value : 0
-						}
-					})
-				]
-			})));
-			var maxId = BX('ROW_MAX_ID').value;
-			for(var i = 0; i <= maxId; i++)
-			{
-				recalculateSum(i);
-			}
-		}
-	}
-	<?endif;?>
-}
-
-function deleteRow(id)
-{
-	if(BX('PRODUCT_ID_'+id))
-	{
-		var trDelete = (BX('PRODUCT_ID_'+id).parentNode.parentNode);
-		if(trDelete)
-		{
-			trDelete.parentNode.removeChild(trDelete);
-			recalculateSum(0);
-		}
-	}
-}
-
-function findBarcodeDivHider()
-{
-	var findBarcodeDiv = BX('cat_barcode_find_div');
-	if(findBarcodeDiv)
-	{
-		if(findBarcodeDiv.style.display == 'none')
-		{
-			findBarcodeDiv.style.display = 'block';
-			BX('CAT_DOC_BARCODE_FIND').focus();
-		}
-		else
-			findBarcodeDiv.style.display = 'none'
-	}
-}
-
-function addProductSearch()
-{
-	var store = 0;
-	var lid = '';
-	if(BX("CAT_DOC_STORE_FROM"))
-		store = BX("CAT_DOC_STORE_FROM").value;
-	if(BX("SITE_ID"))
-		lid = BX("SITE_ID").value;
-	var popup = makeProductSearchDialog({
-		caller: 'storeDocs',
-		lang: '<?=LANGUAGE_ID?>',
-		site_id: lid,
-		callback: 'addRow',
-		store_id: store
-	});
-	popup.Show();
-}
-
-	function makeProductSearchDialog(params)
-	{
-		var caller = params.caller || '',
-			lang = params.lang || 'ru',
-			site_id = params.site_id || '',
-			callback = params.callback || '',
-			store_id = params.store_id || '0';
-
-		var popup = new BX.CDialog({
-			content_url: '/bitrix/admin/cat_product_search_dialog.php?lang='+lang+'&LID='+site_id+'&caller=' + caller + '&func_name='+callback+'&STORE_FROM_ID='+store_id,
-			height: Math.max(500, window.innerHeight-400),
-			width: Math.max(800, window.innerWidth-400),
-			draggable: true,
-			resizable: true,
-			min_height: 500,
-			min_width: 800
-		});
-		BX.addCustomEvent(popup, 'onWindowRegister', BX.defer(function(){
-			popup.Get().style.position = 'fixed';
-			popup.Get().style.top = (parseInt(popup.Get().style.top) - BX.GetWindowScrollPos().scrollTop) + 'px';
-		}));
-		return popup;
-	}
-
-function addRow(index, arElement)
-{
-	if (typeof index === 'object')
-	{
-		if (index!==null )
-			arElement = index;
-	}
-	var hiddenDiv = BX('ELEMENT_ID_DIV');
-	if(hiddenDiv == null)
-	{
-		hiddenDiv = BX('form_b_catalog_store_docs').appendChild(BX.create(
-			'DIV',
-			{
-				props: {
-					id: 'ELEMENT_ID_DIV',
-					name: 'ELEMENT_ID_DIV'
-				}
-			}
-		));
-	}
-
-	if(!arElement.quantity && arElement.parent)
-	{
-		arElement.quantity = BX('CAT_DOC_AMOUNT_'+arElement.parent).value;
-	}
-	var hidden = hiddenDiv.appendChild(BX.create(
-		'INPUT',
-		{
-			props: {
-				type: 'hidden',
-				name: 'ELEMENT_ID[]',
-				value: arElement.id
-			},
-			html: '<input type="hidden" name="HIDDEN_BARCODE[]" value="' + arElement.barcode + '">' +
-				'<input type="hidden" name="HIDDEN_QUANTITY[]" value="' + arElement.quantity + '">' +
-				'<input type="hidden" name="AJAX_MODE" value="Y">'
-		}
-	));
-
-	BX('form_b_catalog_store_docs').submit();
-}
-
-function productSearch(barcode)
-{
-	var dateURL = '<?=bitrix_sessid_get()?>&BARCODE_AJAX=Y&BARCODE='+barcode+'&lang=<? echo LANGUAGE_ID; ?>';
-
-	BX.showWait();
-	BX.ajax.post('/bitrix/admin/cat_store_product_search.php', dateURL, fSearchProductResult);
-}
-
-function fSearchProductResult(result)
-{
-	BX.closeWait();
-	BX("CAT_DOC_BARCODE_FIND").value = '';
-	BX("CAT_DOC_BARCODE_FIND").focus();
-
-	var arBarCodes = [];
-	if (result.length > 0)
-	{
-		var res = eval( '('+result+')' );
-		if(res['id'] > 0)
-		{
-			res['quantity'] = 1;
-			addRow(null, res, null, arBarCodes);
-		}
-	}
-}
-
-function enterBarcodes(id)
-{
-	var amount;
-	if(BX('CAT_DOC_AMOUNT_HIDDEN_'+id))
-		amount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value, 10);
-	else
-		amount = 0;
-	if(isNaN(amount))
-		amount = 0;
-	maxId = amount;
-
-	var
-		content = BX.create('DIV', {
-			props: {id : 'BARCODE_DIV_'+id },
-			children: [
-				BX.create('input', {
-					props : {
-						className: "BARCODE_INPUT_GREY", id : "BARCODE_INPUT_" + id, value : ""
-					}
-				}),
-				BX.create('input', {
-					props : {
-						type : 'button', className: "BARCODE_INPUT_button", id : "BARCODE_INPUT_BUTTON_" + id, value : '<?=GetMessageJS('CAT_DOC_ADD')?>' /*disabled: (maxId >= BX('CAT_DOC_AMOUNT_'+id).value)*/
-					},
-					style : {
-						marginLeft: '5px'
-					},
-					events : {
-						click : function()
-						{
-							if(BX("BARCODE_INPUT_" + id).value.replace(/^\s+|\s+$/g, '') !== '' && !<?=intval($bReadOnly)?>)
-							{
-								amount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value, 10);
-								if(isNaN(amount))
-									amount = 0;
-								for(var j = 0; j <= 100500; j++)
-								{
-									if(!BX("BARCODE["+id+"]["+j+"]"))
-									{
-										counter = j;
-										break;
-									}
-								}
-								BX('BARCODE_DIV_'+id).appendChild(BX.create('DIV', {
-									props : {
-										id : "BARCODE_DIV_INPUT_" + id
-									},
-									style : {
-										padding: '6px'
-									},
-									children : [
-										BX.create('span', {
-											props : {
-												id : "BARCODE_SPAN_INPUT_" + id
-											},
-											text : BX('BARCODE_INPUT_'+id).value.replace(/^\s+|\s+$/g, ''),
-											style : {
-												fontSize: '12'
-											}
-										}),
-										BX.create('input', {
-											props : {
-												type : 'hidden',
-												id : "BARCODE["+id+"]["+counter+"]",
-												name : "BARCODE["+id+"]["+counter+"]",
-												value : BX('BARCODE_INPUT_'+id).value
-											}
-										}),
-										BX.create('a', {
-											props : {
-												className : 'split-delete-item',  tabIndex : '-1', href : 'javascript:void(0);', id : "BARCODE_DELETE["+id+"]["+counter+"]"
-											},
-											events : {
-												click : function()
-												{
-													if(!<?=intval($bReadOnly)?>)
-													{
-														var deleteNode = this.parentNode;
-														if(deleteNode)
-															deleteNode.parentNode.removeChild(deleteNode);
-														amount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value, 10);
-														if(isNaN(amount))
-															amount = 0;
-														BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value = amount - 1;
-														if(BX("BARCODE_INPUT_BUTTON_" + id) && BX("CAT_DOC_AMOUNT_HIDDEN_" + id) && BX('CAT_DOC_AMOUNT_'+id).value > BX("CAT_DOC_AMOUNT_HIDDEN_" + id).value)
-															BX("BARCODE_INPUT_BUTTON_" + id).disabled = false;
-													}
-												}
-											},
-											style : {
-												marginLeft: '8px',
-												verticalAlign: '-3'
-											}
-										})
-									]
-								}));
-								BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value = amount + 1;
-								maxId = amount + 1;
-								if(maxId >= BX('CAT_DOC_AMOUNT_'+id).value)
-									BX("BARCODE_INPUT_BUTTON_" + id).disabled = true;
-							}
-							BX('BARCODE_INPUT_'+id).value = '';
-							BX('BARCODE_INPUT_'+id).focus();
-						}
-					}
-				})
-			]
-		}),
-		formBarcodes = BX.PopupWindowManager.create("catalog-popup-barcodes-"+id, BX("CAT_BARCODE_DIV_BIND_"+id), {
-			offsetTop : -50,
-			offsetLeft : -50,
-			autoHide : false,
-			closeByEsc : true,
-			closeIcon : false,
-			draggable: {
-				restrict: true
-			},
-			content : content
-		});
-	if(!BX("BARCODE_DIV_INPUT_"+id))
-	{
-		var savedBarcodes = '';
-		if(BX("PRODUCT["+id+"][BARCODE]").value !== '')
-			savedBarcodes = BX("PRODUCT["+id+"][BARCODE]").value.split(', ');
-		if(savedBarcodes !== '')
-		{
-			var barCodeAmount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value);
-			BX("BARCODE_INPUT_BUTTON_" + id).disabled = (savedBarcodes.length >= BX('CAT_DOC_AMOUNT_'+id).value);
-			for(i in savedBarcodes)
-			{
-				if(savedBarcodes.hasOwnProperty(i) && savedBarcodes[i] != undefined && savedBarcodes[i] != '<?=GetMessage('CAT_DOC_POPUP_TITLE')?>')
-				{
-					BX('BARCODE_DIV_'+id).appendChild(BX.create('DIV', {
-						props : {
-							id : "BARCODE_DIV_INPUT_" + id
-						},
-						style : {
-							padding: '6px'
-						},
-						children : [
-							BX.create('span', {
-								props : {
-									id : "BARCODE_SPAN_INPUT_" + id
-								},
-								text : savedBarcodes[i],
-								style : {
-									fontSize: '12'
-								}
-							}),
-							BX.create('input', {
-								props : {
-									type : 'hidden',
-									id : "BARCODE["+id+"]["+i+"]",
-									name : "BARCODE["+id+"]["+i+"]",
-									value : savedBarcodes[i]
-								}
-							}),
-							BX.create('a', {
-								props : {
-									className : 'split-delete-item',  tabIndex : '-1', href : 'javascript:void(0);'
-								},
-								events : {
-									click : function()
-									{
-										if(!<?=intval($bReadOnly)?>)
-										{
-											var deleteNode = this.parentNode;
-											if(deleteNode)
-												deleteNode.parentNode.removeChild(deleteNode);
-											amount = parseFloat(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value);
-											if(isNaN(amount))
-												amount = 0;
-											BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value = amount - 1;
-											if(BX("BARCODE_INPUT_BUTTON_" + id) && BX("CAT_DOC_AMOUNT_HIDDEN_" + id) && BX('CAT_DOC_AMOUNT_'+id).value > BX("CAT_DOC_AMOUNT_HIDDEN_" + id).value)
-												BX("BARCODE_INPUT_BUTTON_" + id).disabled = false;
-										}
-									}
-								},
-								style : {
-									marginLeft: '8px',
-									verticalAlign: '-3'
-								}
-							})
-						]
-					}));
-				}
-			}
-		}
-	}
-
-	formBarcodes.setButtons([
-		<?if(!$bReadOnly):?>
-		new BX.PopupWindowButton({
-			text : "<?=GetMessage('CAT_DOC_SAVE')?>",
-			className : "",
-			events : {
-				click : function()
-				{
-					var barcodes = '';
-					if(maxId > 0)
-					{
-						for(var i = 0; i <= maxId; i++)
-						{
-							if(BX("BARCODE["+id+"]["+i+"]"))
-							{
-								if(barcodes !== '')
-									barcodes = barcodes + ', ';
-								if(BX("BARCODE["+id+"]["+i+"]").value !== '')
-									barcodes = barcodes + BX("BARCODE["+id+"]["+i+"]").value;
-							}
-						}
-					}
-
-					BX("PRODUCT["+id+"][BARCODE]").value = barcodes;
-					recalculateSum(id);
-					formBarcodes.close();
-				}
-			}
-		}),
-		<?else:?>
-		new BX.PopupWindowButton({
-			text : "<?=GetMessage('CAT_DOC_CANCEL')?>",
-			className : "",
-			events : {
-				click : function()
-				{
-					formBarcodes.close();
-				}
-			}
-		})
-		<?endif;?>
-	]);
-
-	formBarcodes.show();
-	if(BX('BARCODE_INPUT_'+id))
-		BX('BARCODE_INPUT_'+id).focus();
-	<?if($bReadOnly):?>
-	var addBarcodeButtons = document.querySelectorAll('.BARCODE_INPUT_button, .BARCODE_INPUT_GREY');
-	[].forEach.call(addBarcodeButtons, function disableButtons(item) {
-		item.disabled = true;
-	});
-	var addBarcodeDelBut = document.querySelectorAll('a.split-delete-item');
-	[].forEach.call(addBarcodeDelBut, function hideElements(item) {
-		item.style.display = 'none';
-	});
-	<?endif;?>
-}
-
-function recalculateSum(id)
-{
-	<?if(isset($requiredFields["TOTAL"])):?>
-	var amount = 0;
-	var price = 0;
-	if(BX('CAT_DOC_AMOUNT_'+id) && !isNaN(parseFloat(BX('CAT_DOC_AMOUNT_'+id).value)))
-		amount = parseFloat(BX('CAT_DOC_AMOUNT_'+id).value);
-	if(BX('CAT_DOC_PURCHASING_PRICE_'+id) && !isNaN(parseFloat(BX('CAT_DOC_PURCHASING_PRICE_'+id).value)))
-		price = parseFloat(BX('CAT_DOC_PURCHASING_PRICE_'+id).value);
-	if(BX('CAT_DOC_SUMM_'+id))
-		BX('CAT_DOC_SUMM_'+id).innerHTML = BX.Currency.currencyFormat(amount * price, BX('CAT_CURRENCY_STORE').value, false);
-	if(BX('PRODUCT['+id+'][SUMM]'))
-		BX('PRODUCT['+id+'][SUMM]').value = (amount * price);
-	var maxId = BX('ROW_MAX_ID').value;
-	var totalSum = 0;
-	for(var i = 0; i <= maxId; i++)
-	{
-		if(BX('PRODUCT['+i+'][SUMM]'))
-		{
-			totalSum = totalSum + Number(BX('PRODUCT['+i+'][SUMM]').value);
-		}
-	}
-	if(isNaN(totalSum))
-		totalSum = 0;
-	if(BX("CAT_DOCUMENT_SUMM_SPAN"))
-		BX("CAT_DOCUMENT_SUMM_SPAN").innerHTML = '<?=GetMessage('CAT_DOC_TOTAL')?>' + ': ' + BX.Currency.currencyFormat(totalSum, BX('CAT_CURRENCY_STORE').value, true);
-	else
-		showTotalSum();
-	if(BX("CAT_DOCUMENT_SUM"))
-		BX("CAT_DOCUMENT_SUM").value = totalSum;
-	<?endif;?>
-	if(BX("BARCODE_INPUT_BUTTON_" + id) && BX("CAT_DOC_AMOUNT_HIDDEN_" + id) && BX('CAT_DOC_AMOUNT_'+id).value > BX("CAT_DOC_AMOUNT_HIDDEN_" + id).value)
-		BX("BARCODE_INPUT_BUTTON_" + id).disabled = false;
-	else if(BX("BARCODE_INPUT_BUTTON_" + id))
-		BX("BARCODE_INPUT_BUTTON_" + id).disabled = true;
-
-}
-}
-</script>
 <form enctype="multipart/form-data" method="POST" action="<?echo $APPLICATION->GetCurPage()?>?lang=<?=LANGUAGE_ID?>&DOCUMENT_TYPE=<?=htmlspecialcharsbx($docType)?>" id="form_b_catalog_store_docs" name="form_b_catalog_store_docs">
 	<?echo GetFilterHiddens("filter_");?>
 	<input type="hidden" name="Update" value="Y">
-	<input type="hidden" name="lang" value="<?echo LANG ?>">
+	<input type="hidden" name="lang" value="<?echo LANGUAGE_ID; ?>">
 	<input type="hidden" name="ID" value="<?echo $ID ?>">
 	<input type="hidden" name="DOCUMENT_TYPE" id="DOCUMENT_TYPE" value="<? echo htmlspecialcharsbx($docType);?>">
+	<input type="hidden" name="productAdd" id="productAdd" value="N">
 	<input value="<?=$maxId?>" type="hidden" id="ROW_MAX_ID">
 	<?=bitrix_sessid_post()?>
-
 	<div class="adm-detail-block" id="tabControl_layout">
 		<div class="adm-detail-content-wrap">
 			<div class="adm-detail-content-item-block">
@@ -1219,21 +756,13 @@ $lAdmin->DisplayList();
 	<textarea cols="120" rows="4" class="typearea" name="CAT_DOC_COMMENTARY" <?=$isDisable?> wrap="virtual"><?= $str_COMMENTARY ?></textarea>
 </div>
 <?
-if(isset($requiredFields["TOTAL"]))
-{
-	?>
-	<script type="text/javascript">
-		showTotalSum();
-	</script>
-	<?
-}
 $tabControl->Buttons(
 	array(
 		"disabled" => $bReadOnly,
 		"btnSave" => false,
 		"btnApply" => false,
 		"btnCancel" => false,
-		"back_url" => "/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID."&".GetFilterParams("filter_", false),
+		"back_url" => "/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID.GetFilterParams("filter_", false),
 	)
 );
 if(!$bReadOnly && !$isDocumentConduct)
@@ -1249,12 +778,532 @@ elseif($isDocumentConduct)
 	?>
 	<span class="hor-spacer"></span>
 	<input type="hidden" name="cancellation" id="cancellation" value = "0">
-	<input type="button" class="adm-btn" onClick="if(confirm('<?=GetMessage("CAT_DOC_CANCELLATION_CONFIRM")?>')) {BX('cancellation').value = 1; BX('form_b_catalog_store_docs').submit();}" value="<?echo GetMessage("CAT_DOC_CANCELLATION") ?>">
+	<input type="button" class="adm-btn" onclick="if(confirm('<?=GetMessage("CAT_DOC_CANCELLATION_CONFIRM")?>')) {BX('cancellation').value = 1; BX('form_b_catalog_store_docs').submit();}" value="<?echo GetMessage("CAT_DOC_CANCELLATION") ?>">
 <?
 }
 ?>
 <input type="submit" class="adm-btn" name="dontsave" id="dontsave" value="<?echo GetMessage("CAT_DOC_CANCEL") ?>">
 	<?
 $tabControl->End();
-?></form><?
-?><?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");?>
+?></form>
+<script type="text/javascript">
+BX.Currency.setCurrencies(<? echo CUtil::PhpToJSObject($currencyList, false, true, true); ?>);
+if (typeof showTotalSum === 'undefined')
+{
+	function showTotalSum()
+	{
+		<?if(isset($requiredFields["TOTAL"])):?>
+		if(BX('<?=$sTableID?>'))
+		{
+			if(BX('<?=$sTableID?>'+'_footer'))
+			{
+				BX('<?=$sTableID?>'+'_footer').appendChild((BX.create('DIV', {
+					props : {
+						id : "CAT_DOCUMENT_SUMM"
+					},
+					style : {
+						paddingLeft: '30%',
+						marginTop: '5px',
+						verticalAlign: 'middle',
+						display: 'inline-block'
+					},
+					children : [
+						BX.create('span', {
+							props : {
+								id : "CAT_DOCUMENT_SUMM_SPAN"
+							},
+							text : '<?=GetMessageJS('CAT_DOC_TOTAL')?>',
+							style : {
+								fontSize: '14px',
+								fontWeight: 'bold'
+							}
+						}),
+						BX.create('input', {
+							props : {
+								type : "hidden",
+								name : "CAT_DOCUMENT_SUM",
+								id : "CAT_DOCUMENT_SUM",
+								value : 0
+							}
+						})
+					]
+				})));
+				var maxId = BX('ROW_MAX_ID').value;
+				for(var i = 0; i <= maxId; i++)
+				{
+					recalculateSum(i);
+				}
+			}
+		}
+		<?endif;?>
+	}
+
+	function deleteRow(id)
+	{
+		if(BX('PRODUCT_ID_'+id))
+		{
+			var trDelete = (BX('PRODUCT_ID_'+id).parentNode.parentNode);
+			if(trDelete)
+			{
+				trDelete.parentNode.removeChild(trDelete);
+				recalculateSum(0);
+			}
+		}
+	}
+
+	function findBarcodeDivHider()
+	{
+		var findBarcodeDiv = BX('cat_barcode_find_div');
+		if(findBarcodeDiv)
+		{
+			if(findBarcodeDiv.style.display == 'none')
+			{
+				findBarcodeDiv.style.display = 'block';
+				BX('CAT_DOC_BARCODE_FIND').focus();
+			}
+			else
+				findBarcodeDiv.style.display = 'none'
+		}
+	}
+
+	function addProductSearch()
+	{
+		var store = 0,
+			lid = '',
+			popup;
+		if(BX("CAT_DOC_STORE_FROM"))
+			store = BX("CAT_DOC_STORE_FROM").value;
+		if(BX("SITE_ID"))
+			lid = BX("SITE_ID").value;
+		popup = makeProductSearchDialog({
+			caller: 'storeDocs',
+			lang: '<?=LANGUAGE_ID?>',
+			site_id: lid,
+			callback: 'addRow',
+			store_id: store
+		});
+		popup.Show();
+	}
+
+	function makeProductSearchDialog(params)
+	{
+		var caller = params.caller || '',
+			lang = params.lang || 'ru',
+			site_id = params.site_id || '',
+			callback = params.callback || '',
+			store_id = params.store_id || '0';
+
+		var popup = new BX.CDialog({
+			content_url: '/bitrix/admin/cat_product_search_dialog.php?lang='+lang+'&LID='+site_id+'&caller=' + caller + '&func_name='+callback+'&STORE_FROM_ID='+store_id,
+			height: Math.max(500, window.innerHeight-400),
+			width: Math.max(800, window.innerWidth-400),
+			draggable: true,
+			resizable: true,
+			min_height: 500,
+			min_width: 800
+		});
+		BX.addCustomEvent(popup, 'onWindowRegister', BX.defer(function(){
+			popup.Get().style.position = 'fixed';
+			popup.Get().style.top = (parseInt(popup.Get().style.top) - BX.GetWindowScrollPos().scrollTop) + 'px';
+		}));
+		return popup;
+	}
+
+	function addRow(index, arElement)
+	{
+		var obProductAdd,
+			hiddenDiv;
+
+		obProductAdd = BX('productAdd');
+		if (!!obProductAdd)
+			obProductAdd.value = 'Y';
+
+		if (typeof index === 'object')
+		{
+			if (index!==null )
+				arElement = index;
+		}
+		hiddenDiv = BX('ELEMENT_ID_DIV');
+		if(hiddenDiv == null)
+		{
+			hiddenDiv = BX('form_b_catalog_store_docs').appendChild(BX.create(
+				'DIV',
+				{
+					props: {
+						id: 'ELEMENT_ID_DIV',
+						name: 'ELEMENT_ID_DIV'
+					}
+				}
+			));
+		}
+
+		if(!arElement.quantity && arElement.parent)
+		{
+			arElement.quantity = BX('CAT_DOC_AMOUNT_'+arElement.parent).value;
+		}
+		var hidden = hiddenDiv.appendChild(BX.create(
+			'INPUT',
+			{
+				props: {
+					type: 'hidden',
+					name: 'ELEMENT_ID[]',
+					value: arElement.id
+				},
+				html: '<input type="hidden" name="HIDDEN_BARCODE[]" value="' + arElement.barcode + '">' +
+					'<input type="hidden" name="HIDDEN_QUANTITY[]" value="' + arElement.quantity + '">' +
+					'<input type="hidden" name="AJAX_MODE" value="Y">'
+			}
+		));
+
+		BX('form_b_catalog_store_docs').submit();
+	}
+
+	function copyRow(index, arElement)
+	{
+		var obProductAdd = BX('productAdd');
+		if (!!obProductAdd)
+			obProductAdd.disabled = true;
+		addRow(index, arElement);
+	}
+
+	function productSearch(barcode)
+	{
+		var dateURL = '<?=bitrix_sessid_get()?>&BARCODE_AJAX=Y&BARCODE='+barcode+'&lang=<? echo LANGUAGE_ID; ?>';
+
+		BX.showWait();
+		BX.ajax.post('/bitrix/admin/cat_store_product_search.php', dateURL, fSearchProductResult);
+	}
+
+	function fSearchProductResult(result)
+	{
+		BX.closeWait();
+		BX("CAT_DOC_BARCODE_FIND").value = '';
+		BX("CAT_DOC_BARCODE_FIND").focus();
+
+		var arBarCodes = [],
+			obProductAdd;
+		if (result.length > 0)
+		{
+			var res = eval( '('+result+')' );
+			if(res['id'] > 0)
+			{
+				res['quantity'] = 1;
+				obProductAdd = BX('productAdd');
+				if (!!obProductAdd)
+					obProductAdd.disabled = true;
+				addRow(null, res, null, arBarCodes);
+			}
+		}
+	}
+
+	function enterBarcodes(id)
+	{
+		var amount;
+		if(BX('CAT_DOC_AMOUNT_HIDDEN_'+id))
+			amount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value, 10);
+		else
+			amount = 0;
+		if(isNaN(amount))
+			amount = 0;
+		maxId = amount;
+
+		var
+			content = BX.create('DIV', {
+				props: {id : 'BARCODE_DIV_'+id },
+				children: [
+					BX.create('input', {
+						props : {
+							className: "BARCODE_INPUT_GREY", id : "BARCODE_INPUT_" + id, value : ""
+						}
+					}),
+					BX.create('input', {
+						props : {
+							type : 'button', className: "BARCODE_INPUT_button", id : "BARCODE_INPUT_BUTTON_" + id, value : '<?=GetMessageJS('CAT_DOC_ADD')?>' /*disabled: (maxId >= BX('CAT_DOC_AMOUNT_'+id).value)*/
+						},
+						style : {
+							marginLeft: '5px'
+						},
+						events : {
+							click : function()
+							{
+								if(BX("BARCODE_INPUT_" + id).value.replace(/^\s+|\s+$/g, '') !== '' && !<?=intval($bReadOnly)?>)
+								{
+									amount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value, 10);
+									if(isNaN(amount))
+										amount = 0;
+									for(var j = 0; j <= 100500; j++)
+									{
+										if(!BX("BARCODE["+id+"]["+j+"]"))
+										{
+											counter = j;
+											break;
+										}
+									}
+									BX('BARCODE_DIV_'+id).appendChild(BX.create('DIV', {
+										props : {
+											id : "BARCODE_DIV_INPUT_" + id
+										},
+										style : {
+											padding: '6px'
+										},
+										children : [
+											BX.create('span', {
+												props : {
+													id : "BARCODE_SPAN_INPUT_" + id
+												},
+												text : BX('BARCODE_INPUT_'+id).value.replace(/^\s+|\s+$/g, ''),
+												style : {
+													fontSize: '12'
+												}
+											}),
+											BX.create('input', {
+												props : {
+													type : 'hidden',
+													id : "BARCODE["+id+"]["+counter+"]",
+													name : "BARCODE["+id+"]["+counter+"]",
+													value : BX('BARCODE_INPUT_'+id).value
+												}
+											}),
+											BX.create('a', {
+												props : {
+													className : 'split-delete-item',  tabIndex : '-1', href : 'javascript:void(0);', id : "BARCODE_DELETE["+id+"]["+counter+"]"
+												},
+												events : {
+													click : function()
+													{
+														if(!<?=intval($bReadOnly)?>)
+														{
+															var deleteNode = this.parentNode;
+															if(deleteNode)
+																deleteNode.parentNode.removeChild(deleteNode);
+															amount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value, 10);
+															if(isNaN(amount))
+																amount = 0;
+															BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value = amount - 1;
+															if(BX("BARCODE_INPUT_BUTTON_" + id) && BX("CAT_DOC_AMOUNT_HIDDEN_" + id) && BX('CAT_DOC_AMOUNT_'+id).value > BX("CAT_DOC_AMOUNT_HIDDEN_" + id).value)
+																BX("BARCODE_INPUT_BUTTON_" + id).disabled = false;
+														}
+													}
+												},
+												style : {
+													marginLeft: '8px',
+													verticalAlign: '-3'
+												}
+											})
+										]
+									}));
+									BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value = amount + 1;
+									maxId = amount + 1;
+									if(maxId >= BX('CAT_DOC_AMOUNT_'+id).value)
+										BX("BARCODE_INPUT_BUTTON_" + id).disabled = true;
+								}
+								BX('BARCODE_INPUT_'+id).value = '';
+								BX('BARCODE_INPUT_'+id).focus();
+							}
+						}
+					})
+				]
+			}),
+			formBarcodes = BX.PopupWindowManager.create("catalog-popup-barcodes-"+id, BX("CAT_BARCODE_DIV_BIND_"+id), {
+				offsetTop : -50,
+				offsetLeft : -50,
+				autoHide : false,
+				closeByEsc : true,
+				closeIcon : false,
+				draggable: {
+					restrict: true
+				},
+				content : content
+			});
+		if(!BX("BARCODE_DIV_INPUT_"+id))
+		{
+			var savedBarcodes = '';
+			if(BX("PRODUCT["+id+"][BARCODE]").value !== '')
+				savedBarcodes = BX("PRODUCT["+id+"][BARCODE]").value.split(', ');
+			if(savedBarcodes !== '')
+			{
+				var barCodeAmount = parseInt(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value);
+				BX("BARCODE_INPUT_BUTTON_" + id).disabled = (savedBarcodes.length >= BX('CAT_DOC_AMOUNT_'+id).value);
+				for(i in savedBarcodes)
+				{
+					if(savedBarcodes.hasOwnProperty(i) && savedBarcodes[i] != undefined && savedBarcodes[i] != '<?=GetMessage('CAT_DOC_POPUP_TITLE')?>')
+					{
+						BX('BARCODE_DIV_'+id).appendChild(BX.create('DIV', {
+							props : {
+								id : "BARCODE_DIV_INPUT_" + id
+							},
+							style : {
+								padding: '6px'
+							},
+							children : [
+								BX.create('span', {
+									props : {
+										id : "BARCODE_SPAN_INPUT_" + id
+									},
+									text : savedBarcodes[i],
+									style : {
+										fontSize: '12'
+									}
+								}),
+								BX.create('input', {
+									props : {
+										type : 'hidden',
+										id : "BARCODE["+id+"]["+i+"]",
+										name : "BARCODE["+id+"]["+i+"]",
+										value : savedBarcodes[i]
+									}
+								}),
+								BX.create('a', {
+									props : {
+										className : 'split-delete-item',  tabIndex : '-1', href : 'javascript:void(0);'
+									},
+									events : {
+										click : function()
+										{
+											if(!<?=intval($bReadOnly)?>)
+											{
+												var deleteNode = this.parentNode;
+												if(deleteNode)
+													deleteNode.parentNode.removeChild(deleteNode);
+												amount = parseFloat(BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value);
+												if(isNaN(amount))
+													amount = 0;
+												BX('CAT_DOC_AMOUNT_HIDDEN_'+id).value = amount - 1;
+												if(BX("BARCODE_INPUT_BUTTON_" + id) && BX("CAT_DOC_AMOUNT_HIDDEN_" + id) && BX('CAT_DOC_AMOUNT_'+id).value > BX("CAT_DOC_AMOUNT_HIDDEN_" + id).value)
+													BX("BARCODE_INPUT_BUTTON_" + id).disabled = false;
+											}
+										}
+									},
+									style : {
+										marginLeft: '8px',
+										verticalAlign: '-3'
+									}
+								})
+							]
+						}));
+					}
+				}
+			}
+		}
+
+		formBarcodes.setButtons([
+			<?if(!$bReadOnly):?>
+			new BX.PopupWindowButton({
+				text : "<?=GetMessage('CAT_DOC_SAVE')?>",
+				className : "",
+				events : {
+					click : function()
+					{
+						var barcodes = '';
+						if(maxId > 0)
+						{
+							for(var i = 0; i <= maxId; i++)
+							{
+								if(BX("BARCODE["+id+"]["+i+"]"))
+								{
+									if(barcodes !== '')
+										barcodes = barcodes + ', ';
+									if(BX("BARCODE["+id+"]["+i+"]").value !== '')
+										barcodes = barcodes + BX("BARCODE["+id+"]["+i+"]").value;
+								}
+							}
+						}
+
+						BX("PRODUCT["+id+"][BARCODE]").value = barcodes;
+						recalculateSum(id);
+						formBarcodes.close();
+					}
+				}
+			}),
+			<?else:?>
+			new BX.PopupWindowButton({
+				text : "<?=GetMessage('CAT_DOC_CANCEL')?>",
+				className : "",
+				events : {
+					click : function()
+					{
+						formBarcodes.close();
+					}
+				}
+			})
+			<?endif;?>
+		]);
+
+		formBarcodes.show();
+		if(BX('BARCODE_INPUT_'+id))
+			BX('BARCODE_INPUT_'+id).focus();
+		<?if($bReadOnly):?>
+		var addBarcodeButtons = document.querySelectorAll('.BARCODE_INPUT_button, .BARCODE_INPUT_GREY');
+		[].forEach.call(addBarcodeButtons, function disableButtons(item) {
+			item.disabled = true;
+		});
+		var addBarcodeDelBut = document.querySelectorAll('a.split-delete-item');
+		[].forEach.call(addBarcodeDelBut, function hideElements(item) {
+			item.style.display = 'none';
+		});
+		<?endif;?>
+	}
+
+	function recalculateSum(id)
+	{
+		<?if(isset($requiredFields["TOTAL"])):?>
+		var amount = 0;
+		var price = 0;
+		if(BX('CAT_DOC_AMOUNT_'+id) && !isNaN(parseFloat(BX('CAT_DOC_AMOUNT_'+id).value)))
+			amount = parseFloat(BX('CAT_DOC_AMOUNT_'+id).value);
+		if(BX('CAT_DOC_PURCHASING_PRICE_'+id) && !isNaN(parseFloat(BX('CAT_DOC_PURCHASING_PRICE_'+id).value)))
+			price = parseFloat(BX('CAT_DOC_PURCHASING_PRICE_'+id).value);
+		if(BX('CAT_DOC_SUMM_'+id))
+			BX('CAT_DOC_SUMM_'+id).innerHTML = BX.Currency.currencyFormat(amount * price, BX('CAT_CURRENCY_STORE').value, false);
+		if(BX('PRODUCT['+id+'][SUMM]'))
+			BX('PRODUCT['+id+'][SUMM]').value = (amount * price);
+		var maxId = BX('ROW_MAX_ID').value;
+		var totalSum = 0;
+		for(var i = 0; i <= maxId; i++)
+		{
+			if(BX('PRODUCT['+i+'][SUMM]'))
+			{
+				totalSum = totalSum + Number(BX('PRODUCT['+i+'][SUMM]').value);
+			}
+		}
+		if(isNaN(totalSum))
+			totalSum = 0;
+		if(BX("CAT_DOCUMENT_SUMM_SPAN"))
+			BX("CAT_DOCUMENT_SUMM_SPAN").innerHTML = '<?=GetMessage('CAT_DOC_TOTAL')?>' + ': ' + BX.Currency.currencyFormat(totalSum, BX('CAT_CURRENCY_STORE').value, true);
+		else
+			showTotalSum();
+		if(BX("CAT_DOCUMENT_SUM"))
+			BX("CAT_DOCUMENT_SUM").value = totalSum;
+		<?endif;?>
+		if(BX("BARCODE_INPUT_BUTTON_" + id) && BX("CAT_DOC_AMOUNT_HIDDEN_" + id) && BX('CAT_DOC_AMOUNT_'+id).value > BX("CAT_DOC_AMOUNT_HIDDEN_" + id).value)
+			BX("BARCODE_INPUT_BUTTON_" + id).disabled = false;
+		else if(BX("BARCODE_INPUT_BUTTON_" + id))
+			BX("BARCODE_INPUT_BUTTON_" + id).disabled = true;
+
+	}
+}
+<?
+$readyFunc = array();
+if (isset($requiredFields["TOTAL"]))
+{
+	$readyFunc[] = 'showTotalSum();';
+}
+if (isset($_REQUEST['AJAX_MODE']) && !empty($_POST['productAdd']) && $_POST['productAdd'] == 'Y')
+{
+	$readyFunc[] = 'addProductSearch();';
+}
+
+if (!empty($readyFunc))
+{
+?>
+	BX.ready(BX.defer(function(){
+	<? echo implode("\n", $readyFunc); ?>
+	}));
+<?
+}
+unset($readyFunc);
+?>
+</script>
+<?
+
+require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");

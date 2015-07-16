@@ -174,10 +174,7 @@ while ($arRes = $rsData->NavNext(true, "f_"))
 	$row =& $lAdmin->AddRow($f_NAME, $arRes);
 	foreach ($arNumCols as $column_name => $precision)
 	{
-		if ($_REQUEST["mode"] == "excel")
-			$row->AddViewField($column_name, number_format($arRes[$column_name], $precision, ".", ""));
-		else
-			$row->AddViewField($column_name, str_replace(" ", "&nbsp;", number_format($arRes[$column_name], $precision, ".", " ")));
+		$row->AddViewField($column_name, perfmon_NumberFormat($arRes[$column_name], $precision));
 	}
 	if ($f_QUERIES > 0)
 		$row->AddViewField("QUERIES", '<a href="perfmon_sql_list.php?lang='.LANGUAGE_ID.'&amp;set_filter=Y&amp;find_component_id='.$f_ID.'">'.$f_QUERIES.'</a>');

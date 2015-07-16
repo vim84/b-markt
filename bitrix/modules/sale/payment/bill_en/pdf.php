@@ -12,11 +12,11 @@ if ($_REQUEST['BLANK'] == 'Y')
 
 $pdf = new CSalePdf('P', 'pt', 'A4');
 
-if (CSalePaySystemAction::GetParamValue('BACKGROUND'))
+if (CSalePaySystemAction::GetParamValue('BACKGROUND', false))
 {
 	$pdf->SetBackground(
-		CSalePaySystemAction::GetParamValue('BACKGROUND'),
-		CSalePaySystemAction::GetParamValue('BACKGROUND_STYLE')
+		CSalePaySystemAction::GetParamValue('BACKGROUND', false),
+		CSalePaySystemAction::GetParamValue('BACKGROUND_STYLE', false)
 	);
 }
 
@@ -30,10 +30,10 @@ $fontFamily = 'Font';
 $fontSize   = 10.5;
 
 $margin = array(
-	'top' => intval(CSalePaySystemAction::GetParamValue('MARGIN_TOP') ?: 15) * 72/25.4,
-	'right' => intval(CSalePaySystemAction::GetParamValue('MARGIN_RIGHT') ?: 15) * 72/25.4,
-	'bottom' => intval(CSalePaySystemAction::GetParamValue('MARGIN_BOTTOM') ?: 15) * 72/25.4,
-	'left' => intval(CSalePaySystemAction::GetParamValue('MARGIN_LEFT') ?: 20) * 72/25.4
+	'top' => intval(CSalePaySystemAction::GetParamValue('MARGIN_TOP', false) ?: 15) * 72/25.4,
+	'right' => intval(CSalePaySystemAction::GetParamValue('MARGIN_RIGHT', false) ?: 15) * 72/25.4,
+	'bottom' => intval(CSalePaySystemAction::GetParamValue('MARGIN_BOTTOM', false) ?: 15) * 72/25.4,
+	'left' => intval(CSalePaySystemAction::GetParamValue('MARGIN_LEFT', false) ?: 20) * 72/25.4
 );
 
 $width = $pageWidth - $margin['left'] - $margin['right'];
@@ -49,32 +49,35 @@ $y0 = $pdf->GetY();
 $logoHeight = 0;
 $logoWidth = 0;
 
-if (CSalePaySystemAction::GetParamValue('PATH_TO_LOGO'))
+if (CSalePaySystemAction::GetParamValue('PATH_TO_LOGO', false))
 {
-	list($imageHeight, $imageWidth) = $pdf->GetImageSize(CSalePaySystemAction::GetParamValue('PATH_TO_LOGO'));
+	list($imageHeight, $imageWidth) = $pdf->GetImageSize(CSalePaySystemAction::GetParamValue('PATH_TO_LOGO', false));
 
-	$logoHeight = $imageHeight + 5;
-	$logoWidth  = $imageWidth + 5;
+	$imgDpi = intval(CSalePaySystemAction::GetParamValue('LOGO_DPI', false)) ?: 96;
+	$imgZoom = 96 / $imgDpi;
 
-	$pdf->Image(CSalePaySystemAction::GetParamValue('PATH_TO_LOGO'), $pdf->GetX(), $pdf->GetY());
+	$logoHeight = $imageHeight * $imgZoom + 5;
+	$logoWidth  = $imageWidth * $imgZoom + 5;
+
+	$pdf->Image(CSalePaySystemAction::GetParamValue('PATH_TO_LOGO', false), $pdf->GetX(), $pdf->GetY(), -$imgDpi, -$imgDpi);
 }
 
 $pdf->SetFont($fontFamily, 'B', $fontSize);
 
 $pdf->SetX($pdf->GetX() + $logoWidth);
-$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_NAME")));
+$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_NAME", false)));
 $pdf->Ln();
 
-if (CSalePaySystemAction::GetParamValue("SELLER_ADDRESS"))
+if (CSalePaySystemAction::GetParamValue("SELLER_ADDRESS", false))
 {
 	$pdf->SetX($pdf->GetX() + $logoWidth);
-	$pdf->MultiCell(0, 15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_ADDRESS")), 0, 'L');
+	$pdf->MultiCell(0, 15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_ADDRESS", false)), 0, 'L');
 }
 
-if (CSalePaySystemAction::GetParamValue("SELLER_PHONE"))
+if (CSalePaySystemAction::GetParamValue("SELLER_PHONE", false))
 {
 	$pdf->SetX($pdf->GetX() + $logoWidth);
-	$pdf->Write(15, CSalePdf::prepareToPdf(sprintf("Tel.: %s", CSalePaySystemAction::GetParamValue("SELLER_PHONE"))));
+	$pdf->Write(15, CSalePdf::prepareToPdf(sprintf("Tel.: %s", CSalePaySystemAction::GetParamValue("SELLER_PHONE", false))));
 	$pdf->Ln();
 }
 
@@ -92,7 +95,7 @@ $pdf->Ln();
 
 $pdf->SetFont($fontFamily, 'B', $fontSize);
 
-if (CSalePaySystemAction::GetParamValue("BUYER_NAME"))
+if (CSalePaySystemAction::GetParamValue("BUYER_NAME", false))
 {
 	$pdf->Write(15, CSalePdf::prepareToPdf('To'));
 }
@@ -102,12 +105,12 @@ $pdf->SetFont($fontFamily, '', $fontSize);
 $invoiceNo = CSalePdf::prepareToPdf($GLOBALS["SALE_INPUT_PARAMS"]["ORDER"]["ACCOUNT_NUMBER"]);
 $invoiceNoWidth = $pdf->GetStringWidth($invoiceNo);
 
-$invoiceDate = CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("DATE_INSERT"));
+$invoiceDate = CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("DATE_INSERT", false));
 $invoiceDateWidth = $pdf->GetStringWidth($invoiceDate);
 
 $invoiceDueDate = CSalePdf::prepareToPdf(
-	ConvertDateTime(CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE"), FORMAT_DATE)
-		?: CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE")
+	ConvertDateTime(CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE", false), FORMAT_DATE)
+		?: CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE", false)
 );
 $invoiceDueDateWidth = $pdf->GetStringWidth($invoiceDueDate);
 
@@ -125,9 +128,9 @@ $pdf->Ln();
 
 $pdf->SetFont($fontFamily, '', $fontSize);
 
-if (CSalePaySystemAction::GetParamValue("BUYER_NAME"))
+if (CSalePaySystemAction::GetParamValue("BUYER_NAME", false))
 {
-	$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("BUYER_NAME")));
+	$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("BUYER_NAME", false)));
 }
 
 $pdf->Cell(0, 15, $invoiceDate, 0, 0, 'R');
@@ -142,15 +145,15 @@ $pdf->Ln();
 
 $pdf->SetFont($fontFamily, '', $fontSize);
 
-if (CSalePaySystemAction::GetParamValue("BUYER_NAME"))
+if (CSalePaySystemAction::GetParamValue("BUYER_NAME", false))
 {
-	if (CSalePaySystemAction::GetParamValue("BUYER_ADDRESS"))
+	if (CSalePaySystemAction::GetParamValue("BUYER_ADDRESS", false))
 	{
-		$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("BUYER_ADDRESS")));
+		$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("BUYER_ADDRESS", false)));
 	}
 }
 
-if (CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE"))
+if (CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE", false))
 {
 	$pdf->Cell(0, 15, $invoiceDueDate, 0, 0, 'R');
 
@@ -598,28 +601,28 @@ $pdf->Ln();
 
 $pdf->SetFont($fontFamily, 'B', $fontSize);
 
-if (CSalePaySystemAction::GetParamValue("COMMENT1") || CSalePaySystemAction::GetParamValue("COMMENT2"))
+if (CSalePaySystemAction::GetParamValue("COMMENT1", false) || CSalePaySystemAction::GetParamValue("COMMENT2", false))
 {
 	$pdf->Write(15, CSalePdf::prepareToPdf('Terms & Conditions'));
 	$pdf->Ln();
 
 	$pdf->SetFont($fontFamily, '', $fontSize);
 
-	if (CSalePaySystemAction::GetParamValue("COMMENT1"))
+	if (CSalePaySystemAction::GetParamValue("COMMENT1", false))
 	{
 		$pdf->Write(15, HTMLToTxt(preg_replace(
 			array('#</div>\s*<div[^>]*>#i', '#</?div>#i'), array('<br>', '<br>'),
-			CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("COMMENT1"))
+			CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("COMMENT1", false))
 		), '', array(), 0));
 		$pdf->Ln();
 		$pdf->Ln();
 	}
 
-	if (CSalePaySystemAction::GetParamValue("COMMENT2"))
+	if (CSalePaySystemAction::GetParamValue("COMMENT2", false))
 	{
 		$pdf->Write(15, HTMLToTxt(preg_replace(
 			array('#</div>\s*<div[^>]*>#i', '#</?div>#i'), array('<br>', '<br>'),
-			CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("COMMENT2"))
+			CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("COMMENT2", false))
 		), '', array(), 0));
 		$pdf->Ln();
 		$pdf->Ln();
@@ -630,15 +633,33 @@ $pdf->Ln();
 $pdf->Ln();
 $pdf->Ln();
 
-if (!$blank && CSalePaySystemAction::GetParamValue('PATH_TO_STAMP'))
-	$pdf->Image(CSalePaySystemAction::GetParamValue('PATH_TO_STAMP'), $margin['left']+$width/2+45, $pdf->GetY());
+if (!$blank && CSalePaySystemAction::GetParamValue('PATH_TO_STAMP', false))
+{
+	list($stampHeight, $stampWidth) = $pdf->GetImageSize(CSalePaySystemAction::GetParamValue('PATH_TO_STAMP', false));
+
+	if ($stampHeight && $stampWidth)
+	{
+		if ($stampHeight > 120 || $stampWidth > 120)
+		{
+			$ratio = 120 / max($stampHeight, $stampWidth);
+			$stampHeight = $ratio * $stampHeight;
+			$stampWidth  = $ratio * $stampWidth;
+		}
+
+		$pdf->Image(
+			CSalePaySystemAction::GetParamValue('PATH_TO_STAMP', false),
+			$margin['left']+$width/2+45, $pdf->GetY(),
+			$stampWidth, $stampHeight
+		);
+	}
+}
 
 
 $y0 = $pdf->GetY();
 
-$bankAccNo = CSalePaySystemAction::GetParamValue("SELLER_BANK_ACCNO");
-$bankRouteNo = CSalePaySystemAction::GetParamValue("SELLER_BANK_ROUTENO");
-$bankSwift = CSalePaySystemAction::GetParamValue("SELLER_BANK_SWIFT");
+$bankAccNo = CSalePaySystemAction::GetParamValue("SELLER_BANK_ACCNO", false);
+$bankRouteNo = CSalePaySystemAction::GetParamValue("SELLER_BANK_ROUTENO", false);
+$bankSwift = CSalePaySystemAction::GetParamValue("SELLER_BANK_SWIFT", false);
 
 if ($bankAccNo && $bankRouteNo && $bankSwift)
 {
@@ -651,19 +672,19 @@ if ($bankAccNo && $bankRouteNo && $bankSwift)
 
 	$bankDetails = '';
 
-	if (CSalePaySystemAction::GetParamValue("SELLER_NAME"))
+	if (CSalePaySystemAction::GetParamValue("SELLER_NAME", false))
 	{
 		$bankDetails .= CSalePdf::prepareToPdf(sprintf(
 			"Account Name: %s\n",
-			CSalePaySystemAction::GetParamValue("SELLER_NAME")
+			CSalePaySystemAction::GetParamValue("SELLER_NAME", false)
 		));
 	}
 
 	$bankDetails .= CSalePdf::prepareToPdf(sprintf("Account #: %s\n", $bankAccNo));
 
-	$bank = CSalePaySystemAction::GetParamValue("SELLER_BANK");
-	$bankAddr = CSalePaySystemAction::GetParamValue("SELLER_BANK_ADDR");
-	$bankPhone = CSalePaySystemAction::GetParamValue("SELLER_BANK_PHONE");
+	$bank = CSalePaySystemAction::GetParamValue("SELLER_BANK", false);
+	$bankAddr = CSalePaySystemAction::GetParamValue("SELLER_BANK_ADDR", false);
+	$bankPhone = CSalePaySystemAction::GetParamValue("SELLER_BANK_PHONE", false);
 
 	if ($bank || $bankAddr || $bankPhone)
 	{
@@ -688,14 +709,14 @@ if ($bankAccNo && $bankRouteNo && $bankSwift)
 }
 
 $pdf->SetY($y0 + 15);
-if (CSalePaySystemAction::GetParamValue("SELLER_DIR_POS"))
+if (CSalePaySystemAction::GetParamValue("SELLER_DIR_POS", false))
 {
-	if (CSalePaySystemAction::GetParamValue("SELLER_DIR") || CSalePaySystemAction::GetParamValue("SELLER_DIR_SIGN"))
+	if (CSalePaySystemAction::GetParamValue("SELLER_DIR", false) || CSalePaySystemAction::GetParamValue("SELLER_DIR_SIGN", false))
 	{
 		$isDirSign = false;
-		if (!$blank && CSalePaySystemAction::GetParamValue('SELLER_DIR_SIGN'))
+		if (!$blank && CSalePaySystemAction::GetParamValue('SELLER_DIR_SIGN', false))
 		{
-			list($signHeight, $signWidth) = $pdf->GetImageSize(CSalePaySystemAction::GetParamValue('SELLER_DIR_SIGN'));
+			list($signHeight, $signWidth) = $pdf->GetImageSize(CSalePaySystemAction::GetParamValue('SELLER_DIR_SIGN', false));
 
 			if ($signHeight && $signWidth)
 			{
@@ -707,23 +728,23 @@ if (CSalePaySystemAction::GetParamValue("SELLER_DIR_POS"))
 			}
 		}
 
-		if (CSalePaySystemAction::GetParamValue("SELLER_DIR"))
+		if (CSalePaySystemAction::GetParamValue("SELLER_DIR", false))
 		{
 			$pdf->SetX($pdf->GetX() + $width/2 + 15);
-			$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_DIR")));
+			$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_DIR", false)));
 			$pdf->Ln();
 			$pdf->Ln();
 		}
 
 		$pdf->SetX($pdf->GetX() + $width/2 + 15);
-		$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_DIR_POS")));
+		$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_DIR_POS", false)));
 
 		$pdf->Cell(0, 15, '', 'B');
 
 		if ($isDirSign)
 		{
 			$pdf->Image(
-				CSalePaySystemAction::GetParamValue('SELLER_DIR_SIGN'),
+				CSalePaySystemAction::GetParamValue('SELLER_DIR_SIGN', false),
 				$pdf->GetX() - 150, $pdf->GetY() - $signHeight + 15,
 				$signWidth, $signHeight
 			);
@@ -734,14 +755,14 @@ if (CSalePaySystemAction::GetParamValue("SELLER_DIR_POS"))
 	}
 }
 
-if (CSalePaySystemAction::GetParamValue("SELLER_ACC_POS"))
+if (CSalePaySystemAction::GetParamValue("SELLER_ACC_POS", false))
 {
-	if (CSalePaySystemAction::GetParamValue("SELLER_ACC") || CSalePaySystemAction::GetParamValue("SELLER_ACC_SIGN"))
+	if (CSalePaySystemAction::GetParamValue("SELLER_ACC", false) || CSalePaySystemAction::GetParamValue("SELLER_ACC_SIGN", false))
 	{
 		$isAccSign = false;
-		if (!$blank && CSalePaySystemAction::GetParamValue('SELLER_ACC_SIGN'))
+		if (!$blank && CSalePaySystemAction::GetParamValue('SELLER_ACC_SIGN', false))
 		{
-			list($signHeight, $signWidth) = $pdf->GetImageSize(CSalePaySystemAction::GetParamValue('SELLER_ACC_SIGN'));
+			list($signHeight, $signWidth) = $pdf->GetImageSize(CSalePaySystemAction::GetParamValue('SELLER_ACC_SIGN', false));
 
 			if ($signHeight && $signWidth)
 			{
@@ -753,23 +774,23 @@ if (CSalePaySystemAction::GetParamValue("SELLER_ACC_POS"))
 			}
 		}
 
-		if (CSalePaySystemAction::GetParamValue("SELLER_ACC"))
+		if (CSalePaySystemAction::GetParamValue("SELLER_ACC", false))
 		{
 			$pdf->SetX($pdf->GetX() + $width/2 + 15);
-			$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_ACC")));
+			$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_ACC", false)));
 			$pdf->Ln();
 			$pdf->Ln();
 		}
 
 		$pdf->SetX($pdf->GetX() + $width/2 + 15);
-		$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_ACC_POS")));
+		$pdf->Write(15, CSalePdf::prepareToPdf(CSalePaySystemAction::GetParamValue("SELLER_ACC_POS", false)));
 
 		$pdf->Cell(0, 15, '', 'B');
 
 		if ($isAccSign)
 		{
 			$pdf->Image(
-				CSalePaySystemAction::GetParamValue('SELLER_ACC_SIGN'),
+				CSalePaySystemAction::GetParamValue('SELLER_ACC_SIGN', false),
 				$pdf->GetX() - 150, $pdf->GetY() - $signHeight + 15,
 				$signWidth, $signHeight
 			);

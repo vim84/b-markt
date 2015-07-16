@@ -35,7 +35,7 @@ if ($arParams["COLOR_TYPE"] == "LOGORIFM")
 
 if (intVal($arParams["PERIOD_NEW_TAGS"]) > 0)
 {
-	$time = time();
+	$time = time()+CTimeZone::GetOffset();
 	$period = intVal($arParams["PERIOD_NEW_TAGS"])*24*3600;
 }
 // ********************************************************************************

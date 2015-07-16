@@ -16,7 +16,8 @@ class CBPSetStateActivity
 		while ($stateActivity != null && !is_a($stateActivity, "CBPStateActivity"))
 			$stateActivity = $stateActivity->parent;
 
-		$stateActivity->SetNextStateName($this->TargetStateName);
+		if ($stateActivity != null && ($stateActivity instanceof CBPStateActivity))
+			$stateActivity->SetNextStateName($this->TargetStateName);
 
 		return CBPActivityExecutionStatus::Closed;
 	}
@@ -27,7 +28,7 @@ class CBPSetStateActivity
 
 		if (strlen($arTestProperties["TargetStateName"]) <= 0)
 		{
-			$arErrors[] = array("code" => "emptyState", "parameter" => "TargetStateName", "message" => "Bad target state.");
+			$arErrors[] = array("code" => "emptyState", "parameter" => "TargetStateName", "message" => GetMessage('BPSSA_ERROR_EMPTY_STATE'));
 		}
 
 		return array_merge($arErrors, parent::ValidateProperties($arTestProperties, $user));

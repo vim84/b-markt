@@ -70,9 +70,9 @@ $MESS['SALE_PRODUCTS_SUMMARY'] = "Товары в заказе";
 $MESS['SALE_PACKS_COUNT'] = "Необходимо коробок (штук)";
 $MESS['SOA_ORDER_DELIVERY_EXTRA_PARAMS'] = "Дополнительные параметры для доставки";
 $MESS['SOA_ORDER_DELIVERY_EXTRA_PARAMS_SAVE_ERROR'] = "Ошибка сохранения данных";
-
 $MESS['SOA_OTHER_LOCATION'] = "Другое местоположение";
 $MESS['SOA_LOCATION_NOT_FOUND'] = "Местоположение не найдено";
 $MESS['SOA_LOCATION_NOT_FOUND_PROMPT'] = "Нажмите #ANCHOR#добавить местоположение#ANCHOR_END#, чтобы мы узнали, куда нам доставить ваш заказ";
 $MESS['SOA_NOT_SELECTED_ALT'] = "При необходимости уточнить местоположение";
+$MESS['SOA_TEMPL_ORDER_PS_ERROR'] = "Ошибка выбранного способа оплаты. Обратитесь к Администрации сайта, либо выберите другой способ оплаты.";
 ?>

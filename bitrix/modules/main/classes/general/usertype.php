@@ -1537,58 +1537,11 @@ class CAllUserTypeManager
 
 	function ShowScript()
 	{
-		static $first=true;
-		if($first)
-		{
-			$first = false;
-			return "
-				<script type=\"text/javascript\">
-				function addNewRow(tableID, regexp, rindex)
-				{
-					var tbl = document.getElementById(tableID);
-					var cnt = tbl.rows.length;
-					var oRow = tbl.insertRow(cnt-1);
-					var oCell = oRow.insertCell(0);
-					var html = tbl.rows[cnt-2].cells[0].innerHTML;
+		global $APPLICATION;
 
-					oCell.innerHTML =  html.replace(regexp,
-						function(html)
-						{
-							return html.replace(new RegExp('([\\\\[x])'+arguments[rindex]+'([\\\\]x])', 'gi'), '$1'+(1+parseInt(arguments[rindex]))+'$2');
-						}
-					);
+		$APPLICATION->AddHeadScript("/bitrix/js/main/usertype.js");
 
-					setTimeout(function() {
-						var r = BX.findChildren(oCell, {tag: /^(input|select|textarea)$/i});
-						if (r && r.length > 0)
-						{
-							for (var i=0,l=r.length;i<l;i++)
-							{
-								if (r[i].form && r[i].form.BXAUTOSAVE)
-									r[i].form.BXAUTOSAVE.RegisterInput(r[i]);
-								else
-									break;
-							}
-						}
-					}, 10);
-
-					var re = /<script[^>]*?>([\\w\\s\\S]*?)<\\/script>/gmi;
-					var otv = '';
-					while (otv = re.exec(oCell.innerHTML))
-					{
-						if (otv[1])
-						{
-							BX.evalGlobal(otv[1]);
-						}
-					}
-				}
-				</script>
-			";
-		}
-		else
-		{
-			return "";
-		}
+		return "";
 	}
 
 	function GetEditFormHTML($bVarsFromForm, $form_value, $arUserField)
@@ -1703,9 +1656,9 @@ class CAllUserTypeManager
 					);
 					return '<tr'.($rowClass != '' ? ' class="'.$rowClass.'"' : '').'><td class="adm-detail-valign-top">'.$strLabelHTML.'</td><td>'.
 						'<table id="table_'.$arUserField["FIELD_NAME"].'">'.$html.'<tr><td>'.$fieldHtml.'</td></tr>'.
-					'<tr><td style="padding-top: 6px;"><input type="button" value="'.GetMessage("USER_TYPE_PROP_ADD").'" onClick="addNewRow(\'table_'.$arUserField["FIELD_NAME"].'\', /('.$FIELD_NAME_X.'|'.$arUserField["FIELD_NAME"].'|'.$arUserField["FIELD_NAME"].'_old_id)[x\[]([0-9]*)[x\]]/gi, 2)"></td></tr>'.
+					'<tr><td style="padding-top: 6px;"><input type="button" value="'.GetMessage("USER_TYPE_PROP_ADD").'" onClick="addNewRow(\'table_'.$arUserField["FIELD_NAME"].'\', \''.$FIELD_NAME_X.'|'.$arUserField["FIELD_NAME"].'|'.$arUserField["FIELD_NAME"].'_old_id\')"></td></tr>'.
 					"<script type=\"text/javascript\">BX.addCustomEvent('onAutoSaveRestore', function(ob, data) {for (var i in data){if (i.substring(0,".(strlen($arUserField['FIELD_NAME'])+1).")=='".CUtil::JSEscape($arUserField['FIELD_NAME'])."['){".
-						'addNewRow(\'table_'.$arUserField["FIELD_NAME"].'\', /('.$FIELD_NAME_X.'|'.$arUserField["FIELD_NAME"].'|'.$arUserField["FIELD_NAME"].'_old_id)[x\[]([0-9]*)[x\[]/gi, 2)'.
+					'addNewRow(\'table_'.$arUserField["FIELD_NAME"].'\', \''.$FIELD_NAME_X.'|'.$arUserField["FIELD_NAME"].'|'.$arUserField["FIELD_NAME"].'_old_id\')'.
 					"}}})</script>".
 					'</table>'.
 					'</td></tr>'.$js;
@@ -2001,7 +1954,14 @@ class CAllUserTypeManager
 		return null;
 	}
 
-	function CheckFields($entity_id, $ID, &$arFields)
+	/**
+	 * @param      $entity_id
+	 * @param      $ID
+	 * @param      $arFields
+	 * @param bool $user_id False means current user id.
+	 * @return bool
+	 */
+	function CheckFields($entity_id, $ID, &$arFields, $user_id = false)
 	{
 		global $APPLICATION;
 
@@ -2105,7 +2065,7 @@ class CAllUserTypeManager
 						//apply appropriate check function
 						$ar = call_user_func_array(
 							array($CLASS_NAME, "checkfields"),
-							array($arUserField, $arFields[$FIELD_NAME])
+							array($arUserField, $arFields[$FIELD_NAME], $user_id)
 						);
 						$aMsg = array_merge($aMsg, $ar);
 					}
@@ -2118,7 +2078,7 @@ class CAllUserTypeManager
 								//apply appropriate check function
 								$ar = call_user_func_array(
 									array($CLASS_NAME, "checkfields"),
-									array($arUserField, $value)
+									array($arUserField, $value, $user_id)
 								);
 								$aMsg = array_merge($aMsg, $ar);
 							}
@@ -2225,7 +2185,7 @@ class CAllUserTypeManager
 				if($arUserField["MULTIPLE"] == "N")
 				{
 					if(is_callable(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesave")))
-						$arFields[$FIELD_NAME] = call_user_func_array(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesave"), array($arUserField, $arFields[$FIELD_NAME]));
+						$arFields[$FIELD_NAME] = call_user_func_array(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesave"), array($arUserField, $arFields[$FIELD_NAME], $user_id));
 
 					if(strlen($arFields[$FIELD_NAME])>0)
 						$arUpdate[$FIELD_NAME] = $arFields[$FIELD_NAME];
@@ -2238,13 +2198,13 @@ class CAllUserTypeManager
 					$arInsertType[$arUserField["ID"]] = $arUserField["USER_TYPE"];
 
 					if(is_callable(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesaveall")))
-						$arInsert[$arUserField["ID"]] = call_user_func_array(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesaveall"), array($arUserField, $arFields[$FIELD_NAME]));
+						$arInsert[$arUserField["ID"]] = call_user_func_array(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesaveall"), array($arUserField, $arFields[$FIELD_NAME], $user_id));
 					else
 					{
 						foreach($arFields[$FIELD_NAME] as $value)
 						{
 							if(is_callable(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesave")))
-								$value = call_user_func_array(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesave"), array($arUserField, $value));
+								$value = call_user_func_array(array($arUserField["USER_TYPE"]["CLASS_NAME"], "onbeforesave"), array($arUserField, $value, $user_id));
 
 							if(strlen($value)>0)
 							{
@@ -3694,6 +3654,17 @@ class CUserFieldEnum
 	{
 		global $DB, $CACHE_MANAGER, $APPLICATION;
 		$aMsg = array();
+
+		foreach($values as $i=>$row)
+		{
+			foreach($row as $key=>$val)
+			{
+				if(strncmp($key, "~", 1)===0)
+				{
+					unset($values[$i][$key]);
+				}
+			}
+		}
 
 		/*check unique XML_ID*/
 		$arAdded = array();

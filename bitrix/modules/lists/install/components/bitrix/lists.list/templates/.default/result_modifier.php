@@ -11,14 +11,13 @@ $arSections = array();
 
 $CURRENT_USER_ID = $GLOBALS["USER"]->GetID();
 $CURRENT_USER_GROUPS = $GLOBALS["USER"]->GetUserGroupArray();
-
 foreach($arResult["ELEMENTS_ROWS"] as $i => $arRow)
 {
 	if($arResult["BIZPROC"] == "Y")
 	{
 		$arDocumentStates = CBPDocument::GetDocumentStates(
-			array("iblock", "CIBlockDocument", "iblock_".$arResult["IBLOCK_ID"]),
-			array("iblock", "CIBlockDocument", $arRow["data"]["ID"])
+			BizprocDocument::generateDocumentComplexType($arParams["IBLOCK_TYPE_ID"], $arResult["IBLOCK_ID"]),
+			BizprocDocument::getDocumentComplexId($arParams["IBLOCK_TYPE_ID"], $arRow["data"]["ID"])
 		);
 
 		$USER_GROUPS = $CURRENT_USER_GROUPS;
@@ -27,8 +26,17 @@ foreach($arResult["ELEMENTS_ROWS"] as $i => $arRow)
 
 		$ii = 0;
 		$html = "";
+		$proccesses = false;
+		if($arResult["PROCESSES"] && $arResult["USE_COMMENTS"])
+		{
+			$proccesses = true;
+			$workflows = array();
+		}
 		foreach ($arDocumentStates as $kk => $vv)
 		{
+			if($vv["ID"] && $proccesses && !empty($arRow["data"]["WORKFLOW_ID"]))
+				$workflows[] = 'WF_'.$vv["ID"];
+
 			$canViewWorkflow = CIBlockDocument::CanUserOperateDocument(
 				CBPCanUserOperateOperation::ViewWorkflow,
 				$CURRENT_USER_ID,
@@ -57,6 +65,20 @@ foreach($arResult["ELEMENTS_ROWS"] as $i => $arRow)
 			$html .= "<a href=\"".htmlspecialcharsbx($url)."\">".(strlen($vv["STATE_TITLE"]) > 0 ? $vv["STATE_TITLE"] : $vv["STATE_NAME"])."</a><br />";
 		}
 
+		if ($proccesses)
+		{
+			$workflows = array_unique($workflows);
+			if ($workflows)
+			{
+				$iterator = CForumTopic::getList(array(), array("@XML_ID" => $workflows));
+				while ($row = $iterator->fetch())
+					$arResult["COMMENTS_COUNT"][$row["XML_ID"]] = $row["POSTS"];
+				$arRow["data"]["COMMENTS"] = '<div class="bp-comments"><a href="#" onclick="if (BX.Bizproc.showWorkflowInfoPopup) return BX.Bizproc.showWorkflowInfoPopup(\''.$arRow["data"]["WORKFLOW_ID"].'\')"><span class="bp-comments-icon"></span>'
+					.(!empty($arResult["COMMENTS_COUNT"]['WF_'.$arRow["data"]["WORKFLOW_ID"]]) ? (int) $arResult["COMMENTS_COUNT"]['WF_'.$arRow["data"]["WORKFLOW_ID"]] : '0')
+					.'</a></div>';
+			}
+		}
+
 		$arRow["data"]["BIZPROC"] = $html;
 	}
 
@@ -78,24 +100,24 @@ foreach($arResult["ELEMENTS_ROWS"] as $i => $arRow)
 			$obFileControl = new CListFileControl($obFile, $FIELD_ID);
 
 			$value = '<nobr>'.$obFileControl->GetHTML(array(
-				'show_input' => false,
-				'max_size' => 102400,
-				'max_width' => 50,
-				'max_height' => 50,
-				'url_template' => $arParams["~LIST_FILE_URL"],
-				'a_title' => GetMessage("CT_BLL_ENLARGE"),
-				'download_text' => GetMessage("CT_BLL_DOWNLOAD"),
-			)).'</nobr>';
+					'show_input' => false,
+					'max_size' => 1024000,
+					'max_width' => 50,
+					'max_height' => 50,
+					'url_template' => $arParams["~LIST_FILE_URL"],
+					'a_title' => GetMessage("CT_BLL_ENLARGE"),
+					'download_text' => GetMessage("CT_BLL_DOWNLOAD"),
+				)).'</nobr>';
 		}
 		elseif($FIELD_ID == "IBLOCK_SECTION_ID")
 		{
 			if(array_key_exists($value, $arResult["SECTIONS"]))
 			{
 				$value = '<a href="'.str_replace(
-					array("#list_id#", "#section_id#", "#group_id#"),
-					array($arResult["IBLOCK_ID"], $value, $arParams["SOCNET_GROUP_ID"]),
-					$arParams['LIST_URL']
-				).'">'.$arResult["SECTIONS"][$value]["NAME"].'</a>';
+						array("#list_id#", "#section_id#", "#group_id#"),
+						array($arResult["IBLOCK_ID"], $value, $arParams["SOCNET_GROUP_ID"]),
+						$arParams['LIST_URL']
+					).'">'.$arResult["SECTIONS"][$value]["NAME"].'</a>';
 			}
 			else
 			{
@@ -120,14 +142,14 @@ foreach($arResult["ELEMENTS_ROWS"] as $i => $arRow)
 					$obFileControl = new CListFileControl($obFile, $FIELD_ID);
 
 					$value[$ii] = '<nobr>'.$obFileControl->GetHTML(array(
-						'show_input' => false,
-						'max_size' => 102400,
-						'max_width' => 50,
-						'max_height' => 50,
-						'url_template' => $arParams["~LIST_FILE_URL"],
-						'a_title' => GetMessage("CT_BLL_ENLARGE"),
-						'download_text' => GetMessage("CT_BLL_DOWNLOAD"),
-					)).'</nobr>';
+							'show_input' => false,
+							'max_size' => 1024000,
+							'max_width' => 50,
+							'max_height' => 50,
+							'url_template' => $arParams["~LIST_FILE_URL"],
+							'a_title' => GetMessage("CT_BLL_ENLARGE"),
+							'download_text' => GetMessage("CT_BLL_DOWNLOAD"),
+						)).'</nobr>';
 				}
 			}
 			else
@@ -144,14 +166,14 @@ foreach($arResult["ELEMENTS_ROWS"] as $i => $arRow)
 				$obFileControl = new CListFileControl($obFile, $FIELD_ID);
 
 				$value = '<nobr>'.$obFileControl->GetHTML(array(
-					'show_input' => false,
-					'max_size' => 102400,
-					'max_width' => 50,
-					'max_height' => 50,
-					'url_template' => $arParams["~LIST_FILE_URL"],
-					'a_title' => GetMessage("CT_BLL_ENLARGE"),
-					'download_text' => GetMessage("CT_BLL_DOWNLOAD"),
-				)).'</nobr>';
+						'show_input' => false,
+						'max_size' => 1024000,
+						'max_width' => 50,
+						'max_height' => 50,
+						'url_template' => $arParams["~LIST_FILE_URL"],
+						'a_title' => GetMessage("CT_BLL_ENLARGE"),
+						'download_text' => GetMessage("CT_BLL_DOWNLOAD"),
+					)).'</nobr>';
 			}
 		}
 		elseif($arField["TYPE"] == "E")
@@ -228,4 +250,3 @@ if(count($arSections))
 foreach($arArrays as $i => $ar)
 	$arArrays[$i] = implode("&nbsp;/<br>", $ar);
 ?>
-

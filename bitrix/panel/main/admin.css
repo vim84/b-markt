@@ -3103,7 +3103,7 @@ it's made to prevent appearing of artefacts from old admin button icons.
 /*======================================================MENU ICONS=========================================*/
 
 .adm-submenu-item-link-icon {
-	background:url("images/icons-sprite-8.png") no-repeat center -1512px;
+	background:url("images/icons-sprite-9.png") no-repeat center -1512px;
 }
 .fav_menu_icon {background-position:center -1540px;}
 .iblock_menu_icon_iblocks {background-position:center -56px;}
@@ -3185,6 +3185,7 @@ it's made to prevent appearing of artefacts from old admin button icons.
 
 .seo_menu_icon {background-position: center -2037px;}
 .scale_menu_icon {background-position: center -2099px;}
+.sender_menu_icon {background-position: center -2243px;}
 .mobile_menu_icon { background: url("images/ic-mob.png") no-repeat center 1px; }
 .seo_adv_menu_icon {background-position: center -2211px;}
 

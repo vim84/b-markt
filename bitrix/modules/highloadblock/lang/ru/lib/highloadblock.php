@@ -6,3 +6,4 @@ $MESS['HIGHLOADBLOCK_HIGHLOAD_BLOCK_ENTITY_NAME_FIELD_REGEXP_INVALID'] = 'Наз
 $MESS['HIGHLOADBLOCK_HIGHLOAD_BLOCK_ENTITY_TABLE_NAME_FIELD_REGEXP_INVALID'] = 'Название таблицы должно состоять только из строчных латинских букв, цифр и знака подчеркивания';
 $MESS['HIGHLOADBLOCK_HIGHLOAD_BLOCK_ENTITY_NAME_FIELD_LENGTH_INVALID'] = 'Максимальная длина Названия сущноси 100 символов';
 $MESS['HIGHLOADBLOCK_HIGHLOAD_BLOCK_ENTITY_TABLE_NAME_FIELD_LENGTH_INVALID'] = 'Максимальная длина Названия таблицы 64 символа';
+$MESS['HIGHLOADBLOCK_HIGHLOAD_BLOCK_ENTITY_TABLE_NAME_ALREADY_EXISTS'] = 'Таблица с названием #TABLE_NAME# уже есть в базе данных';

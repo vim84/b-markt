@@ -14,5 +14,11 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.ph
 
 CEvent::CheckEvents();
 
+if(CModule::IncludeModule('sender'))
+{
+	\Bitrix\Sender\MailingManager::checkPeriod(false);
+	\Bitrix\Sender\MailingManager::checkSend();
+}
+
 require($_SERVER['DOCUMENT_ROOT']."/bitrix/modules/main/tools/backup.php");
 ?>

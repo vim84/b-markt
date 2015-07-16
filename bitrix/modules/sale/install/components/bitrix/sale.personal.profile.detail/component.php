@@ -72,6 +72,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && (!empty($_POST["save"]) || !empty($_PO
 		{
 			$bErrorField = false;
 			$curVal = $_POST["ORDER_PROP_".$arOrderProps["ID"]];
+
 			if ($arOrderProps["TYPE"] == "LOCATION" && $arOrderProps["IS_LOCATION"] == "Y")
 			{
 				$DELIVERY_LOCATION = IntVal($curVal);
@@ -159,12 +160,14 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && (!empty($_POST["save"]) || !empty($_PO
 
 			if (isset($_POST["ORDER_PROP_".$arOrderProps["ID"]]))
 			{
+
 				$arFields = array(
 						"USER_PROPS_ID" => $ID,
 						"ORDER_PROPS_ID" => $arOrderProps["ID"],
 						"NAME" => $arOrderProps["NAME"],
 						"VALUE" => $curVal
 					);
+
 				CSaleOrderUserPropsValue::Add($arFields);
 			}
 		}
@@ -208,31 +211,10 @@ if ($arUserProps = $dbUserProps->GetNext())
 	$arResult["TITLE"] = str_replace("#ID#", $arUserProps["ID"], GetMessage("SPPD_PROFILE_NO"));
 	$arResult["PERSON_TYPE"] = CSalePersonType::GetByID($arUserProps["PERSON_TYPE_ID"]);
 	$arResult["PERSON_TYPE"]["NAME"] = htmlspecialcharsEx($arResult["PERSON_TYPE"]["NAME"]);
-	$arPropValsTmp = Array();
-	if (!$bInitVars)
-	{
-		$dbPropVals = CSaleOrderUserPropsValue::GetList(
-				array("SORT" => "ASC"),
-				array("USER_PROPS_ID" => $arUserProps["ID"]),
-				false,
-				false,
-				array("ID", "ORDER_PROPS_ID", "VALUE", "SORT")
-			);
-		while ($arPropVals = $dbPropVals->GetNext())
-		{
-			$arPropValsTmp["ORDER_PROP_".$arPropVals["ORDER_PROPS_ID"]] = $arPropVals["VALUE"];
-		}
-	}
-	else
-	{
-		foreach ($_REQUEST as $key => $value)
-		{
-			if (substr($key, 0, strlen("ORDER_PROP_"))=="ORDER_PROP_")
-				$arPropValsTmp[$key] = htmlspecialcharsbx($value);
-		}
-	}
-	$arResult["ORDER_PROPS_VALUES"] = $arPropValsTmp;
+
+	// get prop description
 	$arrayTmp = Array();
+	$propsOfTypeLocation = array();
 	$dbOrderPropsGroup = CSaleOrderPropsGroup::GetList(
 				array("SORT" => "ASC", "NAME" => "ASC"),
 				array("PERSON_TYPE_ID" => $arUserProps["PERSON_TYPE_ID"]),
@@ -266,6 +248,9 @@ if ($arUserProps = $dbUserProps->GetNext())
 			}
 			elseif($arOrderProps["TYPE"]=="LOCATION")
 			{
+				$propsOfTypeLocation[$arOrderProps['ID']] = true; // required for mapping ID<=>CODE below
+
+				// perfomance hole
 				$dbVars = CSaleLocation::GetList(Array("SORT"=>"ASC", "COUNTRY_NAME_LANG"=>"ASC", "CITY_NAME_LANG"=>"ASC"), array(), LANGUAGE_ID);
 				while($vars = $dbVars->GetNext())
 					$arOrderProps["VALUES"][] = $vars;
@@ -274,6 +259,32 @@ if ($arUserProps = $dbUserProps->GetNext())
 		}
 	}
 	$arResult["ORDER_PROPS"] = $arrayTmp;
+
+	// get prop values
+	$arPropValsTmp = Array();
+	if (!$bInitVars)
+	{
+		$dbPropVals = CSaleOrderUserPropsValue::GetList(
+				array("SORT" => "ASC"),
+				array("USER_PROPS_ID" => $arUserProps["ID"]),
+				false,
+				false,
+				array("ID", "ORDER_PROPS_ID", "VALUE", "SORT")
+			);
+		while ($arPropVals = $dbPropVals->GetNext())
+		{
+			$arPropValsTmp["ORDER_PROP_".$arPropVals["ORDER_PROPS_ID"]] = $arPropVals["VALUE"];
+		}
+	}
+	else
+	{
+		foreach ($_REQUEST as $key => $value)
+		{
+			if (substr($key, 0, strlen("ORDER_PROP_"))=="ORDER_PROP_")
+				$arPropValsTmp[$key] = htmlspecialcharsbx($value);
+		}
+	}
+	$arResult["ORDER_PROPS_VALUES"] = $arPropValsTmp;
 }
 else
 	$arResult["ERROR_MESSAGE"] = GetMessage("SALE_NO_PROFILE");

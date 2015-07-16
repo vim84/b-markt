@@ -155,7 +155,6 @@ Class security extends CModule
 
 			CAgent::RemoveAgent("CSecurityFilter::ClearTmpFiles();", "security");
 			CSecurityFilter::SetActive(true);
-			CSecurityAntiVirus::SetActive(true);
 
 			return true;
 		}

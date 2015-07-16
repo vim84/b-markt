@@ -587,7 +587,7 @@ class OracleSqlHelper extends SqlHelper
 		{
 			$values = $field->getValues();
 
-			if (ctype_digit($values[0]) && ctype_digit($values[1]))
+			if (preg_match('/^[0-9]+$/', $values[0]) && preg_match('/^[0-9]+$/', $values[1]))
 			{
 				return 'number(1)';
 			}

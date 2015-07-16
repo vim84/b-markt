@@ -172,8 +172,15 @@ elseif ((empty($_REQUEST["preview_comment"]) || $_REQUEST["preview_comment"] == 
 		$arTopic = CForumTopic::GetByID($FORUM_TOPIC_ID);
 		if (!$arTopic || !is_array($arTopic) || count($arTopic) <= 0 || $arTopic["FORUM_ID"] != $arParams["FORUM_ID"]):
 			CIBlockElement::SetPropertyValues($arParams["ELEMENT_ID"], $PRODUCT_IBLOCK_ID, 0, "FORUM_TOPIC_ID");
+			CIBlockElement::SetPropertyValues($arParams["ELEMENT_ID"], $PRODUCT_IBLOCK_ID, 0, "FORUM_MESSAGE_CNT");
 			$FORUM_TOPIC_ID = 0;
+		elseif ($arTopic["XML_ID"] !== "IBLOCK_".$arParams["ELEMENT_ID"]):
+			CForumTopic::Update($FORUM_TOPIC_ID, array("XML_ID" => "IBLOCK_".$arParams["ELEMENT_ID"]));
 		endif;
+	elseif (($arTopic = CForumTopic::GetList(array(), array("XML_ID" => "IBLOCK_".$arParams["ELEMENT_ID"]))->fetch()) && $arTopic):
+		$FORUM_TOPIC_ID = intval($arTopic["ID"]);
+		CIBlockElement::SetPropertyValues($arParams["ELEMENT_ID"], $PRODUCT_IBLOCK_ID, $arTopic["ID"], "FORUM_TOPIC_ID");
+		CIBlockElement::SetPropertyValues($arParams["ELEMENT_ID"], $PRODUCT_IBLOCK_ID, $arTopic["POSTS"], "FORUM_MESSAGE_CNT");
 	endif;
 
 	// 1.6 Create New topic and add messages

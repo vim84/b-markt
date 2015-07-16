@@ -186,7 +186,26 @@ if($USER->isAdmin())
 	);
 }
 
-if(count($aMenu["items"]) > 0)
+if(LANGUAGE_ID == "ru" && $USER->IsAdmin() && !IsModuleInstalled("intranet"))
+{
+	$aMenu1 = array($aMenu);
+	$aMenu1[] = array(
+		"parent_menu" => "global_menu_settings",
+		"section" => "security_ddos",
+		"sort" => 211,
+		"text" => GetMessage("SEC_MENU_DDOS_ITEM"),
+		"title" => GetMessage("SEC_MENU_DDOS_TITLE"),
+		"icon" => "security_menu_ddos_icon",
+		"page_icon" => "",
+		"items_id" => "menu_security_ddos",
+		"items" => array(),
+		"url" => "security_ddos.php?lang=".LANGUAGE_ID,
+		"more_url" => "security_ddos.php",
+	);
+	$aMenu = $aMenu1;
+}
+
+if((isset($aMenu["items"]) && count($aMenu["items"]) > 0) || (isset($aMenu[0]["items"]) && count($aMenu[0]["items"]) > 0))
 	return $aMenu;
 else
 	return false;

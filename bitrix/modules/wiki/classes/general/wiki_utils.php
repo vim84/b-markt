@@ -241,7 +241,7 @@ class CWikiUtils
 
 		if (CWikiSocnet::IsSocNet())
 		{
-			$arSonetGroup = CSocNetGroup::GetByID($iSocNetId);
+			$arSonetGroup = CSocNetGroup::GetByID(CWikiSocnet::$iSocNetId);
 			if ($arSonetGroup && CSocNetUser::IsCurrentUserModuleAdmin($arSonetGroup['SITE_ID']))
 				return true;
 

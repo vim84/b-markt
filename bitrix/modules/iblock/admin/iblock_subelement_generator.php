@@ -1,15 +1,16 @@
 <?
+/** @global CMain $APPLICATION */
+use Bitrix\Main;
+use Bitrix\Highloadblock as HL;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
-CModule::IncludeModule("iblock");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/iblock/prolog.php");
 IncludeModuleLangFile(__FILE__);
 
-if(!CModule::IncludeModule('catalog'))
+if(!Main\Loader::includeModule('catalog'))
 	die();
 
-global $APPLICATION;
-
-$APPLICATION->AddHeadScript('/bitrix/js/catalog/tbl_edit.js');
+Main\Page\Asset::getInstance()->addJs('/bitrix/js/catalog/tbl_edit.js');
 
 $arJSDescription = array(
 	'js' => '/bitrix/js/iblock/sub_generator.js',
@@ -18,8 +19,6 @@ $arJSDescription = array(
 );
 CJSCore::RegisterExt('iblock_generator', $arJSDescription);
 CJSCore::Init(array('iblock_generator'));
-
-use Bitrix\Highloadblock as HL;
 
 define('IB_SEG_ROW_PREFIX','IB_SEG_');
 
@@ -204,7 +203,7 @@ while($arIBlockProperty = $dbIBlockProperty->Fetch())
 		$arConvert = array();
 		if (isset($arIBlockProperty["USER_TYPE_SETTINGS"]["TABLE_NAME"]) && !empty($arIBlockProperty["USER_TYPE_SETTINGS"]["TABLE_NAME"]))
 		{
-			$hlblock = HL\HighloadBlockTable::getList(array("filter" => array("TABLE_NAME" => $arIBlockProperty["USER_TYPE_SETTINGS"]["TABLE_NAME"])))->fetch();
+			$hlblock = HL\HighloadBlockTable::getList(array('filter' => array('=TABLE_NAME' => $arIBlockProperty['USER_TYPE_SETTINGS']['TABLE_NAME'])))->fetch();
 			if (!empty($hlblock) && is_array($hlblock))
 			{
 				$entity = HL\HighloadBlockTable::compileEntity($hlblock);
@@ -507,15 +506,17 @@ if(!$bReadOnly && check_bitrix_sessid())
 			?>
 			<script type="text/javascript">
 				top.BX.closeWait();
-				if(top.BX.WindowManager.Get())
+				if (!!top.BX.WindowManager.Get())
 				{
-					top.BX.WindowManager.Get().AllowClose(); top.BX.WindowManager.Get().Close(); top.ReloadOffers();
+					top.BX.WindowManager.Get().AllowClose(); top.BX.WindowManager.Get().Close();
+					if (!!top.ReloadSubList)
+						top.ReloadSubList();
 				}
 			</script>
 			<?
 			die();
 		}
-		if($ex = $APPLICATION->GetException())
+		if ($ex = $APPLICATION->GetException())
 		{
 			$errorMessage .= $ex->GetString()."<br>";
 		}
@@ -525,7 +526,7 @@ if(!$bReadOnly && check_bitrix_sessid())
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 if($errorMessage)
 {
-	CAdminMessage::ShowOldStyleError($errorMessage);
+	CAdminMessage::ShowMessage($errorMessage);
 }
 else
 {
@@ -538,20 +539,19 @@ else
 		array("DIV" => "edit", "TAB" => GetMessage("IB_SEG_TAB_TITLE")),
 	);
 
-	?>
-	<?CAdminMessage::ShowMessage($errorMessage);?>
+	CAdminMessage::ShowMessage($errorMessage);
 
+	?>
 	<form enctype="multipart/form-data" method="POST" action="<?echo $APPLICATION->GetCurPage()?>?" name="iblock_generator_form" id="iblock_generator_form">
-	<input type="hidden" name="lang" value="<?echo LANG ?>">
+	<input type="hidden" name="lang" value="<?echo LANGUAGE_ID; ?>">
 	<input type="hidden" name="subIBlockId" value="<?echo $subIBlockId?>">
 	<input type="hidden" name="subPropValue" value="<?echo $subPropValue?>">
 	<input type="hidden" name="iBlockId" value="<?echo $iBlockId?>">
 	<input type="hidden" name="findSection" value="<?echo $findSection?>">
 	<input type="hidden" name="subTmpId" value="<?echo $subTmpId?>">
 	<input type="hidden" name="PRODUCT_NAME_HIDDEN" value="<?echo htmlspecialcharsbx($parentProductName)?>">
+	<?=bitrix_sessid_post();
 
-	<?=bitrix_sessid_post()?>
-	<?
 	$tabControl = new CAdminTabControl("tabControl", $aTabs, true, true);
 	$strFormAction = $APPLICATION->GetCurPage();
 
@@ -819,4 +819,3 @@ else
 	<?
 }
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-?>

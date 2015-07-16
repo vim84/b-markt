@@ -37,106 +37,170 @@ Class blog extends CModule
 		$this->MODULE_DESCRIPTION = GetMessage("BLOG_INSTALL_DESCRIPTION");
 	}
 
-	function InstallUserFields()
+	public static function installDiskUserFields()
 	{
-		global $USER_FIELD_MANAGER;
+		global $APPLICATION;
 		$errors = null;
 
-		$arFields = array(
-			"BLOG_POST" => array(
-				"ENTITY_ID" => "BLOG_POST",
-				"FIELD_NAME" => "UF_BLOG_POST_DOC",
-				"XML_ID" => "UF_BLOG_POST_DOC"
-			),
-			"BLOG_COMMENT" => array(
-				"ENTITY_ID" => "BLOG_COMMENT",
-				"FIELD_NAME" => "UF_BLOG_COMMENT_DOC",
-				"XML_ID" => "UF_BLOG_COMMENT_DOC"
-			),
-		);
-
-		$arFieldProps = Array(
-			"USER_TYPE_ID" => "file",
-			"SORT" => 100,
-			"MULTIPLE" => "Y",
-			"MANDATORY" => "N",
-			"SHOW_FILTER" => "N",
-			"SHOW_IN_LIST" => "N",
-			"EDIT_IN_LIST" => "Y",
-			"IS_SEARCHABLE" => "Y",
-			"SETTINGS" => array(),
-			"EDIT_FORM_LABEL" => "",
-			"LIST_COLUMN_LABEL" => "",
-			"LIST_FILTER_LABEL" => "",
-			"ERROR_MESSAGE" => "",
-			"HELP_MESSAGE" => "",
-			"MAX_ALLOWED_SIZE" => COption::GetOptionString("blog", "image_max_size", "5000000"),
-		);
-
-		foreach ($arFields as $fieldName => $arField)
+		if(!IsModuleInstalled('disk'))
 		{
-			$rsData = CUserTypeEntity::GetList(array($by=>$order), $arField);
-			if ($arRes = $rsData->Fetch())
-			{
-				$intID = $arRes['ID'];
-			}
-			else
-			{
-				$arProps = $arFieldProps + $arField;
-				$obUserField  = new CUserTypeEntity;
-				$intID = $obUserField->Add($arProps, false);
-
-				if (false == $intID)
-				{
-					if ($strEx = $GLOBALS['APPLICATION']->GetException())
-					{
-						$errors = $strEx->GetString();
-					}
-				}
-			}
+			return;
 		}
 
-		if (is_null($errors))
+		$props = array(
+			array(
+				"ENTITY_ID" => "BLOG_POST",
+				"FIELD_NAME" => "UF_BLOG_POST_FILE",
+				"USER_TYPE_ID" => "disk_file"
+			),
+			array(
+				"ENTITY_ID" => "BLOG_COMMENT",
+				"FIELD_NAME" => "UF_BLOG_COMMENT_FILE",
+				"USER_TYPE_ID" => "disk_file"
+			),
+			array(
+				"ENTITY_ID" => "BLOG_COMMENT",
+				"FIELD_NAME" => "UF_BLOG_COMMENT_FH",
+				"USER_TYPE_ID" => "disk_version"
+			),
+		);
+		$uf = new CUserTypeEntity;
+		foreach ($props as $prop)
 		{
-			$rsData = CUserTypeEntity::GetList(
-				array($by=>$order), 
-				array(
-					"ENTITY_ID" => "BLOG_POST",
-					"XML_ID" => "UF_GRATITUDE"
-				)
-			);
-			if ($arRes = $rsData->Fetch())
-				$intID = $arRes['ID'];
-			else
+			$rsData = CUserTypeEntity::getList(array("ID" => "ASC"), array("ENTITY_ID" => $prop["ENTITY_ID"], "FIELD_NAME" => $prop["FIELD_NAME"]));
+			if (!($rsData && ($arRes = $rsData->Fetch())))
 			{
-				$arFieldProps = Array(
-					"ENTITY_ID" => "BLOG_POST",
-					"FIELD_NAME" => "UF_GRATITUDE",
-					"XML_ID" => "UF_GRATITUDE",			
-					"USER_TYPE_ID" => "integer",
+				$intID = $uf->add(array(
+					"ENTITY_ID" => $prop["ENTITY_ID"],
+					"FIELD_NAME" => $prop["FIELD_NAME"],
+					"XML_ID" => $prop["FIELD_NAME"],
+					"USER_TYPE_ID" => $prop["USER_TYPE_ID"],
 					"SORT" => 100,
-					"MULTIPLE" => "N",
+					"MULTIPLE" => ($prop["USER_TYPE_ID"] == "disk_version" ? "N" : "Y"),
 					"MANDATORY" => "N",
 					"SHOW_FILTER" => "N",
 					"SHOW_IN_LIST" => "N",
 					"EDIT_IN_LIST" => "Y",
-					"IS_SEARCHABLE" => "N",
-					"SETTINGS" => array(),
-					"EDIT_FORM_LABEL" => "",
-					"LIST_COLUMN_LABEL" => "",
-					"LIST_FILTER_LABEL" => "",
-					"ERROR_MESSAGE" => "",
-					"HELP_MESSAGE" => "",
+					"IS_SEARCHABLE" => "N"
+				), false);
+
+				if (false == $intID && ($strEx = $APPLICATION->getException()))
+				{
+					$errors[] = $strEx->getString();
+				}
+			}
+		}
+
+		return $errors;
+	}
+
+	function InstallUserFields($id = "all")
+	{
+		global $USER_FIELD_MANAGER;
+		$errors = null;
+
+		if($id == 'disk' || $id == 'all')
+		{
+			self::installDiskUserFields();
+		}
+		if($id == 'all')
+		{
+			$arFields = array(
+				"BLOG_POST" => array(
+					"ENTITY_ID" => "BLOG_POST",
+					"FIELD_NAME" => "UF_BLOG_POST_DOC",
+					"XML_ID" => "UF_BLOG_POST_DOC"
+				),
+				"BLOG_COMMENT" => array(
+					"ENTITY_ID" => "BLOG_COMMENT",
+					"FIELD_NAME" => "UF_BLOG_COMMENT_DOC",
+					"XML_ID" => "UF_BLOG_COMMENT_DOC"
+				),
+			);
+
+			$arFieldProps = Array(
+				"USER_TYPE_ID" => "file",
+				"SORT" => 100,
+				"MULTIPLE" => "Y",
+				"MANDATORY" => "N",
+				"SHOW_FILTER" => "N",
+				"SHOW_IN_LIST" => "N",
+				"EDIT_IN_LIST" => "Y",
+				"IS_SEARCHABLE" => "Y",
+				"SETTINGS" => array(),
+				"EDIT_FORM_LABEL" => "",
+				"LIST_COLUMN_LABEL" => "",
+				"LIST_FILTER_LABEL" => "",
+				"ERROR_MESSAGE" => "",
+				"HELP_MESSAGE" => "",
+				"MAX_ALLOWED_SIZE" => COption::GetOptionString("blog", "image_max_size", "5000000"),
+			);
+
+			foreach ($arFields as $fieldName => $arField)
+			{
+				$rsData = CUserTypeEntity::GetList(array($by=>$order), $arField);
+				if ($arRes = $rsData->Fetch())
+				{
+					$intID = $arRes['ID'];
+				}
+				else
+				{
+					$arProps = $arFieldProps + $arField;
+					$obUserField  = new CUserTypeEntity;
+					$intID = $obUserField->Add($arProps, false);
+
+					if (false == $intID)
+					{
+						if ($strEx = $GLOBALS['APPLICATION']->GetException())
+						{
+							$errors = $strEx->GetString();
+						}
+					}
+				}
+			}
+
+			if (is_null($errors))
+			{
+				$rsData = CUserTypeEntity::GetList(
+					array($by=>$order),
+					array(
+						"ENTITY_ID" => "BLOG_POST",
+						"XML_ID" => "UF_GRATITUDE"
+					)
 				);
+				if ($arRes = $rsData->Fetch())
+					$intID = $arRes['ID'];
+				else
+				{
+					$arFieldProps = Array(
+						"ENTITY_ID" => "BLOG_POST",
+						"FIELD_NAME" => "UF_GRATITUDE",
+						"XML_ID" => "UF_GRATITUDE",
+						"USER_TYPE_ID" => "integer",
+						"SORT" => 100,
+						"MULTIPLE" => "N",
+						"MANDATORY" => "N",
+						"SHOW_FILTER" => "N",
+						"SHOW_IN_LIST" => "N",
+						"EDIT_IN_LIST" => "Y",
+						"IS_SEARCHABLE" => "N",
+						"SETTINGS" => array(),
+						"EDIT_FORM_LABEL" => "",
+						"LIST_COLUMN_LABEL" => "",
+						"LIST_FILTER_LABEL" => "",
+						"ERROR_MESSAGE" => "",
+						"HELP_MESSAGE" => "",
+					);
 
-				$obUserField  = new CUserTypeEntity;
-				$intID = $obUserField->Add($arFieldProps, false);
+					$obUserField  = new CUserTypeEntity;
+					$intID = $obUserField->Add($arFieldProps, false);
 
-				if (
-					(false == $intID)
-					&& ($strEx = $GLOBALS['APPLICATION']->GetException())
-				)
-					$errors = $strEx->GetString();
+					if (
+						(false == $intID)
+						&& ($strEx = $GLOBALS['APPLICATION']->GetException())
+					)
+						$errors = $strEx->GetString();
+				}
 			}
 		}
 
@@ -184,6 +248,12 @@ Class blog extends CModule
 
 		RegisterModuleDependences("main", "OnGetRatingContentOwner", "blog", "CRatingsComponentsBlog", "OnGetRatingContentOwner", 200);
 		RegisterModuleDependences("im", "OnGetNotifySchema", "blog", "CBlogNotifySchema", "OnGetNotifySchema");
+
+		RegisterModuleDependences("main", "OnAfterRegisterModule", "main", "blog", "installUserFields", 100, "/modules/blog/install/index.php"); // check UF
+
+		RegisterModuleDependences('conversion', 'OnGetCounterTypes' , 'blog', '\Bitrix\Blog\Internals\ConversionHandlers', 'onGetCounterTypes');
+		RegisterModuleDependences('conversion', 'OnGetRateTypes' , 'blog', '\Bitrix\Blog\Internals\ConversionHandlers', 'onGetRateTypes');
+		RegisterModuleDependences('blog', 'OnPostAdd', 'blog', '\Bitrix\Blog\Internals\ConversionHandlers', 'onPostAdd');
 
 		CModule::IncludeModule("blog");
 		if (CModule::IncludeModule("search"))
@@ -349,6 +419,12 @@ Class blog extends CModule
 		
 		UnRegisterModuleDependences("main", "OnGetRatingContentOwner", "blog", "CRatingsComponentsBlog", "OnGetRatingContentOwner");
 		UnRegisterModuleDependences("im", "OnGetNotifySchema", "blog", "CBlogNotifySchema", "OnGetNotifySchema");
+
+		UnRegisterModuleDependences("main", "OnAfterRegisterModule", "main", "blog", "installUserFields", "/modules/blog/install/index.php"); // check UF
+
+		UnRegisterModuleDependences('conversion', 'OnGetCounterTypes' , 'blog', '\Bitrix\Blog\Internals\ConversionHandlers', 'onGetCounterTypes');
+		UnRegisterModuleDependences('conversion', 'OnGetRateTypes' , 'blog', '\Bitrix\Blog\Internals\ConversionHandlers', 'onGetRateTypes');
+		UnRegisterModuleDependences('blog', 'OnPostAdd', 'blog', '\Bitrix\Blog\Internals\ConversionHandlers', 'onPostAdd');
 
 		UnRegisterModule("blog");
 

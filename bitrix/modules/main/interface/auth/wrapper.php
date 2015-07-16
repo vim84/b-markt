@@ -122,7 +122,7 @@ new BX.adminLogin({
 				<div class="login-footer">
 					<div class="login-footer-left"><?=$sCopyright?></div>
 					<div class="login-footer-right">
-						<?if(file_exists($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/this_site_support.php")):?><?include($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/this_site_support.php");?><?else:?><?echo $sLinks?><?endif;?>
+						<?if(($siteSupport = getLocalPath("php_interface/this_site_support.php", BX_PERSONAL_ROOT)) !== false):?><?include($_SERVER["DOCUMENT_ROOT"].$siteSupport);?><?else:?><?echo $sLinks?><?endif;?>
 					</div>
 				</div>
 				<form name="form_auth" method="post" target="auth_frame" class="bx-admin-auth-form" action="" novalidate>

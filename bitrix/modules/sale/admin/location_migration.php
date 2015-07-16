@@ -6,6 +6,7 @@ use Bitrix\Sale\Location\Admin\Helper;
 use Bitrix\Sale\Location\Admin\LocationHelper;
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/prolog.php');
 
 $saleModulePermissions = $APPLICATION->GetGroupRight("sale");
 if ($saleModulePermissions < "W")
@@ -125,7 +126,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 		$tabControl->EndTab();
 		$tabControl->Buttons();
 		?>
-			
+
 		<?
 		$tabControl->End();
 		?>
@@ -284,7 +285,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 						sc.percentIndicator[k].innerHTML = value;
 					}
 				}
-				
+
 				value = value * (so.progressWidth / 100) - 4;
 				if(value < 0)
 					value = 0;

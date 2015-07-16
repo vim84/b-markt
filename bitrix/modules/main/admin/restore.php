@@ -119,6 +119,7 @@ $mArr_ru =  array(
 			"ARC_DOWN_PROCESS" => "Загружается:",
 			"ERR_LOAD_FILE_LIST" => "Ошибочный ответ от сервиса 1С-Битрикс",
 			"ARC_LOCAL" => "Загрузить с локального диска",
+			"ARC_LOCAL_WARN" => "Загрузите все части многотомного архива",
 			"ERR_NO_ARC" => "Не выбран архив для распаковки!",
 			"ERR_NO_PARTS" => "Доступны не все части многотомного архива.<br>Общее число частей: ",
 			"BUT_TEXT1" => "Далее",
@@ -215,6 +216,7 @@ $mArr_en = array(
 			"ARC_DOWN_PROCESS" => "Downloading:",
 			"ERR_LOAD_FILE_LIST" => "Wrong Bitrixsoft server response",
 			"ARC_LOCAL" => "Upload from local disk",
+			"ARC_LOCAL_WARN" => "Don't forget to upload all the parts of multi-volume archive.",
 			"ERR_NO_ARC" => "Archive for extracting is not specified!",
 			"ERR_NO_PARTS" => "Some parts of the multivolume archive are missed.<br>Total number of parts: ",
 			"BUT_TEXT1" => "Continue",
@@ -632,27 +634,28 @@ elseif ($Step == 2 && !$bSelectDumpStep)
 	}
 	elseif($source == 'upload')
 	{
-		$tmp = $_FILES['archive'];
-		$arc_name = $_REQUEST['arc_name'] = 'uploaded_archive.tar.gz';
-		if (@move_uploaded_file($tmp['tmp_name'],$_SERVER['DOCUMENT_ROOT'].'/'.$arc_name))
+		foreach($_FILES['archive']['tmp_name'] as $k => $v)
 		{
-			$text =
-			'<input type=hidden name=Step value=2>'.
-			'<input type=hidden name=arc_name value="'.($arc_name).'">';
-			showMsg(LoaderGetMessage('LOADER_SUBTITLE1'),$text);
-			?><script>reloadPage(2, '<?= LANG?>', 1);</script><?
-			die();
+			if (!$v)
+				continue;
+			$arc_name = $_FILES['archive']['name'][$k];
+			if (!@move_uploaded_file($v, $_SERVER['DOCUMENT_ROOT'].'/'.$arc_name))
+			{
+				$ar = array(
+					'TITLE' => getMsg('ERR_EXTRACT'),
+					'TEXT' => getMsg('ERR_UPLOAD'),
+					'BOTTOM' => '<input type="button" value="'.getMsg('BUT_TEXT_BACK').'" onClick="document.location=\'/restore.php?Step=1&lang='.LANG.'\'"> '
+				);
+				html($ar);
+				die();
+			}
 		}
-		else
-		{
-			$ar = array(
-				'TITLE' => getMsg('ERR_EXTRACT'),
-				'TEXT' => getMsg('ERR_UPLOAD'),
-				'BOTTOM' => '<input type="button" value="'.getMsg('BUT_TEXT_BACK').'" onClick="document.location=\'/restore.php?Step=1&lang='.LANG.'\'"> '
-			);
-			html($ar);
-			die();
-		}
+		$text =
+		'<input type=hidden name=Step value=2>'.
+		'<input type=hidden name=arc_name value="'.htmlspecialcharsbx(CTar::getFirstName($arc_name)).'">';
+		showMsg(LoaderGetMessage('LOADER_SUBTITLE1'),$text);
+		?><script>reloadPage(2, '<?= LANG?>', 1);</script><?
+		die();
 	}
 }
 elseif($Step == 3)
@@ -722,7 +725,7 @@ elseif($Step == 1)
 				</div>
 				<div class=t_div>
 					<label><input type=radio name=x_source onclick="div_show(2)">'. getMsg("ARC_LOCAL", LANG).'</label>
-					<div id=div2 class="div-tool" style="display:none"><input type=file name=archive size=40></div>
+					<div id=div2 class="div-tool" style="display:none"><span style="color:#666">'.getMsg("ARC_LOCAL_WARN", LANG).'</span><input type=file name="archive[]" size=40 multiple onchange="addFileField()"></div>
 				</div>
 				'
 				.(strlen($option) ?
@@ -747,6 +750,19 @@ elseif($Step == 1)
 	html($ar);
 	?>
 	<script>
+		function addFileField()
+		{
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.name = 'archive[]';
+			input.size = 40;
+			input.onchange = addFileField;
+			input.multiple = true;
+
+			var div = document.getElementById('div2');
+			div.appendChild(input);
+		}
+
 		function div_show(i)
 		{
 			document.getElementById('start_button').disabled = i == 0;

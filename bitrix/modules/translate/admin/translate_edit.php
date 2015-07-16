@@ -58,7 +58,9 @@ if($strError == "")
 	$arTLangs = array();
 	$arr = array();
 	$arTLanguages = array();
-	$ln = CLanguage::GetList(($o = 'sort'), ($b = 'asc'), array("ACTIVE"=>"Y"));
+	$o = 'sort';
+	$b = 'asc';
+	$ln = CLanguage::GetList($o, $b, array("ACTIVE"=>"Y"));
 	while ($lnr = $ln->Fetch())
 	{
 		$arTLangs[] = $lnr["LID"];
@@ -165,8 +167,28 @@ if($strError == "")
 					foreach ($LANGS as $lng)
 					{
 						$ms_lang = $lng;
-						$ms_value = ${$k."_".$lng};
-						$ms_value_prev = ${$k."_".$lng."_PREV"};
+						$ms_value = null;
+						$ms_value_prev = null;
+						if (isset($_POST[$k."_".$lng]))
+						{
+							$ms_value = $_POST[$k."_".$lng];
+						}
+						else
+						{
+							$safeKey = str_replace('.', '_', $k."_".$lng);
+							if (isset($_POST[$safeKey]))
+								$ms_value = $_POST[$safeKey];
+						}
+						if (isset($_POST[$k."_".$lng."_PREV"]))
+						{
+							$ms_value_prev = $_POST[$k."_".$lng."_PREV"];
+						}
+						else
+						{
+							$safeKey = str_replace('.', '_', $k."_".$lng."_PREV");
+							if (isset($_POST[$safeKey]))
+								$ms_value_prev = $_POST[$safeKey];
+						}
 						if ($ms_del!="Y" && strlen($ms_value)>0)
 						{
 							$arTEXT[$arLangFiles[$ms_lang]][] = "\$MESS[\"".EscapePHPString($k)."\"] = \"".
@@ -180,6 +202,7 @@ if($strError == "")
 				}
 			}
 
+
 			// collect all the variables and write to files
 			while (list($fpath, $arM)=each($arTEXT))
 			{
@@ -188,7 +211,8 @@ if($strError == "")
 				{
 					if (strlen($M)>0) $strContent .= "\n".$M.";";
 				}
-				if (!TR_BACKUP($fpath)) {
+				if (!TR_BACKUP($fpath))
+				{
 					$strError .= GetMessage("TR_CREATE_BACKUP_ERROR", array('%FILE%' => $fpath))."<br>\n";
 				}
 				else
@@ -207,8 +231,10 @@ if($strError == "")
 					}
 				}
 			}
-			if (strlen($save)>0) LocalRedirect("translate_list.php?lang=".LANGUAGE_ID."&path=".$path_back."&".bitrix_sessid_get());
-			else LocalRedirect("translate_edit.php?lang=".LANGUAGE_ID."&file=".urlencode($file)."&show_error=".$show_error);
+			if (strlen($save)>0)
+				LocalRedirect("translate_list.php?lang=".LANGUAGE_ID."&path=".$path_back."&".bitrix_sessid_get());
+			else
+				LocalRedirect("translate_edit.php?lang=".LANGUAGE_ID."&file=".urlencode($file)."&show_error=".$show_error);
 		}
 	}
 }

@@ -22,7 +22,8 @@ $arAllOptions = array(
 	array("subscribe_auto_method", GetMessage("opt_method"), array("selectbox", array("agent"=>GetMessage("opt_method_agent"), "cron"=>GetMessage("opt_method_cron")))),
 	array("subscribe_max_emails_per_hit", GetMessage("opt_max_per_hit"), array("text", 5)),
 	array("subscribe_template_method", GetMessage("opt_template_method"), array("selectbox", array("agent"=>GetMessage("opt_method_agent"), "cron"=>GetMessage("opt_method_cron")))),
-	array("subscribe_template_interval", GetMessage("opt_template_interval"), array("text", 10))
+	array("subscribe_template_interval", GetMessage("opt_template_interval"), array("text", 10)),
+	array("max_files_size", GetMessage("opt_max_files_size"), array("text", 5)),
 );
 $aTabs = array(
 	array("DIV" => "edit1", "TAB" => GetMessage("MAIN_TAB_SET"), "ICON" => "subscribe_settings", "TITLE" => GetMessage("MAIN_TAB_TITLE_SET")),
@@ -30,14 +31,21 @@ $aTabs = array(
 );
 $tabControl = new CAdminTabControl("tabControl", $aTabs);
 
-if($REQUEST_METHOD=="POST" && strlen($Update.$Apply.$RestoreDefaults)>0 && $POST_RIGHT=="W" && check_bitrix_sessid())
+if(
+	$_SERVER["REQUEST_METHOD"] == "POST"
+	&& strlen($Update.$Apply.$RestoreDefaults) > 0
+	&& $POST_RIGHT == "W"
+	&& check_bitrix_sessid()
+)
 {
 	if(strlen($RestoreDefaults)>0)
 	{
 		COption::RemoveOption("subscribe");
 		$z = CGroup::GetList($v1="id",$v2="asc", array("ACTIVE" => "Y", "ADMIN" => "N"));
 		while($zr = $z->Fetch())
+		{
 			$APPLICATION->DelGroupRight($module_id, array($zr["ID"]));
+		}
 	}
 	else
 	{
@@ -47,16 +55,21 @@ if($REQUEST_METHOD=="POST" && strlen($Update.$Apply.$RestoreDefaults)>0 && $POST
 			if($arOption[2][0]=="text-list")
 			{
 				$val = "";
-				for($j=0; $j<count($$name); $j++)
+				foreach($_POST[$name] as $postValue)
 				{
-					if(strlen(trim(${$name}[$j])) > 0)
-						$val .= ($val <> ""? ",":"").trim(${$name}[$j]);
+					$postValue = trim($postValue);
+					if(strlen($postValue) > 0)
+						$val .= ($val <> ""? ",": "").$postValue;
 				}
 			}
 			else
-				$val=$$name;
+			{
+				$val = $_POST[$name];
+			}
+
 			if($arOption[2][0] == "checkbox" && $val <> "Y")
-				$val="N";
+				$val = "N";
+
 			if($name != "mail_additional_parameters" || $USER->IsAdmin())
 				COption::SetOptionString($module_id, $name, $val);
 		}
@@ -89,7 +102,8 @@ if($REQUEST_METHOD=="POST" && strlen($Update.$Apply.$RestoreDefaults)>0 && $POST
 $tabControl->Begin();
 $tabControl->BeginNextTab();
 
-	foreach($arAllOptions as $Option):
+	foreach($arAllOptions as $Option)
+	{
 	$type = $Option[2];
 	$val = COption::GetOptionString($module_id, $Option[0]);
 	?>
@@ -98,32 +112,44 @@ $tabControl->BeginNextTab();
 			<label for="<?echo htmlspecialcharsbx($Option[0])?>"><?echo $Option[1]?></label>
 		<td width="60%">
 		<?
-			if($type[0]=="checkbox"):
-				?><input type="checkbox" name="<?echo htmlspecialcharsbx($Option[0])?>" id="<?echo htmlspecialcharsbx($Option[0])?>" value="Y"<?if($val=="Y")echo" checked";?>><?
-			elseif($type[0]=="text"):
-				?><input type="text" size="<?echo $type[1]?>" maxlength="255" value="<?echo htmlspecialcharsbx($val)?>" name="<?echo htmlspecialcharsbx($Option[0])?>"><?
-			elseif($type[0]=="textarea"):
-				?><textarea rows="<?echo $type[1]?>" cols="<?echo $type[2]?>" name="<?echo htmlspecialcharsbx($Option[0])?>"><?echo htmlspecialcharsbx($val)?></textarea><?
-			elseif($type[0]=="text-list"):
-				$aVal = explode(",", $val);
-				for($j=0; $j<count($aVal); $j++):
-					?><input type="text" size="<?echo $type[2]?>" value="<?echo htmlspecialcharsbx($aVal[$j])?>" name="<?echo htmlspecialcharsbx($Option[0])."[]"?>"><br><?
-				endfor;
-				for($j=0; $j<$type[1]; $j++):
-					?><input type="text" size="<?echo $type[2]?>" value="" name="<?echo htmlspecialcharsbx($Option[0])."[]"?>"><br><?
-				endfor;
-			elseif($type[0]=="selectbox"):
-				$arr = $type[1];
-				$arr_keys = array_keys($arr);
-				?><select name="<?echo htmlspecialcharsbx($Option[0])?>"><?
-					for($j=0; $j<count($arr_keys); $j++):
-						?><option value="<?echo $arr_keys[$j]?>"<?if($val==$arr_keys[$j])echo" selected"?>><?echo htmlspecialcharsbx($arr[$arr_keys[$j]])?></option><?
-					endfor;
-					?></select><?
-			endif;
+		if($type[0]=="checkbox")
+		{
+			?><input type="checkbox" name="<?echo htmlspecialcharsbx($Option[0])?>" id="<?echo htmlspecialcharsbx($Option[0])?>" value="Y"<?if($val=="Y")echo" checked";?>><?
+		}
+		elseif($type[0]=="text")
+		{
+			?><input type="text" size="<?echo $type[1]?>" maxlength="255" value="<?echo htmlspecialcharsbx($val)?>" name="<?echo htmlspecialcharsbx($Option[0])?>"><?
+		}
+		elseif($type[0]=="textarea")
+		{
+			?><textarea rows="<?echo $type[1]?>" cols="<?echo $type[2]?>" name="<?echo htmlspecialcharsbx($Option[0])?>"><?echo htmlspecialcharsbx($val)?></textarea><?
+		}
+		elseif($type[0]=="text-list")
+		{
+			$aVal = explode(",", $val);
+			foreach($aVal as $val)
+			{
+				?><input type="text" size="<?echo $type[2]?>" value="<?echo htmlspecialcharsbx($val)?>" name="<?echo htmlspecialcharsbx($Option[0])."[]"?>"><br><?
+			}
+			for($j=0; $j<$type[1]; $j++)
+			{
+				?><input type="text" size="<?echo $type[2]?>" value="" name="<?echo htmlspecialcharsbx($Option[0])."[]"?>"><br><?
+			}
+		}
+		elseif($type[0]=="selectbox")
+		{
+			?><select name="<?echo htmlspecialcharsbx($Option[0])?>"><?
+			foreach($type[1] as $optionValue => $optionDisplay)
+			{
+				?><option value="<?echo $optionValue?>"<?if($val==$optionValue)echo" selected"?>><?echo htmlspecialcharsbx($optionDisplay)?></option><?
+			}
+			?></select><?
+		}
 		?></td>
 	</tr>
-	<?endforeach?>
+	<?
+	}
+	?>
 <?$tabControl->BeginNextTab();?>
 <?require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/admin/group_rights.php");?>
 <?$tabControl->Buttons();?>

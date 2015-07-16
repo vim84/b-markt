@@ -6,19 +6,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 
 	if (!($arOrder = CSaleOrder::GetByID(IntVal($_POST["LMI_PAYMENT_NO"]))))
 		$bCorrectPayment = False;
+
 	if ($bCorrectPayment)
 		CSalePaySystemAction::InitParamArrays($arOrder, $arOrder["ID"]);
+
 	$CNST_SECRET_KEY = CSalePaySystemAction::GetParamValue("CNST_SECRET_KEY");
+
+	if(strlen($CNST_SECRET_KEY) <= 0)
+		$bCorrectPayment = False;
+
 	$CNST_PAYEE_PURSE = CSalePaySystemAction::GetParamValue("SHOP_ACCT");
 	$changePayStatus =  trim(CSalePaySystemAction::GetParamValue("CHANGE_STATUS_PAY"));
-	$hashAlgo =  CSalePaySystemAction::GetParamValue("HASH_ALGO");
+	$hashAlgo =  CSalePaySystemAction::GetParamValue("HASH_ALGO", "md5");
 
 	if(!$hashAlgo || ($hashAlgo != "sha256" && $hashAlgo != "md5"))
 		$hashAlgo = "md5";
 	
 	if($_POST["LMI_PREREQUEST"] == "1")
 	{
-	
 		if($arOrder["PRICE"] == DoubleVal($_POST["LMI_PAYMENT_AMOUNT"])
 			&& $CNST_PAYEE_PURSE == $_POST["LMI_PAYEE_PURSE"])
 		{

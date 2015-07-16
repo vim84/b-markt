@@ -149,4 +149,10 @@ $MESS["SALE_MENU_LOCATION_MIGRATION"] = "Migrate to Locations 2.0";
 $MESS["SALE_MENU_LOCATION_MIGRATION_TITLE"] = "Migrate to Locations 2.0";
 $MESS["SALE_MENU_LOCATION_ZONES"] = "Locations for sites";
 $MESS["SALE_BIGDATA"] = "Personalization";
+$MESS["CM_MARKETING_MANAGE_TITLE"] = "Discounts";
+$MESS["CM_MARKETING_MANAGE"] = "Discounts";
+$MESS["SALE_MENU_DISCOUNT_PRESETS"] = "Shopping cart rule wizard";
+$MESS["SALE_MENU_DISCOUNT_PRESETS_TITLE"] = "Shopping cart rule wizard";
+$MESS["SALE_LOCATION_REINDEX"] = "Re-index search";
+$MESS["SALE_LOCATION_REINDEX_DESCR"] = "Re-index search";
 ?>

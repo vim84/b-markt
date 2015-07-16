@@ -1356,6 +1356,11 @@ class CSocNetTools
 								$CACHE_MANAGER->RegisterTag('sonet_group_'.$arGroupTmp["ID"]);
 							}
 						}
+
+						if (defined("BX_COMP_MANAGED_CACHE"))
+						{
+							$CACHE_MANAGER->RegisterTag('sonet_group');
+						}
 					}
 
 					$rsUsers = CUser::GetList(

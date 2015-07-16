@@ -8,6 +8,7 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)
  * @var array $arParams
  * @var array $arResult
  * @global CUser $USER
+ * @global CMain $APPLICATION
  */
 
 $GLOBALS["arrMainMenu"] = explode(",",COption::GetOptionString("main","map_top_menu_type","top"));
@@ -22,6 +23,11 @@ if ($arParams["COL_NUM"] <= 0) $arParams["COL_NUM"] = 1;
 if (!is_set($arParams, "CACHE_TIME")) $arParams["CACHE_TIME"] = "14400";
 
 $arParams["SHOW_DESCRIPTION"] = $arParams["SHOW_DESCRIPTION"] == "N" ? "N" : "Y";
+
+if($arParams["SET_TITLE"] == "Y")
+{
+	$APPLICATION->SetTitle(GetMessage("MAP_TITLE"));
+}
 
 if (!function_exists('GetTree'))
 {

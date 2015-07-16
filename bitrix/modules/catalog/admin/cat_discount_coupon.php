@@ -1,9 +1,17 @@
 <?
+/**
+ * @global CMain $APPLICATION
+ * @global CDatabase $DB
+ * @global CUser $USER
+ */
+use Bitrix\Main;
+use Bitrix\Catalog;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/prolog.php");
 if (!($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_discount')))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
-CModule::IncludeModule("catalog");
+Main\Loader::includeModule('catalog');
 $bReadOnly = !$USER->CanDoOperation('catalog_discount');
 
 if ($ex = $APPLICATION->GetException())
@@ -233,7 +241,7 @@ if (!in_array('ID', $arSelectFields))
 $arSelectFields = array_values($arSelectFields);
 $arSelectFieldsMap = array_merge($arSelectFieldsMap, array_fill_keys($arSelectFields, true));
 
-$arCouponType = CCatalogDiscountCoupon::GetCoupontTypes(true);
+$arCouponType = Catalog\DiscountCouponTable::getCouponTypes(true);
 
 $arNavParams = (isset($_REQUEST["mode"]) && 'excel' == $_REQUEST["mode"]
 	? false
@@ -356,6 +364,7 @@ if ($arSelectFieldsMap['CREATED_BY'] || $arSelectFieldsMap['MODIFIED_BY'])
 		}
 	}
 
+	/** @var CAdminListRow $row */
 	foreach ($arRows as &$row)
 	{
 		if ($arSelectFieldsMap['CREATED_BY'])
@@ -521,6 +530,5 @@ $oFilter->End();
 </form>
 <?
 $lAdmin->DisplayList();
-?><?
+
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-?>

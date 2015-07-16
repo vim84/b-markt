@@ -217,7 +217,10 @@ class CUserTypeHlblock extends CUserTypeEnum
 		$hlblock_id = $userfield['SETTINGS']['HLBLOCK_ID'];
 		$hlfield_id = $userfield['SETTINGS']['HLFIELD_ID'];
 
-		$hlblock = \Bitrix\Highloadblock\HighloadBlockTable::getById($hlblock_id)->fetch();
+		if (!empty($hlblock_id))
+		{
+			$hlblock = \Bitrix\Highloadblock\HighloadBlockTable::getById($hlblock_id)->fetch();
+		}
 
 		if (!empty($hlblock))
 		{

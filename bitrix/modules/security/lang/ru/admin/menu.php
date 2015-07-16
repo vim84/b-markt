@@ -31,3 +31,5 @@ $MESS ['SEC_MENU_SCANNER_ITEM'] = "Сканер безопасности";
 $MESS ['SEC_MENU_SCANNER_TITLE'] = "Запуск сканера безопасности";
 $MESS ['SEC_MENU_HOSTS_ITEM'] = "Хосты/домены";
 $MESS ['SEC_MENU_HOSTS_TITLE'] = "Настройки ограничения хостов";
+$MESS ['SEC_MENU_DDOS_ITEM'] = "Защита от DDoS";
+$MESS ['SEC_MENU_DDOS_TITLE'] = "Включение защиты от DDoS";

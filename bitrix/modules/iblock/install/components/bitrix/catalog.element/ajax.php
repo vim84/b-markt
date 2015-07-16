@@ -1,4 +1,5 @@
 <?
+/** @global CMain $APPLICATION */
 define('NO_AGENT_CHECK', true);
 define("STOP_STATISTICS", true);
 
@@ -10,7 +11,7 @@ if (isset($_POST['AJAX']) && $_POST['AJAX'] == 'Y')
 	if (isset($_POST['PRODUCT_ID']) && isset($_POST['SITE_ID']))
 	{
 		$productID = (int)$_POST['PRODUCT_ID'];
-		$parentID = (int)$_POST['PARENT_ID'];
+		$parentID = (isset($_POST['PARENT_ID']) ? (int)$_POST['PARENT_ID'] : 0);
 		$siteID = substr((string)$_POST['SITE_ID'], 0, 2);
 		if ($productID > 0 && $siteID !== '' && \Bitrix\Main\Loader::includeModule('catalog') && \Bitrix\Main\Loader::includeModule('sale'))
 		{

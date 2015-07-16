@@ -134,14 +134,12 @@ class CAllSocNetUser
 
 	function IsFriendsAllowed()
 	{
-		static $strOptionValue;
+		return (COption::GetOptionString("socialnetwork", "allow_frields", "Y") == "Y");
+	}
 
-		if (!$strOptionValue)
-		{
-			$strOptionValue = COption::GetOptionString("socialnetwork", "allow_frields", "Y");
-		}
-
-		return ($strOptionValue == "Y");
+	function IsFriendsFriendsAllowed()
+	{
+		return (COption::GetOptionString("socialnetwork", "allow_frields_friends", "Y") == "Y");
 	}
 
 	function IsCurrentUserModuleAdmin($site_id = SITE_ID, $bUseSession = true)
@@ -172,68 +170,130 @@ class CAllSocNetUser
 		}
 	}
 
-	function IsUserModuleAdmin($userID, $site_id = SITE_ID)	
+	function IsUserModuleAdmin($userID, $site_id = SITE_ID)
 	{
-		global $DB;
+		global $DB, $CACHE_MANAGER;
 		static $arSocnetModuleAdminsCache = array();
 
 		if ($userID <= 0)
+		{
 			return false;
+		}
 
 		if ($site_id && !is_array($site_id))
+		{
 			$site_id = array($site_id, false);
+		}
 		elseif ($site_id && is_array($site_id))
+		{
 			$site_id = array_merge($site_id, array(false));
+		}
 
 		$cache_key = serialize($site_id);
 		if (!array_key_exists($cache_key, $arSocnetModuleAdminsCache))
 		{
-			if (!$site_id)
-				$strSqlSite = "and MG.SITE_ID IS NULL";
-			else
-			{
-				$strSqlSite = " and (";
-				foreach($site_id as $i => $site_id_tmp)
-				{
-					if ($i > 0)
-						$strSqlSite .= " OR ";
-
-					$strSqlSite .= "MG.SITE_ID ".($site_id_tmp ? "= '".$DB->ForSQL($site_id_tmp)."'" : "IS NULL");
-				}
-				$strSqlSite .= ")";
-			}
-
-			$strSql = "SELECT ".
-				"UG.USER_ID U_ID, ".
-				"G.ID G_ID, ".
-				"max(MG.G_ACCESS) G_ACCESS ".
-				"FROM b_user_group UG, b_module_group MG, b_group G  ".
-				"WHERE ".
-					"	(G.ID = MG.GROUP_ID or G.ID = 1) ".
-					"	AND MG.MODULE_ID = 'socialnetwork' ".
-					"	AND G.ID = UG.GROUP_ID ".
-					"	AND G.ACTIVE = 'Y' ".
-					"	AND G_ACCESS >= 'W'	".
-					"	AND UG.USER_ID = ".intval($userID)." ".
-					"	AND ((UG.DATE_ACTIVE_FROM IS NULL) OR (UG.DATE_ACTIVE_FROM <= ".$DB->CurrentTimeFunction().")) ".
-					"	AND ((UG.DATE_ACTIVE_TO IS NULL) OR (UG.DATE_ACTIVE_TO >= ".$DB->CurrentTimeFunction().")) ".
-					"	AND (G.ANONYMOUS<>'Y' OR G.ANONYMOUS IS NULL) ".
-					$strSqlSite." ".
-				"GROUP BY ".
-					"	UG.USER_ID, G.ID";
+			$cache = new CPHPCache;
+			$cache_time = 31536000;
+			$cache_id = 'site'.($site_id ? '_'.implode('|', $site_id) : '');
+			$cache_path = "/sonet/user_admin/";
 
 			$arModuleAdmins = array();
-			$result = $DB->Query($strSql, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
-			while($ar = $result->Fetch())
-				if (!in_array($ar["U_ID"], $arModuleAdmins))
-					$arModuleAdmins[] = $ar["U_ID"];
-					
+
+			if ($cache->InitCache($cache_time, $cache_id, $cache_path))
+			{
+				$arCacheVars = $cache->GetVars();
+				$arModuleAdmins = $arCacheVars["RESULT"];
+			}
+			else
+			{
+				$cache->StartDataCache($cache_time, $cache_id, $cache_path);
+
+				if(!$site_id)
+				{
+					$strSqlSite = "AND MG.SITE_ID IS NULL";
+				}
+				else
+				{
+					$strSqlSite = " AND (";
+					foreach($site_id as $i => $site_id_tmp)
+					{
+						if($i > 0)
+						{
+							$strSqlSite .= " OR ";
+						}
+
+						$strSqlSite .= "MG.SITE_ID " . ($site_id_tmp ? "= '" . $DB->ForSQL($site_id_tmp) . "'" : "IS NULL");
+					}
+					$strSqlSite .= ")";
+				}
+
+				$strSql = "SELECT " .
+					"UG.USER_ID U_ID, " .
+					"G.ID G_ID, " .
+					CDatabase::DatetimeToTimestampFunction("UG.DATE_ACTIVE_FROM") . " UG_DATE_FROM_TS, " .
+					CDatabase::DatetimeToTimestampFunction("UG.DATE_ACTIVE_TO") . " UG_DATE_TO_TS, " .
+					"MAX(MG.G_ACCESS) G_ACCESS " .
+					"FROM b_user_group UG, b_module_group MG, b_group G  " .
+					"WHERE " .
+					"	(G.ID = MG.GROUP_ID or G.ID = 1) " .
+					"	AND MG.MODULE_ID = 'socialnetwork' " .
+					"	AND G.ID = UG.GROUP_ID " .
+					"	AND G.ACTIVE = 'Y' " .
+					"	AND G_ACCESS >= 'W'	" .
+					"	AND (G.ANONYMOUS<>'Y' OR G.ANONYMOUS IS NULL) " .
+						$strSqlSite .
+					" " .
+					"GROUP BY " .
+					"	UG.USER_ID, G.ID";
+
+				$result = $DB->Query($strSql, false, "FILE: " . __FILE__ . "<br> LINE: " . __LINE__);
+				while($ar = $result->Fetch())
+				{
+					if(!array_key_exists($ar["U_ID"], $arModuleAdmins))
+					{
+						$arModuleAdmins[$ar["U_ID"]] = array(
+							"USER_ID" => $ar["U_ID"],
+						    "DATE_FROM_TS" => $ar["UG_DATE_FROM_TS"],
+							"DATE_TO_TS" => $ar["UG_DATE_TO_TS"]
+						);
+					}
+				}
+			}
+
+			$arCacheData = Array(
+				"RESULT" => $arModuleAdmins
+			);
+
+			$cache->EndDataCache($arCacheData);
+
+			foreach ($arModuleAdmins as $key => $arUserData)
+			{
+				if (
+					(
+						!empty($arUserData["DATE_FROM_TS"])
+						&& $arUserData["DATE_FROM_TS"] > time()
+					)
+					|| (
+						!empty($arUserData["DATE_TO_TS"])
+						&& $arUserData["DATE_TO_TS"] < time()
+					)
+				)
+				{
+					unset($arModuleAdmins[$key]);
+				}
+			}
+
 			$arSocnetModuleAdminsCache[$cache_key] = $arModuleAdmins;
 		}
 
-		return (in_array($userID, $arSocnetModuleAdminsCache[$cache_key]));
+		return (array_key_exists($userID, $arSocnetModuleAdminsCache[$cache_key]));
 	}
-			
+
+	function DeleteUserAdminCache()
+	{
+		BXClearCache(true, "/sonet/user_admin/");
+	}
+
 	function FormatName($name, $lastName, $login)
 	{
 		$name = Trim($name);

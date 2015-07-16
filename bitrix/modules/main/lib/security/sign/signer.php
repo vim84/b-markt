@@ -303,9 +303,13 @@ class Signer
 	 *
 	 * @param string $value Encoded signature.
 	 * @return string Signature in binary representation
+	 * @throws BadSignatureException
 	 */
 	protected function decodeSignature($value)
 	{
+		if (preg_match('#[^[:xdigit:]]#', $value))
+			throw new BadSignatureException('Signature must be hexadecimal string');
+
 		// ToDo: use hex2bin instead pack for PHP > 5.4.0
 		return pack('H*', $value);
 	}

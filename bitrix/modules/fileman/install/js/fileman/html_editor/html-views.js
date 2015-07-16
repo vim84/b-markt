@@ -587,7 +587,7 @@ var focusWithoutScrolling = function(element)
 
 		BX.bind(_element, "focus", function()
 		{
-			_this.editor.On("OnIframeFocus");
+			editor.On("OnIframeFocus");
 			_this.isFocused = true;
 			if (value !== _this.GetValue())
 				BX.onCustomEvent(editor, "OnIframeChange");
@@ -595,7 +595,7 @@ var focusWithoutScrolling = function(element)
 
 		BX.bind(_element, "blur", function()
 		{
-			_this.editor.On("OnIframeBlur");
+			editor.On("OnIframeBlur");
 			_this.isFocused = false;
 			setTimeout(function(){value = _this.GetValue();}, 0);
 		});
@@ -604,7 +604,7 @@ var focusWithoutScrolling = function(element)
 		{
 			if(e && !e.ctrlKey && !e.shiftKey && (BX.getEventButton(e) & BX.MSRIGHT))
 			{
-				_this.editor.On("OnIframeContextMenu", [e, e.target || e.srcElement]);
+				editor.On("OnIframeContextMenu", [e, e.target || e.srcElement]);
 			}
 		});
 
@@ -612,37 +612,37 @@ var focusWithoutScrolling = function(element)
 		{
 			var
 				target = e.target || e.srcElement,
-				bxTag = _this.editor.GetBxTag(target);
+				bxTag = editor.GetBxTag(target);
 
-			if (_this.editor.synchro.IsSyncOn())
+			if (editor.synchro.IsSyncOn())
 			{
-				_this.editor.synchro.StopSync();
+				editor.synchro.StopSync();
 			}
 
 			if (BX.browser.IsIE10() || BX.browser.IsIE11())
 			{
-				_this.editor.phpParser.RedrawSurrogates();
+				editor.phpParser.RedrawSurrogates();
 			}
 
-			if (target.nodeName == 'BODY' || !_this.editor.phpParser.CheckParentSurrogate(target))
+			if (target.nodeName == 'BODY' || !editor.phpParser.CheckParentSurrogate(target))
 			{
 				setTimeout(function()
 				{
-					var range = _this.editor.selection.GetRange();
+					var range = editor.selection.GetRange();
 					if (range && range.collapsed && range.startContainer && range.startContainer == range.endContainer)
 					{
-						var surr = _this.editor.phpParser.CheckParentSurrogate(range.startContainer);
+						var surr = editor.phpParser.CheckParentSurrogate(range.startContainer);
 						if (surr)
 						{
-							_this.editor.selection.SetInvisibleTextAfterNode(surr);
-							_this.editor.selection.SetInvisibleTextBeforeNode(surr);
+							editor.selection.SetInvisibleTextAfterNode(surr);
+							editor.selection.SetInvisibleTextBeforeNode(surr);
 						}
 					}
 				}, 10);
 			}
 
-			editor.selection.SaveRange();
-			_this.editor.On("OnIframeMouseDown", [e, target, bxTag]);
+			editor.selection.SaveRange(false);
+			editor.On("OnIframeMouseDown", [e, target, bxTag]);
 		});
 
 		BX.bind(_element, "touchstart", function(e)
@@ -654,28 +654,28 @@ var focusWithoutScrolling = function(element)
 		{
 			var
 				target = e.target || e.srcElement;
-			_this.editor.On("OnIframeClick", [e, target]);
+			editor.On("OnIframeClick", [e, target]);
 
-			var selNode = _this.editor.selection.GetSelectedNode();
+			var selNode = editor.selection.GetSelectedNode();
 
-			//var node = _this.CheckParentSurrogate(_this.editor.selection.GetSelectedNode());
+			//var node = _this.CheckParentSurrogate(editor.selection.GetSelectedNode());
 //			setTimeout(function()
 //			{
-//				var newSelNode = _this.editor.selection.GetSelectedNode();
+//				var newSelNode = editor.selection.GetSelectedNode();
 //				if (selNode !== newSelNode)
 //				{
 //				}
-//				var node = _this.CheckParentSurrogate(_this.editor.selection.GetSelectedNode());
+//				var node = _this.CheckParentSurrogate(editor.selection.GetSelectedNode());
 //				if(node)
 //				{
-//					_this.editor.selection.SetAfter(node);
+//					editor.selection.SetAfter(node);
 //
-////					if (node.nextSibling && node.nextSibling.nodeType == 3 && _this.editor.util.IsEmptyNode(link.nextSibling))
+////					if (node.nextSibling && node.nextSibling.nodeType == 3 && editor.util.IsEmptyNode(link.nextSibling))
 ////						invisText = link.nextSibling;
 ////					else
-//					var invisText = _this.editor.util.GetInvisibleTextNode();
-//					_this.editor.selection.InsertNode(invisText);
-//					_this.editor.selection.SetAfter(invisText);
+//					var invisText = editor.util.GetInvisibleTextNode();
+//					editor.selection.InsertNode(invisText);
+//					editor.selection.SetAfter(invisText);
 //				}
 //			}, 0);
 		});
@@ -684,18 +684,18 @@ var focusWithoutScrolling = function(element)
 		{
 			var
 				target = e.target || e.srcElement;
-			_this.editor.On("OnIframeDblClick", [e, target]);
+			editor.On("OnIframeDblClick", [e, target]);
 		});
 
 		BX.bind(_element, "mouseup", function(e)
 		{
 			var target = e.target || e.srcElement;
-			if (!_this.editor.synchro.IsSyncOn())
+			if (!editor.synchro.IsSyncOn())
 			{
-				_this.editor.synchro.StartSync();
+				editor.synchro.StartSync();
 			}
 
-			_this.editor.On("OnIframeMouseUp", [e, target]);
+			editor.On("OnIframeMouseUp", [e, target]);
 		});
 
 		// resizestart
@@ -715,7 +715,7 @@ var focusWithoutScrolling = function(element)
 
 				try
 				{
-					_this.editor.selection.InsertNode(input);
+					editor.selection.InsertNode(input);
 				}
 				catch(e)
 				{
@@ -729,11 +729,11 @@ var focusWithoutScrolling = function(element)
 		}
 
 		// --------- Drag & Drop events  ---------
-		BX.bind(element, "dragover", function(){_this.editor.On("OnIframeDragOver");});
-		BX.bind(element, "dragenter", function(){_this.editor.On("OnIframeDragEnter");});
-		BX.bind(element, "dragleave", function(){_this.editor.On("OnIframeDragLeave");});
-		BX.bind(element, "dragexit", function(){_this.editor.On("OnIframeDragExit");});
-		BX.bind(element, "drop", function(){_this.editor.On("OnIframeDrop");});
+		BX.bind(element, "dragover", function(){editor.On("OnIframeDragOver", arguments);});
+		BX.bind(element, "dragenter", function(){editor.On("OnIframeDragEnter", arguments);});
+		BX.bind(element, "dragleave", function(){editor.On("OnIframeDragLeave", arguments);});
+		BX.bind(element, "dragexit", function(){editor.On("OnIframeDragExit", arguments);});
+		BX.bind(element, "drop", function(){editor.On("OnIframeDrop", arguments);});
 
 		// Chrome & Safari & Firefox only fire the ondrop/ondragend/... events when the ondragover event is cancelled
 		//if (BX.browser.IsChrome() || BX.browser.IsFirefox())
@@ -750,8 +750,8 @@ var focusWithoutScrolling = function(element)
 			});
 		}
 
-		BX.bind(element, "drop", BX.delegate(this.OnPasteHandler, this));
-		BX.bind(element, "paste", BX.delegate(this.OnPasteHandler, this));
+		BX.bind(element, 'drop', BX.delegate(this.OnPasteHandler, this));
+		BX.bind(element, 'paste', BX.delegate(this.OnPasteHandler, this));
 
 		BX.bind(element, "keyup", function(e)
 		{
@@ -762,6 +762,10 @@ var focusWithoutScrolling = function(element)
 			_this.SetFocusedFlag(true);
 			if (keyCode === editor.KEY_CODES['space'] || keyCode === editor.KEY_CODES['enter'])
 			{
+				if (keyCode === editor.KEY_CODES['enter'])
+				{
+					_this.OnEnterHandlerKeyUp(e, keyCode, target);
+				}
 				editor.On("OnIframeNewWord");
 			}
 			else
@@ -771,6 +775,14 @@ var focusWithoutScrolling = function(element)
 
 			editor.selection.SaveRange();
 			editor.On('OnIframeKeyup', [e, keyCode, target]);
+
+			if (!editor.util.FirstLetterSupported() && (
+				keyCode === editor.KEY_CODES['delete'] ||
+				keyCode === editor.KEY_CODES['backspace'])
+				)
+			{
+				//_this.editor.parser.FirstLetterCheckNodes('', '', true);
+			}
 		});
 
 		BX.bind(element, "mousedown", function(e)
@@ -816,6 +828,8 @@ var focusWithoutScrolling = function(element)
 				target.setAttribute("data-bx-clean-attribute", "title");
 			}
 		});
+
+		this.InitClipboardHandler();
 	};
 
 	BXEditorIframeView.prototype.KeyDown = function(e)
@@ -830,12 +844,12 @@ var focusWithoutScrolling = function(element)
 			command = this.editor.SHORTCUTS[keyCode],
 			selectedNode = this.editor.selection.GetSelectedNode(true),
 			range = this.editor.selection.GetRange(),
+			body = this.document.body,
 			parent;
 
 		if ((BX.browser.IsIE() || BX.browser.IsIE10() || BX.browser.IsIE11()) &&
 			!BX.util.in_array(keyCode, [16, 17, 18, 20, 65, 144, 37, 38, 39, 40]))
 		{
-			var body = this.document.body;
 			if (selectedNode && selectedNode.nodeName == "BODY"
 				||
 				range.startContainer && range.startContainer.nodeName == "BODY"
@@ -880,6 +894,45 @@ var focusWithoutScrolling = function(element)
 			return BX.PreventDefault(e);
 		}
 
+		// Bug mantis: #59759 workaround *Chrome only
+		// Begin
+		if (
+			keyCode === KEY_CODES['backspace'] &&
+			range.startOffset == 0 &&
+			range.startContainer.nodeType == 3 &&
+			range.startContainer.parentNode.firstChild == range.startContainer &&
+			range.startContainer.parentNode &&
+			range.startContainer.parentNode.nodeName == 'BLOCKQUOTE' &&
+			range.startContainer.parentNode.className
+		)
+		{
+			range.startContainer.parentNode.className = '';
+		}
+
+		if (
+			keyCode === KEY_CODES['delete'] &&
+				range.collapsed &&
+				range.endContainer.nodeType == 3 &&
+				range.endOffset == range.endContainer.length
+			)
+		{
+			var next = this.editor.util.GetNextNotEmptySibling(range.endContainer);
+			if (next)
+			{
+				if(next.nodeName == 'BR')
+				{
+					next = this.editor.util.GetNextNotEmptySibling(next);
+				}
+
+				if (next && next.nodeName == 'BLOCKQUOTE' && next.className)
+				{
+					next.className = '';
+				}
+			}
+		}
+		// END: Bug mantis: #59759
+
+
 		// Clear link with image
 		if (selectedNode && selectedNode.nodeName === "IMG" &&
 			(keyCode === KEY_CODES['backspace'] || keyCode === KEY_CODES['delete']))
@@ -905,11 +958,35 @@ var focusWithoutScrolling = function(element)
 		// Handle Ctrl+Enter
 		if ((e.ctrlKey || e.metaKey) && !e.altKey && keyCode === KEY_CODES["enter"])
 		{
-			if (_this.IsFocused())
-				_this.editor.On("OnIframeBlur");
+			if (this.IsFocused())
+				this.editor.On("OnIframeBlur");
 
-			_this.editor.On('OnCtrlEnter', [e, _this.editor.GetViewMode()]);
+			this.editor.On('OnCtrlEnter', [e, this.editor.GetViewMode()]);
 			return BX.PreventDefault(e);
+		}
+
+		// Firefox's bug it remove first node for customized lists
+		if (BX.browser.IsFirefox() && selectedNode && (keyCode === KEY_CODES["delete"] || keyCode === KEY_CODES["backspace"]))
+		{
+			var li = selectedNode.nodeName == 'LI' ? selectedNode : BX.findParent(selectedNode, {tag: 'LI'}, body);
+			if (li && li.firstChild && li.firstChild.nodeName == 'I')
+			{
+				var ul = BX.findParent(li, {tag: 'UL'}, body);
+				if (ul)
+				{
+					var customBullitClass = this.editor.action.actions.insertUnorderedList.getCustomBullitClass(ul);
+					if (customBullitClass)
+					{
+						setTimeout(function()
+						{
+							if (ul && li && li.innerHTML !== '')
+							{
+								_this.editor.action.actions.insertUnorderedList.checkCustomBullitList(ul, customBullitClass);
+							}
+						}, 0);
+					}
+				}
+			}
 		}
 
 		// Handle "Enter"
@@ -917,12 +994,35 @@ var focusWithoutScrolling = function(element)
 		{
 			return this.OnEnterHandler(e, keyCode, selectedNode, range);
 		}
+
+		if (keyCode === KEY_CODES["pageUp"] || keyCode === KEY_CODES["pageDown"])
+		{
+			this.savedScroll = BX.GetWindowScrollPos(document);
+			BX.addCustomEvent(this.editor, "OnIframeKeyup", BX.proxy(this._RestoreScrollTop, this));
+			setTimeout(BX.proxy(this._RestoreScrollTop, this), 0);
+		}
+
+		if (!this.editor.util.FirstLetterSupported() && (
+			keyCode === this.editor.KEY_CODES['delete'] ||
+				keyCode === this.editor.KEY_CODES['backspace'])
+			)
+		{
+		}
+	};
+
+	BXEditorIframeView.prototype._RestoreScrollTop = function(e)
+	{
+		if (this.savedScroll)
+		{
+			window.scrollTo(this.savedScroll.scrollLeft, this.savedScroll.scrollTop);
+			this.savedScroll = null;
+		}
+		BX.removeCustomEvent(this.editor, "OnIframeKeyup", BX.proxy(this._RestoreScrollTop, this));
 	};
 
 	BXEditorIframeView.prototype._IEBodyClearHandler = function(e)
 	{
 		var
-			_this = this,
 			p = this.document.body.firstChild;
 
 		if (e.keyCode == this.editor.KEY_CODES['enter'] && p.nodeName == "P" && p != this.document.body.lastChild)
@@ -937,7 +1037,7 @@ var focusWithoutScrolling = function(element)
 
 		if (p && p.nodeName == "P" && p == this.document.body.lastChild)
 		{
-			_this.editor.util.ReplaceWithOwnChildren(p);
+			this.editor.util.ReplaceWithOwnChildren(p);
 		}
 		BX.removeCustomEvent(this.editor, "OnIframeKeyup", BX.proxy(this._IEBodyClearHandler, this));
 	};
@@ -958,10 +1058,13 @@ var focusWithoutScrolling = function(element)
 
 	BXEditorIframeView.prototype.OnEnterHandler = function(e, keyCode, selectedNode, range)
 	{
+		// TODO: check it again later maybe chrome will fix it
 		// mantis: 55872. Chrome 38 rendering bug workaround
 		if (BX.browser.IsChrome())
 		{
 			this.document.body.style.minHeight = (parseInt(this.document.body.style.minHeight) + 1) + 'px';
+			// mantis: 60033
+			this.document.body.style.minHeight = (parseInt(this.document.body.style.minHeight) - 1) + 'px';
 		}
 
 		// Check selectedNode
@@ -1078,10 +1181,15 @@ var focusWithoutScrolling = function(element)
 
 			if (blockElement)
 			{
-				// Some browsers create <p> elements after leaving a list
-				// check after keydown of backspace and return whether a <p> got inserted and unwrap it
 				if (blockElement.nodeName === "LI")
 				{
+					if (keyCode === _this.editor.KEY_CODES["enter"] && blockElement && blockElement.parentNode)
+					{
+						var bullitClass = _this.editor.action.actions.insertUnorderedList.getCustomBullitClass(blockElement.parentNode);
+					}
+
+					// Some browsers create <p> elements after leaving a list
+					// check after keydown of backspace and return whether a <p> got inserted and unwrap it
 					setTimeout(function()
 					{
 						var node = _this.editor.selection.GetSelectedNode(true);
@@ -1091,6 +1199,12 @@ var focusWithoutScrolling = function(element)
 							{
 								return BX.util.in_array(n.nodeName, listTags);
 							}, _this.document.body);
+
+							// Check if it's list with custom styled bullits - we have to check it all items have same style
+							if (keyCode === _this.editor.KEY_CODES["enter"] && blockElement && blockElement.parentNode)
+							{
+								_this.editor.action.actions.insertUnorderedList.checkCustomBullitList(blockElement.parentNode, bullitClass, true);
+							}
 
 							if (!list)
 							{
@@ -1119,7 +1233,21 @@ var focusWithoutScrolling = function(element)
 				else if(BX.browser.IsChrome())
 				{
 					this.editor.action.Exec('insertLineBreak');
-					this.editor.action.Exec('insertHTML', this.editor.INVISIBLE_SPACE);
+
+					// Bug in Chrome - when you press enter but it put carret on the prev string
+					// Chrome 43.0.2357 in Mac puts visible space instead of invisible
+					if (BX.browser.IsMac())
+					{
+						var tmpId = "bx-editor-temp-" + Math.round(Math.random() * 1000000);
+						this.editor.action.Exec('insertHTML', '<span id="' + tmpId + '">' + this.editor.INVISIBLE_SPACE + '</span>');
+						var tmpElement = this.editor.GetIframeElement(tmpId);
+						if (tmpElement)
+							BX.remove(tmpElement);
+					}
+					else
+					{
+						this.editor.action.Exec('insertHTML', this.editor.INVISIBLE_SPACE);
+					}
 				}
 				else
 				{
@@ -1134,11 +1262,38 @@ var focusWithoutScrolling = function(element)
 			var checkNode = BX.create('SPAN', false, this.document);
 			this.editor.selection.InsertNode(checkNode);
 			var prev = checkNode.previousSibling;
-			if (prev && prev.nodeType == 3 && this.editor.util.IsEmptyNode(prev, true, true))
+			if (prev && prev.nodeType == 3 && this.editor.util.IsEmptyNode(prev, false, false))
 			{
 				BX.remove(prev);
 			}
+			this.editor.selection.SetBefore(checkNode);
 			BX.remove(checkNode);
+		}
+	};
+
+	BXEditorIframeView.prototype.OnEnterHandlerKeyUp = function(e, keyCode, node)
+	{
+		// Clean class of all block nodes when they created after Enter pressing
+		// All new Ps and DIVs should be without classNames
+		if (node)
+		{
+			var _this = this;
+			if (!BX.util.in_array(node.nodeName, this.editor.GetBlockTags()))
+			{
+				node = BX.findParent(node, function(n)
+				{
+					return BX.util.in_array(n.nodeName, _this.editor.GetBlockTags());
+				}, this.document.body);
+			}
+
+			if (node && BX.util.in_array(node.nodeName, this.editor.GetBlockTags()))
+			{
+				var html = BX.util.trim(node.innerHTML).toLowerCase();
+				if (this.editor.util.IsEmptyNode(node, true, true) || html == '' || html == '<br>')
+				{
+					node.removeAttribute("class");
+				}
+			}
 		}
 	};
 
@@ -1507,6 +1662,8 @@ var focusWithoutScrolling = function(element)
 		{
 			this.editor.skipPasteHandler = true;
 			var
+				originalScrollTop = document.documentElement.scrollTop || document.body.scrollTop,
+				originalScrollLeft = document.documentElement.scrollLeft || document.body.scrollLeft,
 				_this = this,
 				arNodes = [],
 				curNode, i, node, qnodes;
@@ -1554,7 +1711,6 @@ var focusWithoutScrolling = function(element)
 				markGoodNode(arNodes[i]);
 			}
 
-
 			var sync = this.editor.synchro.IsSyncOn();
 			if (sync)
 			{
@@ -1588,6 +1744,11 @@ var focusWithoutScrolling = function(element)
 				{
 					_this.editor.synchro.StartSync();
 				}
+
+				if (window.scrollTo)
+				{
+					window.scrollTo(originalScrollLeft, originalScrollTop);
+				}
 			}, 10);
 		}
 	};
@@ -1609,7 +1770,7 @@ var focusWithoutScrolling = function(element)
 		// Init Autolink system
 		var
 			ignorableParents = {"CODE" : 1, "PRE" : 1, "A" : 1, "SCRIPT" : 1, "HEAD" : 1, "TITLE" : 1, "STYLE" : 1},
-			urlRegExp = /(((?:https?|ftp):\/\/|www\.)[^\s<]{3,})/gi,
+			urlRegExp = /(((?:https?|ftp):\/\/|www\.)[^\s<]{3,500})/gi,
 			emailRegExp = /[\.a-z0-9_\-]+@[\.a-z0-9_\-]+\.[\.a-z0-9_\-]+/gi,
 			MAX_LENGTH = 100,
 			BRACKETS = {
@@ -1648,7 +1809,6 @@ var focusWithoutScrolling = function(element)
 					opening = BRACKETS[punctuation];
 
 				url = url.replace(/([^\w\u0430-\u0456\u0451\/\-](,?))$/i, "");
-
 				if (url.split(opening).length > url.split(punctuation).length)
 				{
 					url = url + punctuation;
@@ -1676,9 +1836,7 @@ var focusWithoutScrolling = function(element)
 				var
 					punctuation = (email.match(/([^\w\/\-](,?))$/i) || [])[1] || "",
 					opening = BRACKETS[punctuation];
-//
 				email = email.replace(/([^\w\/\-](,?))$/i, "");
-//
 				if (email.split(opening).length > email.split(punctuation).length)
 				{
 					email = email + punctuation;
@@ -1701,16 +1859,14 @@ var focusWithoutScrolling = function(element)
 
 		function parseNode(element)
 		{
-			var res;
+			var res, parentNode, tmpDiv;
 			if (element && !ignorableParents[element.nodeName])
 			{
 				// Replaces the content of the text node by link
 				if (element.nodeType === 3 && element.data.match(urlRegExp) && element.parentNode)
 				{
-					var
-						parentNode = element.parentNode,
-						tmpDiv = getTmpDiv(parentNode.ownerDocument);
-
+					parentNode = element.parentNode;
+					tmpDiv = getTmpDiv(parentNode.ownerDocument);
 					tmpDiv.innerHTML = "<span></span>" + convertUrlToLink(element.data);
 					tmpDiv.removeChild(tmpDiv.firstChild);
 
@@ -1721,10 +1877,8 @@ var focusWithoutScrolling = function(element)
 				}
 				else if (element.nodeType === 3 && element.data.match(emailRegExp) && element.parentNode)
 				{
-					var
-						parentNode = element.parentNode,
-						tmpDiv = getTmpDiv(parentNode.ownerDocument);
-
+					parentNode = element.parentNode;
+					tmpDiv = getTmpDiv(parentNode.ownerDocument);
 					tmpDiv.innerHTML = "<span></span>" + convertEmailToLink(element.data);
 					tmpDiv.removeChild(tmpDiv.firstChild);
 
@@ -1825,6 +1979,58 @@ var focusWithoutScrolling = function(element)
 		}
 	};
 
+	BXEditorIframeView.prototype.InitClipboardHandler = function()
+	{
+		var
+			_this = this;
+
+		// Chrome
+		BX.bind(this.element, 'paste', function (e)
+		{
+			var clipboard = e.clipboardData;
+
+			if (clipboard && clipboard.items)
+			{
+				var item = clipboard.items[0];
+
+				if (item && item.type.indexOf('image/') > -1)
+				{
+					var blob = item.getAsFile();
+
+					if (blob)
+					{
+						var reader = new FileReader();
+						reader.readAsDataURL(blob);
+						reader.onload = function (event)
+						{
+							var img = new Image();
+							img.src = event.target.result;
+							_this.element.appendChild(img);
+							_this.HandleImageDataUri(img);
+						}
+					}
+				}
+			}
+		});
+	};
+
+	BXEditorIframeView.prototype.HandleImageDataUri = function(image)
+	{
+		this.editor.On('OnImageDataUriHandle', [this,
+			{
+				src: image.src,
+				title: image.title || ''
+			},
+			BX.proxy(this.HandleImageDataUriCallback, this)]
+		);
+	};
+
+	BXEditorIframeView.prototype.HandleImageDataUriCallback = function(image)
+	{
+
+	};
+
+
 /**
  * Class _this takes care that the value of the composer and the textarea is always in sync
  */
@@ -1858,7 +2064,12 @@ var focusWithoutScrolling = function(element)
 				{
 					var bbCodes = this.editor.bbParser.Unparse(value);
 					this.textareaView.SetValue(bbCodes, false, bFormat || this.editor.bbParseContentMode);
-					this.editor.On("OnContentChanged", [bbCodes || '', value || '']);
+
+					if (typeof this.lastSavedIframeValue !== 'undefined' && this.lastSavedIframeValue != value)
+					{
+						this.editor.On("OnContentChanged", [bbCodes, value]);
+					}
+					this.lastSavedIframeValue = value;
 					this.lastIframeValue = value;
 				}
 			}
@@ -1869,7 +2080,11 @@ var focusWithoutScrolling = function(element)
 				if (value !== this.lastIframeValue)
 				{
 					this.textareaView.SetValue(value, true, bFormat);
-					this.editor.On("OnContentChanged", [this.textareaView.GetValue() || '', value || '']);
+					if (typeof this.lastSavedIframeValue !== 'undefined' && this.lastSavedIframeValue != value)
+					{
+						this.editor.On("OnContentChanged", [this.textareaView.GetValue() || '', value || '']);
+					}
+					this.lastSavedIframeValue = value;
 					this.lastIframeValue = value;
 				}
 			}

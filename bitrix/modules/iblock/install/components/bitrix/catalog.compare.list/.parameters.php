@@ -1,26 +1,23 @@
 <?
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
-
+/** @var array $arCurrentValues */
 use Bitrix\Main\Loader;
 
-if(!Loader::includeModule("iblock"))
+if (!Loader::includeModule("iblock"))
 	return;
 
 $arIBlockType = CIBlockParameters::GetIBlockTypes();
 
-$rsIBlock = CIBlock::GetList(array("SORT" => "ASC"), array("TYPE" => $arCurrentValues["IBLOCK_TYPE"], "ACTIVE"=>"Y"));
-while($arr=$rsIBlock->Fetch())
-	$arIBlock[$arr["ID"]] = "[".$arr["ID"]."] ".$arr["NAME"];
-
-$rsProp = CIBlockProperty::GetList(array("SORT"=>"ASC", "NAME"=>"ASC"), Array("ACTIVE"=>"Y", "IBLOCK_ID"=>$arCurrentValues["IBLOCK_ID"]));
-while ($arr=$rsProp->Fetch())
-{
-	$arProperty[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
-	if (in_array($arr["PROPERTY_TYPE"], array("L", "N", "S")))
-	{
-		$arProperty_LNS[$arr["CODE"]] = "[".$arr["CODE"]."] ".$arr["NAME"];
-	}
-}
+$arIBlock = array();
+$iblockFilter = (
+	!empty($arCurrentValues['IBLOCK_TYPE'])
+	? array('TYPE' => $arCurrentValues['IBLOCK_TYPE'], 'ACTIVE' => 'Y')
+	: array('ACTIVE' => 'Y')
+);
+$rsIBlock = CIBlock::GetList(array('SORT' => 'ASC'), $iblockFilter);
+while ($arr = $rsIBlock->Fetch())
+	$arIBlock[$arr['ID']] = '['.$arr['ID'].'] '.$arr['NAME'];
+unset($arr, $rsIBlock, $iblockFilter);
 
 $arComponentParameters = array(
 	"GROUPS" => array(
@@ -77,4 +74,3 @@ $arComponentParameters = array(
 		),
 	),
 );
-?>

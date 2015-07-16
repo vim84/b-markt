@@ -62,4 +62,5 @@ $MESS["SALE_NO_SUBSCRIBE_PROD"] = "There are no subscribed for items in your sho
 $MESS["SALE_NOACTIVE"] = "out of stock";
 $MESS["SALE_NO_NOACTIVE"] = "There are no out-of-stock items in your shopping cart.";
 $MESS["SALE_BASKET_NOTIFY"] = "backordered";
+$MESS["SOA_TEMPL_ORDER_PS_ERROR"] = "The selected payment method failed. Please contact the site administrator or select another method.";
 ?>

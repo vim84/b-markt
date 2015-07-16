@@ -56,7 +56,6 @@ $arPSCorrespondence = array(
 		"PAYMENT_VALUE" => array(
 				"NAME" => GetMessage("SALE_TYPE_PAYMENT"),
 				"DESCR" => "",
-				"VALUE" => "PC",
 				"TYPE" => "SELECT",
 				"VALUE" => array(
 					"PC" => array(
@@ -79,6 +78,15 @@ $arPSCorrespondence = array(
 					),
 					"MP" => array(
 						"NAME" => GetMessage("SALE_YmPOS")
+					),
+					"AB" => array(
+						"NAME" => GetMessage("SALE_YAlphaClick")
+					),
+					"MA" => array(
+						"NAME" => GetMessage("SALE_YMasterPass")
+					),
+					"PB" => array(
+						"NAME" => GetMessage("SALE_YPromsvyazbank")
 					)
 			),
 		),

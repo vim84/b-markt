@@ -45,6 +45,8 @@
 		BX.addCustomEvent(caller, "onItemsAreAdded", BX.delegate(this.finishQueue, this));
 
 		BX.addCustomEvent(caller, "onFileIsDeleted", BX.delegate(this.deleteItem, this));
+		BX.addCustomEvent(caller, "onFileIsReinited", BX.delegate(this.reinitItem, this));
+
 		this.log('Initialized');
 		return this;
 	};
@@ -54,15 +56,30 @@
 		{
 			BX.UploaderUtils.log('queue', text);
 		},
-		addItem : function (file, being) {
+		addItem : function (file, being)
+		{
+			var isImage;
+			if (!this.showImage)
+				isImage = false;
+			else if (BX.type.isDomNode(file))
+				isImage = BX.UploaderUtils.isImage(file.value, null, null);
+			else
+				isImage = BX.UploaderUtils.isImage(file["name"], file["type"], file["size"]);
+
+			BX.onCustomEvent(this.uploader, "onFileIsBeforeCreated", [file, being, isImage, this.uploader]);
+
 			var params = {copies : this.uploader.fileCopies, fields : this.uploader.fileFields},
-				res = (this.showImage && BX.UploaderUtils.isImage(file["name"], (file["type"] || file["fileType"])) ?
+				res = (isImage ?
 					new BX.UploaderImage(file, params, this.limits, this.uploader) :
 					new BX.UploaderFile(file, params, this.limits, this.uploader)),
-					children, node;
+					children, node,
+					itemStatus = {status : statuses.ready};
+
+			BX.onCustomEvent(res, "onFileIsAfterCreated", [res, being, itemStatus, this.uploader]);
+			BX.onCustomEvent(this.uploader, "onFileIsAfterCreated", [res, being, itemStatus, this.uploader]);
 
 			this.items.setItem(res.id, res);
-			if (!!being)
+			if (being || itemStatus["status"] !== statuses.ready)
 			{
 				this.itUploaded.setItem(res.id, res);
 			}
@@ -191,7 +208,9 @@
 		getItem : function(id)
 		{
 			var item = this.items.getItem(id);
-			return {item : item, node : (item.thumbNode || BX(id + 'Item'))};
+			if (item)
+				return {item : item, node : (item.thumbNode || BX(id + 'Item'))};
+			return null;
 		},
 		onbxdragstart : function() {
 			var item = BX.proxy_context;
@@ -241,7 +260,7 @@
 		onbxdestdragfinish : function(currentNode) {
 			var item = BX.proxy_context;
 			BX.removeClass(item, "bx-drag-over");
-			if(item == currentNode)
+			if(item == currentNode || !BX.hasClass(currentNode, "bx-drag-draggable"))
 				return true;
 			else
 			{
@@ -300,9 +319,9 @@
 			return true;
 		},
 		deleteItem : function (id, item) {
-			if (this.items.hasItem(id))
+			var pointer = this.getItem(id), node;
+			if (pointer && (!this.placeHolder || ((node = pointer.node) && node)))
 			{
-				var node = BX(id + 'Item');
 				if (!!node)
 				{
 					if (!!window["jsDD"])
@@ -336,6 +355,76 @@
 			}
 			return false;
 		},
+		reinitItem : function (id, item) {
+			var node, children;
+			if (!!this.placeHolder && this.items.hasItem(id) && (node = BX(id + 'Item')) && node)
+			{
+				children = item.makeThumb();
+				if (BX.type.isNotEmptyString(children))
+				{
+					if (this.thumb.tagName == 'TR')
+					{
+						children = children.replace(/[\n\t]/gi, "").replace(/^(\s+)(.*?)/gi, "$2").replace(/(.*?)(\s+)$/gi, "$1");
+						if (!!children["trim"])
+							children = children.trim();
+						var replaceFunction = function(str, tdParams, tdInnerHTML)
+						{
+							var td = node.insertCell(-1),
+								attrs = {
+									colspan : true,
+									headers : true,
+									accesskey : true,
+									"class" : true,
+									contenteditable : true,
+									contextmenu : true,
+									dir : true,
+									hidden : true,
+									id : true,
+									lang : true,
+									spellcheck : true,
+									style : true,
+									tabindex : true,
+									title : true,
+									translate : true
+								}, param;
+							td.innerHTML = tdInnerHTML;
+							tdParams = tdParams.split(" ");
+							while ((param = tdParams.pop()) && param)
+							{
+								param = param.split("=");
+								if (param.length == 2)
+								{
+									param[0] = param[0].replace(/^(\s+)(.*?)/gi, "$2").replace(/(.*?)(\s+)$/gi, "$1").replace(/^["'](.*?)["']$/gi, "$1");
+									param[1] = param[1].replace(/^(\s+)(.*?)/gi, "$2").replace(/(.*?)(\s+)$/gi, "$1").replace(/^["'](.*?)["']$/gi, "$1");
+									if (attrs[param[0]] === true)
+										td.setAttribute(param[0], param[1]);
+									else
+										td[param[0]] = param[1];
+								}
+							}
+							return "";
+						}, regex = /^<td(.*?)>(.*?)<\/td>/i;
+						window.data1 = children;
+						while (regex.test(children))
+							children = children.replace(regex, replaceFunction);
+					}
+					else
+					{
+						node.innerHTML = children;
+					}
+				}
+				else if (BX.type.isDomNode(children))
+				{
+					while (BX(node.firstChild))
+					{
+						BX.remove(node.firstChild);
+					}
+					BX.adjust(node, { children : [children] } );
+				}
+				BX.onCustomEvent(this.uploader, "onFileIsAppended", [item.id, item, this.caller]);
+				BX.onCustomEvent(item, "onFileIsAppended", [item.id, item, this.caller]);
+			}
+		},
 		finishQueue : function()
 		{
 		},
@@ -345,29 +434,46 @@
 			while ((item = this.items.getFirst()) && !!item)
 				this.deleteItem(item.id, item);
 		},
-		restoreFiles : function(IDs, restoreError)
+		restoreFiles : function(data, restoreError)
 		{
 			restoreError = (restoreError === true);
+			var item = data.getFirst();
 
-			var item, tmp = {}, id, ii;
-			for (ii = 0; ii < IDs.length; ii++)
+			while(item)
 			{
-				id = IDs[ii];
-				if (this.items.hasItem(id) && (item = this.items.getItem(id)) && !!item &&
+				if (this.items.hasItem(item.id) &&
 					!this.itUploaded.hasItem(item.id) &&
 					(!restoreError && !this.itFailed.hasItem(item.id) || restoreError))
 				{
-					tmp[item.id] = (tmp[item.id] > 0 ? tmp[item.id] : 0);
-					tmp[item.id]++;
 					if (this.itFailed.hasItem(item.id))
 					{
-						delete item.uploadStatus;
-						delete item.file.uploadStatus;
+						delete item["uploadStatus"];
+
+						delete item.file["uploadStatus"];
+						delete item.file["firstChunk"];
+						delete item.file["package"];
+						delete item.file["packages"];
+
+						if (item.file["copies"])
+						{
+							item.file["copies"].reset();
+							var copy;
+							while((copy = item.file["copies"].getNext()) && copy)
+							{
+								delete copy["uploadStatus"];
+								delete copy["firstChunk"];
+								delete copy["package"];
+								delete copy["packages"];
+							}
+							item.file["copies"].reset();
+						}
 					}
+					item["restored"] = "Y";
 					this.itFailed.removeItem(item.id);
 					this.itForUpload.setItem(item.id, item);
 					BX.onCustomEvent(item, "onUploadRestore", [item]);
 				}
+				item = data.getNext();
 			}
 		}
 	};

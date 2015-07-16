@@ -106,6 +106,17 @@ MobileWebrtc.prototype.callInvite = function (userId, video, repeat)
 					this.callInit = false;
 					this.callInvite(userId, video, true);
 				}
+				else if(params.ERROR == 'AUTHORIZE_ERROR')
+				{
+					app.BasicAuth({
+						success: BX.delegate(function ()
+						{
+							this.callInit = false;
+							this.callInvite(userId, video, true);
+
+						}, this)
+					});
+				}
 				return;
 			}
 			this.initiator = true;

@@ -231,7 +231,6 @@ foreach (GetModuleEvents('forum', 'OnCommentsInit', true) as $arEvent)
 /********************************************************************
 				Actions
 ********************************************************************/
-//ForumSetLastVisit($arParams["FORUM_ID"], $arResult['FORUM_TOPIC_ID'], array("nameTemplate" => $arParams["NAME_TEMPLATE"]));
 include($path."/action.php");
 $strErrorMessage = "";
 foreach ($arError as $res)
@@ -386,6 +385,7 @@ ob_start();
 
 if ($arResult['DO_NOT_CACHE'] || $this->StartResultCache($arParams["CACHE_TIME"], $cache_id))
 {
+	ForumSetLastVisit($arParams["FORUM_ID"], $arResult["FORUM_TOPIC_ID"], array("nameTemplate" => $arParams["NAME_TEMPLATE"]));
 	if ($arResult["FORUM_TOPIC_ID"] > 0)
 	{
 		$arMessages = array();
@@ -431,7 +431,7 @@ if ($arResult['DO_NOT_CACHE'] || $this->StartResultCache($arParams["CACHE_TIME"]
 					$res["POST_DATE"] = CForumFormat::DateFormat($arParams["DATE_TIME_FORMAT"], $res["POST_TIMESTAMP"]);
 					$res["EDIT_DATE"] = CForumFormat::DateFormat($arParams["DATE_TIME_FORMAT"], MakeTimeStamp($res["EDIT_DATE"], CSite::GetDateFormat()));
 					// text
-					$res["ALLOW"] = array_merge($arAllow, array("ALLOW_SMILES" => ($res["USE_SMILES"] == "Y" ? $arParams["ALLOW_SMILES"] : "N")));
+					$res["ALLOW"] = array_merge($arAllow, array("SMILES" => ($res["USE_SMILES"] == "Y" ? $arParams["ALLOW_SMILES"] : "N")));
 					$res["~POST_MESSAGE_TEXT"] = (COption::GetOptionString("forum", "FILTER", "Y")=="Y" ? $res["~POST_MESSAGE_FILTER"] : $res["~POST_MESSAGE"]);
 					// links
 					$res["PANELS"] = $arResult["PANELS"];

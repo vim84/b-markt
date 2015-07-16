@@ -102,7 +102,10 @@ function showBlogPost(id, source)
 			start: fxStart,
 			finish: fxFinish,
 			callback: BX.delegate(__blogExpandSetHeight, el),
-			callback_complete: BX.delegate(function() { this.style.maxHeight = 'none'; }, el)
+			callback_complete: BX.delegate(function() {
+				this.style.maxHeight = 'none'; 
+				BX.LazyLoad.showImages(true);
+			}, el)
 		})).start();
 	}
 }

@@ -71,12 +71,6 @@ $aOptions = $grid_options->GetOptions();
 
 if(!isset($aOptions["views"]["default"]["name"]))
 	$aOptions["views"]["default"]["name"] = GetMessage("interface_grid_default_view");
-if($aOptions["views"]["default"]["sort_by"] == '')
-	$aOptions["views"]["default"]["sort_by"] = $arParams["SORT_VARS"]["by"];
-if($aOptions["views"]["default"]["sort_order"] == '')
-	$aOptions["views"]["default"]["sort_order"] = $arParams["SORT_VARS"]["order"];
-if($aOptions["views"]["default"]["page_size"] == '')
-	$aOptions["views"]["default"]["page_size"] = 20;
 
 $func = create_function('$a, $b', 'return strcmp($a["name"], $b["name"]);');
 uasort($aOptions["views"], $func);
@@ -154,10 +148,25 @@ if(!in_array(true, $arResult["FILTER_ROWS"]))
 }
 
 //*********************
-// Columns
+// Columns names
 //*********************
 
 $aCurView = $aOptions["views"][$aOptions["current_view"]];
+$arResult["COLS_NAMES"] = array();
+foreach($arParams["HEADERS"] as $i => $header)
+{
+	$arResult["COLS_NAMES"][$header["id"]] = $header["name"];
+	if(isset($aCurView["custom_names"][$header["id"]]))
+	{
+		$arParams["HEADERS"][$i]["original_name"] = $header["name"];
+		$arParams["HEADERS"][$i]["name"] = htmlspecialcharsbx($aCurView["custom_names"][$header["id"]]);
+	}
+}
+
+//*********************
+// Columns
+//*********************
+
 $aColsTmp = explode(",", $aCurView["columns"]);
 $aCols = array();
 foreach($aColsTmp as $col)
@@ -242,14 +251,6 @@ foreach($arResult["HEADERS"] as $header)
 		foreach($header["editable"] as $attr => $val)
 			$arResult["COLS_EDIT_META"][$header["id"]][$attr] = $val;
 }
-
-//*********************
-// Columns names
-//*********************
-
-$arResult["COLS_NAMES"] = array();
-foreach($arParams["HEADERS"] as $header)
-	$arResult["COLS_NAMES"][$header["id"]] = $header["name"];
 
 //*********************
 // Editable Data

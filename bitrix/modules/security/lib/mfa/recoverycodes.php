@@ -113,8 +113,7 @@ class RecoveryCodesTable
 
 		static::clearByUser($userId);
 
-		$random = new Random;
-		$randomVector = $random->getString(static::CODES_PER_USER * 8);
+		$randomVector = Random::getString(static::CODES_PER_USER * 8);
 		$randomVector = str_split($randomVector, 4);
 		for ($i = 0; $i < static::CODES_PER_USER; $i++)
 		{
@@ -161,7 +160,7 @@ class RecoveryCodesTable
 				static::update($code['ID'], array(
 					'USED' => 'Y',
 					'USING_DATE' => new Type\DateTime,
-					'USING_IP' => $_SERVER['REMOTE_ADDR']
+					'USING_IP' => \Bitrix\Main\Application::getInstance()->getContext()->getRequest()->getRemoteAddress()
 				));
 				$found = true;
 				break;

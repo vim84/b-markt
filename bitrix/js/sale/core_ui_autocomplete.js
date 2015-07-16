@@ -20,79 +20,84 @@
 
 		BX.merge(this, {
 			opts: { // default options
-				source: 				'/somewhere.php', // url that will be used to obtain select options from
-				pageSize: 				5, // amount of variants to show
-				paginatedRequest: 		true, // if true, parameters for server-side paginator will be sent in the request
+				source:					'/somewhere.php', // url that will be used to obtain select options from
+				pageSize:				20, // amount of variants to show
+				paginatedRequest:		true, // if true, parameters for server-side paginator will be sent in the request
 
 				// behaviour
-				selectOnBlur: 			true, // if true, plugin will select first item in variant list when user types tab button on fake input with string being incomplete typed in
-				selectOnEnter: 			true, // item can be selected by pressing Enter on it
-				selectByClick: 			true, // item can be selected by clicking on it
-				chooseUsingArrows: 		true, // item can be choosable when user presses arrow up\down while input is in focus
-				scrollToVariantOnArrow: true,
+				autoSelectOnBlur:			false, // if true, plugin will select first item in variant list when input looses focus
+				autoSelectOnTab: 			false, // if true, plugin will select first item in variant list when user types tab button on fake input with string being incomplete typed in
+				autoSelectOnlyIfOneVariant: false,
+				selectOnEnter:				true, // item can be selected by pressing Enter on it
+				selectByClick:				true, // item can be selected by clicking on it
+				chooseUsingArrows:			true, // item can be choosable when user presses arrow up\down while input is in focus
+				scrollToVariantOnArrow: 	true,
 
 				closePopupOnOuterClick: true, // if true, popup will be closed when user clicks outside the widget
 
-				focusOnMouseSelect: 	true, // if true, plugin will return focus to the fake input after user selects item using mouse. it allows not to lose tabindex order
-				autoSelectIfOneVariant: false, // if true, and only one variant found for currently typed query, it will be selected without any dropdown shown
-				debounceTime: 			500, // time of reaction on input content change. Should not be too small
-				startSearchLen: 		2, // minimum string length search will start with
+				focusOnMouseSelect:		true, // if true, plugin will return focus to the fake input after user selects item using mouse. it allows not to lose tabindex order
+				autoSelectIfOneVariant:	false, // if true, and only one variant found for currently typed query, it will be selected without any dropdown shown
+				debounceTime:			500, // time of reaction on input content change. Should not be too small
+				startSearchLen:			2, // minimum string length search will start with
 
-				knownItems: 			[], // already known items which go directly to the cache
-				selectedItem: 			false, // initially selected item VALUE
-				useCache: 				true, // always should be true, behaviour when useCache == false is not implemented
-				usePagingOnScroll: 		false, // if true, showing items on pane scroll will be used. Note that you must specify also paneHConstraint option, or have popup height limited in your css. Otherwise you will be wondered with the result :)
-				useCustomScrollPane: 	false, // always false, the developing of a custom scroll panel were frozen currently
-				scrollThrottleTimeout: 	300, // timeout of reaction on pane scroll. Should not be too small
-				paneHConstraint: 		0, // limit pane height with this value, if greather than zero
+				knownItems:				[], // already known items which go directly to the cache
+				selectedItem:			false, // initially selected item VALUE
+				useCache:				true, // always should be true, behaviour when useCache == false is not implemented
+				usePagingOnScroll:		false, // if true, showing items on pane scroll will be used. Note that you must specify also paneHConstraint option, or have popup height limited in your css. Otherwise you will be wondered with the result :)
+				useCustomScrollPane:	false, // always false, the developing of a custom scroll panel were frozen currently
+				scrollThrottleTimeout:	300, // timeout of reaction on pane scroll. Should not be too small
+				paneHConstraint:		0, // limit pane height with this value, if greather than zero
 
 				// language-dependent messages to display
 				messages: {
-					nothingFound: 		'Sorry, nothing found',
-					error: 				'Error occured',
-					clearSelection: 	'Clear selection'
+					nothingFound:		'Sorry, nothing found',
+					error:				'Error occured',
+					clearSelection:		'Clear selection'
 				},
 
 				// magic design-related values
-				arrowScrollAdditional: 	0,
-				pageUpWardOffset: 		0,
-				wrapTagName: 			'span',
-				paneHConstraintType: 	'max-height', // constraint type of pane height
+				arrowScrollAdditional:	0,
+				pageUpWardOffset:		0,
+				wrapTagName:			'span',
+				paneHConstraintType:	'max-height', // constraint type of pane height
+				wrapSeparate: 			true,
 
 				bindEvents: {
 					'init': function(){ // after all we do this
 						this.setInitialValue();
+						this.vars.allowHideErrors = true;
 					}
 				}
 			},
 			vars: { // significant variables
-				opened: 				false, // whether dropdown is opened or not
-				eventLock: 				false, // when we fire 'change' on the target node, we dont want our own callback to be called
-				displayPageMutex: 		false,
-				blockingCall: 			false,
-				keyboardMutex: 			false,
+				opened:					false, // whether dropdown is opened or not
+				eventLock:				false, // when we fire 'change' on the target node, we dont want our own callback to be called
+				displayPageMutex:		false,
+				blockingCall:			false,
+				keyboardMutex:			false,
 
 				cache: { // item cache
-					nodes: 				{}, // data index, keeps data for each node ever loaded
-					search: 			{}, // cache for request: map from query string to a set of items in responce. Here pagenavigation can be implemented without a trouble
-					ceilings: 			{}
+					nodes:				{}, // data index, keeps data for each node ever loaded
+					search:				{}, // cache for request: map from query string to a set of items in responce. Here pagenavigation can be implemented without a trouble
+					ceilings:			{}
 				},
-				lastQuery: 				null,
-				lastPage: 				0,
-				displayedIndex: 		[],
+				lastQuery:				null,
+				lastPage:				0,
+				displayedIndex:			[],
 
-				value: 					false, // actually, [VALUE,DISPLAY] pair id
-				currentGlow: 			false, // item that is currently highlighted by arrow-up\down keys
-				previousGlow: 			false, // previous value of currentGlow
+				value:					false, // actually, [VALUE,DISPLAY] pair id
+				currentGlow:			false, // item that is currently highlighted by arrow-up\down keys
+				previousGlow:			false, // previous value of currentGlow
 
-				outSideClickScope: 		null,
-				forceSelectSingeOnce: 	false
+				outSideClickScope:		null,
+				forceSelectSingeOnce:	false,
+				allowHideErrors: 		false
 			},
 			ctrls: { // links to controls
-				displayedItems: 		{}
+				displayedItems:			{}
 			},
 			sys: {
-				code: 					'autocomplete'
+				code:					'autocomplete'
 			}
 		});
 
@@ -137,13 +142,6 @@
 			if(typeof so.knownItems == 'object')
 				this.fillCache(so.knownItems, false);
 
-			/*
-			// pre-initializing
-			sv.initiallySetValue = so.selectedItem && typeof sv.cache.nodes[so.selectedItem] != 'undefined';
-			if(sv.initiallySetValue)
-				sv.value = so.selectedItem;
-			*/
-
 			this.pushFuncStack('buildUpDOM', BX.ui.autoComplete);
 			this.pushFuncStack('bindEvents', BX.ui.autoComplete);
 		},
@@ -168,7 +166,7 @@
 			});
 
 			//BX.style(sc.container, 'display', BX.style(sc.inputs.origin, 'display'));
-			
+
 			BX.insertAfter(sc.container, sc.inputs.origin);
 
 			// clone input node
@@ -267,7 +265,7 @@
 			// nothing found message
 			sc.nothingFound = this.getControl('nothing-found', true);
 			// error message
-			//sc.error = this.getControl('error');
+			sc.errorMessage = this.getControl('error-message', true);
 		},
 
 		bindEvents: function(){
@@ -294,7 +292,7 @@
 			}
 
 			// bind debounced key-type input change
-			BX.bindDebouncedChange(sc.inputs.fake, 
+			BX.bindDebouncedChange(sc.inputs.fake,
 
 				function(val){
 
@@ -312,7 +310,7 @@
 					// dropping selections
 					ctx.deselectItem();
 
-					ctx.fireEvent('after-input-value-modify'); // so.onModifyInput.call(ctx);
+					ctx.fireEvent('after-input-value-modify');
 				},
 				so.debounceTime,
 				sc.inputs.fake
@@ -380,12 +378,12 @@
 							var b = pos.height;
 							var c = sc.pane.clientHeight;
 							var d = sc.pane.scrollTop;
-							var e = so.arrowScrollAdditional;
+							var f = so.arrowScrollAdditional;
 
 							if(a + b > c + d){
-								sc.scrollController.scrollTo({dy: a + b - (c + d) + e});
+								sc.scrollController.scrollTo({dy: a + b - (c + d) + f});
 							}else if(a < d){
-								sc.scrollController.scrollTo({dy: -(d - a + e)});
+								sc.scrollController.scrollTo({dy: -(d - a + f)});
 							}
 						}
 
@@ -393,7 +391,7 @@
 					}
 				}
 
-				// on enter and tab we perform item selection
+				// on enter we perform item selection
 				if(key == 13 && so.selectOnEnter){
 					if(sv.currentGlow !== false)
 						ctx.selectItem(sv.displayedIndex[sv.currentGlow]);
@@ -402,9 +400,9 @@
 				}
 
 				// on tab dropdown close and optional select
-				if(key == 9 && sv.opened && so.selectOnBlur){
+				if(key == 9 && sv.opened && so.autoSelectOnTab){
 
-					if(displayedLen > 0)
+					if((so.autoSelectOnlyIfOneVariant && displayedLen == 1) || (!so.autoSelectOnlyIfOneVariant && displayedLen > 0))
 						ctx.selectItem(sv.displayedIndex[0]);
 					else
 						ctx.hideDropdown();
@@ -413,6 +411,28 @@
 				if(key == 13)
 					BX.PreventDefault(e);
 			});
+
+			if(so.autoSelectOnBlur)
+			{
+				BX.bind(sc.inputs.fake, 'blur', function(){
+
+					var displayedLen = sv.displayedIndex.length;
+
+					if(sv.opened && ((so.autoSelectOnlyIfOneVariant && displayedLen == 1) || (!so.autoSelectOnlyIfOneVariant && displayedLen > 0)))
+						ctx.selectItem(sv.displayedIndex[0]);
+				});
+			}
+
+			if(so.autoSelectOnBlur)
+			{
+				BX.bind(sc.inputs.fake, 'blur', function(){
+
+					var displayedLen = sv.displayedIndex.length;
+
+					if(sv.opened && ((so.autoSelectOnlyIfOneVariant && displayedLen == 1) || (!so.autoSelectOnlyIfOneVariant && displayedLen > 0)))
+						ctx.selectItem(sv.displayedIndex[0]);
+				});
+			}
 
 			// when nothing were selected (but there were already an attempt of search), open dropdown if it was closed occasionly by user
 			BX.bind(sc.inputs.fake, 'click', function(){
@@ -479,26 +499,8 @@
 
 		// common
 
-		fillCache: function(items, key){
-
-			var sv = this.vars,
-				so = this.opts;
-
-			if(!items.length)
-				return;
-
-			// first fill items themselves
-			for(var k in items)
-				sv.cache.nodes[items[k].VALUE] = items[k];
-
-			if(typeof key == 'number' && key != 0){
-
-				if(typeof sv.cache.search[key] == 'undefined')
-					sv.cache.search[key] = [];
-
-				for(var k in items)
-					sv.cache.search[key].push(items[k].VALUE);
-			}
+		// todo
+		addItems2Cache: function(){
 		},
 
 		clearCache: function(){
@@ -509,6 +511,18 @@
 			this.ctrls.inputs.fake.focus();
 		},
 
+		// todo
+		checkDisabled: function(){
+		},
+
+		// todo
+		disable: function(){
+		},
+
+		// todo
+		enable: function(){
+		},
+
 		// function made to have ability to set value externally: when passed empty string, it resets the whole control, otherwise
 		// it searches for the value in the cache. And then, if none is found, sends request to server to obtain missing item
 		setValue: function(value, autoSelect){
@@ -517,9 +531,26 @@
 				so = this.opts,
 				sc = this.ctrls,
 				ctx = this;
+			
+			this.hideError();
 
-			//if(sv.value === false)
-			//	sc.inputs.fake.value = '';
+			// clean
+
+			if(value == null || value == false || typeof value == 'undefined' || value.toString().length == 0){ // deselect
+
+				this.resetVariables();
+
+				BX.cleanNode(sc.vars);
+
+				if(BX.type.isElementNode(sc.nothingFound))
+					BX.hide(sc.nothingFound);
+
+				this.fireEvent('after-deselect-item');
+				this.fireEvent('after-clear-selection');
+
+				return;
+			}else if(value == sv.value) // dup
+				return;
 
 			if(autoSelect !== false)
 				sv.forceSelectSingeOnce = true;
@@ -528,7 +559,7 @@
 
 				// lazyload it...
 				this.resetNavVariables();
-				
+
 				ctx.downloadBundle({VALUE: value}, function(data){
 
 					ctx.fillCache(data, false); // storing item in the cache
@@ -559,19 +590,11 @@
 		},
 
 		getValue: function(){
-			return this.vars.value;
+			return this.vars.value === false ? '' : this.vars.value;
 		},
 
 		clearSelected: function(){
-
-			this.resetVariables();
-
-			BX.cleanNode(this.ctrls.vars);
-
-			if(BX.type.isElementNode(this.ctrls.nothingFound))
-				BX.hide(this.ctrls.nothingFound);
-
-			this.fireEvent('after-clear-selection');
+			this.setValue('');
 		},
 
 		getNodeByValue: function(value){
@@ -582,15 +605,15 @@
 			this.ctrls.inputs.fake.setAttribute('tabindex', index);
 		},
 
+		setTargetInputName: function(newName){
+			this.ctrls.inputs.origin.setAttribute('name', newName);
+		},
+
 		cancelRequest: function(){
 			// completely cancel current pending query
 			this.vars.forceSelectSingeOnce = false;
 
 			// todo
-		},
-
-		setTargetInputName: function(newName){
-			this.ctrls.inputs.origin.setAttribute('name', newName);
 		},
 
 		// low-level, use with caution
@@ -616,6 +639,32 @@
 		},
 
 		////////// PRIVATE: forbidden to use outside (for compatibility reasons)
+
+		fillCache: function(items, key){
+
+			var sv = this.vars,
+				so = this.opts;
+
+			if(!items.length)
+				return;
+
+			// first fill items themselves
+			for(var k in items)
+				this.addItem2Cache(items[k]);
+
+			if(typeof key == 'number' && key != 0){
+
+				if(typeof sv.cache.search[key] == 'undefined')
+					sv.cache.search[key] = [];
+
+				for(var k in items)
+					sv.cache.search[key].push(items[k].VALUE);
+			}
+		},
+
+		addItem2Cache: function(item){
+			this.vars.cache.nodes[item.VALUE] = item;
+		},
 
 		setInitialValue: function(){
 
@@ -702,8 +751,8 @@
 						ctx.displayVariants(page, pageNum);
 					//////////////////
 
-					sv.forceSelectSingeOnce = 	false;
-					sv.displayPageMutex = 		false;
+					sv.forceSelectSingeOnce =	false;
+					sv.displayPageMutex =		false;
 					sv.keyboardMutex =			false;
 
 				}else{
@@ -736,9 +785,9 @@
 						}
 
 					}, function(){
-						sv.forceSelectSingeOnce = 	false;
-						sv.blockingCall = 			false;
-						sv.displayPageMutex = 		false;
+						sv.forceSelectSingeOnce =	false;
+						sv.blockingCall =			false;
+						sv.displayPageMutex =		false;
 						sv.keyboardMutex =			false;
 						//console.dir('UNlock kb mutex');
 					});
@@ -843,7 +892,7 @@
 
 					}else
 						ctx.showError(ctx.opts.messages.error, result.errors);
-					
+
 					onComplete.call(ctx);
 
 					//}catch(e){console.dir(e);}
@@ -910,6 +959,8 @@
 				sc = this.ctrls,
 				so = this.opts;
 
+			this.hideError();
+
 			this.whenClearToggle.apply(this, [false]);
 
 			sv.currentGlow = false;
@@ -957,6 +1008,9 @@
 
 		showDropdown: function(){
 
+			if(this.vars.opened)
+				return;
+
 			var flip = !this.vars.opened;
 			this.vars.opened = true;
 
@@ -997,7 +1051,7 @@
 
 			//this.hideDropdown(); // todo: here ...
 			this.hideNothingFound(); // and here ...
-			
+
 			if(typeof pageNum == 'undefined' || pageNum == 0){
 				BX.cleanNode(sc.vars); // and here "deferred" pattern required, kz hideDropdown() might be async in some implementations
 
@@ -1045,29 +1099,38 @@
 				this.whenNothingFoundToggle(false);
 		},
 
-		showError: function(errorLabel, messages, sysDesc){
+		// actually, means "hide static error"
+		hideError: function(){
+			if(BX.type.isElementNode(this.ctrls.errorMessage) && this.vars.allowHideErrors)
+				BX.hide(this.ctrls.errorMessage);
+		},
 
-			var msg2show = errorLabel;
-			if(typeof messages == 'object')
-				msg2show += ': '+messages.join(', ');
+		showError: function(errorLabel, messages, sysDesc){
 
 			BX.cleanNode(this.ctrls.vars);
 
-			this.ctrls.vars.appendChild(this.whenRenderError(msg2show));
+			this.ctrls.vars.appendChild(this.whenRenderError(errorLabel));
 
 			this.showDropdown();
 
-			if('console' in window){
-				if(typeof messages == 'object')
-					console.error(messages);
-				if(typeof sysDesc != 'undefined')
-					console.error(sysDesc);
-			}
+			BX.debug(arguments);
 		},
 
 		refineItemDataForTemplate: function(itemData){
-			itemData['=display_wrapped'] = BX.util.wrapSubstring(itemData.DISPLAY, this.ctrls.inputs.fake.value, this.opts.wrapTagName, true);
-		
+
+			var query = this.vars.lastQuery.QUERY;
+
+			if(BX.type.isNotEmptyString(query)){
+				var chunks = [];
+				if(this.opts.wrapSeparate)
+					chunks = query.split(/\s+/);
+				else
+					chunks = [query];
+
+				itemData['=display_wrapped'] = BX.util.wrapSubstring(itemData.DISPLAY, chunks, this.opts.wrapTagName, true);
+			}else
+				itemData['=display_wrapped'] = BX.util.htmlspecialchars(itemData.DISPLAY);
+
 			return itemData;
 		},
 
@@ -1084,11 +1147,11 @@
 		whenItemSelect: function(itemId){ // evaluates when user selects a particular item. should return value which we want in our fake input
 			return this.vars.cache.nodes[itemId]['DISPLAY'];
 		},
-		
+
 		whenLoaderToggle: function(way){
 			BX[way ? 'addClass' : 'removeClass'](this.ctrls.inputs.fake, 'bx-ui-'+this.sys.code+'-loading');
 		},
-		
+
 		whenDropdownToggle: function(way, upward, inputHeight, flip){
 
 			if(way){
@@ -1100,7 +1163,7 @@
 
 			this.fireEvent('after-popup-toggled', [way]);
 		},
-		
+
 		whenDecidePaneOrient: function(upward, inputHeight){
 
 			var sc = this.ctrls;
@@ -1125,7 +1188,7 @@
 		whenItemToggle: function(way, node, itemId){
 			BX[way ? 'addClass' : 'removeClass'](node, 'bx-ui-'+this.sys.code+'-variant-active');
 		},
-		
+
 		whenClearToggle: function(way){
 			BX[way ? 'show' : 'hide'](this.ctrls.clear);
 		},

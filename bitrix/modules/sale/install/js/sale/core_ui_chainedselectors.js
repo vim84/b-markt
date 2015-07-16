@@ -2,32 +2,41 @@ BX.ui.chainedSelectors = function(opts, nf){
 
 	this.parentConstruct(BX.ui.chainedSelectors, opts);
 
+	/*
+	events:
+		parent:
+			*
+		BX.ui.chainedSelectors:
+			control-change
+	*/
+
 	BX.merge(this, {
 		opts: { // default options
-			source: 					'/somewhere.php', // url that will be used to obtain select options from
-			paginatedRequest: 			false,
+			source:						'/somewhere.php', // url that will be used to obtain select options from
+			paginatedRequest:			false,
 
 			// behaviour
-			autoSelectWhenSingle: 		true,
+			autoSelectWhenSingle:		true,
 
-			knownBundles: 				{}, // tree levels that already known
-			selectedItem: 				false, // initially selected path in a tree
-			initialBundlesIncomplete: 	false, // treat knownBundles as incomplete and try to re-get from server at the first suitable moment
-			pseudoValues: 				[], // values that can be only displayed as selected, but not actually selected
-			rootNodeValue: 				0,
-			ignoreUnSelectable: 		false,
+			knownBundles:				{}, // tree levels that already known
+			selectedItem:				false, // initially selected path in a tree
+			initialBundlesIncomplete:	false, // treat knownBundles as incomplete and try to re-get from server at the first suitable moment
+			bundlesIncomplete: 			{}, // lists exactly which bundles in knownBundles are incomplete
+			rootNodeValue:				0,
+			ignoreUnSelectable:			false,
 
-			adapterName: 				'combobox',
+			adapterName:				'combobox',
 
 			messages: {
-				nothingFound: 	'Sorry, nothing found',
-				notSelected: 	'-- Not selected',
-				error: 			'Error occured'
+				nothingFound:	'Sorry, nothing found',
+				notSelected:	'-- Not selected',
+				error:			'Error occured'
 			},
 
 			bindEvents: {
 				init: function(){ // after all we do this
 					this.setInitialValue();
+					this.vars.allowHideErrors = true;
 				}
 			}
 		},
@@ -42,8 +51,9 @@ BX.ui.chainedSelectors = function(opts, nf){
 			keys in each node:
 			DISPLAY, VALUE, IS_PARENT, CAN_CHOOSE
 			*/
-			value: false, // currently selected value
-			eventLock: false
+			value: 					false, // currently selected value
+			eventLock: 				false,
+			allowHideErrors: 		false
 		},
 		sys: {
 			code: 'chainedselectors'
@@ -79,6 +89,13 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 			if(so.initialBundlesIncomplete){
 				for(var k in so.knownBundles)
 					sv.cache.incomplete[k] = true;
+			}else if(typeof so.bundlesIncomplete != 'undefined'){
+
+				for(var k in so.knownBundles)
+				{
+					if(typeof so.bundlesIncomplete[k] != 'undefined')
+						sv.cache.incomplete[k] = true;
+				}
 			}
 		}
 
@@ -87,6 +104,152 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 	},
 
 	buildUpDOM: function(){},
+
+	bindEvents: function(){
+
+		var ctx = this,
+			so = this.opts,
+			sv = this.vars,
+			sc = this.ctrls;
+
+		this.bindEvent('control-change', this.controlChangeActions);
+
+		BX.bind(sc.targetInput, 'change', function(){
+
+			if(sv.eventLock)
+				return;
+
+			ctx.setValue(this.value);
+		});
+	},
+
+	////////// PUBLIC: free to use outside
+
+	// todo
+	addItems2Cache: function(){
+	},
+
+	// todo
+	clearCache: function(){
+	},
+
+	// todo
+	focus: function(){
+	},
+	
+	// todo
+	checkDisabled: function(){
+	},
+
+	// todo
+	disable: function(){
+	},
+
+	// todo
+	enable: function(){
+	},
+
+	setValue: function(value){
+
+		var sv = this.vars;
+
+		// same value
+		if(sv.value != false && typeof value != 'undefined' && value == sv.value)
+			return;
+
+		if(value == null || value == false || typeof value == 'undefined' || value.toString().length == 0){ // deselect
+			this.displayRoute([]);
+			this.setValueVariable('');
+			this.setTargetValue('');
+			this.fireEvent('after-clear-selection');
+			return;
+		}
+
+		// set
+		this.fireEvent('before-set-value', [value]);
+
+		var d = new BX.deferred();
+		var ctx = this;
+
+		d.done(BX.proxy(function(route){
+
+			this.displayRoute(route);
+			sv.value = value;
+			this.setTargetValue(this.checkCanSelectItem(value) ? value : this.getLastValidValue());
+
+		}, this));
+
+		d.fail(function(type){
+			if(type == 'notfound'){
+
+				ctx.displayRoute([]);
+				ctx.setValueVariable('');
+				ctx.setTargetValue('');
+				ctx.showError({errors: [ctx.opts.messages.nothingFound], type: 'server-logic', options: {}});
+			}
+		});
+
+		this.hideError();
+
+		this.getRouteToNode(value, d);
+	},
+
+	getValue: function(){
+		return this.vars.value === false ? '' : this.vars.value;
+	},
+
+	clearSelected: function(){
+		this.setValue('');
+	},
+
+	getNodeByValue: function(value){
+		return this.vars.cache.nodes[value];
+	},
+
+	// todo
+	setTabIndex: function(index){
+	},
+
+	setTargetInputName: function(newName){
+		this.ctrls.targetInput.setAttribute('name', newName);
+	},
+
+	// todo:
+	cancelRequest: function(){
+	},
+
+	// specific
+
+	getStackSize: function(){
+		return this.vars.stack.length;
+	},
+
+	getAdapterAtPosition: function(pos){
+		if(pos < 0 || pos >= this.vars.stack.length)
+			return null;
+
+		return this.vars.stack[pos].control;
+	},
+
+	// low-level, use with caution
+
+	setTargetInputValue: function(value){
+
+		this.vars.eventLock = true;
+		this.ctrls.targetInput.value = value;
+		BX.fireEvent(this.ctrls.targetInput, 'change');
+		this.vars.eventLock = false;
+	},
+
+	// todo
+	setFakeInputValue: function(display){
+	},
+
+	setValueVariable: function(value){
+		this.vars.value = value;
+	},
+
+	////////// PRIVATE: forbidden to use outside (for compatibility reasons)
 
 	checkCanSelectItem: function(itemId){
 
@@ -104,96 +267,6 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 		return !nodes[itemId].IS_UNCHOOSABLE;
 	},
 
-	bindEvents: function(){
-
-		var ctx = this,
-			so = this.opts,
-			sv = this.vars,
-			sc = this.ctrls;
-
-		this.bindEvent('control-change', this.controlChangeActions);
-
-		BX.bind(sc.targetInput, 'change', function(){
-
-			if(sv.eventLock)
-				return;
-
-			// todo: add ctx.setValue() here
-
-		});
-	},
-
-	////////// PUBLIC: free to use outside
-
-	setValue: function(value){
-
-		var sv = this.vars;
-
-		// clean
-
-		if(value == null || value == false || typeof value == 'undefined' || value.toString().length == 0){ // deselect
-			this.displayRoute([]);
-			this.fireEvent('after-deselect-item', []);
-			return;
-		}else if(value == sv.value) // dup
-			return;
-
-		// set
-
-		var d = new BX.deferred();
-
-		d.done(BX.proxy(function(route){
-
-			this.displayRoute(route);
-			sv.value = value;
-			this.setTargetValue(this.checkCanSelectItem(value) ? value : this.getLastValidValue());
-
-		}, this));
-
-		/*
-		d.fail(BX.proxy(function(){
-			this.showError({errors: [this.opts.messages.nothingFound], type: 'server-logic', options: {}});
-		}, this));
-		*/
-
-		this.hideError();
-
-		this.getRouteToNode(value, d);
-	},
-
-	getValue: function(){
-		return this.vars.value;
-	},
-
-	clearSelected: function(){
-		this.setValue('');
-	},
-
-	getNodeByValue: function(value){
-		return this.vars.cache.nodes[value];
-	},
-
-	getStackSize: function(){
-		return this.vars.stack.length;
-	},
-
-	getAdapterAtPosition: function(pos){
-		if(pos < 0 || pos >= this.vars.stack.length)
-			return null;
-
-		return this.vars.stack[pos].control;
-	},
-
-	setTargetInputValue: function(value){
-
-		this.vars.eventLock = true;
-		this.ctrls.targetInput.value = value;
-		BX.fireEvent(this.ctrls.targetInput, 'change');
-		this.vars.eventLock = false;
-	},
-
-	////////// PRIVATE: forbidden to use outside (for compatibility reasons)
-
 	controlChangeActions: function(stackIndex, value){
 
 		var ctx = this,
@@ -210,12 +283,8 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 		if(value.length == 0){
 
 			ctx.truncateStack(stackIndex);
-			ctx.setTargetValue(ctx.getLastValidValue());
-
-		}else if(BX.util.in_array(value, so.pseudoValues)){
-
-			ctx.truncateStack(stackIndex);
-			this.fireEvent('after-select-item', [value]);
+			sv.value = ctx.getLastValidValue();
+			ctx.setTargetValue(sv.value);
 
 		}else{
 
@@ -232,8 +301,10 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 			if(typeof sv.cache.links[value] != 'undefined' || node.IS_PARENT)
 				ctx.appendControl(value);
 
-			if(ctx.checkCanSelectItem(value))
+			if(ctx.checkCanSelectItem(value)){
+				sv.value = value;
 				ctx.setTargetValue(value);
+			}
 
 			/*
 			if(typeof sv.cache.links[value] != 'undefined'){
@@ -350,12 +421,12 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 							var route = ctx.getRouteToNodeFromCache(nodeId); // trying to re-get
 
 							if(route.length == 0)
-								d.reject();
+								d.reject('notfound');
 							else
 								d.resolve(route);
 						},
-						onError: function(){
-							d.reject();
+						onError: function(){ // this will only trigger on internal error, not server-logic error
+							d.reject('internal');
 						}
 					},
 					options: {} // accessible in refineRequest\refineResponce and showError
@@ -489,9 +560,7 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 			BX.fireEvent(control, 'change');
 		}else{
 
-			this.setTargetValue(
-				node.IS_UNCHOOSABLE ? this.getLastValidValue() : value
-			);
+			this.setTargetValue(node.IS_UNCHOOSABLE ? this.getLastValidValue() : value);
 		}
 	},
 
@@ -542,7 +611,7 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 
 			// overwrite if not set
 			if(typeof sv.cache.links[parent] == 'undefined' || sv.cache.incomplete[parent] === true){
-				
+
 				// if not set or complete data passed - recreate
 				if(typeof sv.cache.links[parent] == 'undefined' || !isIncompleteData)
 					sv.cache.links[parent] = [];
@@ -550,10 +619,15 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 				for(var k in levels[parent]){
 					sv.cache.links[parent].push(levels[parent][k].VALUE);
 					levels[parent][k].PARENT_VALUE = parent;
-					sv.cache.nodes[levels[parent][k].VALUE] = levels[parent][k];
+
+					this.addItem2Cache(levels[parent][k]);
 				}
 			}
 		}
+	},
+
+	addItem2Cache: function(item){
+		this.vars.cache.nodes[item.VALUE] = item;
 	},
 
 	getCurrentItem: function(){
@@ -566,15 +640,25 @@ BX.merge(BX.ui.chainedSelectors.prototype, {
 
 	showError: function(parameters){
 
-		if(parameters.type != 'server-logic')
-			return;
-
 		this.setCSSState('error', this.ctrls.scope);
-		this.ctrls.errorMessage.innerHTML = BX.util.htmlspecialchars(parameters.errors.join(', '));
+
+		if(BX.type.isElementNode(this.ctrls.errorMessage)){
+			this.ctrls.errorMessage.innerHTML = BX.util.htmlspecialchars(parameters.errors.join(', '));
+			BX.show(this.ctrls.errorMessage);
+		}
+
+		BX.debug(parameters);
 	},
 
 	hideError: function(){
-		this.dropCSSState('error', this.ctrls.scope);
+
+		if(this.vars.allowHideErrors)
+		{
+			this.dropCSSState('error', this.ctrls.scope);
+
+			if(BX.type.isElementNode(this.ctrls.errorMessage))
+				BX.hide(this.ctrls.errorMessage);
+		}
 	}
 
 	/* Behaviour functions below */
@@ -591,6 +675,8 @@ BX.ui.chainedSelectors.adapters.combobox = function(options){
 	this.index = null;
 
 	this.place = function(){
+
+		var ctx = this;
 
 		this.scope = this.opts.parent.createNodesByTemplate('selector-scope', {}, true)[0];
 		BX.append(this.scope, this.opts.parent.ctrls.pool);
@@ -626,6 +712,11 @@ BX.ui.chainedSelectors.adapters.combobox = function(options){
 			this.opts.parent.getBundleForNode(this.opts.parentNode, dBundle);
 		}, this));
 
+		// transfer events from inner widget to outer... bad solution...
+		this.control.bindEvent('before-display-page', function(){
+			ctx.opts.parent.fireEvent('control-before-display-page', [ctx]);
+		});
+
 		this.control.bindEvent('after-select-item', BX.proxy(function(value){
 			this.opts.parent.fireEvent('control-change', [this.index, value]);
 		}, this));
@@ -644,7 +735,8 @@ BX.ui.chainedSelectors.adapters.combobox = function(options){
 		this.control = null;
 
 		this.opts = null;
-		this.scope.remove();
+		BX.remove(this.scope);
+
 		this.scope = null;
 	};
 	this.setIndex = function(index){

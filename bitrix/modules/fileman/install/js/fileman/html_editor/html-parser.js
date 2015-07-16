@@ -28,6 +28,15 @@
 		};
 		this.convertedBxNodes = [];
 		this.rules = {};
+
+		if (!this.editor.util.FirstLetterSupported())
+		{
+			this.firstNodeCheck = false;
+			this.FIRST_LETTER_CLASS = 'bxe-first-letter';
+			this.FIRST_LETTER_CLASS_CHROME = 'bxe-first-letter-chrome';
+			this.FIRST_LETTER_SPAN = 'bxe-first-letter-s';
+			//BX.addCustomEvent(this.editor, 'OnContentChanged', BX.proxy(this.FirstLetterCheckNodes, this));
+		}
 	}
 
 	BXEditorParser.prototype = {
@@ -43,6 +52,7 @@
 			}
 
 			this.convertedBxNodes = [];
+			this.firstNodeCheck = false;
 
 			var
 				frag = doc.createDocumentFragment(),
@@ -56,7 +66,7 @@
 			{
 				firstChild = el.firstChild;
 				el.removeChild(firstChild);
-				newNode = this.Convert(firstChild, cleanUp, parseBx);
+				newNode = this.Convert(firstChild, cleanUp, parseBx, newNode);
 
 				if (newNode)
 				{
@@ -127,7 +137,7 @@
 			return el;
 		},
 
-		Convert: function(oldNode, cleanUp, parseBx)
+		Convert: function(oldNode, cleanUp, parseBx, prevNode)
 		{
 			var
 				bCleanNodeAfterPaste = false,
@@ -139,6 +149,14 @@
 
 			if (oldNodeType == 1)
 			{
+				if (oldNode.nodeName == 'IMG')
+				{
+					if (!oldNode.getAttribute("data-bx-orig-src"))
+						oldNode.setAttribute("data-bx-orig-src", oldNode.getAttribute('src'));
+					else
+						oldNode.setAttribute("src", oldNode.getAttribute('data-bx-orig-src'));
+				}
+
 				if (this.editor.pasteHandleMode && (parseBx || this.editor.bbParseContentMode))
 				{
 					if (oldNode.id == 'bx-cursor-node')
@@ -159,7 +177,7 @@
 
 					if (bCleanNodeAfterPaste)
 					{
-						oldNode = this.CleanNodeAfterPaste(oldNode);
+						oldNode = this.CleanNodeAfterPaste(oldNode, prevNode);
 						if (!oldNode)
 						{
 							return null;
@@ -186,9 +204,11 @@
 						{
 							newNode = oldNode.cloneNode(true);
 							newNode.innerHTML = '';
+							newChild = null;
+
 							for (i = 0; i < oldChilds.length; i++)
 							{
-								newChild = this.Convert(oldChilds[i], cleanUp, parseBx);
+								newChild = this.Convert(oldChilds[i], cleanUp, parseBx, newChild);
 								if (newChild)
 								{
 									newNode.appendChild(newChild);
@@ -319,6 +339,19 @@
 				nodeName = "div";
 			}
 
+			// chrome bug, mantis: #61981
+			if (!this.editor.util.FirstLetterSupported() && oldNode.className)
+			{
+				if (oldNode.className == this.FIRST_LETTER_CLASS && !this.bParseBx)
+				{
+					this.HandleFirstLetterNode(oldNode);
+				}
+				else if (oldNode.className == this.FIRST_LETTER_CLASS_CHROME && this.bParseBx)
+				{
+					this.HandleFirstLetterNodeBack(oldNode);
+				}
+			}
+
 			// Add "data-bx-no-border"="Y" for tables without borders
 			if (nodeName == "table" && !this.bParseBx)
 			{
@@ -390,49 +423,23 @@
 			return newNode;
 		},
 
-		CleanNodeAfterPaste: function(oldNode)
+		CleanNodeAfterPaste: function(oldNode, prevNode)
 		{
 			var
-				styleName, styleValue, name, i,
+				name, i,
 				nodeName = oldNode.nodeName,
-				innerHtml = BX.util.trim(oldNode.innerHTML),
+				innerHtml = oldNode.innerHTML,
+				innerHtmlTrimed = BX.util.trim(innerHtml),
 				whiteAttributes = {align: 1, alt: 1, bgcolor: 1, border: 1, cellpadding: 1, cellspacing: 1, color:1, colspan:1, height: 1, href: 1, rowspan: 1, size: 1, span: 1, src: 1, style: 1, target: 1, title: 1, type: 1, value: 1, width: 1},
-				cleanEmpty = {"A": 1, "SPAN": 1, "B": 1, "STRONG": 1, "I": 1, "EM": 1, "U": 1, "DEL": 1, "S": 1, "STRIKE": 1, "H1": 1, "H2": 1, "H3": 1, "H4": 1, "H5": 1, "H6": 1},
-				whiteCssList = {
-					'background-color': 'transparent',
-					'background-image': 1,
-					'background-position': 1,
-					'background-repeat': 1,
-					'background': 1,
-					'border-collapse': 1,
-					'border-color': 1,
-					'border-style': 1,
-					'border-top': 1,
-					'border-right': 1,
-					'border-bottom': 1,
-					'border-left': 1,
-					'border-top-color': 1,
-					'border-right-color': 1,
-					'border-bottom-color': 1,
-					'border-left-color': 1,
-					'border-top-style': 1,
-					'border-right-style': 1,
-					'border-bottom-style': 1,
-					'border-left-style': 1,
-					'border-top-width': 1,
-					'border-right-width': 1,
-					'border-bottom-width': 1,
-					'border-left-width': 1,
-					'border-width': 1,
-					'border': 1,
-					'color': '#000000',
-					//'font-size': 1,
-					'font-style': 'normal',
-					'font-weight': 'normal',
-					'text-decoration': 'none',
-					'height': 1,
-					'width': 1
-				};
+				decorNodes = {"B": 1, "STRONG": 1, "I": 1, "EM": 1, "U": 1, "DEL": 1, "S": 1, "STRIKE": 1},
+				cleanEmpty = {"A": 1, "SPAN": 1, "B": 1, "STRONG": 1, "I": 1, "EM": 1, "U": 1, "DEL": 1, "S": 1, "STRIKE": 1, "H1": 1, "H2": 1, "H3": 1, "H4": 1, "H5": 1, "H6": 1, "ABBR": 1, "TIME": 1, "FIGURE": 1,  "FIGCAPTION": 1};
+
+
+			// Clean iframes
+			if (nodeName == 'IFRAME')
+			{
+				return null;
+			}
 
 			// Clean items with display: none
 			if (oldNode.style.display == 'none' || oldNode.style.visibility == 'hidden')
@@ -446,8 +453,32 @@
 				return null;
 			}
 
+			var cleanAttribute = oldNode.getAttribute('data-bx-clean-attribute');
+			if (cleanAttribute)
+			{
+				oldNode.removeAttribute(cleanAttribute);
+				oldNode.removeAttribute('data-bx-clean-attribute');
+			}
+
+			// Drag & Drop of the images
+			if (nodeName == 'IMG')
+			{
+				var alt = oldNode.getAttribute('alt');
+				if(alt === '')
+				{
+					oldNode.removeAttribute('alt');
+				}
+				else if(typeof alt == 'string' && alt !== '' && alt.indexOf('://') !== -1)
+				{
+					this.CheckAltImage(oldNode);
+				}
+				oldNode.removeAttribute('class');
+				this.CleanNodeCss(oldNode);
+				return oldNode;
+			}
+
 			// Clean anchors
-			if (nodeName == 'A' && (innerHtml == '' || innerHtml == '&nbsp;'))
+			if (nodeName == 'A' && (innerHtmlTrimed == '' || innerHtmlTrimed == '&nbsp;'))
 			{
 				return null;
 			}
@@ -466,7 +497,7 @@
 			while (i < oldNode.attributes.length)
 			{
 				name = oldNode.attributes[i].name;
-				if (!whiteAttributes[name])
+				if (!whiteAttributes[name] || oldNode.attributes[i].value == '')
 				{
 					oldNode.removeAttribute(name);
 				}
@@ -477,12 +508,19 @@
 			}
 
 			// Clean pasted div's
-			if (nodeName == 'DIV' || oldNode.style.display == 'block')
+			if (nodeName == 'DIV' || oldNode.style.display == 'block' || nodeName == 'FORM')
 			{
 				if (!oldNode.lastChild || (oldNode.lastChild && oldNode.lastChild.nodeName != 'BR'))
 				{
 					oldNode.appendChild(oldNode.ownerDocument.createElement("BR")).setAttribute('data-bx-paste-flag', 'Y');
 				}
+
+				// mantis #54501
+				if (prevNode && typeof prevNode == 'object' && prevNode.nodeType == 3 && oldNode.firstChild)
+				{
+					oldNode.insertBefore(oldNode.ownerDocument.createElement("BR"), oldNode.firstChild).setAttribute('data-bx-paste-flag', 'Y');
+				}
+
 				oldNode.setAttribute('data-bx-new-rule', 'replace_with_children');
 				oldNode.setAttribute('data-bx-replace_with_children', '1');
 			}
@@ -494,64 +532,19 @@
 				oldNode.setAttribute('data-bx-replace_with_children', '1');
 			}
 
+			if (decorNodes[nodeName] && this.editor.config.pasteSetDecor)
+			{
+				oldNode.setAttribute('data-bx-new-rule', 'replace_with_children');
+				oldNode.setAttribute('data-bx-replace_with_children', '1');
+			}
+
 			if (this.IsAnchor(oldNode) && (oldNode.name == '' || BX.util.trim(oldNode.name == '')))
 			{
 				oldNode.setAttribute('data-bx-new-rule', 'replace_with_children');
 				oldNode.setAttribute('data-bx-replace_with_children', '1');
 			}
 
-			var styles, j;
-			// Clean style
-			if (oldNode.style && BX.util.trim(oldNode.style.cssText) != '')
-			{
-				i = 0;
-				styles = [];
-				while (i < oldNode.style.length)
-				{
-					styleName = oldNode.style[i];
-					styleValue = oldNode.style.getPropertyValue(styleName);
-
-					if (!whiteCssList[styleName] || styleValue == whiteCssList[styleName])
-					{
-						oldNode.style.removeProperty(styleName);
-						continue;
-					}
-
-					// Clean colors like rgb(0,0,0)
-					if (styleName.indexOf('color') !== -1)
-					{
-						styleValue = this.editor.util.RgbToHex(styleValue);
-						if (styleValue == whiteCssList[styleName] || styleValue == 'transparent' || styleValue == 'black')
-						{
-							oldNode.style.removeProperty(styleName);
-							continue;
-						}
-					}
-
-					// Clean hidden borders, for example: border-top: medium none;
-					if (styleName.indexOf('border') !== -1 && styleValue.indexOf('none') !== -1)
-					{
-						oldNode.style.removeProperty(styleName);
-						continue;
-					}
-
-					styles.push({name: styleName, value: styleValue});
-					i++;
-				}
-
-				oldNode.removeAttribute('style');
-				if (styles.length > 0)
-				{
-					for (j = 0; j < styles.length; j++)
-					{
-						oldNode.style[styles[j].name] = styles[j].value;
-					}
-				}
-			}
-			else
-			{
-				oldNode.removeAttribute('style');
-			}
+			this.CleanNodeCss(oldNode);
 
 			// Clear useless spans
 			if (nodeName == 'SPAN' && oldNode.style.cssText == '')
@@ -569,16 +562,194 @@
 			return oldNode;
 		},
 
-		HandleText: function(oldNode)
+		CleanNodeCss: function(node)
 		{
-			var data = oldNode.data;
+			var
+				styles, j, styleName, styleValue, i,
+				nodeName = node.nodeName,
+				whiteCssList = {
+					'height': ['auto'],
+					'width': ['auto']
+				};
+
+			if (!this.editor.config.pasteSetColors)
+			{
+				whiteCssList['color'] = ['#000000', '#000', 'black'];
+				whiteCssList['background-color'] = ['transparent', '#fff', '#ffffff', 'white'];
+				whiteCssList['background'] = 1;
+			}
+
+			if (!this.editor.config.pasteSetBorders)
+			{
+				whiteCssList['border-collapse'] = 1;
+				whiteCssList['border-color'] = ['transparent', '#fff', '#ffffff', 'white'];
+				whiteCssList['border-style'] = ['none', 'hidden'];
+				whiteCssList['border-top'] = ['0px', '0'];
+				whiteCssList['border-right'] = ['0px', '0'];
+				whiteCssList['border-bottom'] = ['0px', '0'];
+				whiteCssList['border-left'] = ['0px', '0'];
+				whiteCssList['border-top-color'] = ['transparent', '#fff', '#ffffff', 'white'];
+				whiteCssList['border-right-color'] = ['transparent', '#fff', '#ffffff', 'white'];
+				whiteCssList['border-bottom-color'] = ['transparent', '#fff', '#ffffff', 'white'];
+				whiteCssList['border-left-color'] = ['transparent', '#fff', '#ffffff', 'white'];
+				whiteCssList['border-top-style'] = ['none', 'hidden'];
+				whiteCssList['border-right-style'] = ['none', 'hidden'];
+				whiteCssList['border-bottom-style'] = ['none', 'hidden'];
+				whiteCssList['border-left-style'] = ['none', 'hidden'];
+				whiteCssList['border-top-width'] = ['0px', '0'];
+				whiteCssList['border-right-width'] = ['0px', '0'];
+				whiteCssList['border-bottom-width'] = ['0px', '0'];
+				whiteCssList['border-left-width'] = ['0px', '0'];
+				whiteCssList['border-width'] = ['0px', '0'];
+				whiteCssList['border'] = ['0px', '0'];
+			}
+
+			if (!this.editor.config.pasteSetDecor)
+			{
+				whiteCssList['font-style'] = ['normal'];
+				whiteCssList['font-weight'] = ['normal'];
+				whiteCssList['text-decoration'] = ['none'];
+			}
+
+			// Clean style
+			if (node.style && BX.util.trim(node.style.cssText) != '' && nodeName !== 'BR')
+			{
+				styles = [];
+				for (i in node.style)
+				{
+					if (node.style.hasOwnProperty(i))
+					{
+						if (parseInt(i).toString() === i)
+						{
+							styleName = node.style[i];
+							styleValue = node.style.getPropertyValue(styleName);
+						}
+						else
+						{
+							styleName = i;
+							styleValue = node.style.getPropertyValue(styleName);
+						}
+
+						if (styleValue === null)
+							continue;
+
+						if (!whiteCssList[styleName] ||
+							styleValue.match(/^-(moz|webkit|ms|o)/ig) ||
+							styleValue == 'inherit' ||
+							styleValue == 'initial' ||
+							(styleName == 'color' && nodeName == 'A') || // Color for links
+							((nodeName == 'SPAN' || nodeName == 'P') && (styleName == 'width' || styleName == 'height')) || // Sizes for SPAN and P
+							(typeof whiteCssList[styleName] == 'object' && BX.util.in_array(styleValue.toLowerCase(), whiteCssList[styleName])))
+						{
+							continue;
+						}
+
+						// Clean colors like rgb(0,0,0)
+						if (styleName.indexOf('color') !== -1)
+						{
+							styleValue = this.editor.util.RgbToHex(styleValue);
+							if ((typeof whiteCssList[styleName] == 'object' && BX.util.in_array(styleValue.toLowerCase(), whiteCssList[styleName])) ||
+								styleValue == 'transparent')
+							{
+								continue;
+							}
+						}
+
+						// Clean hidden borders, for example: border-top: medium none;
+						if (styleName.indexOf('border') !== -1 && styleValue.indexOf('none') !== -1)
+						{
+							continue;
+						}
+
+						styles.push({name: styleName, value: styleValue});
+					}
+
+				}
+
+				node.removeAttribute('style');
+				if (styles.length > 0)
+				{
+					for (j = 0; j < styles.length; j++)
+					{
+						node.style[styles[j].name] = styles[j].value;
+					}
+				}
+			}
+			else
+			{
+				node.removeAttribute('style');
+			}
+		},
+
+
+		CheckAltImage: function(img)
+		{
+			var doc = this.editor.GetIframeDoc();
+
+			function getImageBySrc(src)
+			{
+				var
+					i,
+					imgs = doc.getElementsByTagName('IMG');
+
+				for (i = 0; i < imgs.length; i++)
+				{
+					if (imgs[i].src === src)
+					{
+						return imgs[i];
+					}
+				}
+			}
+
+			function onload()
+			{
+				if (img.src === img.alt && img.getAttribute('data-bx-orig-src') !== img.src)
+				{
+					img.setAttribute("data-bx-orig-src", img.getAttribute('src'));
+				}
+
+				BX.unbind(img, 'load', onload);
+				BX.unbind(img, 'error', onerror);
+			}
+
+			function onerror()
+			{
+				var
+					alt = img.getAttribute('alt'),
+					imgNode = getImageBySrc(img.src);
+
+				if (!imgNode)
+				{
+					BX.unbind(img, 'load', onload);
+					BX.unbind(img, 'error', onerror);
+					return;
+				}
+				if (img.getAttribute('src') !== img.alt)
+				{
+					imgNode.setAttribute("src", alt);
+				}
+				else
+				{
+					imgNode.setAttribute("src", img.getAttribute('data-bx-orig-src'));
+					BX.unbind(img, 'load', onload);
+					BX.unbind(img, 'error', onerror);
+				}
+			}
+
+			BX.bind(img, 'load', onload);
+			BX.bind(img, 'error', onerror);
+		},
+
+		HandleText: function(node)
+		{
+			var data = node.data;
 			if (this.editor.pasteHandleMode && data.indexOf('EndFragment:') !== -1)
 			{
 				// Clean content inserted from OpenOffice in MacOs
 				data = data.replace(/Version:\d\.\d(?:\s|\S)*?StartHTML:\d+(?:\s|\S)*?EndHTML:\d+(?:\s|\S)*?StartFragment:\d+(?:\s|\S)*?EndFragment:\d+(?:\s|\n|\t|\r)*/g, '');
 			}
 
-			return oldNode.ownerDocument.createTextNode(data);
+			return node.ownerDocument.createTextNode(data);
 		},
 
 		HandleAttributes: function(oldNode, newNode, rule, parseBx)
@@ -876,7 +1047,7 @@
 
 			if (parseBx && content.indexOf('data-bx-noindex') !== -1)
 			{
-				content = content.replace(/(<a[\s\S]*?)data\-bx\-noindex="Y"([\s\S]*?\/a>)/ig, function(s, s1, s2)
+				content = content.replace(/(<a[^(<a)]*?)data\-bx\-noindex="Y"([\s\S]*?>[\s\S]*?\/a>)/ig, function(s, s1, s2)
 				{
 					return '<!--noindex-->' + s1 + s2 + '<!--\/noindex-->';
 				});
@@ -932,6 +1103,109 @@
 						node.nodeName == 'BLOCKQUOTE' || node.nodeName == 'DIV'
 					)
 				);
+		},
+
+		// For chrome only
+		HandleFirstLetterNode: function(node)
+		{
+			this.firstNodeCheck = true;
+			node.className = this.FIRST_LETTER_CLASS_CHROME;
+			var
+				flTextNode = this._GetFlTextNode(node),
+				textContent, flSpan;
+
+			if (flTextNode)
+			{
+				textContent = BX.util.trim(this.editor.util.GetTextContent(flTextNode));
+				flSpan = BX.create('SPAN', {props: {className: this.FIRST_LETTER_SPAN}, text: textContent.substr(0, 1)}, node.ownerDocument);
+				this.editor.util.SetTextContent(flTextNode, textContent.substr(1));
+				flTextNode.parentNode.insertBefore(flSpan, flTextNode);
+			}
+		},
+
+		HandleFirstLetterNodeBack: function(node)
+		{
+			this.firstNodeCheck = true;
+			node.className = this.FIRST_LETTER_CLASS;
+			var flSpan = this._GetFlSpan(node);
+			if (flSpan)
+			{
+				this.editor.util.ReplaceWithOwnChildren(flSpan);
+			}
+		},
+
+		_GetFlSpan: function(node)
+		{
+			return BX.findChild(node, {className: this.FIRST_LETTER_SPAN}, 1);
+		},
+
+		_GetFlTextNode: function(node)
+		{
+			if (node.innerHTML == '' || !node.firstChild)
+				return null;
+			if (node.firstChild && node.firstChild.nodeType == 3 && node.firstChild.nodeValue && BX.util.trim(node.firstChild.nodeValue) !== '')
+				return node.firstChild;
+
+			var
+				iter = 0,
+				_this = this,
+				nodeI = node;
+
+			while(iter++ <= 100)
+			{
+				nodeI = BX.findChild(nodeI, function(n){return (BX.util.trim(_this.editor.util.GetTextContent(n)) !== '');}, false);
+				if (nodeI.nodeType == 3 && nodeI.nodeValue && BX.util.trim(nodeI.nodeValue) !== '')
+				{
+					return nodeI;
+				}
+			}
+
+			return null;
+		},
+
+		FirstLetterCheckNodes: function(content, contentTextarea, hardCheck)
+		{
+			var doc = this.editor.GetIframeDoc(), i;
+			if (this.firstNodeCheck || content.indexOf(this.FIRST_LETTER_CLASS) !== -1 || hardCheck === true)
+			{
+				var
+					flSpan, html,
+					nodes1 = doc.querySelectorAll('.' + this.FIRST_LETTER_CLASS),
+					nodes2 = doc.querySelectorAll('.' + this.FIRST_LETTER_CLASS_CHROME);
+
+				for (i = 0; i < nodes2.length; i++)
+				{
+					html = BX.util.trim(nodes2[i].innerHTML);
+					if (html == '' || html == '<br>')
+					{
+						BX.remove(nodes2[i]);
+						continue;
+					}
+
+					flSpan = this._GetFlSpan(nodes2[i]);
+					if (flSpan)
+					{
+						this.editor.util.ReplaceWithOwnChildren(flSpan);
+					}
+					this.HandleFirstLetterNode(nodes2[i]);
+				}
+
+				for (i = 0; i < nodes1.length; i++)
+				{
+					this.HandleFirstLetterNode(nodes1[i]);
+				}
+
+				this.firstNodeCheck = !!(nodes1.length || nodes2.length);
+			}
+
+			if (!this.firstNodeCheck && content.indexOf(this.FIRST_LETTER_SPAN) !== -1)
+			{
+				var spans = doc.querySelectorAll('.' + this.FIRST_LETTER_SPAN);
+				for (i = 0; i < spans.length; i++)
+				{
+					this.editor.util.ReplaceWithOwnChildren(spans[i]);
+				}
+			}
 		}
 	};
 
@@ -970,6 +1244,7 @@
 //			this.bUseAPP = false;
 //		}
 
+		this.customParsers = [];
 		this.arScripts = {}; // object which contains all php codes with indexes
 		this.arJavascripts = {}; // object which contains all javascripts codes with indexes
 		this.arHtmlComments = {}; // object which contains all html comments with indexes
@@ -1423,7 +1698,7 @@
 							break;
 					}
 				}
-				return res;
+				return res || str;
 			});
 
 			return content;
@@ -1431,6 +1706,9 @@
 
 		GetPhpCodeHTML: function(code)
 		{
+			if (typeof code !== 'string')
+				return null;
+
 			var
 				result = '',
 				component = this.editor.components.IsComponent(code);
@@ -1466,21 +1744,29 @@
 
 		GetJavascriptCodeHTML: function(code)
 		{
+			if (typeof code !== 'string')
+				return null;
 			return this.GetSurrogateHTML("javascript", "Javascript", "Javascript: " + this.GetShortTitle(code, 200), {value : code});
 		},
 
 		GetHtmlCommentHTML: function(code)
 		{
+			if (typeof code !== 'string')
+				return null;
 			return this.GetSurrogateHTML("htmlcomment", BX.message('BXEdHtmlComment'), BX.message('BXEdHtmlComment') + ": " + this.GetShortTitle(code), {value : code});
 		},
 
 		GetIframeHTML: function(code)
 		{
+			if (typeof code !== 'string')
+				return null;
 			return this.GetSurrogateHTML("iframe", BX.message('BXEdIframe'), BX.message('BXEdIframe') + ": " + this.GetShortTitle(code), {value : code});
 		},
 
 		GetStyleHTML: function(code)
 		{
+			if (typeof code !== 'string')
+				return null;
 			return this.GetSurrogateHTML("style", BX.message('BXEdStyle'), BX.message('BXEdStyle') + ": " + this.GetShortTitle(code), {value : code});
 		},
 
@@ -1524,8 +1810,9 @@
 		FetchVideoIframeParams: function(html, provider)
 		{
 			var
-				attrRe = /((?:title)|(?:width)|(?:height))\s*=\s*("|')([\s\S]*?)(\2)/ig,
+				attrRe = /((?:src)|(?:title)|(?:width)|(?:height))\s*=\s*("|')([\s\S]*?)(\2)/ig,
 				res = {
+					src: '',
 					width: 180,
 					height: 100,
 					title: provider ? BX.message('BXEdVideoTitleProvider').replace('#PROVIDER_NAME#', provider) : BX.message('BXEdVideoTitle'),
@@ -1545,9 +1832,12 @@
 				}
 				else if (attrName == 'title')// title
 				{
-					//var title = BX.util.htmlspecialcharsback(attrValue);
 					res.origTitle = BX.util.htmlspecialcharsback(attrValue);
 					res.title += ': ' + attrValue;
+				}
+				else
+				{
+					res[attrName] = attrValue;
 				}
 				return s;
 			});
@@ -1626,7 +1916,6 @@
 
 		GetShortTitle: function(str, trim)
 		{
-			//trim = trim || 100;
 			if (str.length > 100)
 				str = str.substr(0, 100) + '...';
 			return str;
@@ -2185,11 +2474,14 @@
 				surr = surrs[i];
 				if (usedSurrs[surr.id])
 				{
-					BX.remove(surr);
+					if (surr.getAttribute('data-bx-paste-flag') == 'Y' || usedSurrs[surr.id].getAttribute('data-bx-paste-flag') != 'Y')
+						BX.remove(surr);
+					else if (usedSurrs[surr.id].getAttribute('data-bx-paste-flag') == 'Y')
+						BX.remove(usedSurrs[surr.id]);
 				}
 				else
 				{
-					usedSurrs[surr.id] = true;
+					usedSurrs[surr.id] = surr;
 					surBxTag = this.editor.GetBxTag(surr.id);
 					surr.innerHTML = this.GetSurrogateInner(surBxTag.surrogateId, surBxTag.title, surBxTag.name);
 				}
@@ -2656,7 +2948,7 @@
 
 		CustomContentParse: function(content)
 		{
-			for (var i = 0; i < this.customParsers; i++)
+			for (var i = 0; i < this.customParsers.length; i++)
 			{
 				if (typeof this.customParsers[i] == 'function')
 				{
@@ -2669,7 +2961,8 @@
 
 		AddCustomParser: function(parser)
 		{
-			this.customParsers.push(parser);
+			if (typeof parser == 'function')
+				this.customParsers.push(parser);
 		}
 	};
 
@@ -2684,7 +2977,6 @@
 		{
 			var el = this.editor.parser.GetAsDomElement(content, this.editor.GetIframeDoc());
 			el.setAttribute('data-bx-parent-node', 'Y');
-
 			content = this.GetNodeHtml(el, true);
 			content = content.replace(/#BR#/ig, "\n");
 			content = content.replace(/&nbsp;/ig, " ");
@@ -2698,6 +2990,13 @@
 
 			content = content.replace(/</ig, "&lt;");
 			content = content.replace(/>/ig, "&gt;");
+
+			function secureAtr(str)
+			{
+				if(!str.replace)
+					return str;
+				return str.replace(/("|<|>)/g, '');
+			}
 
 			// [CODE] == > #BX_CODE1#
 			var arCodes = [];
@@ -2740,16 +3039,29 @@
 					return '#BX_TMP_URL' + (arUrls.length - 1) + '#';
 				});
 
-
 				l = this.editor.sortedSmiles.length;
+				var smHtml, symRe = "\\s.,;:!?\\#\\-\\*\\|\\[\\]\\(\\)\\{\\}<>&\\n\\t\\r";
 				for (i = 0; i < l; i++)
 				{
 					smile = this.editor.sortedSmiles[i];
 					if (smile.path && smile.code)
 					{
+						smHtml = '<img id="' + _this.editor.SetBxTag(false, {tag: "smile", params: smile}) + '" src="' + smile.path + '" title="' + (smile.name || smile.code) + '"/>';
 						content = content.replace(
-							new RegExp(BX.util.preg_quote(smile.code), 'ig'),
-							'<img id="' + _this.editor.SetBxTag(false, {tag: "smile", params: smile}) + '" src="' + smile.path + '" title="' + (smile.name || smile.code) + '"/>'
+							new RegExp('([' + symRe + '])' + BX.util.preg_quote(smile.code) + '([' + symRe + '])', 'ig'),
+							"$1" + smHtml + "$2"
+						);
+						content = content.replace(
+							new RegExp('([' + symRe + '])' + BX.util.preg_quote(smile.code) + '$', 'ig'),
+							"$1" + smHtml
+						);
+						content = content.replace(
+							new RegExp('^' + BX.util.preg_quote(smile.code) + '([' + symRe + '])', 'ig'),
+							smHtml + "$1"
+						);
+						content = content.replace(
+							new RegExp('^' + BX.util.preg_quote(smile.code) + '$', 'ig'),
+							smHtml
 						);
 					}
 				}
@@ -2770,7 +3082,8 @@
 			// * * * Handle Smiles  END * * *
 
 			// Quote
-			content = content.replace(/\n?\[quote\]/ig, '<blockquote class="bxhtmled-quote">');
+			//content = content.replace(/\n?\[quote\]/ig, '<blockquote class="bxhtmled-quote">');
+			content = content.replace(/\[quote\]/ig, '<blockquote class="bxhtmled-quote">');
 			content = content.replace(/\[\/quote\]\n?/ig, '</blockquote>');
 
 			// Table
@@ -2812,19 +3125,26 @@
 			}
 
 			// Link
-			content = content.replace(/\[url\]((?:\s|\S)*?)\[\/url\]/ig, "<a href=\"$1\">$1</a>");
-			content = content.replace(/\[url\s*=\s*((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/url\]/ig, "<a href=\"$1\">$2</a>");
+			content = content.replace(/\[url\]((?:\s|\S)*?)\[\/url\]/ig, function(str, href)
+			{
+				return '<a href="' + secureAtr(href) + '">' + href + '</a>';
+			});
+			content = content.replace(/\[url\s*=\s*((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/url\]/ig, function(str, href, html)
+			{
+				return '<a href="' + secureAtr(href) + '">' + html + '</a>';
+			});
 
 			// Img
 			content = content.replace(/\[img((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/img\]/ig,
 				function(str, params, src)
 				{
 					params = _this.FetchImageParams(params);
+					src = secureAtr(src);
 					var size = "";
 					if (params.width)
-						size += 'width:' + params.width + 'px;';
+						size += 'width:' + parseInt(params.width) + 'px;';
 					if (params.height)
-						size += 'height:' + params.height + 'px;';
+						size += 'height:' + parseInt(params.height) + 'px;';
 					if (size !== '')
 						size = 'style="' + size + '"';
 					return '<img  src="' + src + '"' + size + '/>';
@@ -2835,7 +3155,7 @@
 			i = 0;
 			while (content.toLowerCase().indexOf('[color=') != -1 && content.toLowerCase().indexOf('[/color]') != -1 && i++ < 20)
 			{
-				content = content.replace(/\[color=((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/color\]/ig, "<span style=\"color:$1\">$2</span>");
+				content = content.replace(/\[color=((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/color\]/ig, function(s, value, cont){ return '<span style="color:' + secureAtr(value) + '">' + cont + '</span>' });
 			}
 
 			// List
@@ -2856,19 +3176,20 @@
 			i = 0;
 			while (content.toLowerCase().indexOf('[font=') != -1 && content.toLowerCase().indexOf('[/font]') != -1 && i++ < 20)
 			{
-				content = content.replace(/\[font=((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/font\]/ig, "<span style=\"font-family: $1\">$2</span>");
+
+				content = content.replace(/\[font=((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/font\]/ig, function(s, value, cont){ return '<span style="font-family:' + secureAtr(value) + '">' + cont + '</span>' });
 			}
 
 			// Font size
 			i = 0;
 			while (content.toLowerCase().indexOf('[size=') != -1 && content.toLowerCase().indexOf('[/size]') != -1 && i++ < 20)
 			{
-				content = content.replace(/\[size=((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/size\]/ig, "<span style=\"font-size: $1\">$2</span>");
+				content = content.replace(/\[size=((?:\s|\S)*?)\]((?:\s|\S)*?)\[\/size\]/ig, function(s, value, cont){ return '<span style="font-size:' + secureAtr(value) + '">' + cont + '</span>' });
 			}
 
 			if (this.parseAlign)
 			{
-				content = content.replace(/\[(center|left|right|justify)\]/ig, "<div style=\"text-align: $1;\" align=\"$1;\">");
+				content = content.replace(/\[(center|left|right|justify)\]/ig, function(s, value){return '<div style="text-align:' + secureAtr(value) + '">';});
 				content = content.replace(/\[\/(center|left|right|justify)\]/ig, "</div>");
 			}
 
@@ -2918,8 +3239,20 @@
 						return "\n";
 					}
 
+					// Mantis: 54329
+					if (BX.browser.IsChrome() && this.editor.pasteHandleMode && node.nextSibling && node.nextSibling.nodeName == 'P')
+					{
+						text = text.replace(/\n+/ig, "\n");
+					}
+
+					// List of tags inside of which \n will be cleaned in textNodes
 					if (node.parentNode && !node.parentNode.getAttribute('data-bx-parent-node') &&
-						(node.parentNode.nodeName == 'P' || node.parentNode.nodeName == 'DIV'))
+						BX.util.in_array(node.parentNode.nodeName, ['P', 'DIV', 'SPAN', 'TD', 'TH', 'B', 'STRONG', 'I', 'EM', 'U', 'DEL', 'S','STRIKE', 'BLOCKQUOTE']))
+					{
+						text = text.replace(/\n/ig, " ");
+					}
+
+					if (BX.browser.IsMac())
 					{
 						text = text.replace(/\n/ig, " ");
 					}
@@ -2940,7 +3273,6 @@
 				}
 
 				var bbRes = this.UnParseNodeBB(oNode);
-
 				if (bbRes !== false)
 				{
 					return bbRes;
@@ -3177,7 +3509,7 @@
 			else if(nodeName == 'BLOCKQUOTE' && oNode.node.className == 'bxhtmled-quote' && !oNode.node.getAttribute('data-bx-skip-check'))
 			{
 				oNode.bbTag = 'QUOTE';
-				oNode.breakLineBefore = true;
+				//oNode.breakLineBefore = true;
 				oNode.breakLineAfterEnd = true;
 
 				if (isAlign)
@@ -3297,7 +3629,6 @@
 			return res;
 		},
 
-
 		FetchImageParams: function(str)
 		{
 			str = BX.util.trim(str);
@@ -3375,14 +3706,13 @@
 				if (code.substr(i).indexOf('<') == -1)
 				{
 					result += code.substr(i);
-
 					result = result.replace(/\n\s*\n/g, '\n');  //blank lines
 					result = result.replace(/^[\s\n]*/, ''); //leading space
 					result = result.replace(/[\s\n]*$/, ''); //trailing space
 
 					if (result.indexOf('<!--noindex-->') !== -1)
 					{
-						result = result.replace(/(<!--noindex-->)(?:[\s|\n|\r|\t]*?)(<a[\s\S]*?\/a>)(?:[\s|\n|\r|\t]*?)(<!--\/noindex-->)/ig, "$1$2$3");
+						result = result.replace(/(<!--noindex-->)(?:[\s|\n|\r|\t]*?)(<a[\s\S]*?\/a>)(?:[\s|\n|\r|\t]*?)(<!--\/noindex-->)(?:[\n|\r|\t]*)/ig, "$1$2$3");
 					}
 
 					return result;

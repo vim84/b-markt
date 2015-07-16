@@ -17,7 +17,17 @@ IncludeModuleLangFile(__FILE__);
 
 $obBucket = new CCloudStorageBucket(intval($_GET["bucket"]));
 if(!$obBucket->Init())
-	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
+{
+	$APPLICATION->SetTitle($obBucket->BUCKET);
+	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
+	$message = new CAdminMessage(array(
+		"MESSAGE" => GetMessage("CLO_STORAGE_FILE_LIST_ERROR"),
+		"DETAILS" => GetMessage("CLO_STORAGE_FILE_UNKNOWN_ERROR", array("#CODE#" => "L00")),
+	));
+	echo $message->Show();
+	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
+	die();
+}
 
 $PHPchunkSize = 1024*1024; // 1M later TODO return_bytes(ini_get('post_max_size'))
 $CLOchunkSize = $obBucket->GetService()->GetMinUploadPartSize();
@@ -26,6 +36,11 @@ $message = /*.(CAdminMessage).*/null;
 $path = (string)$_GET["path"];
 $sTableID = "tbl_clouds_file_list";
 $lAdmin = new CAdminList($sTableID);
+
+$arFilterFields = Array(
+	"find_name",
+);
+$lAdmin->InitFilter($arFilterFields);
 
 $arID = $lAdmin->GroupAction();
 $action = isset($_REQUEST["action"]) && is_string($_REQUEST["action"])? "$_REQUEST[action]": "";
@@ -530,13 +545,42 @@ $arData = /*.(array[int][string]string).*/array();
 $arFiles = $obBucket->ListFiles($path);
 
 if($path != "/")
-	$arData[] = array("ID" => "D..", "TYPE" => "dir", "NAME" => "..", "SIZE" => "");
+{
+	$arData[] = array(
+		"ID" => "D..",
+		"TYPE" => "dir",
+		"NAME" => "..",
+		"SIZE" => "",
+	);
+}
+
 if(is_array($arFiles))
 {
 	foreach($arFiles["dir"] as $i => $dir)
-		$arData[] = array("ID" => "D".urlencode($dir), "TYPE" => "dir", "NAME" => $dir, "SIZE" => '');
+	{
+		if ($find_name == "" || strpos($dir, $find_name) !== false)
+		{
+			$arData[] = array(
+				"ID" => "D".urlencode($dir),
+				"TYPE" => "dir",
+				"NAME" => $dir,
+				"SIZE" => '',
+			);
+		}
+	}
+
 	foreach($arFiles["file"] as $i => $file)
-		$arData[] = array("ID" => "F".urlencode($file), "TYPE" => "file", "NAME" => $file, "SIZE" => $arFiles["file_size"][$i]);
+	{
+		if ($find_name == "" || strpos($file, $find_name) !== false)
+		{
+			$arData[] = array(
+				"ID" => "F".urlencode($file),
+				"TYPE" => "file",
+				"NAME" => $file,
+				"SIZE" => $arFiles["file_size"][$i],
+			);
+		}
+	}
 }
 else
 {
@@ -713,6 +757,32 @@ $aTabs = array(
 );
 $tabControl = new CAdminTabControl("tabControl", $aTabs, true, true);
 ?>
+
+<form name="find_form" method="GET" action="<?echo $APPLICATION->GetCurPage()?>?">
+<?
+$oFilter = new CAdminFilter(
+	$sTableID."_filter",
+	array(
+	)
+);
+$oFilter->Begin();
+?>
+<tr>
+	<td><b><?= GetMessage("CLO_STORAGE_FILE_NAME")?>:</b></td>
+	<td nowrap>
+		<input type="text" name="find_name" value="<?= htmlspecialcharsbx($find_name)?>" size="35">
+	</td>
+</tr>
+<?
+$oFilter->Buttons(array(
+	"table_id"=>$sTableID,
+	"url"=>"/bitrix/admin/clouds_file_list.php?lang=".urlencode(LANGUAGE_ID).'&bucket='.urlencode($obBucket->ID).'&path='.urlencode($path),
+	"form"=>"find_form",
+));
+$oFilter->End();
+?>
+</form>
+
 <script>
 
 function show_upload_form()

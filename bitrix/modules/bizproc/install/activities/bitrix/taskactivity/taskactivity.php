@@ -23,40 +23,6 @@ class CBPTaskActivity
 		);
 	}
 
-	private function __GetUsers($arUsersDraft)
-	{
-		$arUsers = array();
-
-		$rootActivity = $this->GetRootActivity();
-		$documentId = $rootActivity->GetDocumentId();
-
-		$documentService = $this->workflow->GetService("DocumentService");
-
-		$arUsersDraft = (is_array($arUsersDraft) ? $arUsersDraft : array($arUsersDraft));
-		$l = strlen("user_");
-		foreach ($arUsersDraft as $user)
-		{
-			if (substr($user, 0, $l) == "user_")
-			{
-				$user = intval(substr($user, $l));
-				if ($user > 0)
-					$arUsers[] = $user;
-			}
-			else
-			{
-				$arDSUsers = $documentService->GetUsersFromUserGroup($user, $documentId);
-				foreach ($arDSUsers as $v)
-				{
-					$user = intval($v);
-					if ($user > 0)
-						$arUsers[] = $user;
-				}
-			}
-		}
-
-		return $arUsers;
-	}
-
 	public function Execute()
 	{
 		if (!CModule::IncludeModule("intranet"))
@@ -100,28 +66,31 @@ class CBPTaskActivity
 		if ($parentSectionId <= 0)
 			return CBPActivityExecutionStatus::Closed;
 
-		$arTaskCreatedBy = $this->__GetUsers($this->TaskCreatedBy);
-		$arTaskAssignedTo = $this->__GetUsers($this->TaskAssignedTo);
+		$rootActivity = $this->GetRootActivity();
+		$documentId = $rootActivity->GetDocumentId();
 
-		if (count($arTaskCreatedBy) <= 0 || count($arTaskAssignedTo) <= 0)
+		$arTaskCreatedBy = CBPHelper::ExtractUsers($this->TaskCreatedBy, $documentId, true);
+		$arTaskAssignedTo = CBPHelper::ExtractUsers($this->TaskAssignedTo, $documentId, true);
+
+		if (!$arTaskCreatedBy || !$arTaskAssignedTo)
 			return CBPActivityExecutionStatus::Closed;
 
 		if ($this->TaskType != "group")
-			$this->TaskOwnerId = $arTaskAssignedTo[0];
+			$this->TaskOwnerId = $arTaskAssignedTo;
 
-		$arTaskTrackers = $this->__GetUsers($this->TaskTrackers);
+		$arTaskTrackers = CBPHelper::ExtractUsers($this->TaskTrackers, $documentId);
 
 		$arFields = array(
 			"IBLOCK_SECTION_ID" => $parentSectionId,
-			"MODIFIED_BY" => $arTaskCreatedBy[0],
-			"CREATED_BY" => $arTaskCreatedBy[0],
+			"MODIFIED_BY" => $arTaskCreatedBy,
+			"CREATED_BY" => $arTaskCreatedBy,
 			"DATE_CREATE" => date($GLOBALS["DB"]->DateFormatToPHP(FORMAT_DATETIME)),
 			"ACTIVE_FROM" => $this->TaskActiveFrom,
 			"ACTIVE_TO" => $this->TaskActiveTo,
 			"NAME" => $this->TaskName,
 			"DETAIL_TEXT" => $this->TaskDetailText,
 			"PROPERTY_TaskPriority" => $this->TaskPriority,
-			"PROPERTY_TaskAssignedTo" => $arTaskAssignedTo[0],
+			"PROPERTY_TaskAssignedTo" => $arTaskAssignedTo,
 			"PROPERTY_TaskTrackers" => $arTaskTrackers,
 		);
 

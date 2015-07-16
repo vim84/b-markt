@@ -1,7 +1,6 @@
 <?
 $MESS["PERFMON_HIT_TITLE"] = "Performance Monitor: Hits";
 $MESS["PERFMON_HIT_PAGE"] = "Hits";
-$MESS["PERFMON_HIT_FIND"] = "Find";
 $MESS["PERFMON_HIT_ID"] = "ID";
 $MESS["PERFMON_HIT_DATE_HIT"] = "Hit date";
 $MESS["PERFMON_HIT_SERVER_NAME"] = "Server name";

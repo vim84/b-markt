@@ -98,12 +98,12 @@ class CIBlockProperty extends CAllIBlockProperty
 				switch($arFields["PROPERTY_TYPE"])
 				{
 					case "N":
-						$strTrans = "VALUE_NUM";
-						break;
-					case "L":
 					case "F":
 					case "G":
 					case "E":
+						$strTrans = "VALUE_NUM";
+						break;
+					case "L":
 						$strTrans = "VALUE_ENUM";
 						break;
 					case "s":

@@ -47,6 +47,11 @@ class CHTMLPagesCache
 			//to warm up localStorage
 			define("ENABLE_HTML_STATIC_CACHE_JS", true);
 		}
+		else
+		{
+			//uses in check_bitrix_sessid()
+			define("BITRIX_STATIC_PAGES", true);
+		}
 
 		if ($_SERVER["REQUEST_METHOD"] !== "GET" || isset($_GET["sessid"]))
 		{

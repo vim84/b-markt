@@ -10,7 +10,7 @@ namespace Bitrix\Seo;
 use Bitrix\Main\SystemException;
 use Bitrix\Seo\SearchEngineTable;
 
-abstract class Engine
+class Engine
 {
 	const HTTP_STATUS_OK = 200;
 	const HTTP_STATUS_CREATED = 201;

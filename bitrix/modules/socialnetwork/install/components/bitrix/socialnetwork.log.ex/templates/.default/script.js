@@ -1277,5 +1277,33 @@ BitrixLF.prototype.showRefreshError = function()
 */
 }
 
+BitrixLF.prototype.LazyLoadCheckVisibility = function(image) // to check if expanded or not
+{
+	var img = image.node;
+
+	var textType = 'comment';
+
+	var textBlock = BX.findParent(img, {'className': 'feed-com-text'});
+	if (!textBlock)
+	{
+		textType = 'post';
+		textBlock = BX.findParent(img, {'className': 'feed-post-text-block'});
+	}
+
+	if (textBlock)
+	{
+		var moreBlock = BX.findChild(textBlock, {'tag':'div', 'className': 'feed-post-text-more'}, false)
+		if (
+			moreBlock 
+			&& moreBlock.style.display != 'none'
+		)
+		{
+			return img.parentNode.parentNode.offsetTop < (textType == 'comment' ? 220 : 270);
+		}
+	}
+
+	return true;
+}
+
 oLF = new BitrixLF;
 window.oLF = oLF;

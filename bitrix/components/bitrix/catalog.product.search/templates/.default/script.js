@@ -59,6 +59,10 @@ BX.Catalog.ProductSearchDialog = (function () {
 	ProductSearchDialog.prototype.SelEl = function (arParams, scope) {
 		BX.removeClass(scope, 'row-sku-selected');
 		arParams['quantity'] = 1;
+		var qtyElement = BX(this.tableId+'_qty_'+arParams['id']);
+		if (!!qtyElement)
+			arParams['quantity'] = qtyElement.value;
+
 		if (!!this.event)
 		{
 			if (typeof(arParams.IBLOCK_ID) === 'undefined')

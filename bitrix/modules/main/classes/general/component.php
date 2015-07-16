@@ -56,6 +56,10 @@ class CBitrixComponent
 	/** @var  \Bitrix\Main\HttpRequest */
 	protected $request;
 
+	private $siteId = false;
+	private $siteTemplateId = false;
+	private $languageId = false;
+
 	/**
 	 * Event called from includeComponent before component execution.
 	 *
@@ -122,6 +126,15 @@ class CBitrixComponent
 			$this->__currentCounter = $component->__currentCounter;
 			$this->__editButtons = $component->__editButtons;
 			$this->classOfComponent = $component->classOfComponent;
+			$this->setSiteId($component->getSiteId());
+			$this->setLanguageId($component->getLanguageId());
+			$this->setSiteTemplateId($component->getSiteTemplateId());
+		}
+		else
+		{
+			$this->setSiteId(SITE_ID);
+			$this->setLanguageId(LANGUAGE_ID);
+			$this->setSiteTemplateId(SITE_TEMPLATE_ID);
 		}
 
 		$this->request = \Bitrix\Main\Context::getCurrent()->getRequest();
@@ -198,6 +211,56 @@ class CBitrixComponent
 		$this->__templateName = $templateName;
 		return true;
 	}
+
+	/**
+	 * @param string $siteTemplateId
+	 */
+	public function setSiteTemplateId($siteTemplateId)
+	{
+		$this->siteTemplateId = $siteTemplateId;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getSiteTemplateId()
+	{
+		return $this->siteTemplateId;
+	}
+
+	/**
+	 * @param string $siteId
+	 */
+	public function setSiteId($siteId)
+	{
+		$this->siteId = $siteId;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getSiteId()
+	{
+		return $this->siteId;
+	}
+
+	/**
+	 * @param string $languageId
+	 */
+	public function setLanguageId($languageId)
+	{
+		$this->languageId = $languageId;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getLanguageId()
+	{
+		return $this->languageId;
+	}
+
+
 	/**
 	 * Function returns the template page witch was set with initComponentTemplate
 	 *
@@ -537,7 +600,7 @@ class CBitrixComponent
 		if (!$this->__bInited)
 			return null;
 
-		if ($this->initComponentTemplate($templatePage, false, $customTemplatePath))
+		if ($this->initComponentTemplate($templatePage, $this->getSiteTemplateId(), $customTemplatePath))
 		{
 			$this->showComponentTemplate();
 			if($this->__component_epilog)
@@ -572,6 +635,7 @@ class CBitrixComponent
 		$this->__templatePage = $templatePage;
 
 		$this->__template = new CBitrixComponentTemplate();
+		$this->__template->setLanguageId($this->getLanguageId());
 		if ($this->__template->Init($this, $siteTemplate, $customTemplatePath))
 			return true;
 		else
@@ -660,7 +724,22 @@ class CBitrixComponent
 	 */
 	public function getCacheID($additionalCacheID = false)
 	{
-		$cacheID = SITE_ID."|".LANGUAGE_ID.(defined("SITE_TEMPLATE_ID")? "|".SITE_TEMPLATE_ID:"")."|".$this->__name."|".$this->getTemplateName()."|";
+		if(!$this->getSiteId())
+			$SITE_ID = SITE_ID;
+		else
+			$SITE_ID = $this->getSiteId();
+
+		if(!$this->getLanguageId())
+			$LANGUAGE_ID = LANGUAGE_ID;
+		else
+			$LANGUAGE_ID = $this->getLanguageId();
+
+		if(!$this->getSiteTemplateId())
+			$SITE_TEMPLATE_ID = (defined("SITE_TEMPLATE_ID")? SITE_TEMPLATE_ID:"");
+		else
+			$SITE_TEMPLATE_ID = $this->getSiteTemplateId();
+
+		$cacheID = $SITE_ID."|".$LANGUAGE_ID.($SITE_TEMPLATE_ID != "" ? "|".$SITE_TEMPLATE_ID:"")."|".$this->__name."|".$this->getTemplateName()."|";
 
 		foreach($this->arParams as $k=>$v)
 			if(strncmp("~", $k, 1))

@@ -3294,7 +3294,7 @@ class CAdvBanner_all
 							$strReturn = '<div style="width: '.$arImage["WIDTH"].'px; height: '.$arImage["HEIGHT"].'px; padding:0; margin:0">';
 							if(strlen(trim($arBanner["URL"]))>0 && $arBanner["NO_URL_IN_FLASH"] == "Y")
 							{
-								$strReturn .= ($bNoIndex? '<noindex>':'').'<div style="position:absolute; z-index:100;"><a href="'.$url.'"'.$a_target.$a_title.($bNoIndex? ' rel="nofollow"':'').'><img src="/bitrix/images/1.gif" width="'.$arImage["WIDTH"].'" height="'.$arImage["HEIGHT"].'" border="0" alt="'.htmlspecialcharsEx($alt).'" /></a></div>'.($bNoIndex? '</noindex>':'');
+								$strReturn .= ($bNoIndex? '<noindex>':'').'<div style="position:absolute; z-index:100;"><a href="'.$url.'"'.$a_target.$a_title.($bNoIndex? ' rel="nofollow"':'').'><img src="/bitrix/images/1.gif" width="'.$arImage["WIDTH"].'" height="'.$arImage["HEIGHT"].'" style="border:0;" alt="'.htmlspecialcharsEx($alt).'" /></a></div>'.($bNoIndex? '</noindex>':'');
 							}
 							$strReturn .=
 '<OBJECT
@@ -3344,7 +3344,7 @@ class CAdvBanner_all
 							if(trim($arBanner["URL"]) <> '')
 							{
 								if($arBanner["NO_URL_IN_FLASH"] == "Y")
-									$strReturn .= ($bNoIndex? '<noindex>':'').'<div style="position:absolute; z-index:100;"><a href="'.$url.'"'.$a_target.$a_title.($bNoIndex? ' rel="nofollow"':'').'><img src="/bitrix/images/1.gif" width="'.$arImage["WIDTH"].'" height="'.$arImage["HEIGHT"].'" border="0" alt="'.htmlspecialcharsEx($alt).'" /></a></div>'.($bNoIndex? '</noindex>':'');
+									$strReturn .= ($bNoIndex? '<noindex>':'').'<div style="position:absolute; z-index:100;"><a href="'.$url.'"'.$a_target.$a_title.($bNoIndex? ' rel="nofollow"':'').'><img src="/bitrix/images/1.gif" width="'.$arImage["WIDTH"].'" height="'.$arImage["HEIGHT"].'" style="border:0;" alt="'.htmlspecialcharsEx($alt).'" /></a></div>'.($bNoIndex? '</noindex>':'');
 								else
 									$altHref = $url;
 							}
@@ -3363,7 +3363,7 @@ class CAdvBanner_all
 
 					default:
 						$alt = CAdvBanner::PrepareHTML(trim($arBanner["IMAGE_ALT"]), $arBanner);
-						$strImage = "<img alt=\"".htmlspecialcharsEx($alt)."\"  title=\"".htmlspecialcharsEx($alt)."\" src=\"".$path."\" width=\"".$arImage["WIDTH"]."\" height=\"".$arImage["HEIGHT"]."\" border=\"0\" />";
+						$strImage = "<img alt=\"".htmlspecialcharsEx($alt)."\" title=\"".htmlspecialcharsEx($alt)."\" src=\"".$path."\" width=\"".$arImage["WIDTH"]."\" height=\"".$arImage["HEIGHT"]."\" style=\"border:0;\" />";
 						if (strlen(trim($arBanner["URL"]))>0)
 						{
 							$url = $arBanner["URL"];
@@ -3407,7 +3407,7 @@ class CAdvBanner_all
 			array_key_exists("BANNERS_CNT", $CACHE_ADVERTISING) &&
 			is_array($CACHE_ADVERTISING["BANNERS_CNT"]))
 		{
-		
+
 			if( array_key_exists( "ALL_DATE_SHOW_FIRST", $CACHE_ADVERTISING ) && is_array( $CACHE_ADVERTISING["ALL_DATE_SHOW_FIRST"] ) )
 			{
 				foreach( $CACHE_ADVERTISING["ALL_DATE_SHOW_FIRST"] as $key => $value )
@@ -3415,7 +3415,7 @@ class CAdvBanner_all
 					$DB->Update( "b_adv_banner", Array( "DATE_SHOW_FIRST" => $value ), "WHERE ID='" . $key . "'", $err_mess . __LINE__ );
 				}
 			}
-			
+
 			$bEqualBanID = ($CACHE_ADVERTISING["BANNERS_ALL"] == $CACHE_ADVERTISING["BANNERS_CNT"]);
 
 			//Update баннеров
@@ -3554,8 +3554,11 @@ class CAdvBanner_all
 				}
 				$cookie_value = trim($cookie_value,",");
 				$cookie_name = "BANNERS";
-				$APPLICATION->set_cookie($cookie_name, $cookie_value);
+				$secure = (COption::GetOptionString("main", "use_secure_password_cookies", "N") == "Y" && CMain::IsHTTPS());
+				$APPLICATION->set_cookie($cookie_name, $cookie_value, false, "/", false, $secure);
 			}
+
+			CAdvBanner::BeforeRestartBuffer();
 		}
 	}
 
@@ -3611,7 +3614,7 @@ class CAdvBanner_all
 			}
 		}
 	}
-	
+
 	function BeforeRestartBuffer()
 	{
 		global $CACHE_ADVERTISING, $arrADV_VIEWED_BANNERS;
@@ -3622,10 +3625,10 @@ class CAdvBanner_all
 			"CONTRACTS_CNT" => array(),
 		);
 		$arrADV_VIEWED_BANNERS = false;
-		
+
 		//return true;
 	}
-	
+
 	// устанавливаем cookie посетителю о просмотре баннера
 	function SetCookie($arBanner, &$inc_banner_counter, &$inc_contract_counter)
 	{

@@ -47,6 +47,7 @@
 							}
 							?></td>
 						<td width="50%">
+
 							<?if ($vval["TYPE"]=="CHECKBOX"):?>
 								<input type="hidden" name="<?=$name?>" value="">
 								<input type="checkbox" name="<?=$name?>" value="Y"<?if ($currentValue=="Y" || !isset($currentValue) && $vval["DEFAULT_VALUE"]=="Y") echo " checked";?>>
@@ -77,8 +78,7 @@
 							<?elseif ($vval["TYPE"]=="LOCATION"):?>
 								<?if ($arParams['USE_AJAX_LOCATIONS'] == 'Y'):?>
 
-								<?$locationValue = isset($currentValue) ? $currentValue : $vval["DEFAULT_VALUE"];?>
-
+								<?$locationValue = intval($currentValue) ? $currentValue : $vval["DEFAULT_VALUE"];?>
 								<?CSaleLocation::proxySaleAjaxLocationsComponent(
 									array(
 										"AJAX_CALL" => "N",

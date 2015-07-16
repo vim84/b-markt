@@ -10,14 +10,14 @@ ul#bx_yandex_points li, ul#bx_yandex_polylines li, #bx_yandex_position li {
 	font-size: 11px;
 	display: block;
 	overflow: hidden;
-	height: 18px;
-	margin: 0px 0px 0px 15px;
+	height: auto;
+	margin: 2px 0px 2px 15px;
 	padding: 0px;
 	white-space: nowrap;
 }
 
-ul#bx_yandex_points li a, ul#bx_yandex_polylines li a {display: block;}
-ul#bx_yandex_points li a.bx-yandex-point, ul#bx_yandex_polylines li a.bx-yandex-poly {overflow: hidden; margin-right: 20px; padding: 2px; height: 18px;}
+ul#bx_yandex_points li a, ul#bx_yandex_polylines li a {display: block; font-size: 13px;}
+ul#bx_yandex_points li a.bx-yandex-point, ul#bx_yandex_polylines li a.bx-yandex-poly {overflow: hidden; margin-right: 20px; padding: 2px;}
 * html .bx-yandex-point {width: 215px;}
 ul#bx_yandex_points li a.bx-yandex-delete, ul#bx_yandex_polylines li a.bx-yandex-delete {
 	background-image: url(/bitrix/themes/.default/public/panel_new/buttons/delete.gif); 

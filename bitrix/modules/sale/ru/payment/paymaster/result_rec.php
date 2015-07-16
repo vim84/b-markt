@@ -6,12 +6,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 
 	if (!($arOrder = CSaleOrder::GetByID(IntVal($_POST["LMI_PAYMENT_NO"]))))
 		$bCorrectPayment = False;
+
 	if ($bCorrectPayment)
 		CSalePaySystemAction::InitParamArrays($arOrder, $arOrder["ID"]);
+
 	$CNST_SECRET_KEY = CSalePaySystemAction::GetParamValue("CNST_SECRET_KEY");
+
+	if(strlen($CNST_SECRET_KEY) <= 0)
+		$bCorrectPayment = False;
+
 	$CNST_PAYEE_PURSE = CSalePaySystemAction::GetParamValue("SHOP_ACCT");
-	
 	$currency = CSalePaySystemAction::GetParamValue("CURRENCY");
+
 	if(strlen($currency) <= 0 || $currency == "RUR")
 		$currency = "RUB";
 

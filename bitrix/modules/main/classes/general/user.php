@@ -33,6 +33,7 @@ abstract class CAllUser extends CDBResult
 	var $bLoginByHash = false;
 	protected $admin = null;
 	protected static $CURRENT_USER = false;
+	protected $justAuthorized = false;
 
 	abstract public function Add($arFields);
 
@@ -347,20 +348,9 @@ abstract class CAllUser extends CDBResult
 			}
 
 			//check for an application password, including external users
-			$appPasswords = \Bitrix\Main\Authentication\ApplicationPasswordTable::getList(array(
-				'select' => array('PASSWORD', 'DIGEST_PASSWORD'),
-				'filter' => array('=USER_ID' => $arUser["ID"]),
-			));
-			while(($appPassword = $appPasswords->fetch()))
+			if(($appPassword = \Bitrix\Main\Authentication\ApplicationPasswordTable::findDigestPassword($arUser["ID"], $arDigest)) !== false)
 			{
-				$HA1 = $appPassword["DIGEST_PASSWORD"];
-				$valid_response = md5($HA1.':'.$arDigest['nonce'].':'.$HA2);
-
-				if($arDigest["response"] === $valid_response)
-				{
-					//application password
-					return $USER->Login($arDigest["username"], $appPassword["PASSWORD"], "N", "N");
-				}
+				return $USER->Login($arDigest["username"], $appPassword["PASSWORD"], "N", "N");
 			}
 
 			if($arUser["DIGEST_HA1"] == '')
@@ -526,6 +516,7 @@ abstract class CAllUser extends CDBResult
 		global $DB, $APPLICATION;
 
 		unset($_SESSION["SESS_OPERATIONS"]);
+		unset($_SESSION["MODULE_PERMISSIONS"]);
 		$_SESSION["BX_LOGIN_NEED_CAPTCHA"] = false;
 
 		$strSql =
@@ -535,6 +526,8 @@ abstract class CAllUser extends CDBResult
 		$result = $DB->Query($strSql, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
 		if($arUser = $result->Fetch())
 		{
+			$this->justAuthorized = true;
+
 			$_SESSION["SESS_AUTH"]["AUTHORIZED"] = "Y";
 			$_SESSION["SESS_AUTH"]["USER_ID"] = $arUser["ID"];
 			$_SESSION["SESS_AUTH"]["LOGIN"] = $arUser["LOGIN"];
@@ -553,6 +546,7 @@ abstract class CAllUser extends CDBResult
 			$_SESSION["SESS_AUTH"]["AUTO_TIME_ZONE"] = trim($arUser["AUTO_TIME_ZONE"]);
 			$_SESSION["SESS_AUTH"]["TIME_ZONE"] = $arUser["TIME_ZONE"];
 			$_SESSION["SESS_AUTH"]["APPLICATION_ID"] = $applicationId;
+			$_SESSION["SESS_AUTH"]["BX_USER_ID"] = $arUser["BX_USER_ID"];
 
 			$arGroups = array();
 
@@ -600,6 +594,19 @@ abstract class CAllUser extends CDBResult
 					}
 				}
 
+				$bxUid = '';
+				if (!empty($_COOKIE['BX_USER_ID']) && preg_match('/^[0-9a-f]{32}$/', $_COOKIE['BX_USER_ID']))
+				{
+					if ($_COOKIE['BX_USER_ID'] != $arUser['BX_USER_ID'])
+					{
+						// save new bxuid value
+						$bxUid = ", BX_USER_ID = '".$_COOKIE['BX_USER_ID']."'";
+
+						$arUser['BX_USER_ID'] = $_COOKIE['BX_USER_ID'];
+						$_SESSION["SESS_AUTH"]["BX_USER_ID"] = $_COOKIE['BX_USER_ID'];
+					}
+				}
+
 				$DB->Query("
 					UPDATE b_user SET
 						STORED_HASH = NULL,
@@ -607,6 +614,7 @@ abstract class CAllUser extends CDBResult
 						TIMESTAMP_X = TIMESTAMP_X,
 						LOGIN_ATTEMPTS = 0
 						".$tz."
+						".$bxUid."
 					WHERE
 						ID=".$arUser["ID"]
 				);
@@ -618,13 +626,16 @@ abstract class CAllUser extends CDBResult
 
 					if($bSave)
 					{
-						$APPLICATION->set_cookie("UIDH", $hash, time()+60*60*24*30*60, '/', false, $secure, BX_SPREAD_SITES | BX_SPREAD_DOMAIN, false, true);
-						$APPLICATION->set_cookie("UIDL", $arUser["LOGIN"], time()+60*60*24*30*60, '/', false, $secure, BX_SPREAD_SITES | BX_SPREAD_DOMAIN, false, true);
+						$period = time()+60*60*24*30*60;
+						$spread = BX_SPREAD_SITES | BX_SPREAD_DOMAIN;
 					}
 					else
 					{
-						$APPLICATION->set_cookie("UIDH", $hash, 0, '/', false, $secure, BX_SPREAD_SITES, false, true);
+						$period = 0;
+						$spread = BX_SPREAD_SITES;
 					}
+					$APPLICATION->set_cookie("UIDH", $hash, $period, '/', false, $secure, $spread, false, true);
+					$APPLICATION->set_cookie("UIDL", $arUser["LOGIN"], $period, '/', false, $secure, $spread, false, true);
 
 					$stored_id = CUser::CheckStoredHash($arUser["ID"], $hash);
 					if($stored_id)
@@ -736,6 +747,7 @@ abstract class CAllUser extends CDBResult
 		);
 
 		unset($_SESSION["SESS_OPERATIONS"]);
+		unset($_SESSION["MODULE_PERMISSIONS"]);
 		$_SESSION["BX_LOGIN_NEED_CAPTCHA"] = false;
 
 		$bOk = true;
@@ -1285,6 +1297,8 @@ abstract class CAllUser extends CDBResult
 
 			if($sFilter <> '')
 			{
+				$confirmation = (COption::GetOptionString("main", "new_user_registration_email_confirmation", "N") == "Y");
+
 				$strSql =
 					"SELECT ID, LID, ACTIVE, CONFIRM_CODE, LOGIN, EMAIL, NAME, LAST_NAME ".
 					"FROM b_user u ".
@@ -1303,12 +1317,12 @@ abstract class CAllUser extends CDBResult
 							$arParams["SITE_ID"] = SITE_ID;
 					}
 
-					$f = true;
 					if($arUser["ACTIVE"] == "Y")
 					{
 						CUser::SendUserInfo($arUser["ID"], $arParams["SITE_ID"], GetMessage("INFO_REQ"), true, 'USER_PASS_REQUEST');
+						$f = true;
 					}
-					else
+					elseif($confirmation)
 					{
 						//unconfirmed registration - resend confirmation email
 						$arFields = array(
@@ -1326,6 +1340,7 @@ abstract class CAllUser extends CDBResult
 						$event->SendImmediate("NEW_USER_CONFIRM", $arParams["SITE_ID"], $arFields);
 
 						$result_message = array("MESSAGE"=>GetMessage("MAIN_SEND_PASS_CONFIRM")."<br>", "TYPE"=>"OK");
+						$f = true;
 					}
 
 					if(COption::GetOptionString("main", "event_log_password_request", "N") === "Y")
@@ -1618,6 +1633,11 @@ abstract class CAllUser extends CDBResult
 		return ($_SESSION["SESS_AUTH"]["AUTHORIZED"]=="Y");
 	}
 
+	public function IsJustAuthorized()
+	{
+		return $this->justAuthorized;
+	}
+
 	function IsAdmin()
 	{
 		if ($this->admin === null)
@@ -1665,7 +1685,7 @@ abstract class CAllUser extends CDBResult
 
 		$arParams = array(
 			"USER_ID" => &$USER_ID
-			);
+		);
 
 		$APPLICATION->ResetException();
 		$bOk = true;
@@ -1691,9 +1711,12 @@ abstract class CAllUser extends CDBResult
 			if($_SESSION["SESS_AUTH"]["STORED_AUTH_ID"]>0)
 				$DB->Query("DELETE FROM b_user_stored_auth WHERE ID=".intval($_SESSION["SESS_AUTH"]["STORED_AUTH_ID"]));
 
+			$this->justAuthorized = false;
+
 			$_SESSION["SESS_AUTH"] = array();
 			unset($_SESSION["SESS_AUTH"]);
 			unset($_SESSION["SESS_OPERATIONS"]);
+			unset($_SESSION["MODULE_PERMISSIONS"]);
 			unset($_SESSION["SESS_PWD_HASH_TESTED"]);
 
 			//change session id for security reason after logout
@@ -1702,7 +1725,10 @@ abstract class CAllUser extends CDBResult
 			else
 				session_regenerate_id(true);
 
-			$APPLICATION->set_cookie("UIDH", "", 0, '/', false, false, COption::GetOptionString("main", "auth_multisite", "N")=="Y", false, true);
+			$multi = (COption::GetOptionString("main", "auth_multisite", "N") == "Y");
+			$APPLICATION->set_cookie("UIDH", "", 0, '/', false, false, $multi, false, true);
+			$APPLICATION->set_cookie("UIDL", "", 0, '/', false, false, $multi, false, true);
+
 			CHTMLPagesCache::OnUserLogout();
 		}
 
@@ -2412,8 +2438,13 @@ abstract class CAllUser extends CDBResult
 		foreach(GetModuleEvents("main", "OnExternalAuthList", true) as $arEvent)
 		{
 			$arRes = ExecuteModuleEventEx($arEvent);
-			foreach($arRes as $v)
-				$arAll[] = $v;
+			if(is_array($arRes))
+			{
+				foreach($arRes as $v)
+				{
+					$arAll[] = $v;
+				}
+			}
 		}
 
 		$result = new CDBResult;
@@ -3417,7 +3448,7 @@ class CAllGroup
 
 	function GetSubordinateGroups($grId)
 	{
-		global $DB;
+		global $DB, $CACHE_MANAGER;
 
 		$groupFilter = array();
 		if (is_array($grId))
@@ -3439,17 +3470,44 @@ class CAllGroup
 		$result = array(2);
 		if (!empty($groupFilter))
 		{
-			$z = $DB->Query("
-				SELECT AR_SUBGROUP_ID
-				FROM b_group_subordinate
-				WHERE ID in (".implode(", ", $groupFilter).")
-			", false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
-			while ($zr = $z->Fetch())
+			if (CACHED_b_group_subordinate === false)
 			{
-				$subordinateGroups = explode(",", $zr['AR_SUBGROUP_ID']);
-				if (count($subordinateGroups)==1 && !$subordinateGroups[0])
-					$subordinateGroups = array();
-				$result = array_merge($result, $subordinateGroups);
+				$z = $DB->Query("SELECT AR_SUBGROUP_ID FROM b_group_subordinate WHERE ID in (".implode(", ", $groupFilter).")");
+				while ($zr = $z->Fetch())
+				{
+					$subordinateGroups = explode(",", $zr['AR_SUBGROUP_ID']);
+					if (count($subordinateGroups) == 1 && !$subordinateGroups[0])
+						continue;
+					$result = array_merge($result, $subordinateGroups);
+				}
+			}
+			else
+			{
+				if ($CACHE_MANAGER->Read(CACHED_b_group_subordinate, "b_group_subordinate"))
+				{
+					$cache = $CACHE_MANAGER->Get("b_group_subordinate");
+				}
+				else
+				{
+					$cache = array();
+					$z = $DB->Query("SELECT ID, AR_SUBGROUP_ID FROM b_group_subordinate");
+					while ($zr = $z->Fetch())
+					{
+						$subordinateGroups = explode(",", $zr['AR_SUBGROUP_ID']);
+						if (count($subordinateGroups) == 1 && !$subordinateGroups[0])
+							continue;
+						$cache[$zr["ID"]] = $subordinateGroups;
+					}
+					$CACHE_MANAGER->Set("b_group_subordinate", $cache);
+				}
+
+				foreach ($cache as $groupId => $subordinateGroups)
+				{
+					if (isset($groupFilter[$groupId]))
+					{
+						$result = array_merge($result, $subordinateGroups);
+					}
+				}
 			}
 		}
 
@@ -3458,14 +3516,19 @@ class CAllGroup
 
 	function SetSubordinateGroups($grId, $arSubGroups=false)
 	{
-		global $DB;
+		global $DB, $CACHE_MANAGER;
+		$grId = intval($grId);
 
-		$DB->Query("DELETE FROM b_group_subordinate WHERE ID=".intval($grId), false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
+		$DB->Query("DELETE FROM b_group_subordinate WHERE ID = ".$grId);
 		if(is_array($arSubGroups))
 		{
-			$strSubordinateGroups = $DB->ForSQL(implode(",", $arSubGroups), 255);
-			$DB->Query("INSERT INTO b_group_subordinate(ID, AR_SUBGROUP_ID) VALUES (".intval($grId).", '".$strSubordinateGroups."')", false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
+			$arInsert = $DB->PrepareInsert("b_group_subordinate", array(
+				"ID" => $grId,
+				"AR_SUBGROUP_ID" => implode(",", $arSubGroups),
+			));
+			$DB->Query("INSERT INTO b_group_subordinate(".$arInsert[0].") VALUES (".$arInsert[1].")");
 		}
+		$CACHE_MANAGER->Clean("b_group_subordinate");
 	}
 
 

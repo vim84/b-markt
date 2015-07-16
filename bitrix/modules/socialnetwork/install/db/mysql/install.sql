@@ -100,7 +100,8 @@ create table b_sonet_user_relations
   INITIATED_BY char(1) not null default 'F',
   primary key (ID),
   unique IX_SONET_RELATIONS_1(FIRST_USER_ID, SECOND_USER_ID),
-  index IX_SONET_RELATIONS_2(FIRST_USER_ID, SECOND_USER_ID, RELATION)
+  index IX_SONET_RELATIONS_2(FIRST_USER_ID, SECOND_USER_ID, RELATION),
+  index IX_SONET_RELATIONS_3(SECOND_USER_ID)
 );
 
 create table b_sonet_messages

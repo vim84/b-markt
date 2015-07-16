@@ -66,17 +66,29 @@ if ($arOrder)
 			$pathToAction = $_SERVER["DOCUMENT_ROOT"].$arPaySysAction["ACTION_FILE"];
 			$pathToAction = rtrim(str_replace("\\", "/", $pathToAction), "/");
 
-			if (file_exists($pathToAction))
+			try
 			{
-				if (is_dir($pathToAction))
+				if (file_exists($pathToAction))
 				{
-					if (file_exists($pathToAction."/payment.php"))
-						include($pathToAction."/payment.php");
+					if (is_dir($pathToAction))
+					{
+						if (file_exists($pathToAction."/payment.php"))
+							include($pathToAction."/payment.php");
+					}
+					else
+					{
+						include($pathToAction);
+					}
 				}
+			}
+			catch(\Bitrix\Main\SystemException $e)
+			{
+				if($e->getCode() == CSalePaySystemAction::GET_PARAM_VALUE)
+					$message = GetMessage("SOA_TEMPL_ORDER_PS_ERROR");
 				else
-				{
-					include($pathToAction);
-				}
+					$message = $e->getMessage();
+
+				ShowError($message);
 			}
 
 			if(strlen($arPaySysAction["ENCODING"]) > 0)

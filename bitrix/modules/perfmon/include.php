@@ -5,6 +5,7 @@ $db_type = strtolower($DB->type);
 CModule::AddAutoloadClasses(
 	"perfmon",
 	array(
+		"perfmon" => "install/index.php",
 		"CPerfomanceKeeper" => "classes/general/keeper.php",
 		"CAllPerfomanceHit" => "classes/general/hit.php",
 		"CPerfomanceHit" => "classes/general/hit.php",

@@ -1,27 +1,24 @@
 <?
+use Bitrix\Main\Loader;
 define("SALE_DEBUG", false); // Debug
 
 global $DBType;
 
 IncludeModuleLangFile(__FILE__);
 
-
 $GLOBALS["SALE_FIELD_TYPES"] = array(
-		"CHECKBOX" => GetMessage("SALE_TYPE_CHECKBOX"),
-		"TEXT" => GetMessage("SALE_TYPE_TEXT"),
-		"SELECT" => GetMessage("SALE_TYPE_SELECT"),
-		"MULTISELECT" => GetMessage("SALE_TYPE_MULTISELECT"),
-		"TEXTAREA" => GetMessage("SALE_TYPE_TEXTAREA"),
-		"LOCATION" => GetMessage("SALE_TYPE_LOCATION"),
-		"RADIO" => GetMessage("SALE_TYPE_RADIO"),
-		"FILE" => GetMessage("SALE_TYPE_FILE")
-	);
+	"TEXT" => GetMessage("SALE_TYPE_TEXT"),
+	"CHECKBOX" => GetMessage("SALE_TYPE_CHECKBOX"),
+	"SELECT" => GetMessage("SALE_TYPE_SELECT"),
+	"MULTISELECT" => GetMessage("SALE_TYPE_MULTISELECT"),
+	"TEXTAREA" => GetMessage("SALE_TYPE_TEXTAREA"),
+	"LOCATION" => GetMessage("SALE_TYPE_LOCATION"),
+	"RADIO" => GetMessage("SALE_TYPE_RADIO"),
+	"FILE" => GetMessage("SALE_TYPE_FILE")
+);
 
-if (!CModule::IncludeModule("currency"))
-{
-//	trigger_error("Currency is not installed");
+if (!Loader::includeModule('currency'))
 	return false;
-}
 
 // Number of processed recurring records at one time
 define("SALE_PROC_REC_NUM", 3);
@@ -38,14 +35,14 @@ define("CACHED_b_sale_order", 3600*24);
 
 global $SALE_TIME_PERIOD_TYPES;
 $SALE_TIME_PERIOD_TYPES = array(
-		"H" => GetMessage("I_PERIOD_HOUR"),
-		"D" => GetMessage("I_PERIOD_DAY"),
-		"W" => GetMessage("I_PERIOD_WEEK"),
-		"M" => GetMessage("I_PERIOD_MONTH"),
-		"Q" => GetMessage("I_PERIOD_QUART"),
-		"S" => GetMessage("I_PERIOD_SEMIYEAR"),
-		"Y" => GetMessage("I_PERIOD_YEAR")
-	);
+	"H" => GetMessage("I_PERIOD_HOUR"),
+	"D" => GetMessage("I_PERIOD_DAY"),
+	"W" => GetMessage("I_PERIOD_WEEK"),
+	"M" => GetMessage("I_PERIOD_MONTH"),
+	"Q" => GetMessage("I_PERIOD_QUART"),
+	"S" => GetMessage("I_PERIOD_SEMIYEAR"),
+	"Y" => GetMessage("I_PERIOD_YEAR")
+);
 
 define("SALE_VALUE_PRECISION", 2);
 define("SALE_WEIGHT_PRECISION", 3);
@@ -53,29 +50,29 @@ define("SALE_WEIGHT_PRECISION", 3);
 define('BX_SALE_MENU_CATALOG_CLEAR', 'Y');
 
 $GLOBALS["AVAILABLE_ORDER_FIELDS"] = array(
-		"ID" => array("COLUMN_NAME" => "ID", "NAME" => GetMessage("SI_ORDER_ID"), "SELECT" => "ID,DATE_INSERT", "CUSTOM" => "Y", "SORT" => "ID"),
-		"LID" => array("COLUMN_NAME" => GetMessage("SI_SITE"), "NAME" => GetMessage("SI_SITE"), "SELECT" => "LID", "CUSTOM" => "N", "SORT" => "LID"),
-		"PERSON_TYPE" => array("COLUMN_NAME" => GetMessage("SI_PAYER_TYPE"), "NAME" => GetMessage("SI_PAYER_TYPE"), "SELECT" => "PERSON_TYPE_ID", "CUSTOM" => "Y", "SORT" => "PERSON_TYPE_ID"),
-		"PAYED" => array("COLUMN_NAME" => GetMessage("SI_PAID"), "NAME" => GetMessage("SI_PAID_ORDER"), "SELECT" => "PAYED,DATE_PAYED,EMP_PAYED_ID", "CUSTOM" => "Y", "SORT" => "PAYED"),
-		"PAY_VOUCHER_NUM" => array("COLUMN_NAME" => GetMessage("SI_NO_PP"), "NAME" => GetMessage("SI_NO_PP_DOC"), "SELECT" => "PAY_VOUCHER_NUM", "CUSTOM" => "N", "SORT" => "PAY_VOUCHER_NUM"),
-		"PAY_VOUCHER_DATE" => array("COLUMN_NAME" => GetMessage("SI_DATE_PP"), "NAME" => GetMessage("SI_DATE_PP_DOC"), "SELECT" => "PAY_VOUCHER_DATE", "CUSTOM" => "N", "SORT" => "PAY_VOUCHER_DATE"),
-		"DELIVERY_DOC_NUM" => array("COLUMN_NAME" => GetMessage("SI_DATE_PP_DELIVERY_DOC_NUM"), "NAME" => GetMessage("SI_DATE_PP_DOC_DELIVERY_DOC_NUM"), "SELECT" => "DELIVERY_DOC_NUM", "CUSTOM" => "N", "SORT" => "DELIVERY_DOC_NUM"),
-		"DELIVERY_DOC_DATE" => array("COLUMN_NAME" => GetMessage("SI_DATE_PP_DELIVERY_DOC_DATE"), "NAME" => GetMessage("SI_DATE_PP_DOC_DELIVERY_DOC_DATE"), "SELECT" => "DELIVERY_DOC_DATE", "CUSTOM" => "N", "SORT" => "DELIVERY_DOC_DATE"),
-		"CANCELED" => array("COLUMN_NAME" => GetMessage("SI_CANCELED"), "NAME" => GetMessage("SI_CANCELED_ORD"), "SELECT" => "CANCELED,DATE_CANCELED,EMP_CANCELED_ID", "CUSTOM" => "Y", "SORT" => "CANCELED"),
-		"STATUS" => array("COLUMN_NAME" => GetMessage("SI_STATUS"), "NAME" => GetMessage("SI_STATUS_ORD"), "SELECT" => "STATUS_ID,DATE_STATUS,EMP_STATUS_ID", "CUSTOM" => "Y", "SORT" => "STATUS_ID"),
-		"PRICE_DELIVERY" => array("COLUMN_NAME" => GetMessage("SI_DELIVERY"), "NAME" => GetMessage("SI_DELIVERY"), "SELECT" => "PRICE_DELIVERY,CURRENCY", "CUSTOM" => "Y", "SORT" => "PRICE_DELIVERY"),
-		"ALLOW_DELIVERY" => array("COLUMN_NAME" => GetMessage("SI_ALLOW_DELIVERY"), "NAME" => GetMessage("SI_ALLOW_DELIVERY1"), "SELECT" => "ALLOW_DELIVERY,DATE_ALLOW_DELIVERY,EMP_ALLOW_DELIVERY_ID", "CUSTOM" => "Y", "SORT" => "ALLOW_DELIVERY"),
-		"PRICE" => array("COLUMN_NAME" => GetMessage("SI_SUM"), "NAME" => GetMessage("SI_SUM_ORD"), "SELECT" => "PRICE,CURRENCY", "CUSTOM" => "Y", "SORT" => "PRICE"),
-		"SUM_PAID" => array("COLUMN_NAME" => GetMessage("SI_SUM_PAID"), "NAME" => GetMessage("SI_SUM_PAID1"), "SELECT" => "SUM_PAID,CURRENCY", "CUSTOM" => "Y", "SORT" => "SUM_PAID"),
-		"USER" => array("COLUMN_NAME" => GetMessage("SI_BUYER"), "NAME" => GetMessage("SI_BUYER"), "SELECT" => "USER_ID", "CUSTOM" => "Y", "SORT" => "USER_ID"),
-		"PAY_SYSTEM" => array("COLUMN_NAME" => GetMessage("SI_PAY_SYS"), "NAME" => GetMessage("SI_PAY_SYS"), "SELECT" => "PAY_SYSTEM_ID", "CUSTOM" => "Y", "SORT" => "PAY_SYSTEM_ID"),
-		"DELIVERY" => array("COLUMN_NAME" => GetMessage("SI_DELIVERY_SYS"), "NAME" => GetMessage("SI_DELIVERY_SYS"), "SELECT" => "DELIVERY_ID", "CUSTOM" => "Y", "SORT" => "DELIVERY_ID"),
-		"DATE_UPDATE" => array("COLUMN_NAME" => GetMessage("SI_DATE_UPDATE"), "NAME" => GetMessage("SI_DATE_UPDATE"), "SELECT" => "DATE_UPDATE", "CUSTOM" => "N", "SORT" => "DATE_UPDATE"),
-		"PS_STATUS" => array("COLUMN_NAME" => GetMessage("SI_PAYMENT_PS"), "NAME" => GetMessage("SI_PS_STATUS"), "SELECT" => "PS_STATUS,PS_RESPONSE_DATE", "CUSTOM" => "N", "SORT" => "PS_STATUS"),
-		"PS_SUM" => array("COLUMN_NAME" => GetMessage("SI_PS_SUM"), "NAME" => GetMessage("SI_PS_SUM1"), "SELECT" => "PS_SUM,PS_CURRENCY", "CUSTOM" => "Y", "SORT" => "PS_SUM"),
-		"TAX_VALUE" => array("COLUMN_NAME" => GetMessage("SI_TAX"), "NAME" => GetMessage("SI_TAX_SUM"), "SELECT" => "TAX_VALUE,CURRENCY", "CUSTOM" => "Y", "SORT" => "TAX_VALUE"),
-		"BASKET" => array("COLUMN_NAME" => GetMessage("SI_ITEMS"), "NAME" => GetMessage("SI_ITEMS_ORD"), "SELECT" => "", "CUSTOM" => "Y", "SORT" => "")
-	);
+	"ID" => array("COLUMN_NAME" => "ID", "NAME" => GetMessage("SI_ORDER_ID"), "SELECT" => "ID,DATE_INSERT", "CUSTOM" => "Y", "SORT" => "ID"),
+	"LID" => array("COLUMN_NAME" => GetMessage("SI_SITE"), "NAME" => GetMessage("SI_SITE"), "SELECT" => "LID", "CUSTOM" => "N", "SORT" => "LID"),
+	"PERSON_TYPE" => array("COLUMN_NAME" => GetMessage("SI_PAYER_TYPE"), "NAME" => GetMessage("SI_PAYER_TYPE"), "SELECT" => "PERSON_TYPE_ID", "CUSTOM" => "Y", "SORT" => "PERSON_TYPE_ID"),
+	"PAYED" => array("COLUMN_NAME" => GetMessage("SI_PAID"), "NAME" => GetMessage("SI_PAID_ORDER"), "SELECT" => "PAYED,DATE_PAYED,EMP_PAYED_ID", "CUSTOM" => "Y", "SORT" => "PAYED"),
+	"PAY_VOUCHER_NUM" => array("COLUMN_NAME" => GetMessage("SI_NO_PP"), "NAME" => GetMessage("SI_NO_PP_DOC"), "SELECT" => "PAY_VOUCHER_NUM", "CUSTOM" => "N", "SORT" => "PAY_VOUCHER_NUM"),
+	"PAY_VOUCHER_DATE" => array("COLUMN_NAME" => GetMessage("SI_DATE_PP"), "NAME" => GetMessage("SI_DATE_PP_DOC"), "SELECT" => "PAY_VOUCHER_DATE", "CUSTOM" => "N", "SORT" => "PAY_VOUCHER_DATE"),
+	"DELIVERY_DOC_NUM" => array("COLUMN_NAME" => GetMessage("SI_DATE_PP_DELIVERY_DOC_NUM"), "NAME" => GetMessage("SI_DATE_PP_DOC_DELIVERY_DOC_NUM"), "SELECT" => "DELIVERY_DOC_NUM", "CUSTOM" => "N", "SORT" => "DELIVERY_DOC_NUM"),
+	"DELIVERY_DOC_DATE" => array("COLUMN_NAME" => GetMessage("SI_DATE_PP_DELIVERY_DOC_DATE"), "NAME" => GetMessage("SI_DATE_PP_DOC_DELIVERY_DOC_DATE"), "SELECT" => "DELIVERY_DOC_DATE", "CUSTOM" => "N", "SORT" => "DELIVERY_DOC_DATE"),
+	"CANCELED" => array("COLUMN_NAME" => GetMessage("SI_CANCELED"), "NAME" => GetMessage("SI_CANCELED_ORD"), "SELECT" => "CANCELED,DATE_CANCELED,EMP_CANCELED_ID", "CUSTOM" => "Y", "SORT" => "CANCELED"),
+	"STATUS" => array("COLUMN_NAME" => GetMessage("SI_STATUS"), "NAME" => GetMessage("SI_STATUS_ORD"), "SELECT" => "STATUS_ID,DATE_STATUS,EMP_STATUS_ID", "CUSTOM" => "Y", "SORT" => "STATUS_ID"),
+	"PRICE_DELIVERY" => array("COLUMN_NAME" => GetMessage("SI_DELIVERY"), "NAME" => GetMessage("SI_DELIVERY"), "SELECT" => "PRICE_DELIVERY,CURRENCY", "CUSTOM" => "Y", "SORT" => "PRICE_DELIVERY"),
+	"ALLOW_DELIVERY" => array("COLUMN_NAME" => GetMessage("SI_ALLOW_DELIVERY"), "NAME" => GetMessage("SI_ALLOW_DELIVERY1"), "SELECT" => "ALLOW_DELIVERY,DATE_ALLOW_DELIVERY,EMP_ALLOW_DELIVERY_ID", "CUSTOM" => "Y", "SORT" => "ALLOW_DELIVERY"),
+	"PRICE" => array("COLUMN_NAME" => GetMessage("SI_SUM"), "NAME" => GetMessage("SI_SUM_ORD"), "SELECT" => "PRICE,CURRENCY", "CUSTOM" => "Y", "SORT" => "PRICE"),
+	"SUM_PAID" => array("COLUMN_NAME" => GetMessage("SI_SUM_PAID"), "NAME" => GetMessage("SI_SUM_PAID1"), "SELECT" => "SUM_PAID,CURRENCY", "CUSTOM" => "Y", "SORT" => "SUM_PAID"),
+	"USER" => array("COLUMN_NAME" => GetMessage("SI_BUYER"), "NAME" => GetMessage("SI_BUYER"), "SELECT" => "USER_ID", "CUSTOM" => "Y", "SORT" => "USER_ID"),
+	"PAY_SYSTEM" => array("COLUMN_NAME" => GetMessage("SI_PAY_SYS"), "NAME" => GetMessage("SI_PAY_SYS"), "SELECT" => "PAY_SYSTEM_ID", "CUSTOM" => "Y", "SORT" => "PAY_SYSTEM_ID"),
+	"DELIVERY" => array("COLUMN_NAME" => GetMessage("SI_DELIVERY_SYS"), "NAME" => GetMessage("SI_DELIVERY_SYS"), "SELECT" => "DELIVERY_ID", "CUSTOM" => "Y", "SORT" => "DELIVERY_ID"),
+	"DATE_UPDATE" => array("COLUMN_NAME" => GetMessage("SI_DATE_UPDATE"), "NAME" => GetMessage("SI_DATE_UPDATE"), "SELECT" => "DATE_UPDATE", "CUSTOM" => "N", "SORT" => "DATE_UPDATE"),
+	"PS_STATUS" => array("COLUMN_NAME" => GetMessage("SI_PAYMENT_PS"), "NAME" => GetMessage("SI_PS_STATUS"), "SELECT" => "PS_STATUS,PS_RESPONSE_DATE", "CUSTOM" => "N", "SORT" => "PS_STATUS"),
+	"PS_SUM" => array("COLUMN_NAME" => GetMessage("SI_PS_SUM"), "NAME" => GetMessage("SI_PS_SUM1"), "SELECT" => "PS_SUM,PS_CURRENCY", "CUSTOM" => "Y", "SORT" => "PS_SUM"),
+	"TAX_VALUE" => array("COLUMN_NAME" => GetMessage("SI_TAX"), "NAME" => GetMessage("SI_TAX_SUM"), "SELECT" => "TAX_VALUE,CURRENCY", "CUSTOM" => "Y", "SORT" => "TAX_VALUE"),
+	"BASKET" => array("COLUMN_NAME" => GetMessage("SI_ITEMS"), "NAME" => GetMessage("SI_ITEMS_ORD"), "SELECT" => "", "CUSTOM" => "Y", "SORT" => "")
+);
 
 CModule::AddAutoloadClasses(
 	"sale",
@@ -196,10 +193,17 @@ CModule::AddAutoloadClasses(
 
 		// data entities
 		"Bitrix\\Sale\\Location\\LocationTable" => "lib/location/location.php",
+		"Bitrix\\Sale\\Location\\Tree" => "lib/location/tree.php",
 		"Bitrix\\Sale\\Location\\TypeTable" => "lib/location/type.php",
 		"Bitrix\\Sale\\Location\\GroupTable" => "lib/location/group.php",
 		"Bitrix\\Sale\\Location\\ExternalTable" => "lib/location/external.php",
 		"Bitrix\\Sale\\Location\\ExternalServiceTable" => "lib/location/externalservice.php",
+
+		// search
+		"Bitrix\\Sale\\Location\\Search\\Finder" => "lib/location/search/finder.php",
+		"Bitrix\\Sale\\Location\\Search\\WordTable" => "lib/location/search/word.php",
+		"Bitrix\\Sale\\Location\\Search\\ChainTable" => "lib/location/search/chain.php",
+		"Bitrix\\Sale\\Location\\Search\\SiteLinkTable" => "lib/location/search/sitelink.php",
 
 		// lang entities
 		"Bitrix\\Sale\\Location\\Name\\NameEntity" => "lib/location/name/nameentity.php",
@@ -215,10 +219,10 @@ CModule::AddAutoloadClasses(
 		"Bitrix\\Sale\\Location\\SiteLocationTable" => "lib/location/sitelocation.php",
 		"Bitrix\\Sale\\Location\\DefaultSiteTable" => "lib/location/defaultsite.php",
 
-		// util classes for db manipulation and argument check
-		"Bitrix\\Sale\\Location\\TreeEntity" => "lib/location/treeentity.php",
-		"Bitrix\\Sale\\Location\\DBBlockInserter" => "lib/location/dbblockinserter.php",
-		"Bitrix\\Sale\\Location\\Assert" => "lib/location/assert.php",
+		// db util
+		"Bitrix\\Sale\\Location\\DB\\CommonHelper" => "lib/location/db/commonhelper.php",
+		"Bitrix\\Sale\\Location\\DB\\Helper" => "lib/location/db/".ToLower($DBType)."/helper.php",
+		"Bitrix\\Sale\\Location\\DB\\BlockInserter" => "lib/location/db/blockinserter.php",
 
 		// admin logic
 		"Bitrix\\Sale\\Location\\Admin\\Helper" => "lib/location/admin/helper.php",
@@ -229,15 +233,23 @@ CModule::AddAutoloadClasses(
 		"Bitrix\\Sale\\Location\\Admin\\DefaultSiteHelper" => "lib/location/admin/defaultsitehelper.php",
 		"Bitrix\\Sale\\Location\\Admin\\SiteLocationHelper" => "lib/location/admin/sitelocationhelper.php",
 		"Bitrix\\Sale\\Location\\Admin\\ExternalServiceHelper" => "lib/location/admin/externalservicehelper.php",
+		"Bitrix\\Sale\\Location\\Admin\\SearchHelper" => "lib/location/admin/searchhelper.php",
 
-		// util classes being used in import, migrator and location asset compiler
-		"Bitrix\\Sale\\Location\\Import\\Process" => "lib/location/import/process.php",
-		"Bitrix\\Sale\\Location\\Import\\CSVReader" => "lib/location/import/csvreader.php",
+		// util
+		"Bitrix\\Sale\\Location\\Util\\Process" => "lib/location/util/process.php",
+		"Bitrix\\Sale\\Location\\Util\\CSVReader" => "lib/location/util/csvreader.php",
+		"Bitrix\\Sale\\Location\\Util\\Assert" => "lib/location/util/assert.php",
+
+		// processes for step-by-step actions
 		"Bitrix\\Sale\\Location\\Import\\ImportProcess" => "lib/location/import/importprocess.php",
+		"Bitrix\\Sale\\Location\\Search\\ReindexProcess" => "lib/location/search/reindexprocess.php",
 
 		// old
 		"CSaleProxyAdminResult" => "general/proxyadminresult.php", // for admin
-		"CSaleProxyResult" =>  "general/proxyresult.php", // for public
+		"CSaleProxyResult" => "general/proxyresult.php", // for public
+
+		// other
+		"Bitrix\\Sale\\Location\\Migration\\CUpdaterLocationPro" => "lib/location/migration/migrate.php", // class of migrations
 
 		////////////////////////////
 		// linked entities
@@ -269,13 +281,22 @@ CModule::AddAutoloadClasses(
 		"CSalePdf" => "general/pdf.php",
 		"CSaleYMHandler" => "general/ym_handler.php",
 		"Bitrix\\Sale\\TradingPlatformTable" => "lib/tradingplatform.php",
-		"CSaleYMLocation" => "general/ym_location.php"
+		"CSaleYMLocation" => "general/ym_location.php",
+
+
+		'\Bitrix\Sale\Internals\DiscountTable' => 'lib/internals/discount.php',
+		'\Bitrix\Sale\Internals\DiscountCouponTable' => 'lib/internals/discountcoupon.php',
+		'\Bitrix\Sale\Internals\DiscountEntitiesTable' => 'lib/internals/discountentities.php',
+		'\Bitrix\Sale\Internals\DiscountGroupTable' => 'lib/internals/discountgroup.php',
+		'\Bitrix\Sale\Internals\DiscountModuleTable' => 'lib/internals/discountmodule.php',
+		'\Bitrix\Sale\Configuration' => 'lib/configuration.php',
+		'\Bitrix\Sale\DiscountCouponsManager' => 'lib/discountcoupon.php'
 	)
 );
 
-function GetBasketListSimple($bSkipFUserInit = False)
+function GetBasketListSimple($bSkipFUserInit = true)
 {
-	$fUserID = CSaleBasket::GetBasketUserID($bSkipFUserInit);
+	$fUserID = (int)CSaleBasket::GetBasketUserID($bSkipFUserInit);
 	if ($fUserID > 0)
 		return CSaleBasket::GetList(
 			array("NAME" => "ASC"),
@@ -285,25 +306,40 @@ function GetBasketListSimple($bSkipFUserInit = False)
 		return False;
 }
 
-function GetBasketList($bSkipFUserInit = False)
+function GetBasketList($bSkipFUserInit = true)
 {
-	$fUserID = CSaleBasket::GetBasketUserID($bSkipFUserInit);
+	$fUserID = (int)CSaleBasket::GetBasketUserID($bSkipFUserInit);
 	$arRes = array();
 	if ($fUserID > 0)
 	{
+		$basketID = array();
 		$db_res = CSaleBasket::GetList(
-			array("NAME" => "ASC"),
-			array("FUSER_ID" => $fUserID, "LID" => SITE_ID, "ORDER_ID" => "NULL")
+			array(),
+			array("FUSER_ID" => $fUserID, "LID" => SITE_ID, "ORDER_ID" => false),
+			false,
+			false,
+			array('ID', 'CALLBACK_FUNC', 'PRODUCT_PROVIDER_CLASS', 'MODULE', 'PRODUCT_ID', 'QUANTITY', 'NOTES')
 		);
-		while ($res = $db_res->GetNext())
+		while ($res = $db_res->Fetch())
 		{
-			if (strlen($res["CALLBACK_FUNC"]) > 0 || strlen($res["PRODUCT_PROVIDER_CLASS"]) > 0)
-			{
-				CSaleBasket::UpdatePrice($res["ID"], $res["CALLBACK_FUNC"], $res["MODULE"], $res["PRODUCT_ID"], $res["QUANTITY"], $res["PRODUCT_PROVIDER_CLASS"]);
-				$res = CSaleBasket::GetByID($res["ID"]);
-			}
-			$arRes[] = $res;
+			$res['CALLBACK_FUNC'] = (string)$res['CALLBACK_FUNC'];
+			$res['PRODUCT_PROVIDER_CLASS'] = (string)$res['PRODUCT_PROVIDER_CLASS'];
+			if ($res['CALLBACK_FUNC'] != '' || $res['PRODUCT_PROVIDER_CLASS'] != '')
+				CSaleBasket::UpdatePrice($res["ID"], $res["CALLBACK_FUNC"], $res["MODULE"], $res["PRODUCT_ID"], $res["QUANTITY"], 'N', $res["PRODUCT_PROVIDER_CLASS"], $res['NOTES']);
+			$basketID[] = $res['ID'];
 		}
+		unset($res, $db_res);
+		if (!empty($basketID))
+		{
+			$basketIterator = CSaleBasket::GetList(
+				array('NAME' => 'ASC'),
+				array('ID' => $basketID)
+			);
+			while ($basket = $basketIterator->GetNext())
+				$arRes[] = $basket;
+			unset($basket, $basketIterator);
+		}
+		unset($basketID);
 	}
 	return $arRes;
 }
@@ -341,10 +377,9 @@ function CurrencyModuleUnInstallSale()
 {
 	$GLOBALS["APPLICATION"]->ThrowException(GetMessage("SALE_INCLUDE_CURRENCY"), "SALE_DEPENDES_CURRENCY");
 	return false;
-
 }
 
-if(file_exists($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/ru/include.php"))
+if (file_exists($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/ru/include.php"))
 	include($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/ru/include.php");
 
 function PayUserAccountDeliveryOrderCallback($productID, $userID, $bPaid, $orderID, $quantity = 1)
@@ -437,7 +472,7 @@ function GetFormatedUserName($USER_ID, $bEnableId = true)
  */
 function getMeasures($arBasketItems)
 {
-	if (CModule::IncludeModule("catalog"))
+	if (Loader::includeModule('catalog'))
 	{
 		$arDefaultMeasure = CCatalogMeasure::getDefaultMeasure(true, true);
 		$arElementId = array();
@@ -446,7 +481,8 @@ function getMeasures($arBasketItems)
 		{
 			$productID = (int)$arItem["PRODUCT_ID"];
 			if (!isset($basketLinks[$productID]))
-				$basketLinks[$productID][] = $keyBasket;
+				$basketLinks[$productID] = array();
+			$basketLinks[$productID][] = $keyBasket;
 			$arElementId[] = $productID;
 			$arBasketItems[$keyBasket]['MEASURE_TEXT'] = $arDefaultMeasure['~SYMBOL_RUS'];
 			$arBasketItems[$keyBasket]['MEASURE'] = 0;
@@ -503,11 +539,8 @@ function getMeasures($arBasketItems)
 				}
 			}
 		}
-
-		return $arBasketItems;
 	}
-	else
-		return false;
+	return $arBasketItems;
 }
 
 /*
@@ -519,30 +552,35 @@ function getMeasures($arBasketItems)
  */
 function getRatio($arBasketItems)
 {
-	if (CModule::IncludeModule("catalog"))
+	if (Loader::includeModule('catalog'))
 	{
+		$map = array();
 		$arElementId = array();
-		foreach ($arBasketItems as $arItem)
-			$arElementId[] = $arItem["PRODUCT_ID"];
+		foreach ($arBasketItems as $key => $arItem)
+		{
+			$arElementId[$arItem["PRODUCT_ID"]] = $arItem["PRODUCT_ID"];
+			if (!isset($map[$arItem["PRODUCT_ID"]]))
+				$map[$arItem["PRODUCT_ID"]] = array();
+			$map[$arItem["PRODUCT_ID"]][] = $key;
+		}
 
 		if (!empty($arElementId))
 		{
-			$dbRatio = CCatalogMeasureRatio::GetList(array(), array_unique($arElementId));
-			while ($arRatio = $dbRatio->GetNext())
+			$dbRatio = CCatalogMeasureRatio::getList(array(), array('PRODUCT_ID' => $arElementId), false, false, array('PRODUCT_ID', 'RATIO'));
+			while ($arRatio = $dbRatio->Fetch())
 			{
-				foreach ($arBasketItems as &$basketItem)
+				if (empty($map[$arRatio["PRODUCT_ID"]]))
+					continue;
+				foreach ($map[$arRatio["PRODUCT_ID"]] as $key)
 				{
-					if ($arRatio["PRODUCT_ID"] == $basketItem["PRODUCT_ID"])
-						$basketItem["MEASURE_RATIO"] = $arRatio["RATIO"];
+					$arBasketItems[$key]["MEASURE_RATIO"] = $arRatio["RATIO"];
 				}
 			}
-			unset($basketItem);
-
-			return $arBasketItems;
 		}
+		unset($arElementId, $map);
 	}
+	return $arBasketItems;
 }
-
 
 /*
  * Creates an array of iblock properties for the elements with certain IDs
@@ -553,7 +591,7 @@ function getRatio($arBasketItems)
  */
 function getProductProps($arElementId, $arSelect)
 {
-	if (!CModule::IncludeModule("iblock"))
+	if (!Loader::includeModule("iblock"))
 		return array();
 
 	if (empty($arElementId))
@@ -656,4 +694,3 @@ function updateBasketOffersProps($oldProps, $newProps)
 	}
 	return $result;
 }
-?>

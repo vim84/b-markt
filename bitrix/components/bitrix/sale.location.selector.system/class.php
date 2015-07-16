@@ -69,25 +69,14 @@ class CBitrixLocationSelectorSystemComponent extends CBitrixLocationSelectorSear
 
 	protected function obtainDataLocationTypes(&$cachedData)
 	{
-		$res = Location\TypeTable::getList(array(
-			'select' => array(
-				'*',
-				'LNAME' => 'NAME.NAME'
-			),
-			'filter' => array(
-				'NAME.LANGUAGE_ID' => LANGUAGE_ID
-			),
-			'order' => array(
-				'SORT' => 'asc',
-				'NAME.NAME' => 'asc'
-			)
-		));
-		$res->addReplacedAliases(array('LNAME' => 'NAME'));
-		$types = array();
-		while($item = $res->fetch())
-			$types[$item['ID']] = $item;
-
-		$cachedData['TYPES'] = $types;
+		$types = Location\Admin\TypeHelper::getTypes(LANGUAGE_ID);
+		$cachedData['TYPES'] = array();
+		foreach($types as $type)
+		{
+			$type['NAME'] = $type['NAME_CURRENT'];
+			unset($type['NAME_CURRENT']);
+			$cachedData['TYPES'][$type['ID']] = $type;
+		}
 	}
 
 	protected function obtainDataGroups(&$cachedData)
@@ -375,88 +364,92 @@ class CBitrixLocationSelectorSystemComponent extends CBitrixLocationSelectorSear
 		$this->arResult['USE_CODES'] = $this->useCodes;
 	}
 
-	protected static function processSearchGetFilter()
+	protected static function processSearchRequestV2GetFinderBehaviour()
 	{
-		if(intval($_REQUEST['FILTER']['GROUP_ID']))
-		{
-			return array(
-				'NAME.LANGUAGE_ID' => strlen($_REQUEST['BEHAVIOUR']['LANGUAGE_ID']) ? $_REQUEST['BEHAVIOUR']['LANGUAGE_ID'] : LANGUAGE_ID
-			);
-		}
-
-		return parent::processSearchGetFilter();
+		return array('USE_INDEX' => false);
 	}
 
-	protected static function processSearchGetSelect()
+	protected static function processSearchRequestV2GetAdditional(&$data, $parameters)
 	{
-		$select = parent::processSearchGetSelect();
-
-		if(intval($_REQUEST['FILTER']['GROUP_ID'])){
-			$select = array_merge($select , array(
-				'ID', 'CODE', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'TYPE_ID'
-			));
-			$select['LNAME'] = 'NAME.NAME';
-		}
-
-		return $select;
-	}
-
-	protected static function processSearchGetList($parameters)
-	{
-		if($gId = intval($_REQUEST['FILTER']['GROUP_ID']))
+		if(!empty($data['ITEMS']) && is_array($parameters['additionals']))
 		{
-			$res = Location\GroupLocationTable::getConnectedLocations($gId, $parameters);
-			$res->addReplacedAliases(array('LNAME' => 'NAME'));
-			$result = array();
-			while($item = $res->fetch())
+			if(in_array('PATH', $parameters['additionals']))
 			{
-				$result[$item['ID']] = $item;
+				// show path to each found node
+				static::processSearchRequestV2GetAdditionalPathNodes($data, $parameters);
 			}
-		}
-		else
-			$result = parent::processSearchGetList($parameters);
 
-		return $result;
-	}
-
-	protected static function processSearchGetAdditional($result)
-	{
-		$result = parent::processSearchGetAdditional($result);
-
-		// get common path of parent
-		if(isset($_REQUEST['FILTER']['PARENT_ID']))
-		{
-			$path = array();
-			$result['ETC']['PATH_NAMES'] = array();
-
-			if($pId = intval($_REQUEST['FILTER']['PARENT_ID']))
+			// show common count of items by current filter
+			if(in_array('CNT_BY_FILTER', $parameters['additionals']) && is_array($parameters['filter']))
 			{
-				$res = Location\LocationTable::getPathToNode($pId, array(
-					'select' => array(
-						'ID',
-						'CODE',
-						'TYPE_ID',
-						'LNAME' => 'NAME.NAME'
-					),
-					'filter' => array(
-						'NAME.LANGUAGE_ID' => static::processSearchRequestGetLang()
-					)
-				));
-				$res->addReplacedAliases(array('LNAME' => 'NAME'));
+				$item = Location\LocationTable::getList(array('select' => array('CNT'), 'filter' => $parameters['filter']))->fetch();
+				$data['ETC']['CNT_BY_FILTER'] = $item['CNT'];
+			}
 
-				$node = array();
-				while($item = $res->fetch())
+			// show parent item in case of PARENT_ID condition in filter
+			if(in_array('PARENT_ITEM', $parameters['additionals']))
+			{
+				$id = false;
+				if(intval($parameters['filter']['=PARENT_ID']))
+					$id = intval($parameters['filter']['=PARENT_ID']);
+				elseif(intval($parameters['filter']['PARENT_ID']))
+					$id = intval($parameters['filter']['PARENT_ID']);
+
+				if($id !== false)
 				{
-					$path[] = intval($item['ID']);
-					$result['ETC']['PATH_NAMES'][$item['ID']] = $item['NAME'];
+					$path = array();
+					$data['ETC']['PATH_ITEMS'] = array();
 
-					$node = $item;
+					$res = Location\LocationTable::getPathToNode($id, array(
+						'select' => array(
+							'VALUE' => 'ID',
+							'CODE',
+							'TYPE_ID',
+							'DISPLAY' => 'NAME.NAME'
+						),
+						'filter' => array(
+							'=NAME.LANGUAGE_ID' => strlen($parameters['filter']['=NAME.LANGUAGE_ID']) ? $parameters['filter']['=NAME.LANGUAGE_ID'] : LANGUAGE_ID
+						)
+					));
+
+					$node = array();
+					while($item = $res->fetch())
+					{
+						$path[] = intval($item['VALUE']);
+						$data['ETC']['PATH_ITEMS'][$item['VALUE']] = $item;
+
+						$node = $item;
+					}
+
+					$node['PATH'] = array_reverse($path);
+					$data['ETC']['PARENT_ITEM'] = $node;
 				}
-
-				$node['PATH'] = array_reverse($path);
-				$result['ETC']['PARENT_ITEM'] = $node;
 			}
 		}
+
+		return $data;
+	}
+
+	public static function processGetPathRequest($parameters)
+	{
+		$idList = $parameters['ITEMS'];
+
+		if(!is_array($idList) || empty($idList))
+			throw new Main\SystemException('Empty array passed'); // todo: assert here later
+
+		$result = array();
+
+		$idList = array_unique($idList);
+		$items = array();
+
+		$res = self::getEntityListByListOfPrimary(self::LOCATION_ENTITY_NAME, $idList, array('select' => array('ID', 'LEFT_MARGIN', 'RIGHT_MARGIN')), 'ID');
+		while($item = $res->fetch())
+			$items[] = $item;
+
+		if(empty($items))
+			return $result;
+
+		$result = static::getPathToNodesV2($items);
 
 		return $result;
 	}
@@ -483,29 +476,5 @@ class CBitrixLocationSelectorSystemComponent extends CBitrixLocationSelectorSear
 		}
 
 		return $list;
-	}
-
-	public static function processGetPathRequest()
-	{
-		$idList = $_REQUEST['ITEMS'];
-
-		if(!is_array($idList) || empty($idList))
-			throw new Main\SystemException('Empty array passed'); // todo: assert here later
-
-		$result = array();
-
-		$idList = array_unique($idList);
-		$items = array();
-
-		$res = self::getEntityListByListOfPrimary(self::LOCATION_ENTITY_NAME, $idList, array('select' => array('ID', 'LEFT_MARGIN', 'RIGHT_MARGIN')), 'ID');
-		while($item = $res->fetch())
-			$items[] = $item;
-
-		if(empty($items))
-			return $result;
-
-		$result = static::getPathToNodes($items);
-
-		return $result;
 	}
 }

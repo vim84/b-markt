@@ -7,8 +7,11 @@ if(!$USER->IsAdmin())
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
 $group_id = intval($_GET["group_id"]);
-if(!CClusterGroup::GetArrayByID($group_id))
-	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
+if ($_GET["group_id"] !== "all")
+{
+	if(!CClusterGroup::GetArrayByID($group_id))
+		$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
+}
 
 $sTableID = "tbl_cluster_slave_list";
 $oSort = new CAdminSorting($sTableID, "ID", "ASC");
@@ -113,16 +116,14 @@ $arHeaders = array(
 
 $lAdmin->AddHeaders($arHeaders);
 
-$cData = new CClusterDBNode;
-$rsData = $cData->GetList(
-	array(//Order
-		"ID" => "ASC",
-	)
-	,array(//Filter
-		"=ROLE_ID" => array("MAIN", "SLAVE", "MASTER"),
-		"=GROUP_ID" => $group_id,
-	)
+$arFilter = array(
+	"=ROLE_ID" => array("MAIN", "SLAVE", "MASTER"),
 );
+if ($group_id > 0)
+	$arFilter["=GROUP_ID"] = $group_id;
+
+$cData = new CClusterDBNode;
+$rsData = $cData->GetList(array("ID" => "ASC"), $arFilter);
 
 if(!isset($_SESSION["SLAVE_LIST"]))
 	$_SESSION["SLAVE_LIST"] = array();
@@ -150,7 +151,7 @@ while($arRes = $rsData->Fetch()):
 		$uptime = false;
 
 	if($arRes["ID"] > 1)
-		$row->AddViewField("ID", '<a href="cluster_slave_edit.php?lang='.LANGUAGE_ID.'&group_id='.$group_id.'&ID='.$arRes["ID"].'">'.$arRes["ID"].'</a>');
+		$row->AddViewField("ID", '<a href="cluster_slave_edit.php?lang='.LANGUAGE_ID.'&group_id='.$arRes["GROUP_ID"].'&ID='.$arRes["ID"].'">'.$arRes["ID"].'</a>');
 
 	$Seconds_Behind_Master = 0;
 	$Slave_IO_Running = 'Yes';
@@ -295,7 +296,7 @@ while($arRes = $rsData->Fetch()):
 		"ICON" => "edit",
 		"DEFAULT" => true,
 		"TEXT" => GetMessage("CLU_SLAVE_LIST_EDIT"),
-		"ACTION" => $lAdmin->ActionRedirect('cluster_slave_edit.php?lang='.LANGUAGE_ID.'&group_id='.$group_id.'&ID='.$arRes["ID"])
+		"ACTION" => $lAdmin->ActionRedirect('cluster_slave_edit.php?lang='.LANGUAGE_ID.'&group_id='.$arRes["GROUP_ID"].'&ID='.$arRes["ID"])
 	);
 
 	if(strlen($arRes["MASTER_ID"]))
@@ -304,40 +305,40 @@ while($arRes = $rsData->Fetch()):
 		{
 			$arActions[] = array(
 				"TEXT" => GetMessage("CLU_SLAVE_LIST_PAUSE"),
-				"ACTION"=>$lAdmin->ActionDoGroup($arRes["ID"], "pause", 'group_id='.$group_id)
+				"ACTION"=>$lAdmin->ActionDoGroup($arRes["ID"], "pause", 'group_id='.($group_id ?: 'all'))
 			);
 		}
 		elseif($arRes["STATUS"] == "PAUSED")
 		{
 			$arActions[] = array(
 				"TEXT" => GetMessage("CLU_SLAVE_LIST_RESUME"),
-				"ACTION"=>$lAdmin->ActionDoGroup($arRes["ID"], "resume", 'group_id='.$group_id)
+				"ACTION"=>$lAdmin->ActionDoGroup($arRes["ID"], "resume", 'group_id='.($group_id ?: 'all'))
 			);
 			$arActions[] = array(
 				"TEXT" => GetMessage("CLU_SLAVE_LIST_STOP"),
-				"ACTION"=>$lAdmin->ActionDoGroup($arRes["ID"], "stop", 'group_id='.$group_id)
+				"ACTION"=>$lAdmin->ActionDoGroup($arRes["ID"], "stop", 'group_id='.($group_id ?: 'all'))
 			);
 		}
 	}
 
 	if($arRes["ROLE_ID"] == "SLAVE" || $arRes["ROLE_ID"] == "MASTER")
 	{
-		if($arRes["STATUS"] == "READY")
+		if($arRes["STATUS"] == "READY" && $group_id > 0)
 		{
 			$arActions[] = array(
 				"ICON"=>"delete",
 				"TEXT"=>GetMessage("CLU_SLAVE_LIST_DELETE"),
-				"ACTION"=>"if(confirm('".GetMessage("CLU_SLAVE_LIST_DELETE_CONF")."')) ".$lAdmin->ActionDoGroup($arRes["ID"], "delete", 'group_id='.$group_id)
+				"ACTION"=>"if(confirm('".GetMessage("CLU_SLAVE_LIST_DELETE_CONF")."')) ".$lAdmin->ActionDoGroup($arRes["ID"], "delete", 'group_id='.$arRes["GROUP_ID"])
 			);
 			if($arRes["ROLE_ID"] == "MASTER")
 				$arActions[] = array(
 					"TEXT" => GetMessage("CLU_SLAVE_LIST_START_USING_DB"),
-					"ACTION" => "javascript:WizardWindow.Open('bitrix:cluster.master_start','".bitrix_sessid()."&__wiz_node_id=".$arRes["ID"]."&__wiz_group_id=".$group_id."')",
+					"ACTION" => "javascript:WizardWindow.Open('bitrix:cluster.master_start','".bitrix_sessid()."&__wiz_node_id=".$arRes["ID"]."&__wiz_group_id=".$arRes["GROUP_ID"]."')",
 				);
 			else
 				$arActions[] = array(
 					"TEXT" => GetMessage("CLU_SLAVE_LIST_START_USING_DB"),
-					"ACTION" => "javascript:WizardWindow.Open('bitrix:cluster.slave_start','".bitrix_sessid()."&__wiz_node_id=".$arRes["ID"]."&__wiz_group_id=".$group_id."')",
+					"ACTION" => "javascript:WizardWindow.Open('bitrix:cluster.slave_start','".bitrix_sessid()."&__wiz_node_id=".$arRes["ID"]."&__wiz_group_id=".$arRes["GROUP_ID"]."')",
 				);
 		}
 	}
@@ -346,7 +347,7 @@ while($arRes = $rsData->Fetch()):
 		$arActions[] = array(
 			"TEXT" => GetMessage("CLU_SLAVE_LIST_SKIP_SQL_ERROR"),
 			"TITLE" => GetMessage("CLU_SLAVE_LIST_SKIP_SQL_ERROR_ALT"),
-			"ACTION" => $lAdmin->ActionDoGroup($arRes["ID"], "skip_sql_error", 'group_id='.$group_id)
+			"ACTION" => $lAdmin->ActionDoGroup($arRes["ID"], "skip_sql_error", 'group_id='.($group_id ?: 'all'))
 		);
 
 	if(!empty($arActions))
@@ -369,7 +370,7 @@ $lAdmin->AddFooter(
 );
 
 $aContext = array();
-if($bHasMaster)
+if($bHasMaster && $group_id > 0)
 {
 	$aContext[] = array(
 		"TEXT" => GetMessage("CLU_SLAVE_LIST_ADD"),
@@ -389,7 +390,7 @@ elseif($group_id > 1)
 }
 $aContext[] = array(
 	"TEXT" => GetMessage("CLU_SLAVE_LIST_REFRESH"),
-	"LINK" => "cluster_slave_list.php?lang=".LANGUAGE_ID.'&group_id='.$group_id,
+	"LINK" => "cluster_slave_list.php?lang=".LANGUAGE_ID.'&group_id='.($group_id ?: 'all'),
 );
 
 $lAdmin->AddAdminContextMenu($aContext, /*$bShowExcel=*/false);

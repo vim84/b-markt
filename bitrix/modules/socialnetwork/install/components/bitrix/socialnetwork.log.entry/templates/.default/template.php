@@ -88,15 +88,21 @@ else
 			&& $arEvent["EVENT_FORMATTED"]["URL"] !== ""
 			&& $arEvent["EVENT_FORMATTED"]["URL"] !== false
 		)
+		{
 			$url = $arEvent["EVENT_FORMATTED"]["URL"];
+		}
 		elseif (
 			isset($arEvent["EVENT"]["URL"])
 			&& $arEvent["EVENT"]["URL"] !== ""
 			&& $arEvent["EVENT"]["URL"] !== false
 		)
+		{
 			$url = $arEvent["EVENT"]["URL"];
+		}
 		else
+		{
 			$url = "";
+		}
 
 		$hasTitle24 = isset($arEvent["EVENT_FORMATTED"]["TITLE_24"])
 			&& $arEvent["EVENT_FORMATTED"]["TITLE_24"] !== ""
@@ -765,7 +771,10 @@ else
 							$APPLICATION->IncludeComponent(
 								"bitrix:system.field.view",
 								$arUserField["USER_TYPE"]["USER_TYPE_ID"],
-								array("arUserField" => $arUserField),
+								array(
+									"LAZYLOAD" => $arParams["LAZYLOAD"],
+									"arUserField" => $arUserField
+								),
 								null,
 								array("HIDE_ICONS"=>"Y")
 							);
@@ -800,7 +809,14 @@ else
 						?><span class="feed-inform-comments"><?
 							?><?if (intval($arEvent["COMMENTS_COUNT"]) > 0 )
 							{
-								?><a href="<?=$url?>"><?=GetMessage("SONET_C30_COMMENTS")?></a><?
+								if ($url !== "")
+								{
+									?><a href="<?=$url?>"><?=GetMessage("SONET_C30_COMMENTS")?></a><?
+								}
+								else
+								{
+									?><span class="feed-inform-comments-nolink"><?=GetMessage("SONET_C30_COMMENTS")?></span><?
+								}
 							}
 							else
 							{
@@ -1041,7 +1057,17 @@ else
 							"POST_MESSAGE_TEXT" => (array_key_exists("FULL_MESSAGE_CUT", $arComment["EVENT_FORMATTED"]) ? $arComment["EVENT_FORMATTED"]["FULL_MESSAGE_CUT"] : ""),
 							"~POST_MESSAGE_TEXT" => "",
 							"URL" => array(
-								"LINK" => (isset($arComment["EVENT"]["URL"]) && strlen($arComment["EVENT"]["URL"]) > 0 ? $arComment["EVENT"]["URL"] : (isset($arParams["PATH_TO_LOG_ENTRY"]) && strlen($arParams["PATH_TO_LOG_ENTRY"]) > 0 ? CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_LOG_ENTRY"], array("log_id" => $arEvent["EVENT"]["ID"]))."?commentId=".$arComment["EVENT"]["ID"] : "")),
+								"LINK" => (
+									isset($arComment["EVENT"]["URL"])
+									&& strlen($arComment["EVENT"]["URL"]) > 0
+										? $arComment["EVENT"]["URL"]
+										: (
+											isset($arParams["PATH_TO_LOG_ENTRY"])
+											&& strlen($arParams["PATH_TO_LOG_ENTRY"]) > 0
+												? CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_LOG_ENTRY"], array("log_id" => $arEvent["EVENT"]["ID"]))."?commentId=".$arComment["EVENT"]["ID"]
+												: ""
+										)
+								),
 								"EDIT" => "__logEditComment('".$arEvent["COMMENTS_PARAMS"]["ENTITY_XML_ID"]."', '".$arComment["EVENT"]["ID"]."', '".$arEvent["EVENT"]["ID"]."');",
 								"DELETE" => '/bitrix/components/bitrix/socialnetwork.log.entry/ajax.php?lang='.LANGUAGE_ID.'&action=delete_comment&delete_comment_id='.$arComment["EVENT"]["ID"].'&post_id='.$arEvent["EVENT"]["ID"].'&site='.SITE_ID
 							),
@@ -1096,8 +1122,11 @@ else
 									$APPLICATION->IncludeComponent(
 										"bitrix:system.field.view",
 										$arUserField["USER_TYPE"]["USER_TYPE_ID"],
-												array("arUserField" => $arUserField),
-												null,
+										array(
+											"LAZYLOAD" => $arParams["LAZYLOAD"],
+											"arUserField" => $arUserField
+										),
+										null,
 										array("HIDE_ICONS"=>"Y")
 									);
 								}

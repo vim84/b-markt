@@ -16,4 +16,5 @@ $MESS["IBSEL_A_ACTIVATE"] = "Активировать";
 $MESS["IBSEL_A_CLEAR_COUNTER"] = "Сбросить счетчик просмотров";
 $MESS["IBSEL_A_CLEAR_COUNTER_TITLE"] = "Обнулить счетчик и дату начала просмотров элемента";
 $MESS["IBEL_CATALOG_TYPE_MESS_OFFER"] = "предложение";
+$MESS["IBSEL_A_CLEAR_COUNTER_CONFIRM"] = "Вы уверены, что хотите обнулить счетчик и дату начала просмотров элемента?";
 ?>

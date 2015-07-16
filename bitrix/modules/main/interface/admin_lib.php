@@ -759,7 +759,7 @@ class CAdminMenu
 		{
 			if(isset($aMenu["dynamic"]) && $aMenu["dynamic"] == true && (!$aMenu["items"] || count($aMenu["items"]) <= 0))
 			{
-				$onclick = "BX.adminMenu.toggleDynSection(".$this->_get_menu_item_width($level).", this.parentNode.parentNode, '".htmlspecialcharsbx(CUtil::JSEscape($aMenu["module_id"]))."', '".htmlspecialcharsbx(CUtil::JSEscape($aMenu["items_id"]))."', '".($level+1)."')";
+				$onclick = "BX.adminMenu.toggleDynSection(".$this->_get_menu_item_width($level).", this.parentNode.parentNode, '".htmlspecialcharsbx(CUtil::JSEscape($aMenu["module_id"]))."', '".urlencode(htmlspecialcharsbx(CUtil::JSEscape($aMenu["items_id"])))."', '".($level+1)."')";
 			}
 			elseif(!$aMenu["dynamic"] || !$bSectionActive || $aMenu['dynamic'] && $bSectionActive && isset($aMenu["items"]) && count($aMenu["items"]) > 0)
 			{
@@ -1128,6 +1128,11 @@ class CAdminPopupEx extends CAdminPopup
 {
 	protected $element_id;
 
+	/**
+	 * @param string $element_id
+	 * @param bool|array $items
+	 * @param bool|array $params
+	 */
 	public function __construct($element_id, $items=false, $params=false)
 	{
 //SEPARATOR, ID, ONCLICK|LINK, ICONCLASS, TEXT, DEFAULT=>true|false, MENU
@@ -2698,6 +2703,9 @@ echo '
 		}
 	}
 
+	/**
+	 * @param bool|array $arJSButtons
+	 */
 	function ButtonsPublic($arJSButtons = false)
 	{
 		while ($this->tabIndex < count($this->tabs))
@@ -3562,7 +3570,7 @@ class CAdminList
 							$val = "";
 						break;
 					case "html":
-						$val = trim($field["view"]['value']);
+						$val = trim(strip_tags($field["view"]['value'], "<br>"));
 						break;
 					default:
 						$val = htmlspecialcharsex($val);
@@ -3931,6 +3939,7 @@ class CAdminListRow
 	/**
 	 * @param string $id
 	 * @param array|boolean $arAttributes
+	 * @return void
 	 */
 	function AddCheckField($id, $arAttributes = Array())
 	{
@@ -3946,6 +3955,7 @@ class CAdminListRow
 	 * @param string $id
 	 * @param array $arValues
 	 * @param array|boolean $arAttributes
+	 * @return void
 	 */
 	function AddSelectField($id, $arValues = Array(), $arAttributes = Array())
 	{
@@ -3960,6 +3970,7 @@ class CAdminListRow
 	/**
 	 * @param string $id
 	 * @param array|boolean $arAttributes
+	 * @return void
 	 */
 	function AddInputField($id, $arAttributes = Array())
 	{
@@ -3973,12 +3984,14 @@ class CAdminListRow
 	/**
 	 * @param string $id
 	 * @param array|boolean $arAttributes
+	 * @param bool $useTime
+	 * @return void
 	 */
-	function AddCalendarField($id, $arAttributes = Array())
+	function AddCalendarField($id, $arAttributes = Array(), $useTime = false)
 	{
 		if($arAttributes!==false)
 		{
-			$this->aFields[$id]["edit"] = Array("type"=>"calendar", "attributes"=>$arAttributes);
+			$this->aFields[$id]["edit"] = array("type"=>"calendar", "attributes"=>$arAttributes, "useTime" => $useTime);
 			$this->pList->bCanBeEdited = true;
 		}
 	}
@@ -3994,6 +4007,11 @@ class CAdminListRow
 		$this->pList->bCanBeEdited = true;
 	}
 
+	/**
+	 * @param string $id
+	 * @param bool|array $showInfo
+	 * @return void
+	 */
 	function AddViewFileField($id, $showInfo = false)
 	{
 		static $fileman = 0;
@@ -4014,6 +4032,12 @@ class CAdminListRow
 		);
 	}
 
+	/**
+	 * @param string $id
+	 * @param bool|array $showInfo
+	 * @param array $inputs
+	 * @return void
+	 */
 	function AddFileField($id, $showInfo = false, $inputs = array())
 	{
 		$this->aFields[$id]["edit"] = array(
@@ -4151,7 +4175,12 @@ class CAdminListRow
 						if(!$field["edit"]["attributes"]["size"])
 							$field["edit"]["attributes"]["size"] = "10";
 						echo '<span style="white-space:nowrap;"><input type="text" '.$this->__AttrGen($field["edit"]["attributes"]).' name="FIELDS['.htmlspecialcharsbx($this->id).']['.htmlspecialcharsbx($id).']" value="'.htmlspecialcharsbx($val).'">';
-						echo CAdminCalendar::Calendar('FIELDS['.htmlspecialcharsbx($this->id).']['.htmlspecialcharsbx($id).']').'</span>';
+						echo CAdminCalendar::Calendar(
+								'FIELDS['.htmlspecialcharsbx($this->id).']['.htmlspecialcharsbx($id).']',
+								'',
+								'',
+								$field['edit']['useTime']
+							).'</span>';
 						break;
 					case "file":
 						echo CFileInput::Show(
@@ -5437,7 +5466,7 @@ class CAdminForm extends CAdminTabControl
 	{
 		if($this->tabIndex >= count($this->tabs))
 			return;
-		
+
 		$this->tabIndex++;
 		while(
 			isset($this->tabs[$this->tabIndex])
@@ -5463,7 +5492,7 @@ class CAdminForm extends CAdminTabControl
 		$this->arSavedTabs = $this->tabs;
 		$this->arSystemTabs = array();
 		$this->arReqiredTabs = array();
-		
+
 		foreach($this->tabs as $arTab)
 		{
 			$this->arSystemTabs[$arTab["DIV"]] = $arTab;
@@ -6153,6 +6182,10 @@ class CAdminForm extends CAdminTabControl
 			$this->BeginNextFormTab();
 	}
 
+	/**
+	 * @param bool|array $arJSButtons
+	 * @return void
+	 */
 	function ButtonsPublic($arJSButtons = false)
 	{
 		if ($this->bPublicMode)

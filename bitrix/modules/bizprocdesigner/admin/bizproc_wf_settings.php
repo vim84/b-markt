@@ -6,37 +6,32 @@ IncludeModuleLangFile(__FILE__);
 
 CUtil::DecodeUriComponent($_POST);
 
-if (LANG_CHARSET != "UTF-8" && is_array($_POST["arWorkflowParameters"]))
+foreach (array('arWorkflowParameters', 'arWorkflowParameters', 'arWorkflowConstants') as $field)
 {
-	foreach ($_POST["arWorkflowParameters"] as $name => $param)
+	if (isset($_POST[$field]) && is_array($_POST[$field]))
 	{
-		if (is_array($_POST["arWorkflowParameters"][$name]["Options"]))
+		if (LANG_CHARSET != "UTF-8")
 		{
-			$newarr = array();
-			foreach ($_POST["arWorkflowParameters"][$name]["Options"] as $k => $v)
-				$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
-			$_POST["arWorkflowParameters"][$name]["Options"] = $newarr;
+			foreach ($_POST[$field] as $name => $param)
+			{
+				if (is_array($_POST[$field][$name]["Options"]))
+				{
+					$newarr = array();
+					foreach ($_POST[$field][$name]["Options"] as $k => $v)
+						$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
+					$_POST[$field][$name]["Options"] = $newarr;
+				}
+			}
 		}
 	}
+	else
+		$_POST[$field] = array();
 }
+
 
 $arWorkflowParameters = $_POST['arWorkflowParameters'];
-
-if (LANG_CHARSET != "UTF-8" && is_array($_POST["arWorkflowVariables"]))
-{
-	foreach ($_POST["arWorkflowVariables"] as $name => $param)
-	{
-		if (is_array($_POST["arWorkflowVariables"][$name]["Options"]))
-		{
-			$newarr = array();
-			foreach ($_POST["arWorkflowVariables"][$name]["Options"] as $k => $v)
-				$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
-			$_POST["arWorkflowVariables"][$name]["Options"] = $newarr;
-		}
-	}
-}
-
 $arWorkflowVariables = $_POST['arWorkflowVariables'];
+$arWorkflowConstants = $_POST['arWorkflowConstants'];
 
 try
 {
@@ -53,13 +48,15 @@ catch (Exception $e)
 
 if (!$canWrite || !check_bitrix_sessid())
 {
-	$popupWindow->ShowError(GetMessage("ACCESS_DENIED"));
+	ShowError(GetMessage("ACCESS_DENIED"));
 	die();
 }
 
 if ($_POST["save"] == "Y")
 {
 	$perms = array();
+	if (!isset($arErrors))
+		$arErrors = array();
 	if (is_array($_POST['perm']))
 	{
 		foreach ($_POST['perm'] as $t => $v)
@@ -67,7 +64,6 @@ if ($_POST["save"] == "Y")
 	}
 
 	echo CUtil::PhpToJSObject($perms, false);
-
 	die();
 }
 
@@ -86,16 +82,6 @@ $arAllowableOperations = $documentService->GetAllowableOperations(array(MODULE_I
 if(!is_array($arWorkflowParameters))
 	$arWorkflowParameters = array();
 
-/*$arKeys = array_keys($arWorkflowParameters);
-foreach ($arKeys as $key)
-{
-	$arWorkflowParameters[$key]["Default_printable"] = $documentService->GetFieldInputValuePrintable(
-		array(MODULE_ID, ENTITY, $_POST['document_type']),
-		$arWorkflowParameters[$key],
-		$arWorkflowParameters[$key]["Default"]
-	);
-}*/
-
 $arWorkflowParameterTypesTmp = $documentService->GetDocumentFieldTypes(array(MODULE_ID, ENTITY, $_POST['document_type']));
 $arWorkflowParameterTypes = array();
 foreach ($arWorkflowParameterTypesTmp as $key => $value)
@@ -106,19 +92,27 @@ CBPDocument::AddShowParameterInit(MODULE_ID, "only_users", $_POST['document_type
 <script type="text/javascript">
 BX.WindowManager.Get().SetTitle('<?= GetMessageJS("BIZPROC_WFS_TITLE") ?>');
 
-var WFSParams = <?=(is_array($arWorkflowParameters)?CUtil::PhpToJSObject($arWorkflowParameters):'{}')?>;
-var WFSVars = <?=(is_array($arWorkflowVariables)?CUtil::PhpToJSObject($arWorkflowVariables):'{}')?>;
+var WFSAllData = {};
+WFSAllData['P'] = <?=(is_array($arWorkflowParameters)?CUtil::PhpToJSObject($arWorkflowParameters):'{}')?>;
+WFSAllData['V'] = <?=(is_array($arWorkflowVariables)?CUtil::PhpToJSObject($arWorkflowVariables):'{}')?>;
+WFSAllData['C'] = <?=(is_array($arWorkflowConstants)?CUtil::PhpToJSObject($arWorkflowConstants):'{}')?>;
 
 function WFSStart()
 {
-	var id;
+	var type, id;
 
-	for (id in WFSParams)
-		WFSParamAddParam(id, WFSParams[id], 'P');
-
-	for (id in WFSVars)
-		WFSParamAddParam(id, WFSVars[id], 'V');
-
+	for (type in WFSAllData)
+	{
+		if (!WFSAllData.hasOwnProperty(type))
+			continue;
+		var typeData = WFSAllData[type];
+		for (id in typeData)
+		{
+			if (!typeData.hasOwnProperty(id))
+				continue;
+			WFSParamAddParam(id, typeData[id], type);
+		}
+	}
 	document.getElementById('WFStemplate_name').value = workflowTemplateName;
 	document.getElementById('WFStemplate_description').value = workflowTemplateDescription;
 
@@ -160,9 +154,14 @@ function WFSSaveOK(permissions)
 	arWorkflowParameters = {};
 	var i, t = document.getElementById('WFSListP');
 	for (i = 1; i < t.rows.length; i++)
-		arWorkflowParameters[t.rows[i].paramId] = WFSParams[t.rows[i].paramId];
-//__dump_bx(arWorkflowParameters, 4, '!1!');
-	arWorkflowVariables = WFSVars;
+		arWorkflowParameters[t.rows[i].paramId] = WFSAllData['P'][t.rows[i].paramId];
+
+	arWorkflowConstants = {};
+	var i, t = document.getElementById('WFSListC');
+	for (i = 1; i < t.rows.length; i++)
+		arWorkflowConstants[t.rows[i].paramId] = WFSAllData['C'][t.rows[i].paramId];
+
+	arWorkflowVariables = WFSAllData['V'];
 	workflowTemplateName = document.getElementById('WFStemplate_name').value;
 	workflowTemplateDescription = document.getElementById('WFStemplate_description').value;
 	workflowTemplateAutostart = ((document.getElementById('WFStemplate_autostart1').checked ? 1 : 0) | (document.getElementById('WFStemplate_autostart2').checked ? 2 : 0));
@@ -297,16 +296,6 @@ function WFSParamSetSubtype(type, pvMode, value)
 	);
 }
 
-function WFSSwitchSubTypeControlP(newSubtype)
-{
-	WFSSwitchSubTypeControl(newSubtype, 'P');
-}
-
-function WFSSwitchSubTypeControlV(newSubtype)
-{
-	WFSSwitchSubTypeControl(newSubtype, 'V');
-}
-
 function WFSSwitchSubTypeControl(newSubtype, pvMode)
 {
 	BX.showWait();
@@ -343,7 +332,6 @@ function WFSSwitchTypeControl(newType, pvMode)
 		{
 			window.currentType['Type'] = newType;
 
-			//alert("GetFieldInputValue1=" + v);
 			if (typeof v == "object")
 				v = v[0];
 
@@ -354,13 +342,25 @@ function WFSSwitchTypeControl(newType, pvMode)
 	);
 }
 
+function WFSSwitchSubTypeControlP(newSubtype)
+{
+	WFSSwitchSubTypeControl(newSubtype, 'P');
+}
+
+function WFSSwitchSubTypeControlV(newSubtype)
+{
+	WFSSwitchSubTypeControl(newSubtype, 'V');
+}
+
+function WFSSwitchSubTypeControlC(newSubtype)
+{
+	WFSSwitchSubTypeControl(newSubtype, 'C');
+}
+
 function WFSParamDeleteParam(ob, Type)
 {
 	var id = ob.parentNode.parentNode.paramId;
-	if (Type == 'V')
-		delete WFSVars[id];
-	else
-		delete WFSParams[id];
+	delete WFSAllData[Type][id];
 
 	var i, t = document.getElementById('WFSList'+Type);
 	for (i = 1; i < t.rows.length; i++)
@@ -382,7 +382,7 @@ function WFSParamEditParam(ob, pvMode)
 
 	window.lastEd = ob.parentNode.parentNode.paramId;
 
-	var s = (pvMode=='V' ? WFSVars[ob.parentNode.parentNode.paramId] : WFSParams[ob.parentNode.parentNode.paramId]);
+	var s = WFSAllData[pvMode][ob.parentNode.parentNode.paramId];
 
 	window.currentType = {'Type' : s['Type'], 'Options' : s['Options'], 'Required' : s['Required'], 'Multiple' : s['Multiple']};
 
@@ -390,7 +390,7 @@ function WFSParamEditParam(ob, pvMode)
 	document.getElementById("WFSFormId"+pvMode).readOnly = true;
 
 	document.getElementById("WFSFormName"+pvMode).value = s['Name'];
-	document.getElementById("WFSFormDesc"+pvMode).value = s['Description'];
+	document.getElementById("WFSFormDesc"+pvMode).value = s['Description'] || '';
 
 	document.getElementById("WFSFormReq"+pvMode).checked = (s['Required'] == 1);
 	document.getElementById("WFSFormMult"+pvMode).checked = (s['Multiple'] == 1);
@@ -429,27 +429,30 @@ function WFSParamSaveForm(Type)
 		return;
 	}
 
-	BX.showWait();
-
+	var WFSData = WFSAllData[Type];
+	if (lastEd && typeof WFSData[lastEd] === 'undefined')
+		lastEd = false;
 	var N = lastEd;
-	if (Type == 'V')
-		WFSData = WFSVars;
-	else
-		WFSData = WFSParams;
 
 	if (!lastEd)
 	{
-		lastEd = document.getElementById("WFSFormId"+Type).value.replace(/^\s+|\s+$/g, '');
+		var varId = document.getElementById("WFSFormId"+Type).value.replace(/^\s+|\s+$/g, '');
+		if (typeof(WFSData[varId]) !== 'undefined')
+		{
+			alert('<?=GetMessageJS("BIZPROC_WFS_PARAM_ID_EXISTS")?>'.replace('#ID#', varId));
+			document.getElementById("WFSFormId"+Type).focus();
+			return;
+		}
+		lastEd = varId;
 		WFSData[lastEd] = {};
 	}
+	BX.showWait();
 
 	WFSData[lastEd]['Name'] = document.getElementById("WFSFormName"+Type).value.replace(/^\s+|\s+$/g, '');
 	WFSData[lastEd]['Description'] = document.getElementById("WFSFormDesc"+Type).value;
 	WFSData[lastEd]['Type'] = document.getElementById("WFSFormType"+Type).value;
 	WFSData[lastEd]['Required'] = document.getElementById("WFSFormReq"+Type).checked ? 1 : 0;
 	WFSData[lastEd]['Multiple'] = document.getElementById("WFSFormMult"+Type).checked ? 1 : 0;
-
-	//alert("!1!=" + WFSData[lastEd]['Default']);
 
 	WFSData[lastEd]['Options'] = null;
 	if (objFields.arFieldTypes[WFSData[lastEd]['Type']]['Complex'] == "Y")
@@ -459,20 +462,15 @@ function WFSParamSaveForm(Type)
 		WFSData[lastEd],
 		{'Field':'WFSFormDefault'+Type, 'Form':'bizprocform'},
 		function(v){
-			//alert("GetFieldInputValue0a=" + v);
 			if (typeof v == "object")
 			{
 				WFSData[lastEd]['Default_printable'] = v[1];
 				v = v[0];
-				//alert("!1!:" + (typeof v) + "=" + v);
 			}
 			else
 			{
 				WFSData[lastEd]['Default_printable'] = v;
 			}
-
-			//alert("GetFieldInputValue1a=" + v);
-			//__dump_bx(v, 4, '!2!');
 
 			WFSData[lastEd]['Default'] = v;
 
@@ -501,19 +499,6 @@ function WFSParamFillParam(id, p, pvMode)
 			r[2].innerHTML = (objFields.arFieldTypes[p['Type']] ? objFields.arFieldTypes[p['Type']]['Name'] : p['Type'] );
 			r[3].innerHTML = (p['Required']==1?'<?=GetMessageJS("BIZPROC_WFS_YES")?>':'<?=GetMessageJS("BIZPROC_WFS_NO")?>');
 			r[4].innerHTML = (p['Multiple']==1?'<?=GetMessageJS("BIZPROC_WFS_YES")?>':'<?=GetMessageJS("BIZPROC_WFS_NO")?>');
-			/*if (objFields.arFieldTypes[p['Type']]['BaseType'] == 'bool')
-			{
-				if(p['Default']==1 || p['Default']=='Y')
-					r[4].innerHTML = '<?=GetMessageJS("BIZPROC_WFS_YES")?>';
-				else if(p['Default']=='N')
-					r[4].innerHTML = '<?=GetMessageJS("BIZPROC_WFS_NO")?>';
-				else
-					r[4].innerHTML = '';
-			}
-			else
-			{
-				r[4].innerHTML = HTMLEncode(p['Default_printable']);
-			}*/
 
 			return true;
 		}
@@ -526,18 +511,11 @@ function WFSParamNewParam(pvMode)
 	WFSParamEditForm(true, pvMode);
 
 	var i;
+	var prefix = {P: 'Parameter', V: 'Variable', C: 'Constant'}[pvMode];
 	for (i=1; i<10000; i++)
 	{
-		if (pvMode != 'V')
-		{
-			if (!WFSParams['Parameter'+i])
-				break;
-		}
-		else
-		{
-			if (!WFSVars['Variable'+i])
-				break;
-		}
+		if (!WFSAllData[pvMode][prefix+i])
+			break;
 	}
 
 	for (var t in objFields.arFieldTypes)
@@ -545,7 +523,7 @@ function WFSParamNewParam(pvMode)
 
 	window.currentType = {'Type' : t, 'Options' : null, 'Required' : 'N', 'Multiple' : 'N'};
 
-	document.getElementById("WFSFormId"+pvMode).value = (pvMode != 'V' ? 'Parameter'+i : 'Variable'+i);
+	document.getElementById("WFSFormId"+pvMode).value = prefix+i;
 	document.getElementById("WFSFormId"+pvMode).readOnly = false;
 
 	document.getElementById("WFSFormType"+pvMode).selectedIndex = 0;
@@ -572,7 +550,6 @@ function WFSParamAddParam(id, p, pvMode)
 	c.align="center";
 	c = r.insertCell(-1);
 	c.align="center";
-	//c = r.insertCell(-1);
 	c = r.insertCell(-1);
 	c.innerHTML = ((pvMode == "P") ? '<a href="javascript:void(0);" onclick="moveRowUp(this); return false;"><?= GetMessageJS("BP_WF_UP") ?></a> | <a href="javascript:void(0);" onclick="moveRowDown(this); return false;"><?= GetMessageJS("BP_WF_DOWN") ?></a> | ' : '') + '<a href="javascript:void(0);" onclick="WFSParamEditParam(this, \''+pvMode+'\');"><?=GetMessageJS("BIZPROC_WFS_CHANGE_PARAM")?></a> | <a href="javascript:void(0);" onclick="WFSParamDeleteParam(this, \''+pvMode+'\');"><?=GetMessageJS("BIZPROC_WFS_DEL_PARAM")?></a>';
 	WFSParamFillParam(id, p, pvMode);
@@ -607,6 +584,7 @@ $aTabs = array(
 	array("DIV" => "edit1", "TAB" => GetMessage("BIZPROC_WFS_TAB_MAIN"), "ICON" => "group_edit", "TITLE" => GetMessage("BIZPROC_WFS_TAB_MAIN_TITLE")),
 	array("DIV" => "edit2", "TAB" => GetMessage("BIZPROC_WFS_TAB_PARAM"), "ICON" => "group_edit", "TITLE" => GetMessage("BIZPROC_WFS_TAB_PARAM_TITLE")),
 	array("DIV" => "edit3", "TAB" => GetMessage("BP_WF_TAB_VARS"), "ICON" => "group_edit", "TITLE" => GetMessage("BP_WF_TAB_VARS_TITLE")),
+	array("DIV" => "edit5", "TAB" => GetMessage("BP_WF_TAB_CONSTANTS"), "ICON" => "group_edit", "TITLE" => GetMessage("BP_WF_TAB_CONSTANTS_TITLE")),
 	array("DIV" => "edit4", "TAB" => GetMessage("BP_WF_TAB_PERM"), "ICON" => "group_edit", "TITLE" => GetMessage("BP_WF_TAB_PERM_TITLE")),
 );
 
@@ -774,20 +752,91 @@ $tabControl->BeginNextTab();
 </tr>
 <?
 $tabControl->BeginNextTab();
+?>
+	<tr>
+		<td colspan="2">
+			<div id="dparamlistC">
+				<table width="100%" class="internal" id="WFSListC">
+					<tr class="heading">
+						<td><?echo GetMessage("BIZPROC_WFS_PARAM_NAME")?></td>
+						<td><?echo GetMessage("BIZPROC_WFS_PARAMID")?></td>
+						<td><?echo GetMessage("BIZPROC_WFS_PARAM_TYPE")?></td>
+						<td><?echo GetMessage("BIZPROC_WFS_PARAM_REQUIRED")?></td>
+						<td><?echo GetMessage("BIZPROC_WFS_PARAM_MULT")?></td>
+						<!--td><?echo GetMessage("BIZPROC_WFS_PARAM_DEF")?></td-->
+						<td><?echo GetMessage("BIZPROC_WFS_PARAM_ACT")?></td>
+					</tr>
+				</table>
+				<br>
+				<span style="padding: 10px;"><a href="javascript:void(0);" onclick="WFSParamNewParam('C')"><?echo GetMessage("BP_WF_CONSTANT_ADD")?></a></span>
+			</div>
+			<div id="dparamformC" style="display: none">
+				<table class="internal">
+					<tr>
+						<td><span style="color: #FF0000">*</span><?=GetMessage("BIZPROC_WFS_PARAMID")?>:</td>
+						<td><input type="text" size="20" id="WFSFormIdC" readonly=readonly></td>
+					</tr>
+					<tr>
+						<td><span style="color: #FF0000">*</span><?=GetMessage("BIZPROC_WFS_PARAM_NAME")?>:</td>
+						<td><input type="text" size="30" id="WFSFormNameC"></td>
+					</tr>
+					<tr>
+						<td><?=GetMessage("BIZPROC_WFS_PARAMDESC")?>:</td>
+						<td><textarea id="WFSFormDescC" rows="2" cols="30"></textarea></td>
+					</tr>
+					<tr>
+						<td><?=GetMessage("BIZPROC_WFS_PARAM_TYPE")?>:</td>
+						<td>
+							<select id="WFSFormTypeC" onchange="WFSSwitchTypeControl(this.value, 'C');">
+								<?foreach ($arWorkflowParameterTypes as $k => $v):?>
+									<option value="<?= $k ?>"><?= htmlspecialcharsbx($v) ?></option>
+								<?endforeach;?>
+							</select><br />
+							<span id="WFSAdditionalTypeInfoC"></span>
+						</td>
+					</tr>
+					<tr>
+						<td><?=GetMessage("BIZPROC_WFS_PARAM_REQUIRED")?>:</td>
+						<td><input type="checkbox" id="WFSFormReqC" value="Y"></td>
+					</tr>
+					<tr>
+						<td><?=GetMessage("BIZPROC_WFS_PARAM_MULT")?>:</td>
+						<td><input type="checkbox" id="WFSFormMultC" value="Y"></td>
+					</tr>
+					<tr id="WFSFormOptionsRowC" style="display: none;">
+						<td id="tdWFSFormOptionsPromtC"><?echo GetMessage("BIZPROC_WFS_PARAMLIST")?>:</td>
+						<td id="tdWFSFormOptionsC"><textarea id="WFSFormOptionsC" rows="5" cols="30"></textarea></td>
+					</tr>
+					<tr>
+						<td><?=GetMessage("BIZPROC_WFS_CONSTANTDEF")?>:</td>
+						<td id="tdWFSFormDefaultC">
+							<input id="id_WFSFormDefaultC">
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" align="center"><input type="button" id="dpsavebuttonformC" value="OK" onclick="WFSParamSaveForm('C')"><input type="button" id="dpcancelbuttonformC" onclick="WFSParamEditForm(false, 'C')" value="<?echo GetMessage("BIZPROC_WFS_BUTTON_CANCEL")?>"></td>
+					</tr>
+				</table>
+			</div>
+		</td>
+	</tr>
+	<?
+$tabControl->BeginNextTab();
 $permissions = $_POST['arWorkflowTemplate'][0]['Properties']['Permission'];
 foreach($arAllowableOperations as $op_id=>$op_name):
 	$parameterKeyExt = 'P'.$op_id;
 ?>
 <tr>
 	<td valign="top"><?=htmlspecialcharsbx($op_name)?>:</td>
-	<td><?
+	<td valign="top"><?
 			$usersP = htmlspecialcharsbx(CBPHelper::UsersArrayToString(
 						$permissions[$op_id],
 						$_POST['arWorkflowTemplate'],
 						array(MODULE_ID, ENTITY, $_POST['document_type'])
 					));
 	?>
-	<textarea name="<?= $parameterKeyExt ?>" id="id_<?= $parameterKeyExt ?>" rows="4" cols="50"><?= $usersP ?></textarea><input type="button" value="..." onclick="BPAShowSelector('id_<?= $parameterKeyExt ?>', 'user', 'all', {'arWorkflowParameters': WFSParams, 'arWorkflowVariables': WFSVars});" />
+	<textarea name="<?= $parameterKeyExt ?>" id="id_<?= $parameterKeyExt ?>" rows="4" cols="50"><?= $usersP ?></textarea>
+	<input type="button" value="..." onclick="BPAShowSelector('id_<?= $parameterKeyExt ?>', 'user', 'all', {'arWorkflowParameters': WFSAllData['P'], 'arWorkflowVariables': WFSAllData['V'], 'arWorkflowConstants': WFSAllData['C']});" style="vertical-align: top; margin-left: 2px"/>
 	</td>
 </tr>
 <?

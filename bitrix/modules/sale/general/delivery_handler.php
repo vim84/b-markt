@@ -104,10 +104,13 @@ WHERE HID IN (".$strKeys.")";
 				{
 					$arConfigValues = call_user_func($arHandler["DBGETSETTINGS"], $arRes["SETTINGS"]);
 
-					foreach ($arConfigValues as $key => $value)
+					if (!empty($arConfigValues) && is_array($arConfigValues))
 					{
-						if (is_array($arHandler["CONFIG"]["CONFIG"][$key]))
-							$arHandler["CONFIG"]["CONFIG"][$key]["VALUE"] = $value;
+						foreach ($arConfigValues as $key => $value)
+						{
+							if (is_array($arHandler["CONFIG"]["CONFIG"][$key]))
+								$arHandler["CONFIG"]["CONFIG"][$key]["VALUE"] = $value;
+						}
 					}
 				}
 				else

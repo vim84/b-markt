@@ -1854,6 +1854,9 @@
 }
 
 #bx-admin-prefix .adm-info-message-gray .adm-info-message-buttons {padding-top: 15px;}
+.adm-workarea .adm-info-message-buttons input[type="button"]:first-child {
+	margin-right: 15px;
+}
 
 .bx-ie8 #bx-admin-prefix .adm-info-message-green .adm-info-message,
 .bx-ie9 #bx-admin-prefix .adm-info-message-green .adm-info-message {

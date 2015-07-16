@@ -193,6 +193,8 @@ class CSaleOrder extends CAllSaleOrder
 		elseif (StrPos($key, "PROPERTY_VAL_BY_CODE_") === 0)
 			$propIDTmp = preg_replace("/[^a-zA-Z0-9_-]/is", "", trim(substr($key, StrLen("PROPERTY_VAL_BY_CODE_"))));
 
+		$locationPropInfo = self::getLocationPropertyInfo();
+
 		if (strlen($propIDTmp) > 0 || $propIDTmp > 0)
 		{
 			if (!in_array($propIDTmp, $arPropIDsTmp))
@@ -202,9 +204,26 @@ class CSaleOrder extends CAllSaleOrder
 				$arFields["PROPERTY_ID_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".ID", "TYPE" => "int", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".ORDER_PROPS_ID = ".$propIDTmp." AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
 				$arFields["PROPERTY_ORDER_PROPS_ID_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".ORDER_PROPS_ID", "TYPE" => "int", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".ORDER_PROPS_ID = ".$propIDTmp." AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
 				$arFields["PROPERTY_NAME_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".NAME", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".ORDER_PROPS_ID = ".$propIDTmp." AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
-				$arFields["PROPERTY_VALUE_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".VALUE", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".ORDER_PROPS_ID = ".$propIDTmp." AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
+				
+				if(CSaleLocation::isLocationProMigrated() && isset($locationPropInfo['ID'][$propIDTmp]))
+				{
+					$arFields["PROPERTY_VALUE_".$propIDTmp] = array("FIELD" => "L_".$propIDTmp.".ID", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".ORDER_PROPS_ID = ".$propIDTmp." AND O.ID = SP_".$propIDTmp.".ORDER_ID) INNER JOIN b_sale_location L_".$propIDTmp." ON (SP_".$propIDTmp.".VALUE = L_".$propIDTmp.".CODE)");
+				}
+				else
+				{
+					$arFields["PROPERTY_VALUE_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".VALUE", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".ORDER_PROPS_ID = ".$propIDTmp." AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
+				}
+
 				$arFields["PROPERTY_CODE_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".CODE", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".ORDER_PROPS_ID = ".$propIDTmp." AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
-				$arFields["PROPERTY_VAL_BY_CODE_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".VALUE", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".CODE = '".$propIDTmp."' AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
+
+				if(CSaleLocation::isLocationProMigrated() && isset($locationPropInfo['CODE'][$propIDTmp]))
+				{
+					$arFields["PROPERTY_VAL_BY_CODE_".$propIDTmp] = array("FIELD" => "L_".$propIDTmp.".ID", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".CODE = '".$propIDTmp."' AND O.ID = SP_".$propIDTmp.".ORDER_ID) INNER JOIN b_sale_location L_".$propIDTmp." ON (SP_".$propIDTmp.".VALUE = L_".$propIDTmp.".CODE)");
+				}
+				else
+				{
+					$arFields["PROPERTY_VAL_BY_CODE_".$propIDTmp] = array("FIELD" => "SP_".$propIDTmp.".VALUE", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props_value SP_".$propIDTmp." ON (SP_".$propIDTmp.".CODE = '".$propIDTmp."' AND O.ID = SP_".$propIDTmp.".ORDER_ID)");
+				}
 			}
 		}
 	}
@@ -593,6 +612,7 @@ class CSaleOrder extends CAllSaleOrder
 			"DELIVERY_DOC_DATE" => array("FIELD" => "O.DELIVERY_DOC_DATE", "TYPE" => "date"),
 			"UPDATED_1C" => array("FIELD" => "O.UPDATED_1C", "TYPE" => "string"),
 			"STORE_ID" => array("FIELD" => "O.STORE_ID", "TYPE" => "int"),
+			"BY_RECOMMENDATION" => array("FIELD" => "(SELECT (CASE WHEN MAX(BR.RECOMMENDATION) IS NULL OR MAX(BR.RECOMMENDATION) = '' THEN 'N' ELSE 'Y' END) FROM b_sale_basket BR WHERE BR.ORDER_ID=O.ID GROUP BY BR.ORDER_ID)", "TYPE" => "char"),
 
 			"ORDER_TOPIC" => array("FIELD" => "O.ORDER_TOPIC", "TYPE" => "string"),
 			"RESPONSIBLE_ID" => array("FIELD" => "O.RESPONSIBLE_ID", "TYPE" => "int"),

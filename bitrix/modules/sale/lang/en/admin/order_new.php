@@ -38,7 +38,6 @@ $MESS["NEWO_CHOOSE_CITY"] = "(select city)";
 $MESS["NEWO_BASKET_CONTAINER"] = "Order Contents";
 $MESS["NEWO_BASKET_COUPON"] = "Coupon";
 $MESS["NEWO_COUPON_RECALC"] = "Recalculate";
-$MESS["NEWO_COUPON_DESC"] = "Use comma to separate multiple coupon codes.";
 $MESS["NEWO_COUPON_NEW_DESC"] = "Discount coupons are only applicable to new products.";
 $MESS["NEWO_CURRENT_ACCOUNT"] = "Pay from internal account";
 $MESS["NEWO_PAY_FROM_ACCOUNT_NO"] = "Insufficient funds in the user account.";

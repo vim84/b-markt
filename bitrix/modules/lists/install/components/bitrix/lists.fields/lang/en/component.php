@@ -11,4 +11,5 @@ $MESS["CC_BLF_ACTION_MENU_EDIT"] = "Edit";
 $MESS["CC_BLF_ACTION_MENU_DELETE"] = "Delete";
 $MESS["CC_BLF_ACTION_MENU_DELETE_CONF"] = "Are you sure you want to delete this field?";
 $MESS["CC_BLF_CHAIN_FIELDS"] = "List Fields";
+$MESS["CC_BLF_TITLE_EDIT_PROCESS"] = "Edit fields for workflow: #NAME#";
 ?>

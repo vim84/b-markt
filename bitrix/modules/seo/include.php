@@ -105,7 +105,7 @@ class CSeoEventHandlers
 
 	public static function OnIncludeHTMLEditorScript()
 	{
-		if (COption::GetOptionString('main', 'vendor', '') == '1c_bitrix')
+		if (COption::GetOptionString('main', 'vendor', '') == '1c_bitrix' && defined('ADMIN_SECTION'))
 		{
 ?>
 <script>
@@ -250,7 +250,7 @@ class CSeoEventHandlers
 
 	public static function OnBeforeHTMLEditorScriptRuns()
 	{
-		if (COption::GetOptionString('main', 'vendor', '') == '1c_bitrix')
+		if (COption::GetOptionString('main', 'vendor', '') == '1c_bitrix' && defined('ADMIN_SECTION'))
 		{
 ?>
 <script>

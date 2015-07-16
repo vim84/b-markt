@@ -417,7 +417,7 @@ class CComponentPanel
 			);
 
 			$aMenuItem = array(
-				"TEXT"=>$arComponentDescription["NAME"],
+				"TEXT"=>($arComponentDescription["NAME"] <> ''? $arComponentDescription["NAME"] : $this->componentName),
 				"TITLE"=>GetMessage("main_comp_button_menu_title").' '.$this->componentName,
 				"ICON"=>"parameters-2",
 				"ACTION"=>$url,

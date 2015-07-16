@@ -18,10 +18,11 @@ use Bitrix\Sale\Location\Admin\TypeHelper;
 use Bitrix\Sale\Location\Admin\ExternalServiceHelper;
 
 use Bitrix\Sale\Location\Import;
+use Bitrix\Sale\Location\Search\Finder;
 
 Loc::loadMessages(__FILE__);
 
-class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
+class CBitrixSaleLocationImportComponent extends CBitrixComponent
 {
 	protected $componentData = 	array();
 	protected $dbResult = 		array();
@@ -48,7 +49,7 @@ class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
 	 * @throws Exception
 	 * @return void
 	 */
-	protected static function checkRequiredModules()
+	protected function checkRequiredModules()
 	{
 		$result = true;
 
@@ -61,6 +62,29 @@ class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
 		return $result;
 	}
 
+	protected static function checkAccessPermissions($parameters = array())
+	{
+		if(!is_array($parameters))
+			$parameters = array();
+
+		$errors = array();
+
+		if ($GLOBALS['APPLICATION']->GetGroupRight("sale") < "W")
+			$errors[] = Loc::getMessage("SALE_SLI_SALE_MODULE_WRITE_ACCESS_DENIED");
+
+		if(!LocationHelper::checkLocationEnabled())
+			$errors[] = 'Locations were disabled or data has not been converted';
+
+		if($parameters['CHECK_CSRF'])
+		{
+			$post = \Bitrix\Main\Context::getCurrent()->getRequest()->getPostList();
+			if(!strlen($post['csrf']) || bitrix_sessid() != $post['csrf'])
+				$errors[] = 'CSRF token is not valid';
+		}
+
+		return $errors;
+	}
+
 	/**
 	 * Function checks if user have basic permissions to launch the component
 	 * @throws Exception
@@ -68,21 +92,13 @@ class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
 	 */
 	protected function checkPermissions()
 	{
-		$result = true;
-
-		if ($GLOBALS['APPLICATION']->GetGroupRight("sale") < "W")
+		$errors = static::checkAccessPermissions();
+		if(is_array($errors))
 		{
-			$this->errors['FATAL'][] = Loc::getMessage("SALE_SLI_SALE_MODULE_WRITE_ACCESS_DENIED");
-			$result = false;
+			$this->errors['FATAL'] = array_merge($this->errors['FATAL'], $errors);
 		}
 
-		if(!LocationHelper::checkLocationEnabled())
-		{
-			$this->errors['FATAL'][] = 'Locations were disabled or data has not been converted';
-			$result = false;
-		}
-
-		return $result;
+		return count($errors) == 0;
 	}
 
 	/**
@@ -191,54 +207,49 @@ class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
 		$this->includeComponentTemplate();
 	}
 
-	/**
-	 * Do smth when called over ajax
-	 * @return mixed[]
-	 */
 	public static function doAjaxStuff($parameters = array())
 	{
-		$import = 	static::getImportInstance($parameters);
-		$errors = 	array();
+		$errors = static::checkAccessPermissions(array('CHECK_CSRF' => true));
 		$data = 	array();
 
-		$request =	static::getRequest();
-
-		// action: restore indexes
-		if(isset($request['POST']['RESTORE_INDEXES']))
+		if(count($errors) == 0)
 		{
-			$import->restoreIndexes();
-			$import->unLockProcess();
-		}
+			$import = 	static::getImportInstance($parameters);
 
-		// action: process ajax
-		if(isset($request['POST']['AJAX_CALL']))
-		{
-			$data = array();
+			$request =	static::getRequest();
 
-			if($request['POST']['step'] == 0)
-				$import->reset();
-
-			try
+			// action: restore indexes
+			if(isset($request['POST']['RESTORE_INDEXES']))
 			{
+				$import->restoreIndexes();
+				$import->unLockProcess();
+			}
+
+			// action: process ajax
+			if(isset($request['POST']['AJAX_CALL']))
+			{
+				$data = array();
+
+				if($request['POST']['step'] == 0)
+					$import->reset();
+
 				@set_time_limit(0);
 
 				$data['PERCENT'] = $import->performStage();
 				$data['NEXT_STAGE'] = $import->getStageCode();
-			}
-			catch(Main\SystemException $e)
-			{
-				$errors[] = $e->getMessage();
-			}
 
-			if($data['PERCENT'] == 100)
-			{
-				$import->logFinalResult();
-				$data['STAT'] = array_values($import->getStatisticsAll()); // to force to [] in json
+				if($data['PERCENT'] == 100)
+				{
+					$import->logFinalResult();
+					$data['STAT'] = array_values($import->getStatisticsAll()); // to force to [] in json
 
-				$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+					Finder::setIndexInvalid();
 
-				if($request['POST']['OPTIONS']['DROP_ALL'] == 1 || $request['POST']['ONLY_DELETE_ALL'] == 1)
-					Main\Config\Option::set('sale', self::LOC2_IMPORT_PERFORMED_OPTION, 'Y');
+					$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+
+					if($request['POST']['OPTIONS']['DROP_ALL'] == 1 || $request['POST']['ONLY_DELETE_ALL'] == 1)
+						Main\Config\Option::set('sale', self::LOC2_IMPORT_PERFORMED_OPTION, 'Y');
+				}
 			}
 		}
 
@@ -266,11 +277,19 @@ class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
 
 	protected static function getImportInstance($parameters)
 	{
+		$request = static::getRequest();
+
 		// you must pass all parameters here, Import\ImportProcess should not know about $_REQUEST
 		return new Import\ImportProcess(array(
+
+			// system parameters
 			'INITIAL_TIME' => intval($parameters['INITIAL_TIME']),
-			'ONLY_DELETE_ALL' => !!$parameters['ONLY_DELETE_ALL'],
-			'USE_LOCK' => true
+			'ONLY_DELETE_ALL' => !!($request['POST']['ONLY_DELETE_ALL']),
+			'USE_LOCK' => true,
+
+			// parameters from the form
+			'REQUEST' => $request['POST'],
+			'LANGUAGE_ID' => isset($request['GET']['lang']) && (string) $request['GET']['lang'] != '' ? $request['GET']['lang'] : LANGUAGE_ID
 		));
 	}
 
@@ -311,7 +330,7 @@ class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
 		$sortedChildren = array();
 		foreach($this->dbResult['LAYOUT'][$code] as $item)
 		{
-			$name = isset($item['NAME'][ToUpper(LANGUAGE_ID)]['NAME']) ? $item['NAME'][ToUpper(LANGUAGE_ID)]['NAME'] : $item['NAME']['EN']['NAME'];
+			$name = $item['NAME'][ToUpper(LANGUAGE_ID)]['NAME'];
 			$sortedChildren[$name] = $item;
 
 			$this->resortLayoutBundleAlphabetically($item['CODE']);
@@ -348,7 +367,7 @@ class CBitrixCrmConfigLocationImport2Component extends CBitrixComponent
 					'{{EXPANDER_CLASS}}'
 				), array(
 					$pCode == 'WORLD' ? '' : $pCode, // a little mixin with view, actually temporal
-					isset($pName[ToUpper(LANGUAGE_ID)]['NAME']) ? $pName[ToUpper(LANGUAGE_ID)]['NAME'] : $pName['EN']['NAME'],
+					(string) $pName[ToUpper(LANGUAGE_ID)]['NAME'] != '' ? $pName[ToUpper(LANGUAGE_ID)]['NAME'] : $pName['EN']['NAME'],
 					$childrenHtml,
 					$parameters['INPUT_NAME'], //!strlen($childrenHtml) ? $parameters['INPUT_NAME'] : '',
 					strlen($childrenHtml) ? $parameters['EXPANDER_CLASS'] : ''

@@ -1,4 +1,8 @@
 <?
+/** @global CDatabase $DB */
+/** @global CMain $APPLICATION */
+/** @global CUser $USER */
+use Bitrix\Main\Loader;
 define('NO_AGENT_CHECK', true);
 if (
 	isset($_REQUEST['ACTION']) && (string)$_REQUEST['ACTION'] == 'IMPORT'
@@ -15,17 +19,14 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admi
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/catalog/prolog.php");
 if (!($USER->CanDoOperation('catalog_read') || $USER->CanDoOperation('catalog_import_edit') || $USER->CanDoOperation('catalog_import_exec')))
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
-CModule::IncludeModule("catalog");
+Loader::includeModule('catalog');
 $bCanEdit = $USER->CanDoOperation('catalog_import_edit');
 $bCanExec = $USER->CanDoOperation('catalog_import_exec');
 
 if ($ex = $APPLICATION->GetException())
 {
 	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
-
-	$strError = $ex->GetString();
-	ShowError($strError);
-
+	ShowError($ex->GetString());
 	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
 	die();
 }
@@ -165,7 +166,7 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 				$CUR_FILE_POS = 0;
 				if (isset($_REQUEST['CUR_FILE_POS']))
 				{
-					$CUR_FILE_POS = intval($_REQUEST['CUR_FILE_POS']);
+					$CUR_FILE_POS = (int)$_REQUEST['CUR_FILE_POS'];
 				}
 				if (0 > $CUR_FILE_POS)
 				{
@@ -225,8 +226,8 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 						$db_profile = CCatalogImport::GetList(array(), array("DEFAULT_PROFILE"=>"Y", "FILE_NAME"=>$strActFileName));
 						if ($ar_profile = $db_profile->Fetch())
 						{
-							$PROFILE_ID = intval($ar_profile["ID"]);
-							if ('Y' == $ar_profile["NEED_EDIT"])
+							$PROFILE_ID = (int)$ar_profile['ID'];
+							if ($ar_profile['NEED_EDIT'] == 'Y')
 								$boolNeedEdit = true;
 						}
 					}
@@ -344,13 +345,14 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 							$setupVars = http_build_query($arSetupVars);
 					}
 
-					$_SESSION[$CUR_LOAD_SESS_ID]["CUR_FILE_POS"] = intval($CUR_FILE_POS);
+					$_SESSION[$CUR_LOAD_SESS_ID]["CUR_FILE_POS"] = $CUR_FILE_POS;
 					$_SESSION[$CUR_LOAD_SESS_ID]["INTERNAL_VARS"] = $arInternalVars;
 					$_SESSION[$CUR_LOAD_SESS_ID]["SETUP_VARS"] = $setupVars;
 					$_SESSION[$CUR_LOAD_SESS_ID]["ERROR_MESSAGE"] .= $strImportErrorMessage;
 					$_SESSION[$CUR_LOAD_SESS_ID]["OK_MESSAGE"] .= $strImportOKMessage;
 
-					$urlParams = "CUR_FILE_POS=".intval($CUR_FILE_POS)."&CUR_LOAD_SESS_ID=".urlencode($CUR_LOAD_SESS_ID)."&ACT_FILE=".urlencode($strActFileName)."&ACTION=IMPORT&PROFILE_ID=".intval($PROFILE_ID);
+					$urlParams = "CUR_FILE_POS=".$CUR_FILE_POS."&CUR_LOAD_SESS_ID=".urlencode($CUR_LOAD_SESS_ID)."&ACT_FILE=".urlencode($strActFileName)."&ACTION=IMPORT&PROFILE_ID=".$PROFILE_ID;
+					$fullUrl = $APPLICATION->GetCurPage().'?lang='.LANGUAGE_ID.'&'.$urlParams.'&'.bitrix_sessid_get();
 					?><!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 					<html>
 					<head>
@@ -358,11 +360,11 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 					</head>
 					<body>
 						<?echo GetMessage("CATI_AUTO_REFRESH");?>
-						<a href="<?echo $APPLICATION->GetCurPage() ?>?lang=<?echo LANGUAGE_ID; ?>&<?echo $urlParams ?>&<?=bitrix_sessid_get()?>"><?echo GetMessage("CATI_AUTO_REFRESH_STEP");?></a><br>
+						<a href="<?=$fullUrl; ?>"><?echo GetMessage("CATI_AUTO_REFRESH_STEP");?></a><br>
 						<script type="text/javascript">
 						function DoNext()
 						{
-							window.location="<?echo $APPLICATION->GetCurPage()?>?lang=<?echo LANGUAGE_ID; ?>&<?echo CUtil::JSEscape($urlParams); ?>&<?=bitrix_sessid_get()?>";
+							window.location="<?=$fullUrl; ?>";
 						}
 						setTimeout('DoNext()', 2000);
 						</script>
@@ -395,30 +397,30 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 				if (strlen($strImportOKMessage)>0)
 					$strOKMessage .= $strImportOKMessage;
 
+				if ($PROFILE_ID>0)
+				{
+					CCatalogImport::Update($PROFILE_ID, array(
+						"=LAST_USE" => $DB->GetNowFunction(),
+						'NEED_EDIT' => 'N',
+					));
+				}
+				else
+				{
+					$PROFILE_ID = CCatalogImport::Add(array(
+						"=LAST_USE"		=> $DB->GetNowFunction(),
+						"FILE_NAME"		=> $strActFileName,
+						"NAME"			=> $arReportsList[$strActFileName]["TITLE"],
+						"DEFAULT_PROFILE" => "Y",
+						"IN_MENU"		=> "N",
+						"IN_AGENT"		=> "N",
+						"IN_CRON"		=> "N",
+						'NEED_EDIT' => 'N',
+						"SETUP_VARS"	=> false
+					));
+				}
+
 				if (strlen($strErrorMessage)<=0)
 				{
-					if ($PROFILE_ID>0)
-					{
-						CCatalogImport::Update($PROFILE_ID, array(
-							"=LAST_USE" => $DB->GetNowFunction(),
-							'NEED_EDIT' => 'N',
-						));
-					}
-					else
-					{
-						$PROFILE_ID = CCatalogImport::Add(array(
-							"=LAST_USE"		=> $DB->GetNowFunction(),
-							"FILE_NAME"		=> $strActFileName,
-							"NAME"			=> $arReportsList[$strActFileName]["TITLE"],
-							"DEFAULT_PROFILE" => "Y",
-							"IN_MENU"		=> "N",
-							"IN_AGENT"		=> "N",
-							"IN_CRON"		=> "N",
-							'NEED_EDIT' => 'N',
-							"SETUP_VARS"	=> false
-							));
-					}
-
 					$randVal = rand(1, 1000);
 					$_SESSION["COMMERCEML_IMPORT_".$randVal] = $strOKMessage;
 					LocalRedirect("/bitrix/admin/cat_import_setup.php?lang=".LANGUAGE_ID."&success_import=Y&message_sess_id=".$randVal);
@@ -443,9 +445,7 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 				{
 					$db_profile = CCatalogImport::GetList(array(), array("DEFAULT_PROFILE"=>"Y", "FILE_NAME"=>$strActFileName));
 					if ($ar_profile = $db_profile->Fetch())
-					{
-						$PROFILE_ID = intval($ar_profile["ID"]);
-					}
+						$PROFILE_ID = (int)$ar_profile['ID'];
 				}
 
 				if ($PROFILE_ID>0)
@@ -503,8 +503,8 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 					$db_profile = CCatalogImport::GetList(array(), array("DEFAULT_PROFILE"=>"Y", "FILE_NAME"=>$strActFileName));
 					if ($ar_profile = $db_profile->Fetch())
 					{
-						$PROFILE_ID = intval($ar_profile["ID"]);
-						if ('Y' == $ar_profile["NEED_EDIT"])
+						$PROFILE_ID = (int)$ar_profile['ID'];
+						if ($ar_profile['NEED_EDIT'] == 'Y')
 							$boolNeedEdit = true;
 					}
 				}
@@ -543,7 +543,7 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 							"NEED_EDIT"		=> "N",
 							"SETUP_VARS"	=> false
 							));
-						if (intval($PROFILE_ID)>0)
+						if ((int)$PROFILE_ID > 0)
 						{
 							CAgent::AddAgent("CCatalogImport::PreGenerateImport(".$PROFILE_ID.");", "catalog", "N", $agent_period*60*60, "", "Y");
 						}
@@ -588,8 +588,8 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 					$db_profile = CCatalogImport::GetList(array(), array("DEFAULT_PROFILE"=>"Y", "FILE_NAME"=>$strActFileName));
 					if ($ar_profile = $db_profile->Fetch())
 					{
-						$PROFILE_ID = intval($ar_profile["ID"]);
-						if ('Y' == $ar_profile["NEED_EDIT"])
+						$PROFILE_ID = (int)$ar_profile['ID'];
+						if ($ar_profile['NEED_EDIT'] == 'Y')
 							$boolNeedEdit = true;
 					}
 				}
@@ -686,7 +686,7 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 							'NEED_EDIT'		=> 'N',
 							"SETUP_VARS"	=> false
 							));
-						if (intval($PROFILE_ID)>0)
+						if ((int)$PROFILE_ID > 0)
 						{
 							// add
 							if ($agent_period>0)
@@ -860,7 +860,7 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 						"SETUP_VARS"	=> $strSETUP_VARS
 						));
 
-					if (intval($PROFILE_ID)<=0)
+					if ((int)$PROFILE_ID <= 0)
 					{
 						$strErrorMessage .= GetMessage("CES_ERROR_SAVE_PROFILE")."\n";
 					}
@@ -993,7 +993,7 @@ if (($bCanEdit || $bCanExec) && check_bitrix_sessid())
 								'NEED_EDIT'		=> 'N',
 								"SETUP_VARS"	=> $strSETUP_VARS
 							));
-							if (intval($PROFILE_ID)<=0)
+							if ((int)$PROFILE_ID <= 0)
 							{
 								$strErrorMessage .= GetMessage("CES_ERROR_COPY_PROFILE")."\n";
 							}
@@ -1054,6 +1054,7 @@ $arUserList = array();
 $strNameFormat = CSite::GetNameFormat(true);
 
 $arContextMenu = array();
+$cronErrors = array();
 
 foreach($arReportsList as $strReportFile => $arReportParams)
 {
@@ -1074,6 +1075,9 @@ foreach($arReportsList as $strReportFile => $arReportParams)
 
 	while ($arProfile = $rsProfiles->Fetch())
 	{
+		if ($arProfile['IN_AGENT'] == 'Y' && $arProfile['IN_CRON'] == 'Y')
+			$cronErrors[] = '['.$arProfile['ID'].'] '.$arReportParams['TITLE'];
+
 		$arProfile['USED'] = $arProfile['LAST_USE_FORMAT'];
 		$boolExist = true;
 		$boolNeedEdit = (isset($arProfile['NEED_EDIT']) && 'Y' == $arProfile['NEED_EDIT']);
@@ -1298,6 +1302,9 @@ foreach($arReportsList as $strReportFile => $arReportParams)
 
 	while ($arProfile = $rsProfiles->Fetch())
 	{
+		if ($arProfile['IN_AGENT'] == 'Y' && $arProfile['IN_CRON'] == 'Y')
+			$cronErrors[] = '['.$arProfile['ID'].'] '.$arReportParams['TITLE'];
+
 		$arProfile['USED'] = $arProfile['LAST_USE_FORMAT'];
 		$boolNeedEdit = (isset($arProfile['NEED_EDIT']) && 'Y' == $arProfile['NEED_EDIT']);
 
@@ -1596,37 +1603,98 @@ if (strlen($strErrorMessage) > 0)
 
 if ($_GET["success_import"]=="Y")
 {
+	$message_sess_id = (isset($_GET['message_sess_id']) ? (int)$_GET['message_sess_id'] : 0);
 	CAdminMessage::ShowNote(GetMessage("CES_SUCCESS"));
-	if (strlen($_SESSION["COMMERCEML_IMPORT_".intval($message_sess_id)]) > 0)
+	if (strlen($_SESSION["COMMERCEML_IMPORT_".$message_sess_id]) > 0)
 	{
-		echo "<p>".$_SESSION["COMMERCEML_IMPORT_".intval($message_sess_id)]."</p>";
-		unset($_SESSION["COMMERCEML_IMPORT_".intval($message_sess_id)]);
+		echo "<p>".$_SESSION["COMMERCEML_IMPORT_".$message_sess_id]."</p>";
+		unset($_SESSION["COMMERCEML_IMPORT_".$message_sess_id]);
 	}
 }
+
+if (!empty($cronErrors))
+{
+	$cronMessage = new CAdminMessage(array(
+		'MESSAGE' => GetMessage('CES_CRON_AGENT_ERRORS'),
+		'DETAILS' => implode('<br>', $cronErrors),
+		'TYPE' => 'OK',
+		'HTML' => true
+	));
+	echo $cronMessage->Show();
+	unset($cronMessage);
+}
+
+$lAdmin->DisplayList();
+
+echo BeginNote();
+	echo GetMessage("import_setup_cat")?> <?echo CATALOG_PATH2IMPORTS;?><br><br>
+	<?echo GetMessage("CES_NOTES1");?><br><br>
+	<?if ($bWindowsHosting):?>
+		<b><?echo GetMessage("CES_NOTES2");?></b>
+	<?else:?>
+		<?echo GetMessage("CES_NOTES3");?>
+		<b><?echo $_SERVER["DOCUMENT_ROOT"];?>/bitrix/crontab/crontab.cfg</b>
+		<?echo GetMessage("CES_NOTES4");?><br>
+		<?echo GetMessage("CES_NOTES5");?><br>
+		<b>crontab <?echo $_SERVER["DOCUMENT_ROOT"];?>/bitrix/crontab/crontab.cfg</b><br>
+		<?echo GetMessage("CES_NOTES6");?><br>
+		<b>crontab -l</b><br>
+		<?echo GetMessage("CES_NOTES7");?><br>
+		<b>crontab -r</b><br><br>
+		<?
+		$arRetval = array();
+		@exec("crontab -l", $arRetval);
+		if (is_array($arRetval) && !empty($arRetval))
+		{
+			?>
+			<?echo GetMessage("CES_NOTES8");?><br>
+			<textarea name="crontasks" cols="70" rows="5" wrap="off" readonly>
+			<?
+			echo htmlspecialcharsbx(implode("\n", $arRetval))."\n";
+			?>
+			</textarea><br>
+			<?
+		}
+		echo GetMessage("CES_NOTES10");?><br><br>
+		<?echo GetMessage("CES_NOTES11");?><br>
+		<?echo $_SERVER["DOCUMENT_ROOT"];?>/bitrix/php_interface/include/catalog_import/cron_frame.php<br>
+		<?echo GetMessage("CES_NOTES12");?>
+	<?endif;
+
+echo EndNote();
+
 ?>
 <script type="text/javascript">
 function ShowDiv(div, shadow)
 {
-	var obDiv = BX(div);
-	var obShadow = BX(shadow);
+	var obDiv = BX(div),
+		obShadow = BX(shadow),
+		l,
+		t,
+		obCoord;
+
 	if (!!obDiv && !!obShadow)
 	{
-		var obCoord = BX.GetWindowSize();
+		obCoord = BX.GetWindowSize();
 		BX.style(obDiv, 'display', 'block');
 		BX.style(obShadow, 'display', 'block');
 
-		var l = parseInt(obCoord.scrollLeft + obCoord.innerWidth/2 - obDiv.offsetWidth/2);
-		var t = parseInt(obCoord.scrollTop + obCoord.innerHeight/2 - obDiv.offsetHeight/2);
+		l = parseInt(obCoord.scrollLeft + obCoord.innerWidth/2 - obDiv.offsetWidth/2, 10);
+		if (isNaN(l))
+			l = 0;
+		t = parseInt(obCoord.scrollTop + obCoord.innerHeight/2 - obDiv.offsetHeight/2, 10);
+		if (isNaN(t))
+			t = 0;
 
-		BX.adjust(obDiv, {style: {left: l + "px", top: t + "px"}});
-		BX.adjust(obShadow, {style: {left: (l+4) + "px", top: (t+4) + "px", width: obDiv.offsetWidth + 'px', height: obDiv.offsetHeight + 'px'}});
+		BX.adjust(obDiv, {style: {left: l + 'px', top: t + 'px'}});
+		BX.adjust(obShadow, {style: {left: (l+4) + 'px', top: (t+4) + 'px', width: obDiv.offsetWidth + 'px', height: obDiv.offsetHeight + 'px'}});
 	}
 }
 
 function HideDiv(div, shadow)
 {
-	var obDiv = BX(div);
-	var obShadow = BX(shadow);
+	var obDiv = BX(div),
+		obShadow = BX(shadow);
 	if (!!obDiv && !!obShadow)
 	{
 		BX.style(obDiv, 'display', 'none');
@@ -1636,15 +1704,18 @@ function HideDiv(div, shadow)
 
 function SetForm(form, strAction)
 {
-	var obForm = BX(form);
+	var obForm = BX(form),
+		obTbl,
+		n,
+		i;
 	if (!!obForm)
 	{
 		obForm.action = strAction;
-		var obTbl = BX.findChild(obForm, {tag: 'table', className: 'edit-table'}, false, false);
+		obTbl = BX.findChild(obForm, {tag: 'table', className: 'edit-table'}, false, false);
 		if (!!obTbl)
 		{
-			var n = obTbl.tBodies[0].rows.length;
-			for (var i=0; i<n; i++)
+			n = obTbl.tBodies[0].rows.length;
+			for (i=0; i < n; i++)
 			{
 				if (obTbl.tBodies[0].rows[i].cells.length > 1)
 				{
@@ -1656,10 +1727,7 @@ function SetForm(form, strAction)
 		BX.adminFormTools.modifyFormElements(obTbl);
 		return true;
 	}
-	else
-	{
-		return false;
-	}
+	return false;
 }
 
 function ShowAgentForm(strAction)
@@ -1721,44 +1789,5 @@ function HideVarsForm()
 }
 </script>
 <?
-$lAdmin->DisplayList();
-
-echo BeginNote();
-	echo GetMessage("import_setup_cat")?> <?echo CATALOG_PATH2IMPORTS;?><br><br>
-	<?echo GetMessage("CES_NOTES1");?><br><br>
-	<?if ($bWindowsHosting):?>
-		<b><?echo GetMessage("CES_NOTES2");?></b>
-	<?else:?>
-		<?echo GetMessage("CES_NOTES3");?>
-		<b><?echo $_SERVER["DOCUMENT_ROOT"];?>/bitrix/crontab/crontab.cfg</b>
-		<?echo GetMessage("CES_NOTES4");?><br>
-		<?echo GetMessage("CES_NOTES5");?><br>
-		<b>crontab <?echo $_SERVER["DOCUMENT_ROOT"];?>/bitrix/crontab/crontab.cfg</b><br>
-		<?echo GetMessage("CES_NOTES6");?><br>
-		<b>crontab -l</b><br>
-		<?echo GetMessage("CES_NOTES7");?><br>
-		<b>crontab -r</b><br><br>
-		<?
-		$arRetval = array();
-		@exec("crontab -l", $arRetval);
-		if (is_array($arRetval) && !empty($arRetval))
-		{
-			?>
-			<?echo GetMessage("CES_NOTES8");?><br>
-			<textarea name="crontasks" cols="70" rows="5" wrap="off" readonly>
-			<?
-			echo htmlspecialcharsbx(implode("\n", $arRetval))."\n";
-			?>
-			</textarea><br>
-			<?
-		}
-		echo GetMessage("CES_NOTES10");?><br><br>
-		<?echo GetMessage("CES_NOTES11");?><br>
-		<?echo $_SERVER["DOCUMENT_ROOT"];?>/bitrix/php_interface/include/catalog_import/cron_frame.php<br>
-		<?echo GetMessage("CES_NOTES12");?>
-	<?endif;
-
-echo EndNote();
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
-?>

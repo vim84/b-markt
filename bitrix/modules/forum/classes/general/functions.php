@@ -166,6 +166,7 @@ class forumTextParser extends CTextParser
 
 		$this->imageWidth = ($this->image_params["width"] > 0 ? $this->image_params["width"] : ($this->imageWidth > 0 ? $this->imageWidth : 300));
 		$this->imageHeight = ($this->image_params["height"] > 0 ? $this->image_params["height"] : ($this->imageHeight > 0 ? $this->imageHeight : 300));
+		
 		$this->userPath = (empty($this->userPath) && !empty($this->pathToUser) ? $this->pathToUser : $this->userPath);
 
 		$this->type = $type;
@@ -177,7 +178,7 @@ class forumTextParser extends CTextParser
 			if (!isset($allow['TABLE']))
 				$allow['TABLE']=$allow['BIU'];
 
-			$this->allow = $allow;
+			$this->allow = array_merge((is_array($this->allow) ? $this->allow : array()), $allow);
 		}
 		$this->parser_nofollow = COption::GetOptionString("forum", "parser_nofollow", "Y");
 		$this->link_target = COption::GetOptionString("forum", "parser_link_target", "_blank");
@@ -253,13 +254,20 @@ class forumTextParser extends CTextParser
 	function ParserFile(&$text, &$obj, $type="html")
 	{
 		if (method_exists($obj, "convert_attachment"))
+		{
+			$tmpType = $obj->type;
+			$obj->type = $type;
 			$text = preg_replace_callback("/\[file([^\]]*)id\s*=\s*([0-9]+)([^\]]*)\]/is".BX_UTF_PCRE_MODIFIER, array($this, "convert_attachment"), $text);
+			$obj->type = $tmpType;
+		}
 	}
 
 	function ParserUser(&$text, &$obj)
 	{
 		if($obj->allow["USER"] != "N" && is_callable(array($obj, 'convert_user')))
+		{
 			$text = preg_replace_callback("/\[user\s*=\s*([^\]]*)\](.+?)\[\/user\]/is".BX_UTF_PCRE_MODIFIER, array($obj, "convert_user"), $text);
+		}
 	}
 
 	function convert_user($userId = 0, $name = "")
@@ -320,7 +328,15 @@ class forumTextParser extends CTextParser
 		$this->{$marker."_open"}++;
 		if ($this->type == "rss")
 			return "\n====".$marker."====\n";
-		return '<table class="forum-'.$marker.'"><thead><tr><th>'.($marker == "quote" ? GetMessage("FRM_QUOTE") : GetMessage("FRM_CODE")).'</th></tr></thead><tbody><tr><td>';
+
+		if ($this->bMobile)
+		{
+			return "<div class='blog-post-".$marker."' title=\"".($marker == "quote" ? GetMessage("FRM_QUOTE") : GetMessage("FRM_CODE"))."\"><table class='blog".$marker."'><tr><td>";
+		}
+		else
+		{
+			return '<table class="forum-'.$marker.'"><thead><tr><th>'.($marker == "quote" ? GetMessage("FRM_QUOTE") : GetMessage("FRM_CODE")).'</th></tr></thead><tbody><tr><td>';
+		}
 	}
 
 	function convert_close_tag($marker = "quote")
@@ -336,7 +352,16 @@ class forumTextParser extends CTextParser
 
 		if ($this->type == "rss")
 			return "\n=============\n";
-		return "</td></tr></tbody></table>";
+
+		if ($this->bMobile)
+		{
+			return "</td></tr></table></div>";
+		}
+		else
+		{
+			return "</td></tr></tbody></table>";
+		}
+
 	}
 
 	function convert_image_tag($url = "", $params="")
@@ -356,11 +381,17 @@ class forumTextParser extends CTextParser
 		if ($type != "html")
 			return '<img src="'.$url.'" alt="'.GetMessage("FRM_IMAGE_ALT").'" border="0" />';
 
+		$width = 0; $height = 0;
+		if (preg_match_all("/width\=(?P<width>\d+)|height\=(?P<height>\d+)/is".BX_UTF_PCRE_MODIFIER, $params, $matches)):
+			$width = intval(!empty($matches["width"][0]) ? $matches["width"][0] : $matches["width"][1]);
+			$height = intval(!empty($matches["height"][0]) ? $matches["height"][0] : $matches["height"][1]);
+		endif;
 		$result = $GLOBALS["APPLICATION"]->IncludeComponent(
 			"bitrix:forum.interface",
 			$this->imageTemplate,
 			Array(
 				"URL" => $url,
+				"SIZE" => array("width" => $width, "height" => $height),
 				"MAX_SIZE" => array("width" => $this->imageWidth, "height" => $this->imageHeight),
 				"HTML_SIZE"=> array("width" => $this->imageHtmlWidth, "height" => $this->imageHtmlHeight),
 				"CONVERT" => "N",
@@ -369,7 +400,7 @@ class forumTextParser extends CTextParser
 			),
 			$this->component,
 			array("HIDE_ICONS" => "Y"));
-		return $result;
+		return $this->defended_tags($result, 'replace');
 	}
 
 	function convert_attachment($fileID = "", $p = "", $type = "", $text = "")

@@ -200,7 +200,7 @@ $MESS["SONET_GL_TASKS2_TASK_STATUS_MESSAGE_7"] = "Задача отклонен�
 $MESS["SONET_GL_TASKS2_TASK_STATUS_MESSAGE_7_24"] = "Задача отклонена";
 $MESS["SONET_GL_TASKS2_TASK_STATUS_MESSAGE_7_24_2"] = "Причина";
 $MESS["SONET_GL_TASKS2_TASK_STATUS_MESSAGE_4_24_2"] = "Причина";
-$MESS["SONET_FORUM_IM_COMMENT"] = "Прокомментировал вашу тему форума “#title#”";
+$MESS["SONET_FORUM_IM_COMMENT"] = "Прокомментировал вашу тему форума \"#title#\"";
 $MESS["LOG_FILES"] = "Файлы:";
 $MESS["SONET_GL_COMMENT_TITLE_PHOTO_ALBUM"] = "Добавлен комментарий к альбому";
 ?>

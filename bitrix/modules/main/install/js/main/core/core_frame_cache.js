@@ -501,6 +501,12 @@
 	BX.frameCache.writeCacheWithID = function(id, content, hash, props)
 	{
 		BX.frameCache.openDatabase();
+
+		if (typeof props == "object")
+		{
+			props = JSON.stringify(props)
+		}
+
 		this.cacheDataBase.getRows(
 			{
 				tableName: this.tableParams.tableName,
@@ -520,7 +526,11 @@
 									},
 									filter: {
 										id: id
+									},
+									fail:function(e){
+										//console.error("Update cache error: ", e);
 									}
+
 								}
 							);
 						}
@@ -529,7 +539,8 @@
 							this.cacheDataBase.addRow(
 								{
 									tableName: this.tableParams.tableName,
-									insertFields: {
+									insertFields:
+									{
 										id: id,
 										content: content,
 										hash: hash,
@@ -552,8 +563,9 @@
 								hash: hash,
 								props : props
 							},
-							success: function(res)
+							fail: function(error)
 							{
+								//console.error("Add cache error: ", error);
 							}
 						}
 					);
@@ -673,3 +685,4 @@
 	BX.frameCache.init();
 
 })(window);
+

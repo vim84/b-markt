@@ -298,7 +298,7 @@ if ('' == $strImportErrorMessage)
 {
 	$currentUserID = $USER->GetID();
 
-	$boolUseStoreControl = 'Y' == COption::GetOptionString('catalog', 'default_use_store_control', 'N');
+	$boolUseStoreControl = (COption::GetOptionString('catalog', 'default_use_store_control') == 'Y');
 	$arDisableFields = array(
 		'CP_QUANTITY' => true,
 		'CP_PURCHASING_PRICE' => true,
@@ -514,7 +514,7 @@ if ('' == $strImportErrorMessage)
 			for ($i = 0, $intCount = count($arGroupsTmp); $i < $intCount; $i++)
 			{
 				$sectionFilter = '';
-				$arFilter = array("IBLOCK_ID" => $IBLOCK_ID);
+				$arFilter = array("IBLOCK_ID" => $IBLOCK_ID, 'CHECK_PERMISSIONS' => 'N');
 				if (isset($arGroupsTmp[$i]["XML_ID"]) && '' !== $arGroupsTmp[$i]["XML_ID"])
 				{
 					$arFilter["=XML_ID"] = $arGroupsTmp[$i]["XML_ID"];
@@ -737,7 +737,7 @@ if ('' == $strImportErrorMessage)
 				);
 				if ($arr = $res->Fetch())
 				{
-					$PRODUCT_ID = $arr["ID"];
+					$PRODUCT_ID = (int)$arr['ID'];
 					if (isset($arLoadProductArray["PREVIEW_PICTURE"]) && intval($arr["PREVIEW_PICTURE"])>0)
 					{
 						$arLoadProductArray["PREVIEW_PICTURE"]["old_file"] = $arr["PREVIEW_PICTURE"];
@@ -892,7 +892,11 @@ if ('' == $strImportErrorMessage)
 					}
 				}
 
-				CIBlockElement::SetPropertyValuesEx($PRODUCT_ID, $IBLOCK_ID, $PROP);
+				if (!empty($PROP))
+				{
+					CIBlockElement::SetPropertyValuesEx($PRODUCT_ID, $IBLOCK_ID, $PROP);
+					\Bitrix\Iblock\PropertyIndex\Manager::updateElementIndex($IBLOCK_ID, $PRODUCT_ID);
+				}
 			}
 
 			if ('' == $strErrorR && $bIBlockIsCatalog)
@@ -1063,7 +1067,7 @@ if ('' == $strImportErrorMessage)
 	{
 		$res = CIBlockSection::GetList(
 			array(),
-			array("IBLOCK_ID" => $IBLOCK_ID, "TMP_ID" => $tmpid, "ACTIVE" => "N"),
+			array("IBLOCK_ID" => $IBLOCK_ID, "TMP_ID" => $tmpid, "ACTIVE" => "N", 'CHECK_PERMISSIONS' => 'N'),
 			false,
 			array('ID', 'NAME')
 		);
@@ -1097,7 +1101,7 @@ if ('' == $strImportErrorMessage)
 	{
 		$res = CIBlockSection::GetList(
 			array(),
-			array("IBLOCK_ID" => $IBLOCK_ID, "!TMP_ID" => $tmpid),
+			array("IBLOCK_ID" => $IBLOCK_ID, "!TMP_ID" => $tmpid, 'CHECK_PERMISSIONS' => 'N'),
 			false,
 			array('ID', 'NAME')
 		);

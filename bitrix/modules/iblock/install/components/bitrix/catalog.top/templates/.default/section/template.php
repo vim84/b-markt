@@ -55,6 +55,10 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 		? $arItem['IPROPERTY_VALUES']['ELEMENT_PREVIEW_PICTURE_FILE_TITLE']
 		: $arItem['NAME']
 	);
+
+	$minPrice = false;
+	if (isset($arItem['MIN_PRICE']) || isset($arItem['RATIO_PRICE']))
+		$minPrice = (isset($arItem['RATIO_PRICE']) ? $arItem['RATIO_PRICE'] : $arItem['MIN_PRICE']);
 ?>
 	<div class="<? echo ($arItem['SECOND_PICT'] ? 'bx_catalog_item double' : 'bx_catalog_item'); ?>"><div class="bx_catalog_item_container" id="<? echo $strMainID; ?>">
 		<a id="<? echo $arItemIDs['PICT']; ?>" href="<? echo $arItem['DETAIL_PAGE_URL']; ?>" class="bx_catalog_item_images" style="background-image: url(<? echo $arItem['PREVIEW_PICTURE']['SRC']; ?>)" title="<? echo $imgTitle; ?>">
@@ -62,7 +66,7 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 	if ('Y' == $arParams['SHOW_DISCOUNT_PERCENT'])
 	{
 ?>
-			<div id="<? echo $arItemIDs['DSC_PERC']; ?>" class="bx_stick_disc right bottom" style="display:<? echo (0 < $arItem['MIN_PRICE']['DISCOUNT_DIFF_PERCENT'] ? '' : 'none'); ?>;">-<? echo $arItem['MIN_PRICE']['DISCOUNT_DIFF_PERCENT']; ?>%</div>
+			<div id="<? echo $arItemIDs['DSC_PERC']; ?>" class="bx_stick_disc right bottom" style="display:<? echo (0 < $minPrice['DISCOUNT_DIFF_PERCENT'] ? '' : 'none'); ?>;">-<? echo $minPrice['DISCOUNT_DIFF_PERCENT']; ?>%</div>
 <?
 	}
 	if ($arItem['LABEL'])
@@ -86,7 +90,7 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 		if ('Y' == $arParams['SHOW_DISCOUNT_PERCENT'])
 		{
 ?>
-			<div id="<? echo $arItemIDs['SECOND_DSC_PERC']; ?>" class="bx_stick_disc right bottom" style="display:<? echo (0 < $arItem['MIN_PRICE']['DISCOUNT_DIFF_PERCENT'] ? '' : 'none'); ?>;">-<? echo $arItem['MIN_PRICE']['DISCOUNT_DIFF_PERCENT']; ?>%</div>
+			<div id="<? echo $arItemIDs['SECOND_DSC_PERC']; ?>" class="bx_stick_disc right bottom" style="display:<? echo (0 < $minPrice['DISCOUNT_DIFF_PERCENT'] ? '' : 'none'); ?>;">-<? echo $minPrice['DISCOUNT_DIFF_PERCENT']; ?>%</div>
 <?
 		}
 		if ($arItem['LABEL'])
@@ -103,19 +107,19 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 		<div class="bx_catalog_item_title"><a href="<? echo $arItem['DETAIL_PAGE_URL']; ?>" title="<? echo $productTitle; ?>"><? echo $productTitle; ?></a></div>
 		<div class="bx_catalog_item_price"><div id="<? echo $arItemIDs['PRICE']; ?>" class="bx_price">
 <?
-	if (!empty($arItem['MIN_PRICE']))
+	if (!empty($minPrice))
 	{
 		if ('N' == $arParams['PRODUCT_DISPLAY_MODE'] && isset($arItem['OFFERS']) && !empty($arItem['OFFERS']))
 		{
 			echo GetMessage(
 				'CT_BCT_TPL_MESS_PRICE_SIMPLE_MODE',
 				array(
-					'#PRICE#' => $arItem['MIN_PRICE']['PRINT_DISCOUNT_VALUE'],
+					'#PRICE#' => $minPrice['PRINT_DISCOUNT_VALUE'],
 					'#MEASURE#' => GetMessage(
 						'CT_BCT_TPL_MESS_MEASURE_SIMPLE_MODE',
 						array(
-							'#VALUE#' => $arItem['MIN_PRICE']['CATALOG_MEASURE_RATIO'],
-							'#UNIT#' => $arItem['MIN_PRICE']['CATALOG_MEASURE_NAME']
+							'#VALUE#' => $minPrice['CATALOG_MEASURE_RATIO'],
+							'#UNIT#' => $minPrice['CATALOG_MEASURE_NAME']
 						)
 					)
 				)
@@ -123,13 +127,14 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 		}
 		else
 		{
-			echo $arItem['MIN_PRICE']['PRINT_DISCOUNT_VALUE'];
+			echo $minPrice['PRINT_DISCOUNT_VALUE'];
 		}
-		if ('Y' == $arParams['SHOW_OLD_PRICE'] && $arItem['MIN_PRICE']['DISCOUNT_VALUE'] < $arItem['MIN_PRICE']['VALUE'])
+		if ('Y' == $arParams['SHOW_OLD_PRICE'] && $minPrice['DISCOUNT_VALUE'] < $minPrice['VALUE'])
 		{
-			?> <span><? echo $arItem['MIN_PRICE']['PRINT_VALUE']; ?></span><?
+			?> <span><? echo $minPrice['PRINT_VALUE']; ?></span><?
 		}
 	}
+	unset($minPrice);
 ?>
 		</div></div>
 <?
@@ -292,8 +297,10 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 			'SHOW_ADD_BASKET_BTN' => false,
 			'SHOW_BUY_BTN' => true,
 			'SHOW_ABSENT' => true,
+			'SHOW_OLD_PRICE' => ('Y' == $arParams['SHOW_OLD_PRICE']),
 			'ADD_TO_BASKET_ACTION' => $arParams['ADD_TO_BASKET_ACTION'],
 			'SHOW_CLOSE_POPUP' => ($arParams['SHOW_CLOSE_POPUP'] == 'Y'),
+			'SHOW_DISCOUNT_PERCENT' => ('Y' == $arParams['SHOW_DISCOUNT_PERCENT']),
 			'DISPLAY_COMPARE' => $arParams['DISPLAY_COMPARE'],
 			'PRODUCT' => array(
 				'ID' => $arItem['ID'],
@@ -556,6 +563,74 @@ var <? echo $strObName; ?> = new JCCatalogTopSection(<? echo CUtil::PhpToJSObjec
 </script>
 				<?
 			}
+		}
+		else
+		{
+			$arJSParams = array(
+				'PRODUCT_TYPE' => $arItem['CATALOG_TYPE'],
+				'SHOW_QUANTITY' => false,
+				'SHOW_ADD_BASKET_BTN' => false,
+				'SHOW_BUY_BTN' => false,
+				'SHOW_ABSENT' => false,
+				'SHOW_SKU_PROPS' => false,
+				'SECOND_PICT' => $arItem['SECOND_PICT'],
+				'SHOW_OLD_PRICE' => ('Y' == $arParams['SHOW_OLD_PRICE']),
+				'SHOW_DISCOUNT_PERCENT' => ('Y' == $arParams['SHOW_DISCOUNT_PERCENT']),
+				'ADD_TO_BASKET_ACTION' => $arParams['ADD_TO_BASKET_ACTION'],
+				'SHOW_CLOSE_POPUP' => ($arParams['SHOW_CLOSE_POPUP'] == 'Y'),
+				'DISPLAY_COMPARE' => $arParams['DISPLAY_COMPARE'],
+				'DEFAULT_PICTURE' => array(
+					'PICTURE' => $arItem['PRODUCT_PREVIEW'],
+					'PICTURE_SECOND' => $arItem['PRODUCT_PREVIEW_SECOND']
+				),
+				'VISUAL' => array(
+					'ID' => $arItemIDs['ID'],
+					'PICT_ID' => $arItemIDs['PICT'],
+					'SECOND_PICT_ID' => $arItemIDs['SECOND_PICT'],
+					'QUANTITY_ID' => $arItemIDs['QUANTITY'],
+					'QUANTITY_UP_ID' => $arItemIDs['QUANTITY_UP'],
+					'QUANTITY_DOWN_ID' => $arItemIDs['QUANTITY_DOWN'],
+					'QUANTITY_MEASURE' => $arItemIDs['QUANTITY_MEASURE'],
+					'PRICE_ID' => $arItemIDs['PRICE'],
+					'TREE_ID' => $arItemIDs['PROP_DIV'],
+					'TREE_ITEM_ID' => $arItemIDs['PROP'],
+					'BUY_ID' => $arItemIDs['BUY_LINK'],
+					'ADD_BASKET_ID' => $arItemIDs['ADD_BASKET_ID'],
+					'DSC_PERC' => $arItemIDs['DSC_PERC'],
+					'SECOND_DSC_PERC' => $arItemIDs['SECOND_DSC_PERC'],
+					'DISPLAY_PROP_DIV' => $arItemIDs['DISPLAY_PROP_DIV'],
+					'BASKET_ACTIONS_ID' => $arItemIDs['BASKET_ACTIONS'],
+					'NOT_AVAILABLE_MESS' => $arItemIDs['NOT_AVAILABLE_MESS'],
+					'COMPARE_LINK_ID' => $arItemIDs['COMPARE_LINK']
+				),
+				'BASKET' => array(
+					'QUANTITY' => $arParams['PRODUCT_QUANTITY_VARIABLE'],
+					'PROPS' => $arParams['PRODUCT_PROPS_VARIABLE'],
+					'SKU_PROPS' => $arItem['OFFERS_PROP_CODES'],
+					'ADD_URL_TEMPLATE' => $arResult['~ADD_URL_TEMPLATE'],
+					'BUY_URL_TEMPLATE' => $arResult['~BUY_URL_TEMPLATE']
+				),
+				'PRODUCT' => array(
+					'ID' => $arItem['ID'],
+					'NAME' => $productTitle
+				),
+				'OFFERS' => array(),
+				'OFFER_SELECTED' => 0,
+				'TREE_PROPS' => array(),
+				'LAST_ELEMENT' => $arItem['LAST_ELEMENT']
+			);
+			if ($arParams['DISPLAY_COMPARE'])
+			{
+				$arJSParams['COMPARE'] = array(
+					'COMPARE_URL_TEMPLATE' => $arResult['~COMPARE_URL_TEMPLATE'],
+					'COMPARE_PATH' => $arParams['COMPARE_PATH']
+				);
+			}
+?>
+<script type="text/javascript">
+var <? echo $strObName; ?> = new JCCatalogTopSection(<? echo CUtil::PhpToJSObject($arJSParams, false, true); ?>);
+</script>
+<?
 		}
 	}
 ?></div></div><?

@@ -339,6 +339,7 @@ if ($USER->CanDoOperation('catalog_price'))
 				}
 
 				CPrice::DeleteByProduct($PRODUCT_ID, $arUpdatedIDs);
+				\Bitrix\Iblock\PropertyIndex\Manager::updateElementIndex($IBLOCK_ID, $PRODUCT_ID);
 
 				if ($arCatalog["SUBSCRIPTION"] == "Y")
 				{

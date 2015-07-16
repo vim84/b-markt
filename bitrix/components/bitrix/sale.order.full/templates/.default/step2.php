@@ -113,9 +113,9 @@ if (!function_exists('PrintPropsForm'))
 										"ONCITYCHANGE" => "",
 									),
 									array(
-										"ID" => "",
-										"CODE" => $arProperties["VALUE"],
-										"PROVIDE_LINK_BY" => "code",
+										"ID" => $value,
+										"CODE" => "",
+										"PROVIDE_LINK_BY" => "id",
 									)
 								);
 
@@ -214,7 +214,7 @@ if (!function_exists('PrintPropsForm'))
 								<?
 								foreach($arUserProfiles["USER_PROPS_VALUES"] as $arUserPropsValues)
 								{
-									
+
 									if (strlen($arUserPropsValues["VALUE_FORMATED"]) > 0)
 									{
 										?>

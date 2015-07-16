@@ -2,37 +2,45 @@
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
 	die();
 
-if (!CModule::IncludeModule("iblock"))
+use Bitrix\Main\Loader;
+use Bitrix\Currency;
+
+if (!Loader::includeModule('iblock'))
 	return;
 
-$boolCatalog = CModule::IncludeModule("catalog");
+$catalogIncluded = Loader::includeModule('catalog');
+$iblockExists = (!empty($arCurrentValues['IBLOCK_ID']) && (int)$arCurrentValues['IBLOCK_ID'] > 0);
 
 $arIBlockType = CIBlockParameters::GetIBlockTypes();
-$rsIBlock = CIBlock::GetList(array(
-	"sort" => "asc",
-), array(
-	"TYPE" => $arCurrentValues["IBLOCK_TYPE"],
-	"ACTIVE" => "Y",
-));
+$arIBlock = array();
+$iblockFilter = (
+	!empty($arCurrentValues['IBLOCK_TYPE'])
+	? array('TYPE' => $arCurrentValues['IBLOCK_TYPE'], 'ACTIVE' => 'Y')
+	: array('ACTIVE' => 'Y')
+);
+$rsIBlock = CIBlock::GetList(array('SORT' => 'ASC'), $iblockFilter);
 while ($arr = $rsIBlock->Fetch())
-	$arIBlock[$arr["ID"]] = "[".$arr["ID"]."] ".$arr["NAME"];
+	$arIBlock[$arr['ID']] = '['.$arr['ID'].'] '.$arr['NAME'];
+unset($arr, $rsIBlock, $iblockFilter);
 
 $arPrice = array();
-if ($boolCatalog)
+if ($catalogIncluded)
 {
-	$rsPrice = CCatalogGroup::GetList($v1 = "sort", $v2 = "asc");
-	while ($arr = $rsPrice->Fetch())
-		$arPrice[$arr["NAME"]] = "[".$arr["NAME"]."] ".$arr["NAME_LANG"];
+	$arPrice = CCatalogIBlockParameters::getPriceTypesList();
 }
 
 $arProperty_UF = array();
 $arSProperty_LNS = array();
-$arUserFields = $GLOBALS["USER_FIELD_MANAGER"]->GetUserFields("IBLOCK_".$arCurrentValues["IBLOCK_ID"]."_SECTION");
-foreach($arUserFields as $FIELD_NAME=>$arUserField)
+if ($iblockExists)
 {
-	$arProperty_UF[$FIELD_NAME] = $arUserField["LIST_COLUMN_LABEL"]? $arUserField["LIST_COLUMN_LABEL"]: $FIELD_NAME;
-	if($arUserField["USER_TYPE"]["BASE_TYPE"]=="string")
-		$arSProperty_LNS[$FIELD_NAME] = $arProperty_UF[$FIELD_NAME];
+	$arUserFields = $GLOBALS["USER_FIELD_MANAGER"]->GetUserFields("IBLOCK_".$arCurrentValues["IBLOCK_ID"]."_SECTION");
+	foreach($arUserFields as $FIELD_NAME=>$arUserField)
+	{
+		$arProperty_UF[$FIELD_NAME] = $arUserField["LIST_COLUMN_LABEL"]? $arUserField["LIST_COLUMN_LABEL"]: $FIELD_NAME;
+		if($arUserField["USER_TYPE"]["BASE_TYPE"]=="string")
+			$arSProperty_LNS[$FIELD_NAME] = $arProperty_UF[$FIELD_NAME];
+	}
+	unset($arUserFields, $FIELD_NAME, $arUserField);
 }
 
 $arComponentParameters = array(
@@ -142,7 +150,7 @@ $arComponentParameters = array(
 		),
 	),
 );
-if ($boolCatalog)
+if ($catalogIncluded)
 {
 	$arComponentParameters["PARAMETERS"]['HIDE_NOT_AVAILABLE'] = array(
 		'PARENT' => 'DATA_SOURCE',
@@ -150,7 +158,29 @@ if ($boolCatalog)
 		'TYPE' => 'CHECKBOX',
 		'DEFAULT' => 'N',
 	);
+
+	$arComponentParameters["PARAMETERS"]['CONVERT_CURRENCY'] = array(
+		'PARENT' => 'PRICES',
+		'NAME' => GetMessage('CP_BCSF_CONVERT_CURRENCY'),
+		'TYPE' => 'CHECKBOX',
+		'DEFAULT' => 'N',
+		'REFRESH' => 'Y',
+	);
+
+	if (isset($arCurrentValues['CONVERT_CURRENCY']) && $arCurrentValues['CONVERT_CURRENCY'] == 'Y')
+	{
+		$arComponentParameters['PARAMETERS']['CURRENCY_ID'] = array(
+			'PARENT' => 'PRICES',
+			'NAME' => GetMessage('CP_BCSF_CURRENCY_ID'),
+			'TYPE' => 'LIST',
+			'VALUES' => Currency\CurrencyManager::getCurrencyList(),
+			'DEFAULT' => Currency\CurrencyManager::getBaseCurrency(),
+			"ADDITIONAL_VALUES" => "Y",
+		);
+	}
 }
-if(empty($arPrice))
+
+if (empty($arPrice))
+{
 	unset($arComponentParameters["PARAMETERS"]["PRICE_CODE"]);
-?>
+}

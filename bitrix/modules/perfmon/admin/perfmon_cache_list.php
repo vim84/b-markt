@@ -460,10 +460,7 @@ while ($arRes = $rsData->NavNext(true, "f_"))
 	$numbers = array();
 	foreach ($arNumCols as $column_name => $precision)
 	{
-		if ($_REQUEST["mode"] == "excel")
-			$numbers[$column_name] = number_format($arRes[$column_name], $precision, ".", "");
-		else
-			$numbers[$column_name] = str_replace(" ", "&nbsp;", number_format($arRes[$column_name], $precision, ".", " "));
+		$numbers[$column_name] = perfmon_NumberFormat($arRes[$column_name], $precision);
 		$row->AddViewField($column_name, $numbers[$column_name]);
 	}
 	$row->AddViewField("HIT_ID", '<a href="perfmon_hit_list.php?lang='.LANGUAGE_ID.'&amp;set_filter=Y&amp;find_id='.$f_HIT_ID.'">'.$f_HIT_ID.'</a>');

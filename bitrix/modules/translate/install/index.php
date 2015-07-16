@@ -1,10 +1,8 @@
-<?
-global $MESS;
-$PathInstall = str_replace("\\", "/", __FILE__);
-$PathInstall = substr($PathInstall, 0, strlen($PathInstall)-strlen("/index.php"));
-IncludeModuleLangFile($PathInstall."/install.php");
+<?php
+IncludeModuleLangFile(__FILE__);
 
 if(class_exists("translate")) return;
+
 Class translate extends CModule
 {
 	var $MODULE_ID = "translate";
@@ -100,4 +98,3 @@ Class translate extends CModule
 		$APPLICATION->IncludeAdminFile(GetMessage("TRANSLATE_UNINSTALL_TITLE"), $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/translate/install/unstep.php");
 	}
 }
-?>

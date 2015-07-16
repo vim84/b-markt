@@ -109,16 +109,14 @@ if (!$arOrder)
 
 if ($arOrder)
 {
-	if ($arOrder["CANCELED"]!="Y" && $arOrder["STATUS_ID"]!="F" && $arOrder["PAYED"]!="Y")
-	{
-		$arResult = Array(
-			"ID" => $ID,
-			"ACCOUNT_NUMBER" => $arOrder["ACCOUNT_NUMBER"],
-			"URL_TO_DETAIL" => CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_DETAIL"], Array("ID" => urlencode(urlencode($arOrder["ACCOUNT_NUMBER"])))),
-			"URL_TO_LIST" => $arParams["PATH_TO_LIST"],
-		);
-	}
-	else
+	$arResult = Array(
+		"ID" => $ID,
+		"ACCOUNT_NUMBER" => $arOrder["ACCOUNT_NUMBER"],
+		"URL_TO_DETAIL" => CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_DETAIL"], Array("ID" => urlencode(urlencode($arOrder["ACCOUNT_NUMBER"])))),
+		"URL_TO_LIST" => $arParams["PATH_TO_LIST"],
+	);
+
+	if (!($arOrder["CANCELED"]!="Y" && $arOrder["STATUS_ID"]!="F" && $arOrder["PAYED"]!="Y"))
 		$arResult["ERROR_MESSAGE"] = GetMessage("SPOC_CANCEL_ORDER");
 }
 else

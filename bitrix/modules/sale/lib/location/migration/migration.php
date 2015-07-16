@@ -13,7 +13,7 @@ use Bitrix\Sale\Location;
 
 include_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/lib/location/migration/migrate.php");
 
-final class MigrationProcess extends Location\Import\Process
+final class MigrationProcess extends Location\Util\Process
 {
 	const SESS_KEY = 	'location_migration';
 	const NOTIF_TAG = 	'SALE_LOCATIONPRO_PLZ_MIGRATE';
@@ -34,7 +34,6 @@ final class MigrationProcess extends Location\Import\Process
 			'PERCENT' => 30,
 			'CODE' => 'CONVERT_TREE',
 			'CALLBACK' => 'stageConvertTree'
-			//'SUBPERCENT_CALLBACK' => 'getSubpercentForStageProcessFiles'
 		));
 
 		$this->addStage(array(
@@ -93,8 +92,16 @@ final class MigrationProcess extends Location\Import\Process
 
 	protected function stageConvertTree()
 	{
-		$this->migrator->convertTree();
-		$this->nextStage();
+		if($this->getStep() == 0)
+		{
+			$this->migrator->convertTree();
+			$this->nextStep();
+		}
+		else
+		{
+			$this->migrator->resetLegacyPath();
+			$this->nextStage();
+		}
 	}
 
 	protected function stageConvertZones()

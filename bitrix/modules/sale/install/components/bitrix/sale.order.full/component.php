@@ -620,10 +620,12 @@ else
 
 			if (is_array($arResult["DELIVERY_ID"]))
 			{
+				$locFrom = COption::GetOptionString('sale', 'location');
+
 				$arOrder = array(
 					"PRICE" => $arResult["ORDER_PRICE"],
 					"WEIGHT" => $arResult["ORDER_WEIGHT"],
-					"LOCATION_FROM" => COption::GetOptionInt('sale', 'location'),
+					"LOCATION_FROM" => $locFrom,
 					"LOCATION_TO" => $arResult["DELIVERY_LOCATION"],
 					"LOCATION_ZIP" => $arResult["DELIVERY_LOCATION_ZIP"],
 				);
@@ -1406,27 +1408,34 @@ if ($USER->IsAuthorized())
 					{
 						if ($arLocation = CSaleLocation::GetByID($arUserPropsValues["VALUE"], LANGUAGE_ID))
 						{
-							/*
-							$arUserPropsValues["VALUE_FORMATED"] = htmlspecialcharsEx($arLocation["COUNTRY_NAME"]);
-							if (strlen($arLocation["COUNTRY_NAME"]) > 0
-								&& strlen($arLocation["CITY_NAME"]) > 0)
+							$locationName = '';
+							if(CSaleLocation::isLocationProMigrated())
 							{
-								$arUserPropsValues["VALUE_FORMATED"] .= " - ";
+								$locationName = \Bitrix\Sale\Location\Admin\LocationHelper::getLocationStringById($arLocation['ID']);
 							}
-							$arUserPropsValues["VALUE_FORMATED"] .= htmlspecialcharsEx($arLocation["CITY_NAME"]);
-							*/
+							else
+							{
+								/*
+								$arUserPropsValues["VALUE_FORMATED"] = htmlspecialcharsEx($arLocation["COUNTRY_NAME"]);
+								if (strlen($arLocation["COUNTRY_NAME"]) > 0
+									&& strlen($arLocation["CITY_NAME"]) > 0)
+								{
+									$arUserPropsValues["VALUE_FORMATED"] .= " - ";
+								}
+								$arUserPropsValues["VALUE_FORMATED"] .= htmlspecialcharsEx($arLocation["CITY_NAME"]);
+								*/
 
-							$locationName = "";
-							$locationName .= ((strlen($arLocation["COUNTRY_NAME"])<=0) ? "" : $arLocation["COUNTRY_NAME"]);
+								$locationName .= ((strlen($arLocation["COUNTRY_NAME"])<=0) ? "" : $arLocation["COUNTRY_NAME"]);
 
-							if (strlen($arLocation["COUNTRY_NAME"])>0 && strlen($arLocation["REGION_NAME"])>0)
-								$locationName .= " - ".$arLocation["REGION_NAME"];
-							elseif (strlen($arLocation["REGION_NAME"])>0)
-								$locationName .= $arLocation["REGION_NAME"];
-							if (strlen($arLocation["COUNTRY_NAME"])>0 || strlen($arLocation["REGION_NAME"])>0)
-								$locationName .= " - ".$arLocation["CITY_NAME"];
-							elseif (strlen($arLocation["CITY_NAME"])>0)
-								$locationName .= $arLocation["CITY_NAME"];
+								if (strlen($arLocation["COUNTRY_NAME"])>0 && strlen($arLocation["REGION_NAME"])>0)
+									$locationName .= " - ".$arLocation["REGION_NAME"];
+								elseif (strlen($arLocation["REGION_NAME"])>0)
+									$locationName .= $arLocation["REGION_NAME"];
+								if (strlen($arLocation["COUNTRY_NAME"])>0 || strlen($arLocation["REGION_NAME"])>0)
+									$locationName .= " - ".$arLocation["CITY_NAME"];
+								elseif (strlen($arLocation["CITY_NAME"])>0)
+									$locationName .= $arLocation["CITY_NAME"];
+							}
 
 							$arUserPropsValues["VALUE_FORMATED"] = $locationName;
 						}
@@ -1524,6 +1533,7 @@ if ($USER->IsAuthorized())
 			elseif ($arProperties["TYPE"] == "SELECT")
 			{
 				$arProperties["SIZE1"] = ((IntVal($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 1);
+				$arProperties["VARIANTS"] = array();
 				$dbVariants = CSaleOrderPropsVariant::GetList(
 						array("SORT" => "ASC"),
 						array("ORDER_PROPS_ID" => $arProperties["ID"]),
@@ -1547,7 +1557,7 @@ if ($USER->IsAuthorized())
 				$countDefVal = count($arDefVal);
 				for ($i = 0; $i < $countDefVal; $i++)
 					$arDefVal[$i] = Trim($arDefVal[$i]);
-
+				$arProperties["VARIANTS"] = array();
 				$dbVariants = CSaleOrderPropsVariant::GetList(
 						array("SORT" => "ASC"),
 						array("ORDER_PROPS_ID" => $arProperties["ID"]),
@@ -1570,7 +1580,9 @@ if ($USER->IsAuthorized())
 			}
 			elseif ($arProperties["TYPE"] == "LOCATION")
 			{
+				$locationFound = false;
 				$arProperties["SIZE1"] = ((IntVal($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 1);
+				$arProperties["VARIANTS"] = array();
 				$dbVariants = CSaleLocation::GetList(
 						array("SORT" => "ASC", "COUNTRY_NAME_LANG" => "ASC", "CITY_NAME_LANG" => "ASC"),
 						array("LID" => LANGUAGE_ID),
@@ -1581,13 +1593,29 @@ if ($USER->IsAuthorized())
 				while ($arVariants = $dbVariants->GetNext())
 				{
 					if (IntVal($arVariants["ID"]) == IntVal($curVal) || !isset($curVal) && IntVal($arVariants["ID"]) == IntVal($arProperties["DEFAULT_VALUE"]))
+					{
 						$arVariants["SELECTED"] = "Y";
+						$locationFound = true;
+					}
 					$arVariants["NAME"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 					$arProperties["VARIANTS"][] = $arVariants;
+				}
+
+				// this is not a COUNTRY, REGION or CITY, but must appear in $arProperties["VARIANTS"]
+				if(CSaleLocation::isLocationProMigrated() && !$locationFound && IntVal($curVal))
+				{
+					$item = CSaleLocation::GetById($curVal);
+					if($item)
+					{
+						$item['NAME'] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
+						$item['SELECTED'] = 'Y';
+						$arProperties["VARIANTS"][] = $item;
+					}
 				}
 			}
 			elseif ($arProperties["TYPE"] == "RADIO")
 			{
+				$arProperties["VARIANTS"] = array();
 				$dbVariants = CSaleOrderPropsVariant::GetList(
 						array("SORT" => "ASC"),
 						array("ORDER_PROPS_ID" => $arProperties["ID"]),
@@ -1946,17 +1974,26 @@ if ($USER->IsAuthorized())
 				*/
 
 				$locationName = "";
-				$locationName .= ((strlen($arVal["COUNTRY_NAME"])<=0) ? "" : $arVal["COUNTRY_NAME"]);
 
-				if (strlen($arVal["COUNTRY_NAME"])>0 && strlen($arVal["REGION_NAME"])>0)
-					$locationName .= " - ".$arVal["REGION_NAME"];
-				elseif (strlen($arVal["REGION_NAME"])>0)
-					$locationName .= $arVal["REGION_NAME"];
+				if(CSaleLocation::isLocationProMigrated())
+				{
+					if(intval($arVal['ID']))
+						$locationName = \Bitrix\Sale\Location\Admin\LocationHelper::getLocationStringById($arVal['ID']);
+				}
+				else
+				{
+					$locationName .= ((strlen($arVal["COUNTRY_NAME"])<=0) ? "" : $arVal["COUNTRY_NAME"]);
 
-				if (strlen($arVal["COUNTRY_NAME"])>0 || strlen($arVal["REGION_NAME"])>0)
-					$locationName .= " - ".$arVal["CITY_NAME"];
-				elseif (strlen($arVal["CITY_NAME"])>0)
-					$locationName .= $arVal["CITY_NAME"];
+					if (strlen($arVal["COUNTRY_NAME"])>0 && strlen($arVal["REGION_NAME"])>0)
+						$locationName .= " - ".$arVal["REGION_NAME"];
+					elseif (strlen($arVal["REGION_NAME"])>0)
+						$locationName .= $arVal["REGION_NAME"];
+
+					if (strlen($arVal["COUNTRY_NAME"])>0 || strlen($arVal["REGION_NAME"])>0)
+						$locationName .= " - ".$arVal["CITY_NAME"];
+					elseif (strlen($arVal["CITY_NAME"])>0)
+						$locationName .= $arVal["CITY_NAME"];
+				}
 
 				$arProperties["VALUE_FORMATED"] .= htmlspecialcharsEx($locationName);
 			}
@@ -1973,7 +2010,7 @@ if ($USER->IsAuthorized())
 			$arOrderTmpDel = array(
 				"PRICE" => $arResult["ORDER_PRICE"],
 				"WEIGHT" => $arResult["ORDER_WEIGHT"],
-				"LOCATION_FROM" => COption::GetOptionInt('sale', 'location'),
+				"LOCATION_FROM" => COption::GetOptionString('sale', 'location'),
 				"LOCATION_TO" => $arResult["DELIVERY_LOCATION"],
 				"LOCATION_ZIP" => $arResult["DELIVERY_LOCATION_ZIP"],
 

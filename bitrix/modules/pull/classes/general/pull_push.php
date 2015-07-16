@@ -365,6 +365,8 @@ class CPushManager
 		if (strlen($arParams['SOUND']) > 0)
 			$arFields['SOUND'] = $arParams['SOUND'];
 
+		$arFields['APP_ID'] = (strlen($arParams['APP_ID']) > 0)? $arParams['APP_ID']: "Bitrix24";
+
 
 		if (isset($arParams['SEND_IMMEDIATELY']) && $arParams['SEND_IMMEDIATELY'] == 'Y' || !CUser::IsOnLine($arFields['USER_ID'], 120))
 		{
@@ -377,15 +379,12 @@ class CPushManager
 				$arAdd['PARAMS'] = $arFields['PARAMS'];
 			if (intval($arFields['BADGE']) >= 0)
 				$arAdd['BADGE'] = $arFields['BADGE'];
-			if (strlen($arFields['APP_ID']) > 0)
-				$arAdd['APP_ID'] = $arFields['APP_ID'];
-			else
-				$arAdd['APP_ID'] = "Bitrix24";
-
 			if (strlen($arFields['SOUND']) > 0)
 				$arAdd['SOUND'] = $arFields['SOUND'];
 			if(strlen($arParams['EXPIRY']) > 0)
 				$arAdd['EXPIRY'] = $arParams['EXPIRY'];
+
+			$arAdd['APP_ID'] = $arFields['APP_ID'];
 
 			$CPushManager = new CPushManager();
 			$CPushManager->SendMessage(Array($arAdd));
@@ -405,10 +404,8 @@ class CPushManager
 				$arAdd['PARAMS'] = $arFields['PARAMS'];
 			if (intval($arFields['BADGE']) >= 0)
 				$arAdd['BADGE'] = $arFields['BADGE'];
-			if (strlen($arFields['APP_ID']) > 0)
-				$arAdd['APP_ID'] = $arFields['APP_ID'];
-			else
-				$arAdd['APP_ID'] = "Bitrix24";
+
+			$arAdd['APP_ID'] = $arFields['APP_ID'];
 
 			$DB->Add("b_pull_push_queue", $arAdd, Array("PARAMS"));
 

@@ -1288,7 +1288,7 @@ class CAllTicket
 		$DB->Update("b_ticket",$arFields,"WHERE ID='".$ticketID."'",$err_mess.__LINE__);
 	}
 
-	function GetFileList(&$by, &$order, $arFilter=array())
+	function GetFileList(&$by, &$order, $arFilter=array(), $checkRights = 'N')
 	{
 		$err_mess = (CAllTicket::err_mess())."<br>Function: GetFileList<br>Line: ";
 		global $DB, $USER;
@@ -1341,6 +1341,78 @@ class CAllTicket
 			$strSqlOrder .= " asc ";
 			$order="asc";
 		}
+
+		$messageJoin = '';
+		$ticketJoin = '';
+
+		if ($checkRights == 'Y')
+		{
+			$bAdmin = (CTicket::IsAdmin()) ? 'Y' : 'N';
+			$bSupportTeam = (CTicket::IsSupportTeam()) ? 'Y' : 'N';
+			$bSupportClient = (CTicket::IsSupportClient()) ? 'Y' : 'N';
+			$bDemo = (CTicket::IsDemo()) ? 'Y' : 'N';
+			$uid = intval($USER->GetID());
+
+			if ($bAdmin!='Y' && $bSupportTeam!='Y' && $bSupportClient!='Y' && $bDemo!='Y') return false;
+
+			if (!($bAdmin == 'Y' || $bDemo == 'Y'))
+			{
+				// a list of users who own or are responsible for tickets, which we can show to our current user
+				$ticketUsers = array($uid);
+
+				// check if user has groups
+				$result = $DB->Query('SELECT GROUP_ID FROM b_ticket_user_ugroup WHERE USER_ID = '.$uid.' AND CAN_VIEW_GROUP_MESSAGES = \'Y\'');
+				if ($result)
+				{
+					// collect members of these groups
+					$uGroups = array();
+
+					while ($row = $result->Fetch())
+					{
+						$uGroups[] = $row['GROUP_ID'];
+					}
+
+					if (!empty($uGroups))
+					{
+						$result = $DB->Query('SELECT USER_ID FROM b_ticket_user_ugroup WHERE GROUP_ID IN ('.join(',', $uGroups).')');
+						if ($result)
+						{
+							while ($row = $result->Fetch())
+							{
+								$ticketUsers[] = $row['USER_ID'];
+							}
+						}
+					}
+				}
+
+				// build sql
+				$strSqlSearchUser = "";
+
+				if($bSupportTeam == 'Y')
+				{
+					$strSqlSearchUser = 'T.RESPONSIBLE_USER_ID IN ('.join(',', $ticketUsers).')';
+				}
+				elseif ($bSupportClient == 'Y')
+				{
+					$strSqlSearchUser = 'T.OWNER_USER_ID IN ('.join(',', $ticketUsers).')';
+				}
+
+				if ($strSqlSearchUser)
+				{
+					$ticketJoin = 'INNER JOIN b_ticket T ON (T.ID = MF.TICKET_ID)';
+					$arSqlSearch[] = $strSqlSearchUser;
+				}
+			}
+
+			if ($bSupportTeam!="Y" && $bAdmin!="Y")
+			{
+				$messageJoin = 'INNER JOIN b_ticket_message M ON (M.ID = MF.MESSAGE_ID)';
+
+				$arSqlSearch[] = "M.IS_HIDDEN='N'";
+				$arSqlSearch[] = "M.IS_LOG='N'";
+			}
+		}
+
 		$strSqlSearch = GetFilterSqlSearch($arSqlSearch);
 		$strSql = "
 			SELECT
@@ -1353,6 +1425,8 @@ class CAllTicket
 			FROM
 				b_ticket_message_2_file MF
 			INNER JOIN b_file F ON (MF.FILE_ID = F.ID)
+			$ticketJoin
+			$messageJoin
 			WHERE
 				$strSqlSearch
 			$strSqlOrder
@@ -2219,10 +2293,8 @@ class CAllTicket
 		{
 			// берем из настроек модуля ответственного по умолчанию
 			$RU_ID = intval(COption::GetOptionString("support", "DEFAULT_RESPONSIBLE_ID"));
-			if($f->RESPONSIBLE_USER_ID > 0) $f->RESPONSIBLE_USER_ID = $RU_ID;
+			$f->RESPONSIBLE_USER_ID = $RU_ID;
 		}
-		
-		
 	}
 	
 	function Set_getCOUPONandSLA($v, $f, $arFields)

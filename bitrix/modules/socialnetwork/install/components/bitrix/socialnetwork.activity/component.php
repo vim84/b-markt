@@ -87,7 +87,7 @@ if ($arUser = $dbUser->Fetch())
 			$arResult["Features"][] = "tasks";
 		}
 
-		if (IsModuleInstalled("webdav"))
+		if (IsModuleInstalled("webdav") || IsModuleInstalled("disk"))
 			$arResult["Features"][] = "files";
 	
 		if ($arParams["SET_TITLE"] == "Y" || $arParams["SET_NAV_CHAIN"] != "N")

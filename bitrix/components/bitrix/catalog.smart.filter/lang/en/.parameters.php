@@ -14,4 +14,6 @@ $MESS["CP_BCSF_SECTION_DESCRIPTION"] = "Description";
 $MESS["CP_BCSF_GROUP_XML_EXPORT"] = "Support YandexIsland (export filter to XML)";
 $MESS["CP_BCSF_XML_EXPORT"] = "Enable YandexIsland";
 $MESS["CP_BCSF_HIDE_NOT_AVAILABLE"] = "Hide items not in stock";
+$MESS["CP_BCSF_CONVERT_CURRENCY"] = "Use only one currency to show prices";
+$MESS["CP_BCSF_CURRENCY_ID"] = "Convert all prices to currency";
 ?>

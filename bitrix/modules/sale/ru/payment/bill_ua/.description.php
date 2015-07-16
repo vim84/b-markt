@@ -133,6 +133,18 @@ $arPSCorrespondence = array(
 				"VALUE" => "",
 				"TYPE" => ""
 			),
+		"COMMENT1" => array(
+				"NAME" => GetMessage("SBLP_COMMENT1"),
+				"DESCR" => "",
+				"VALUE" => GetMessage("SBLP_COMMENT1_VALUE"),
+				"TYPE" => ""
+			),
+		"COMMENT2" => array(
+				"NAME" => GetMessage("SBLP_COMMENT2"),
+				"DESCR" => "",
+				"VALUE" => "",
+				"TYPE" => ""
+			),
 		"PATH_TO_STAMP" => array(
 				"NAME" => GetMessage("SBLP_PRINT"),
 				"DESCR" => GetMessage("SBLP_PRINT_DESC"),

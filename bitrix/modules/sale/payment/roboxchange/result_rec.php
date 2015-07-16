@@ -17,6 +17,10 @@ if($inv_id > 0)
 
 	$changePayStatus =  trim(CSalePaySystemAction::GetParamValue("CHANGE_STATUS_PAY"));
 	$mrh_pass2 =  CSalePaySystemAction::GetParamValue("ShopPassword2");
+
+	if(strlen($mrh_pass2) <= 0)
+		$bCorrectPayment = False;
+
 	$strCheck = md5($out_summ.":".$inv_id.":".$mrh_pass2);
 
 	if ($bCorrectPayment && ToUpper($crc) != ToUpper($strCheck))

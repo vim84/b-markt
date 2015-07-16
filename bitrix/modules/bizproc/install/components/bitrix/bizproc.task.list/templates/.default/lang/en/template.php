@@ -8,4 +8,8 @@ $MESS["BPATL_FINISHED_TASKS"] = "Assignment Archive";
 $MESS["BPATL_EMPTY"] = "Assignment List is empty.";
 $MESS["BPATL_DOCUMENT_TITLE"] = "View document";
 $MESS["BPWC_WLCT_TOTAL"] = "Total";
+$MESS["BPATL_GROUP_ACTION_YES"] = "Approve";
+$MESS["BPATL_GROUP_ACTION_NO"] = "Decline";
+$MESS["BPATL_GROUP_ACTION_OK"] = "Run";
+$MESS["BPATL_GROUP_ACTION_DELEGATE"] = "Delegate";
 ?>

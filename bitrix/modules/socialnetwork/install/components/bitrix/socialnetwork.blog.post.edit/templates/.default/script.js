@@ -36,10 +36,10 @@ window.SBPETabs.getInstance = function()
 	return window.SBPETabs.instance;
 };
 
-window.SBPETabs.changePostFormTab = function(type)
+window.SBPETabs.changePostFormTab = function(type, iblock)
 {
 	var tabsObj = window.SBPETabs.getInstance();
-	return tabsObj.setActive(type);
+	return tabsObj.setActive(type, iblock);
 };
 
 window.SBPETabs.prototype = {
@@ -102,6 +102,8 @@ window.SBPETabs.prototype = {
 			this.bodies['important'] = [this.bodies['message'], this.bodies['important']];
 		if (!!this.tabs['grat'])
 			this.bodies['grat'] = [this.bodies['message'], this.bodies['grat']];
+		if (!!this.tabs['lists'])
+			this.bodies['lists'] = [this.bodies['lists']];
 
 		for (var ii in this.bodies)
 		{
@@ -149,9 +151,9 @@ window.SBPETabs.prototype = {
 		}
 	},
 
-	setActive : function(type)
+	setActive : function(type, iblock)
 	{
-		if (type == null || this.active == type)
+		if (type == null || this.active == type && type != 'lists')
 			return this.active;
 		else if (!this.tabs[type])
 			return false;
@@ -202,12 +204,13 @@ window.SBPETabs.prototype = {
 							if (values1.rows > 0 || !!values2 && values2.length > 1)
 								hasValuesFile = true;
 						}
-						else if (messageBody.childNodes[ii].className == "wduf-selectdialog")
+						else if (BX.type.isNotEmptyString(messageBody.childNodes[ii].className) &&
+							(messageBody.childNodes[ii].className.indexOf("wduf-selectdialog") >= 0 ||
+							messageBody.childNodes[ii].className.indexOf('diskuf-selectdialog') >= 0))
 						{
 							nodeDocs = messageBody.childNodes[ii];
 							var webdavValues = BX.findChildren(nodeDocs, {"className" : "wd-inline-file"}, true);
 							hasValuesDocs = (!!webdavValues && webdavValues.length > 0);
-
 						}
 						else if(BX.type.isElementNode(messageBody.childNodes[ii]))
 						{
@@ -256,6 +259,11 @@ window.SBPETabs.prototype = {
 				BX.onCustomEvent(BX('divoPostFormLHE_blogPostForm' ), 'OnShowLHE', ['justShow']);
 			}
 
+			if(type == 'lists')
+			{
+				BX.onCustomEvent('onDisplayClaimLiveFeed', [iblock]);
+			}
+
 			this.previousTab = type;
 			if (!!this.bodies[type])
 			{
@@ -267,8 +275,8 @@ window.SBPETabs.prototype = {
 		}
 
 		this.endAnimation();
-
-		this.restoreMoreMenu();
+		if(type != 'lists')
+			this.restoreMoreMenu();
 
 		BX.onCustomEvent(window, "changePostFormTab", [type]);
 		return this.active;
@@ -364,6 +372,228 @@ window.SBPETabs.prototype = {
 		var btnText = BX("feed-add-post-form-link-text", true);
 		btn.className = "feed-add-post-form-link feed-add-post-form-link-more";
 		btnText.innerHTML = BX.message("SBPE_MORE");
+	},
+
+	getLists : function()
+	{
+		var tabContainer = BX('feed-add-post-form-tab-lists'),
+			tabs = BX.findChildren(tabContainer, {'tag':'span', 'className': 'feed-add-post-form-link-lists'}, true),
+			tabsDefault = BX.findChildren(tabContainer, {'tag':'span', 'className': 'feed-add-post-form-link-lists-default'}, true),
+			menuItemsListsDefault = [],
+			menuItemsLists = [];
+
+		if(tabs.length)
+		{
+			menuItemsLists = this.getMenuItems(tabs, this.createOnclickLists);
+			menuItemsListsDefault = this.getMenuItemsDefault(tabsDefault);
+			menuItemsLists = menuItemsLists.concat(menuItemsListsDefault);
+			this.showMoreMenuLists(menuItemsLists);
+		}
+		else
+		{
+			var showMoreMenuLists = this.showMoreMenuLists,
+				getMenuItems = this.getMenuItems,
+				getMenuItemsDefault = this.getMenuItemsDefault,
+				createOnclickLists = this.createOnclickLists,
+				siteId = null;
+
+			if(BX('bx-lists-select-site-id'))
+			{
+				siteId = BX('bx-lists-select-site-id').value;
+			}
+			BX.ajax({
+				method: 'POST',
+				dataType: 'json',
+				url: '/bitrix/components/bitrix/socialnetwork.blog.post.edit/post.ajax.php',
+				data: {
+					bitrix_processes: 1,
+					siteId: siteId,
+					sessid: BX.bitrix_sessid()
+				},
+				onsuccess: BX.delegate(function(result) {
+					if(result.success)
+					{
+						for(var k in result.lists)
+						{
+							tabContainer.appendChild(BX.create('span', {
+								attrs: {
+									'data-name': result.lists[k].NAME,
+									'data-picture': result.lists[k].PICTURE,
+									'data-description': result.lists[k].DESCRIPTION,
+									'data-picture-small': result.lists[k].PICTURE_SMALL,
+									'data-code': result.lists[k].CODE,
+									'iblockId': result.lists[k].ID
+								},
+								props:{
+									className: 'feed-add-post-form-link-lists',
+									id: 'feed-add-post-form-tab-lists'
+								},
+								style : {
+									display: 'none'
+								}
+							}));
+						}
+
+						tabs = BX.findChildren(tabContainer, {'tag':'span', 'className': 'feed-add-post-form-link-lists'}, true);
+						menuItemsLists = getMenuItems(tabs, createOnclickLists);
+						if(!tabsDefault.length)
+						{
+							for(var k in result.permissions)
+							{
+								var onclick;
+								if(k == 'new')
+								{
+									onclick = 'document.location.href = "'+BX('bx-lists-lists-page').value+'0/edit/"';
+								}
+								else if(k == 'market')
+								{
+									if(result.admin && BX('bx-lists-lists-page'))
+									{
+										onclick = 'document.location.href = "'+BX('bx-lists-lists-page').value+'?bp_catalog=y"';
+									}
+									else
+									{
+										if(BX('bx-lists-random-string'))
+										{
+											onclick = 'BX["LiveFeedClass_'+BX('bx-lists-random-string').value+'"].errorPopup("'+BX.message('LISTS_CATALOG_PROCESSES_ACCESS_DENIED')+'");';
+										}
+									}
+								}
+								else if(k == 'settings')
+								{
+									onclick = 'document.location.href = "'+BX('bx-lists-lists-page').value+'"';
+								}
+								tabContainer.appendChild(BX.create('span', {
+									attrs: {
+										'data-name': result.permissions[k],
+										'data-picture-small': '',
+										'data-key': k,
+										'data-onclick': onclick
+									},
+									props:{
+										className: 'feed-add-post-form-link-lists-default',
+										id: 'feed-add-post-form-tab-lists'
+									},
+									style : {
+										display: 'none'
+									}
+								}));
+							}
+							tabsDefault = BX.findChildren(tabContainer, {'tag':'span', 'className': 'feed-add-post-form-link-lists-default'}, true);
+						}
+						menuItemsListsDefault = getMenuItemsDefault(tabsDefault);
+						menuItemsLists = menuItemsLists.concat(menuItemsListsDefault);
+						showMoreMenuLists(menuItemsLists);
+					}
+					else
+					{
+						tabContainer.appendChild(BX.create('span', {
+							attrs: {
+								'data-name': result.error,
+								'data-picture-small': ''
+							},
+							props:{
+								className: 'feed-add-post-form-link-lists-default',
+								id: 'feed-add-post-form-tab-lists'
+							},
+							style : {
+								display: 'none'
+							}
+						}));
+						tabs = BX.findChildren(tabContainer, {'tag':'span', 'className': 'feed-add-post-form-link-lists-default'}, true);
+						menuItemsLists = getMenuItems(tabs, 0);
+						showMoreMenuLists(menuItemsLists);
+					}
+				})
+			});
+		}
+	},
+
+	getMenuItems : function(tabs, createOnclickLists)
+	{
+		var menuItemsLists = [];
+		for (var i = 0; i < tabs.length; i++)
+		{
+			var id = tabs[i].getAttribute("id").replace("feed-add-post-form-tab-", "");
+			if(createOnclickLists)
+			{
+				menuItemsLists.push({
+					tabId : id,
+					text : tabs[i].getAttribute("data-name"),
+					className : "feed-add-post-form-" + id,
+					onclick : createOnclickLists(
+						id,
+						[
+							tabs[i].getAttribute("iblockId"),
+							tabs[i].getAttribute("data-name"),
+							tabs[i].getAttribute("data-description"),
+							tabs[i].getAttribute("data-picture"),
+							tabs[i].getAttribute("data-code")
+						]
+					)
+				});
+			}
+			else
+			{
+				menuItemsLists.push({
+					tabId : id,
+					text : tabs[i].getAttribute("data-name"),
+					className : "feed-add-post-form-" + id,
+					onclick : ''
+				});
+			}
+		}
+		return menuItemsLists;
+	},
+
+	getMenuItemsDefault : function(tabs)
+	{
+		var menuItemsLists = [];
+		for (var i = 0; i < tabs.length; i++)
+		{
+			menuItemsLists.push({
+				text : tabs[i].getAttribute("data-name"),
+				className : "feed-add-post-form-lists-default-"+tabs[i].getAttribute("data-key"),
+				onclick : tabs[i].getAttribute("data-onclick")
+			});
+		}
+		return menuItemsLists;
+	},
+
+	showMoreMenuLists : function(menuItemsLists)
+	{
+		var menu = BX.PopupMenu.create(
+			"lists",
+			BX("feed-add-post-form-tab-lists"),
+			menuItemsLists,
+			{
+				closeByEsc : true,
+				offsetTop: 5,
+				offsetLeft: 12,
+				angle: true
+			}
+		);
+		var spanIcon = BX.findChildren(BX('popup-window-content-menu-popup-lists'), {'tag':'span', 'className': 'menu-popup-item-icon'}, true),
+			spanDataPicture = BX.findChildren(BX('feed-add-post-form-tab-lists'), {'tag':'span', 'className': 'feed-add-post-form-link-lists'}, true),
+			spanDataPictureDefault = BX.findChildren(BX('feed-add-post-form-tab-lists'), {'tag':'span', 'className': 'feed-add-post-form-link-lists-default'}, true);
+		spanDataPicture = spanDataPicture.concat(spanDataPictureDefault);
+		for(var i = 0; i < spanIcon.length; i++)
+		{
+			if(spanDataPicture[i].getAttribute('data-picture-small'))
+			{
+				spanIcon[i].innerHTML = spanDataPicture[i].getAttribute('data-picture-small');
+			}
+		}
+		menu.popupWindow.show();
+	},
+
+	createOnclickLists : function(id, iblock)
+	{
+		return function()
+		{
+			window.SBPETabs.changePostFormTab(id, iblock);
+			this.popupWindow.close();
+		}
 	}
 };
 
@@ -962,45 +1192,71 @@ BX.SocnetBlogPostInit = function(formID, params)
 					new BlogPostAutoSave(formParams[formID]["autoSave"]);
 
 				var
-					intId,
-					id,
 					f = window[editor.id + 'Files'],
 					handler = LHEPostForm.getHandler(editor.id),
-					img_wrap,
-					img_title,
-					img_del,
-					needToReparse = [];
+					intId, id, node, needToReparse = [],
+					controller = null;
+				for (id in handler['controllers'])
+				{
+					if (handler['controllers'].hasOwnProperty(id))
+					{
+						if (handler['controllers'][id]["parser"] && handler['controllers'][id]["parser"]["bxTag"] == "postimage")
+						{
+							controller = handler['controllers'][id];
+							break;
+						}
+					}
+				}
+				var closure = function(a, b) { return function() { a.insertFile(b); } },
+					closure2 = function(a, b, c) { return function() {
+						if (controller)
+						{
+							controller.deleteFile(b, {});
+							BX.remove(BX('wd-doc' + b));
+							BX.ajax({ method: 'GET', url: c});
+						}
+						else
+						{
+							a.deleteFile(b, c, a, {controlID : 'common'});
+						}
+					} };
 
 				for (intId in f)
 				{
 					if (f.hasOwnProperty(intId))
 					{
-						id = handler.checkFile(intId, "common", f[intId]);
-						needToReparse.push(intId);
-						if (!!id)
+						if (controller)
 						{
-							img_wrap = BX.findChild(BX('blog-doc'+intId), {className: 'feed-add-img-wrap'}, true, false);
-							img_title = BX.findChild(BX('blog-doc'+intId), {className: 'feed-add-img-title'}, true, false);
-							img_del = BX.findChild(BX('blog-doc'+intId), {className: 'feed-add-post-del-but'}, true, false);
-							if (!!img_wrap && !img_wrap.hasAttribute("bx-mpf-bound-to-" + editor.id))
+							controller.addFile(f[intId]);
+						}
+						else
+						{
+							id = handler.checkFile(intId, "common", f[intId]);
+							needToReparse.push(intId);
+							if (!!id && BX('wd-doc'+intId) && !BX('wd-doc'+intId).hasOwnProperty("bx-bound"))
 							{
-								img_wrap.setAttribute("bx-mpf-bound-to-" + editor.id, "Y");
-								BX.bind(img_wrap, "click", function(){handler.insertFile(id);});
-								img_wrap.style.cursor = "pointer";
+								BX('wd-doc'+intId).setAttribute('bx-bound', 'Y');
+								if ((node = BX.findChild(BX('wd-doc'+intId), {className: 'feed-add-img-wrap'}, true, false)) && node)
+								{
+									BX.bind(node, "click", closure(handler, id));
+									node.style.cursor = "pointer";
+								}
+								if ((node = BX.findChild(BX('wd-doc'+intId), {className: 'feed-add-img-title'}, true, false)) && node)
+								{
+									BX.bind(node, "click", closure(handler, id));
+									node.style.cursor = "pointer";
+								}
+								if ((node = BX.findChild(BX('wd-doc'+intId), {className: 'feed-add-post-del-but'}, true, false)) && node)
+								{
+									BX.bind(node, "click", closure2(handler, intId, f[intId]['del_url']));
+									node.style.cursor = "pointer";
+								}
 							}
-							if (img_title && !img_title.hasAttribute("bx-mpf-bound-to-" + editor.id))
-							{
-								img_title.setAttribute("bx-mpf-bound-to-" + editor.id, "Y");
-								BX.bind(img_title, "click", function(){handler.insertFile(id);});
-								img_title.style.cursor = "pointer";
-							}
-							if (img_del && !img_del.hasAttribute("bx-mpf-bound-to-" + editor.id))
-							{
-								img_del.setAttribute("bx-mpf-bound-to-" + editor.id, "Y");
-
-								BX.bind(img_del, "click", function(){handler.deleteFile(intId, f[intId]['del_url'], this, {controlID : 'common'});});
-								img_del.style.cursor = "pointer";
-							}
+						}
+						if ((node = BX.findChild(BX('wd-doc'+intId), {className: 'feed-add-post-del-but'}, true, false)) && node)
+						{
+							BX.bind(node, "click", closure2(handler, intId, f[intId]['del_url']));
+							node.style.cursor = "pointer";
 						}
 					}
 				}

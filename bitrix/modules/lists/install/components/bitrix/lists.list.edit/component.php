@@ -134,6 +134,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && check_bitrix_sessid())
 		//Gather fields for update
 		$arFields = array(
 			"NAME" => $_POST["NAME"],
+			"DESCRIPTION" => $_POST["DESCRIPTION"],
 			"IBLOCK_TYPE_ID" => $arParams["~IBLOCK_TYPE_ID"],
 			"SORT" => $_POST["SORT"],
 			"WORKFLOW" => "N",
@@ -284,6 +285,16 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && check_bitrix_sessid())
 		}
 		LocalRedirect($arResult["~LISTS_URL"]);
 	}
+	elseif(isset($_POST["action"]) && $_POST["action"]==="migrate" && $arResult["IBLOCK_ID"])
+	{
+		if($arParams["IBLOCK_TYPE_ID"] != COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+		{
+			if(CModule::includeModule('bizproc'))
+				\Bitrix\Lists\Importer::migrateList($arResult["IBLOCK_ID"]);
+		}
+		$path = rtrim(SITE_DIR, '/');
+		LocalRedirect($path.COption::GetOptionString('lists', 'livefeed_url'));
+	}
 	else
 	{
 		//Go to lists page
@@ -293,10 +304,16 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && check_bitrix_sessid())
 
 $data = array();
 
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+	$typeTranslation = '_PROCESS';
+else
+	$typeTranslation = '';
+
 if($bVarsFromForm)
 {//There was an error so display form values
 	$data["ID"] = $arIBlock? $arIBlock["ID"]: "";
 	$data["NAME"] = $_POST["NAME"];
+	$data["DESCRIPTION"] = $_POST["DESCRIPTION"];
 	$data["SORT"] = $_POST["SORT"];
 	if($bBizProc)
 		$data["BIZPROC"] = $_POST["BIZPROC"];
@@ -316,6 +333,7 @@ elseif($arIBlock)
 {//Edit existing iblock
 	$data["ID"] = $arIBlock["ID"];
 	$data["NAME"] = $arIBlock["NAME"];
+	$data["DESCRIPTION"] = $arIBlock["DESCRIPTION"];
 	$data["SORT"] = $arIBlock["SORT"];
 	if($bBizProc)
 		$data["BIZPROC"] = $arIBlock["BIZPROC"];
@@ -334,7 +352,7 @@ elseif($arIBlock)
 else
 {//New one
 	$data["ID"] = "";
-	$data["NAME"] = GetMessage("CC_BLLE_FIELD_NAME_DEFAULT");
+	$data["NAME"] = GetMessage("CC_BLLE_FIELD_NAME_DEFAULT".$typeTranslation);
 	$data["SORT"] = 500;
 	if($bBizProc)
 		$data["BIZPROC"] = "Y";
@@ -488,9 +506,9 @@ foreach($arResult["TASKS"] as $TASK_ID => $label)
 $this->IncludeComponentTemplate();
 
 if($arIBlock)
-	$APPLICATION->SetTitle(GetMessage("CC_BLLE_TITLE_EDIT", array("#NAME#" => $arResult["IBLOCK"]["NAME"])));
+	$APPLICATION->SetTitle(GetMessage("CC_BLLE_TITLE_EDIT".$typeTranslation, array("#NAME#" => $arResult["IBLOCK"]["NAME"])));
 else
-	$APPLICATION->SetTitle(GetMessage("CC_BLLE_TITLE_NEW"));
+	$APPLICATION->SetTitle(GetMessage("CC_BLLE_TITLE_NEW".$typeTranslation));
 
 if($arResult["IBLOCK_ID"])
 	$APPLICATION->AddChainItem($arResult["IBLOCK"]["NAME"], $arResult["~LIST_URL"]);

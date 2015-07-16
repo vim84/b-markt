@@ -52,3 +52,4 @@ function BXWdCloseBnr(obBnr)
 		jsUserOptions.SendData(null);
 	}
 }
+

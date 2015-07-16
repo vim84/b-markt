@@ -80,4 +80,10 @@ $MESS["SBLP_MARGIN_LEFT"] = "Left margin";
 
 $MESS["SBLP_COMMENT1"] = "Comment 1 for Invoice";
 $MESS["SBLP_COMMENT2"] = "Comment 2 for Invoice";
-?>
+
+$MESS["SBLP_LOGO_DPI"] = "Logo scale";
+$MESS["SBLP_LOGO_DPI_72"] = "133% (72 dpi)";
+$MESS["SBLP_LOGO_DPI_96"] = "100% (96 dpi)";
+$MESS["SBLP_LOGO_DPI_150"] = "64% (150 dpi)";
+$MESS["SBLP_LOGO_DPI_300"] = "32% (300 dpi)";
+$MESS["SBLP_LOGO_DPI_600"] = "16% (600 dpi)";

@@ -30,7 +30,7 @@ $MESS ['BP_V1ST_TASK_DESC'] = "You have to approve or reject the document \"{=Do
 Author: {=Document:CREATED_BY_PRINTABLE}";
 $MESS ['BP_V1ST_TASK_TEXT'] = "You have to approve or reject the document \"{=Document:NAME}\".
 
-Proceed by opening the link: http://#HTTP_HOST##TASK_URL#
+Proceed by opening the link: #BASE_HREF##TASK_URL#
 
 Author: {=Document:CREATED_BY_PRINTABLE}";
 ?>

@@ -81,7 +81,7 @@ function ArrayMultiply(&$arResult, $arTuple, $arTemp = array())
 }
 /////////////////////////////////////////////////////////////////////
 
-if ($REQUEST_METHOD == "POST" && $STEP > 1 && check_bitrix_sessid())
+if ($_SERVER['REQUEST_METHOD'] == "POST" && $STEP > 1 && check_bitrix_sessid())
 {
 	//*****************************************************************//
 	if ($STEP > 1)
@@ -91,7 +91,8 @@ if ($REQUEST_METHOD == "POST" && $STEP > 1 && check_bitrix_sessid())
 			array("sort" => "asc"),
 			array(
 				"ID" => $IBLOCK_ID,
-				"MIN_PERMISSION" => "W"
+				"MIN_PERMISSION" => "X",
+				"OPERATION" => "iblock_export",
 			)
 		);
 		$arIBlockRes = new CIBlockResult($arIBlockRes);
@@ -447,7 +448,19 @@ if (!$bPublicMode)
 	<tr>
 		<td width="40%"><?echo GetMessage("IBLOCK_ADM_EXP_CHOOSE_IBLOCK") ?></td>
 		<td width="60%">
-			<?echo GetIBlockDropDownList($IBLOCK_ID, 'IBLOCK_TYPE_ID', 'IBLOCK_ID', false, 'class="adm-detail-iblock-types"', 'class="adm-detail-iblock-list"');?>
+			<?echo GetIBlockDropDownListEx(
+				$IBLOCK_ID,
+				'IBLOCK_TYPE_ID',
+				'IBLOCK_ID',
+				array(
+					"MIN_PERMISSION" => "X",
+					"OPERATION" => "iblock_export",
+				),
+				'',
+				'',
+				'class="adm-detail-iblock-types"',
+				'class="adm-detail-iblock-list"'
+			);?>
 		</td>
 	</tr>
 <?

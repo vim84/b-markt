@@ -10,6 +10,9 @@ IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"].'/bitrix/modules/sale/delivery/d
 
 define('DELIVERY_RP_CSV_PATH', $_SERVER['DOCUMENT_ROOT'].BX_ROOT.'/modules/sale/ru/delivery/rus_post'); //where we can found csv files
 
+use Bitrix\Main\Config\Option,
+	Bitrix\Sale\Location;
+
 class CDeliveryRusPost
 {
 	private static $MAX_WEIGHT_HEAVY = 20000; // (g)
@@ -42,6 +45,8 @@ class CDeliveryRusPost
 	private static $TARIF_AVIA_HEAVY = 16;		//2.2
 
 	private static $MAX_DIMENSIONS = array("425", "265", "380");
+
+	const LOCATION_CODE_RUSSIA = "0000028023";
 
 	/* Standard mandatory delivery handler functions */
 	function Init()
@@ -91,16 +96,25 @@ class CDeliveryRusPost
 
 	function GetConfig($siteId = false)
 	{
+		global $APPLICATION;
+
 		$shopLocationId = CSaleHelper::getShopLocationId($siteId);
-		$arShopLocation = CSaleLocation::GetByID($shopLocationId);
-		$shopPrevLocationId = COption::GetOptionString('sale', 'delivery_rus_post_prev_loc', 0);
+		$arShopLocation = CSaleLocation::GetByIDForLegacyDelivery($shopLocationId);
+
+		if(!$arShopLocation)
+			$arShopLocation = array();
+
+		if(isset($_REQUEST["SET_DEFAULT_TARIF_ZONES"]) && $_REQUEST["SET_DEFAULT_TARIF_ZONES"] == "Y")
+			Option::delete('sale', array('name' => 'delivery_rus_post_prev_loc'));
+
+		$shopPrevLocationId = Option::get('sale', 'delivery_rus_post_prev_loc', "");
 
 		/* if shop's location was changed */
-		if($shopPrevLocationId != $shopLocationId)
+		if(strlen($shopPrevLocationId) <= 0 || $shopPrevLocationId != $shopLocationId)
 		{
-			COption::SetOptionString('sale', 'delivery_rus_post_prev_loc', $shopLocationId);
-			COption::RemoveOption('sale', 'delivery_regs_to_zones');
-			COption::RemoveOption('sale', 'delivery_rus_post_tarifs');
+			Option::set('sale', 'delivery_rus_post_prev_loc', $shopLocationId);
+			Option::delete('sale', array('name' => 'delivery_regs_to_zones'));
+			Option::delete('sale', array('name' => 'delivery_rus_post_tarifs'));
 		}
 
 		$arConfig = array(
@@ -109,7 +123,7 @@ class CDeliveryRusPost
 				'tarifs' => GetMessage('SALE_DH_RP_CONFIG_GROUP_TARIFS'),
 				'land' => GetMessage('SALE_DH_RP_CONFIG_GROUP_LAND'),
 				'avia' => GetMessage('SALE_DH_RP_CONFIG_GROUP_AVIA'),
-			),
+			)
 		);
 
 		// Zones tab
@@ -121,21 +135,41 @@ class CDeliveryRusPost
 			$arZones[$i] = GetMessage('SALE_DH_RP_CONFIG_ZONE').' '.$i;
 
 		$arRegsToZones = CSaleHelper::getOptionOrImportValues(
-									'delivery_regs_to_zones',
-									array('CDeliveryRusPost', 'importZonesFromCsv'),
-									array($arShopLocation['REGION_NAME_LANG'])
-						);
+			'delivery_regs_to_zones',
+			array('CDeliveryRusPost', 'importZonesFromCsv'),
+			array($arShopLocation)
+		);
+
+		$arConfig['CONFIG']['SET_DEFAULT_TARIF_ZONES'] = array(
+			'TYPE' => 'CUSTOM',
+			'TITLE' => GetMessage('SALE_DH_RP_SET_DEFAULT_TARIF_ZONES'),
+			'GROUP' => 'zones',
+			'DEFAULT' => '<a href="'.$APPLICATION->GetCurPageParam('', array('SET_DEFAULT_TARIF_ZONES')).'&SET_DEFAULT_TARIF_ZONES=Y">'.GetMessage('SALE_DH_RP_SET_DEFAULT_TARIF_ZONES_SET').'</a>'
+		);
+
+		$regCounter = 0;
 
 		foreach ($arRegions as $regId => $regName)
 		{
-			$arConfig['CONFIG']['REG_'.$regId] = array(
-						'TYPE' => 'DROPDOWN',
-						'DEFAULT' => isset($arRegsToZones[$regId]) ? $arRegsToZones[$regId] : '0',
-						'TITLE' => $regName,
-						'GROUP' => 'zones',
-						'VALUES'=> $arZones
-			);
+			$codeByName = self::getRegionCodeByOldName($regName); // old location
+			$code = strlen($codeByName) > 0 ? $codeByName : $regId;
+
+			if(isset($arRegsToZones[$code]))
+			{
+				$arConfig['CONFIG']['REG_'.$code] = array(
+							'TYPE' => 'DROPDOWN',
+							'DEFAULT' => isset($arRegsToZones[$code]) ? $arRegsToZones[$code] : '0',
+							'TITLE' => $regName,
+							'GROUP' => 'zones',
+							'VALUES'=> $arZones
+				);
+
+				$regCounter++;
+			}
 		}
+
+		if($regCounter <= 0)
+			self::notifyAdmin('CONFIG_TARIF_ZONES_SUSP');
 
 		/*
 		tarifs tab
@@ -152,7 +186,7 @@ class CDeliveryRusPost
 		$arTarifs = CSaleHelper::getOptionOrImportValues(
 									'delivery_rus_post_tarifs',
 									array('CDeliveryRusPost', 'getTarifsByRegionFromCsv'),
-									array($arShopLocation['REGION_NAME_LANG'])
+									array($arShopLocation)
 						);
 
 		foreach ($arZones as $zoneId => $zoneName)
@@ -265,7 +299,8 @@ class CDeliveryRusPost
 		$arConfig['CONFIG']['tarif_avia_services'] = array(
 					'TYPE' => 'SECTION',
 					'TITLE' => GetMessage('SALE_DH_RP_TARIFS_AVIA'),
-					'GROUP' => 'avia',		);
+					'GROUP' => 'avia',
+		);
 
 		$arConfig['CONFIG']['tarif_avia_'.$tarifId.'_value'] = array(
 					'TYPE' => 'STRING',
@@ -287,7 +322,16 @@ class CDeliveryRusPost
 
 	function GetSettings($strSettings)
 	{
-		return unserialize($strSettings);
+		$result = unserialize($strSettings);
+
+		if(isset($_REQUEST["SET_DEFAULT_TARIF_ZONES"]) && $_REQUEST["SET_DEFAULT_TARIF_ZONES"] == "Y")
+		{
+			foreach($result as $key => $value)
+				if(substr($key, 0, 4) == 'REG_')
+					unset($result[$key]);
+		}
+
+		return $result;
 	}
 
 	function SetSettings($arSettings)
@@ -340,10 +384,20 @@ class CDeliveryRusPost
 		}
 
 		$totalPrice = 0;
-		$arLocationTo = CSaleLocation::GetByID($arOrder['LOCATION_TO']);
+		$arLocationTo = CSaleLocation::GetByIDForLegacyDelivery($arOrder['LOCATION_TO']);
 
-		foreach ($arPackagesParams as $arPackage)
-			$totalPrice += self::calculatePackPrice($arPackage, $profile, $arConfig, $arLocationTo);
+		try
+		{
+			foreach ($arPackagesParams as $arPackage)
+				$totalPrice += self::calculatePackPrice($arPackage, $profile, $arConfig, $arLocationTo);
+		}
+		catch(\Bitrix\Main\SystemException $e)
+		{
+			return array(
+				"RESULT" => "ERROR",
+				"TEXT" => $e->getMessage()
+			);
+		}
 
 		$arResult = array(
 			'RESULT' => 'OK',
@@ -361,12 +415,15 @@ class CDeliveryRusPost
 
 		$maxWeight = $bHevyWeightEnabled ? self::$MAX_WEIGHT_HEAVY : self::$MAX_WEIGHT;
 
-		foreach ($arOrder["ITEMS"] as $arItem)
+		if (!empty($arOrder["ITEMS"]) && is_array($arOrder["ITEMS"]))
 		{
-			if(floatval($arItem["WEIGHT"]) > $maxWeight)
+			foreach ($arOrder["ITEMS"] as $arItem)
 			{
-				$profiles = array();
-				break;
+				if (floatval($arItem["WEIGHT"]) > $maxWeight)
+				{
+					$profiles = array();
+					break;
+				}
 			}
 		}
 
@@ -390,35 +447,56 @@ class CDeliveryRusPost
 
 	/* Particular handler helper functions*/
 
-	public function importZonesFromCsv($regionNameLang)
+	public function importZonesFromCsv(array $arShopLocation)
 	{
-		if(strlen($regionNameLang) <= 0)
+		if(empty($arShopLocation) || !isset($arShopLocation["REGION_ID"]) || !isset($arShopLocation['REGION_NAME_LANG']))
 			return array();
 
-		$COL_REG_NAME = 0;
+		$regionCodeFromCode = $regionCodeFromName = "";
 
+		$dbRes = Location\LocationTable::getList(array(
+			'filter' => array(
+				'=TYPE.CODE' => 'REGION',
+				'=REGION_ID' => intval($arShopLocation["REGION_ID"]),
+				'=CITY_ID' => false
+			),
+			'select' => array(
+				'ID', 'CODE'
+			)
+		));
+
+		if($locReg = $dbRes->fetch())
+			$regionCodeFromCode = $locReg["CODE"];
+
+		$regionCodeFromName = self::getRegionCodeByOldName($arShopLocation['REGION_NAME_LANG']);
+
+		$COL_REG_CODE = 0;
 		$csvFile = CSaleHelper::getCsvObject(DELIVERY_RP_CSV_PATH.'/zones.csv');
 		$arRegsTo = $csvFile->Fetch();
-
-		$arRegions = CSaleDeliveryHelper::getRegionsList(0, true); // RegName => RegId
-
 		$arRegionsZones = array();
 
 		while ($arRes = $csvFile->Fetch())
 		{
-			if(isset($arRes[$COL_REG_NAME]) && $regionNameLang == $arRes[$COL_REG_NAME])
+			if(isset($arRes[$COL_REG_CODE])
+				&& (
+					$regionCodeFromCode == $arRes[$COL_REG_CODE]
+					|| $regionCodeFromName == $arRes[$COL_REG_CODE]
+				)
+			)
+			{
 				for ($i = 1, $l = count($arRes) - 1; $i <= $l; $i++)
 				{
 					if(isset($arRegsTo[$i])
 						&&
-						isset($arRegions[$arRegsTo[$i]])
-						&&
 						isset($arRes[$i])
 					)
 					{
-						$arRegionsZones[$arRegions[$arRegsTo[$i]]] = $arRes[$i];
+						$arRegionsZones[$arRegsTo[$i]] = $arRes[$i];
 					}
 				}
+
+				break;
+			}
 		}
 
 		return $arRegionsZones;
@@ -458,15 +536,32 @@ class CDeliveryRusPost
 		return $arRegionsZones;
 	}
 
-	public static function getTarifNumFromCsv($regionNameLang)
+	public static function getTarifNumFromCsv(array $arShopLocation)
 	{
+		if(empty($arShopLocation) || !isset($arShopLocation['REGION_NAME_LANG'], $arShopLocation["ID"]))
+			return false;
+
+		$regionCodeFromCode = $regionCodeFromName = "";
+
+		$res = \Bitrix\Sale\Location\LocationTable::getList(array(
+			'filter' => array('=PARENTS.TYPE.CODE' => 'REGION', '=ID' => $arShopLocation["ID"], '=PARENTS.NAME.LANGUAGE_ID' => LANGUAGE_ID),
+			'select' => array('CODE' => 'PARENTS.CODE', 'LNAME' => 'PARENTS.NAME.NAME'))
+		);
+
+		if($locReg = $res->fetch())
+			$regionCodeFromCode = $locReg["CODE"];
+
+		$regionCodeFromName = self::getRegionCodeByOldName($arShopLocation['REGION_NAME_LANG']);
 		$csvFile = CSaleHelper::getCsvObject(DELIVERY_RP_CSV_PATH.'/tarif_regions.csv');
 		$tarifNumber = false;
 		$COL_TARIF_NUM = 0;
 
 		while ($arRes = $csvFile->Fetch())
 		{
-			if(in_array($regionNameLang, $arRes))
+			if(
+				(strlen($regionCodeFromCode) > 0 && in_array($regionCodeFromCode, $arRes))
+				|| (strlen($regionCodeFromName) > 0 && in_array($regionCodeFromName, $arRes))
+			)
 			{
 				$tarifNumber = $arRes[$COL_TARIF_NUM];
 				break;
@@ -475,12 +570,9 @@ class CDeliveryRusPost
 		return $tarifNumber;
 	}
 
-	public static function getTarifsByRegionFromCsv($regionNameLang)
+	public static function getTarifsByRegionFromCsv(array $arShopLocation)
 	{
-		if(strlen(trim($regionNameLang)) <= 0)
-			return false;
-
-		$tarifNumber = self::getTarifNumFromCsv($regionNameLang);
+		$tarifNumber = self::getTarifNumFromCsv($arShopLocation);
 
 		if($tarifNumber === false)
 			return false;
@@ -489,7 +581,6 @@ class CDeliveryRusPost
 		$COL_TARIF_ITEMS = 0;
 		$arTarifs = array();
 		$arRes = $csvFile->Fetch();
-
 		while ($arRes = $csvFile->Fetch())
 		{
 			if(!isset($arRes[$tarifNumber]))
@@ -538,8 +629,29 @@ class CDeliveryRusPost
 		/*1 Land price
 		1.1 Base Price less 10 kg*/
 
-		$zoneTo = $arConfig['REG_'.$arLocationTo['REGION_ID']]['VALUE'];
-		$basePrice = $totalPrice = 0;
+		$code = self::getRegionCodeByOldName($arLocationTo['REGION_NAME_LANG']); // old location
+
+		if(strlen($code) <= 0 && CSaleLocation::isLocationProMigrated())
+		{
+			$dbRes = Location\LocationTable::getList(array(
+				'filter' => array(
+					'=TYPE.CODE' => 'REGION',
+					'=REGION_ID' => intval($arLocationTo["REGION_ID"]),
+					'=CITY_ID' => false
+				),
+				'select' => array(
+					'ID', 'CODE', 'NAME'
+				)
+			));
+
+			if($locReg = $dbRes->fetch())
+				$code = $locReg["CODE"];
+		}
+
+		if(strlen($code) <= 0)
+			throw new \Bitrix\Main\SystemException(GetMessage("SALE_DH_RP_ERROR_LOCATION_NOT_FOUND"));
+
+		$zoneTo = $arConfig['REG_'.$code]['VALUE'];
 		$basePrice = floatval(self::getConfValue($arConfig, 'ZONE_RATE_MAIN_'.$zoneTo));
 		$arDebug[] = 'Base Price less 500 g: '.$basePrice;
 
@@ -602,8 +714,40 @@ class CDeliveryRusPost
 		return $totalPrice;
 	}
 
+	protected static function getRegionCodeByOldName($regionLangName)
+	{
+		if(strlen($regionLangName) <= 0)
+			return "";
+
+		static $data = array();
+
+		if(empty($data))
+		{
+			require_once(dirname(__FILE__).'/rus_post/old_loc_to_codes.php');
+			$data = $locToCode;
+		}
+
+		return isset($data[$regionLangName]) ? $data[$regionLangName] : "";
+	}
+
+	protected function notifyAdmin($tag)
+	{
+		$dbRes = CAdminNotify::GetList(array(), array("TAG" => $tag));
+
+		if($res = $dbRes->Fetch())
+			return false;
+
+		CAdminNotify::Add(array(
+				"MESSAGE" => GetMessage("SALE_DH_RP_MESS_".$tag, array("##LANGUAGE_ID##" => LANGUAGE_ID)),
+				"TAG" => $tag,
+				"MODULE_ID" => "SALE",
+				"ENABLE_CLOSE" => "Y"
+			)
+		);
+
+		return true;
+	}
 }
 
 AddEventHandler('sale', 'onSaleDeliveryHandlersBuildList', array('CDeliveryRusPost', 'Init'));
-
 ?>

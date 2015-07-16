@@ -1384,3 +1384,4 @@ function getVideoUploader(id) {
 
     return getControlObject(id);
 }
+

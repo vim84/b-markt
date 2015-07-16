@@ -3,19 +3,66 @@
 		return false;
 	var BX = window.BX;
 	BX.UploaderLog = [];
+	BX.UploaderDebug = false;
 	var statuses = { "new" : 0, ready : 1, preparing : 2, inprogress : 3, done : 4, failed : 5, stopped : 6, changed : 7, uploaded : 8};
 	BX.UploaderUtils = {
 		statuses : statuses,
 		getId : function() { return (new Date().valueOf() + Math.round(Math.random() * 1000000)); },
-		log : function(res, val){ if (window.BXDEBUG === true) { BX.UploaderLog.push(res + ': ' + val); }},
+		log : function(){
+			if (BX.UploaderDebug === true)
+			{
+				console.log(arguments);
+			}
+			else
+			{
+				BX.UploaderLog.push(arguments);
+			}
+		},
 		Hash : function()
 		{
 			this.length = 0;
 			this.items = {};
 			this.order = [];
+			var i;
+			if (arguments.length == 1 && BX.type.isArray(arguments[0]) && arguments[0].length > 0)
+			{
+				var data = arguments[0];
+				for (i = 0; i < data.length; i++)
+				{
+					if (data[i] && typeof data[i] == "object" && data[i]["id"])
+					{
+						this.setItem(data[i]["id"], data[i]);
+					}
+				}
+			}
+			else
+			{
+				for (i = 0; i < arguments.length; i += 2)
+					this.setItem(arguments[i], arguments[i + 1]);
+			}
+		},
+		getFileNameOnly : function (name)
+		{
+			var delimiter = "\\", start = name.lastIndexOf(delimiter), finish = name.length;
+			if (start == -1)
+			{
+				delimiter = "/";
+				start = name.lastIndexOf(delimiter);
+			}
+			if ((start + 1) == name.length)
+			{
+				finish = start;
+				start = name.substring(0, finish).lastIndexOf(delimiter);
+			}
+			name = name.substring(start + 1, finish);
+			if (delimiter == "/" && name.indexOf("?") > 0)
+			{
+				name = name.substring(0, name.indexOf("?"));
+			}
 
-			for (var i = 0; i < arguments.length; i += 2)
-				this.setItem(arguments[i], arguments[i + 1]);
+			if (name == '')
+				name = 'noname';
+			return name;
 		},
 		isImageExt : function(ext)
 		{
@@ -24,9 +71,12 @@
 				false
 			);
 		},
-		isImage : function(name, type)
+		isImage : function(name, type, size)
 		{
-			return (type || '').indexOf("image/") === 0 && BX.UploaderUtils.isImageExt((name || '').lastIndexOf('.') > 0 ? name.substr(name.lastIndexOf('.')+1) : '');
+			return (
+				(type === null || (type || '').indexOf("image/") === 0) &&
+				(size === null || (size < 20 * 1024 * 1024)) &&
+				BX.UploaderUtils.isImageExt((name || '').lastIndexOf('.') > 0 ? name.substr(name.lastIndexOf('.')+1).toLowerCase() : ''));
 		},
 		scaleImage : function(arSourceSize, arSize, resizeType)
 		{
@@ -200,12 +250,12 @@
 			var blob, chunkSize = MaxFilesize, start, end, chunk = null;
 			if (BX.type.isDomNode(file))
 			{
-				file.uploadStatus = statuses.done;
+//				file.uploadStatus = statuses.done;
 				blob = file;
 			}
 			else if (!(MaxFilesize > 0 && file.size > MaxFilesize))
 			{
-				file.uploadStatus = statuses.done;
+//				file.uploadStatus = statuses.done;
 				blob = file;
 			}
 			else if (window.Blob || window.MozBlobBuilder || window.WebKitBlobBuilder || window.BlobBuilder)
@@ -243,6 +293,7 @@
 					}
 				}
 				blob["name"] = file["name"];
+				blob["start"] = start;
 			}
 			return blob;
 		},
@@ -277,9 +328,98 @@
 				}
 			}
 			return file;
+		},
+		appendToForm : function(fd, key, val)
+		{
+			if (!!val && typeof val == "object")
+			{
+				for (var ii in val)
+				{
+					if (val.hasOwnProperty(ii))
+					{
+						BX.UploaderUtils.appendToForm(fd, key + '[' + ii + ']', val[ii]);
+					}
+				}
+			}
+			else
+			{
+				fd.append(key, (!!val ? val : ''));
+			}
+		},
+		FormData : function()
+		{
+			return new (BX.Uploader.getInstanceName() == "BX.UploaderSimple" ? FormDataLocal : window.FormData);
+		},
+		prepareData : function(arData)
+		{
+			var data = {};
+			if (null != arData)
+			{
+				if(typeof arData == 'object')
+				{
+					for(var i in arData)
+					{
+						if (arData.hasOwnProperty(i))
+						{
+							var name = BX.util.urlencode(i);
+							if(typeof arData[i] == 'object')
+								data[name] = BX.UploaderUtils.prepareData(arData[i]);
+							else
+								data[name] = BX.util.urlencode(arData[i]);
+						}
+					}
+				}
+				else
+					data = BX.util.urlencode(arData);
+			}
+			return data;
+		}
+	};
+	var FormDataLocal = function()
+	{
+		var uniqueID;
+		do {
+			uniqueID = Math.floor(Math.random() * 99999);
+		} while(BX("form-" + uniqueID));
+		this.local = true;
+		this.form = BX.create("FORM", {
+			props: {
+				id: "form-" + uniqueID,
+				method: "POST",
+				enctype: "multipart/form-data",
+				encoding: "multipart/form-data"
+			},
+			style: {display: "none"}
+		});
+		document.body.appendChild(this.form);
+	};
+	FormDataLocal.prototype = {
+		append : function(name, val)
+		{
+			if (BX.type.isDomNode(val))
+			{
+				this.form.appendChild(val);
+			}
+			else
+			{
+				this.form.appendChild(
+					BX.create("INPUT", {
+							props : {
+								type : "hidden",
+								name : name,
+								value : val
+							}
+						}
+					)
+				);
+			}
 		}
 	};
 	BX.UploaderUtils.Hash.prototype = {
+		getIds : function()
+		{
+			return this.order;
+		},
 		getQueue : function(id)
 		{
 			return BX.util.array_search(id, this.order);

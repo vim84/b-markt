@@ -1,12 +1,14 @@
 <?
+/** @global CMain $APPLICATION */
+/** @global CUser $USER */
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/include.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/prolog.php");
 
-global $USER;
-global $APPLICATION;
+use Bitrix\Main\Loader;
 
 use Bitrix\Sale\Location;
+use Bitrix\Sale\DiscountCouponsManager;
 
 $crmMode = (defined("BX_PUBLIC_MODE") && BX_PUBLIC_MODE && array_key_exists("CRM_MANAGER_USER_ID", $_REQUEST));
 
@@ -176,6 +178,14 @@ if (isset($_REQUEST['dontsave']) && $_REQUEST['dontsave'] == 'Y')
 	if (!CSaleOrder::IsLocked($ID, $intLockUserID, $strLockTime))
 		CSaleOrder::UnLock($ID);
 	LocalRedirect("sale_order.php?lang=".LANGUAGE_ID.GetFilterParams("filter_", false));
+}
+if ($saleModulePermissions >= "W" && isset($_REQUEST['unlock']) && 'Y' == $_REQUEST['unlock'])
+{
+	$intLockUserID = 0;
+	$strLockTime = '';
+	if (CSaleOrder::IsLocked($ID, $intLockUserID, $strLockTime))
+		CSaleOrder::UnLock($ID);
+	LocalRedirect("sale_order_new.php?ID=".$ID."&lang=".LANGUAGE_ID.GetFilterParams("filter_", false));
 }
 
 // include functions
@@ -659,6 +669,14 @@ if (
 	// saving
 	if (strlen($errorMessage) <= 0)
 	{
+		$couponsMode = ($ID > 0 ? DiscountCouponsManager::MODE_ORDER : DiscountCouponsManager::MODE_MANAGER);
+		$couponsParams = array(
+			'userId' => $str_USER_ID
+		);
+		if ($ID > 0)
+			$couponsParams['orderId'] = $ID;
+		DiscountCouponsManager::init($couponsMode, $couponsParams, false);
+		unset($couponsParams, $couponsMode);
 		//send new user mail
 		if ($btnNewBuyer == "Y" && strlen($userNew) > 0)
 			CUser::SendUserInfo($str_USER_ID, $LID, $userNew, true);
@@ -714,7 +732,7 @@ if (
 				if ($val["NAME"] != $arShoppingCart[$key]["NAME"] AND $val["PRODUCT_ID"] == $arShoppingCart[$key]["PRODUCT_ID"])
 					$arShoppingCart[$key]["NAME"] = $val["NAME"];
 
-				if ($val["NOTES"] != $arShoppingCart[$key]["NOTES"] AND $val["PRODUCT_ID"] == $arShoppingCart[$key]["PRODUCT_ID"])
+				if ($val["NOTES"] != '' && $val["NOTES"] != $arShoppingCart[$key]["NOTES"] AND $val["PRODUCT_ID"] == $arShoppingCart[$key]["PRODUCT_ID"])
 					$arShoppingCart[$key]["NOTES"] = $val["NOTES"];
 			}
 		}
@@ -1391,6 +1409,7 @@ if (
 
 		if (isset($save) AND strlen($save) > 0)
 		{
+			DiscountCouponsManager::clear(true);
 			CSaleOrder::UnLock($ID);
 			LocalRedirect("/bitrix/admin/sale_order.php?lang=".LANGUAGE_ID."&LID=".urlencode($LID).GetFilterParams("filter_", false));
 		}
@@ -1423,12 +1442,9 @@ if (
 	/*
 	* location
 	*/
-	if (isset($location) AND !isset($product) AND !isset($locationZip))
+	if (isset($location) && !isset($product) && !isset($locationZip))
 	{
 		$tmpLocation = "";
-
-		if(!CSaleLocation::isLocationProEnabled())
-			$location = intval($location);
 
 		ob_start();
 
@@ -1446,15 +1462,15 @@ if (
 				"ONCITYCHANGE" => "fChangeLocationCity();",
 			),
 			array(
-				"ID" => "",
-				"CODE" => $location,
+				"ID" => $location,
+				"CODE" => "",
 				"JS_CALLBACK" => 'fChangeLocationCity',
 				"SHOW_DEFAULT_LOCATIONS" => 'Y',
 				"JS_CONTROL_GLOBAL_ID" => 'saleOrderNew',
 			),
 			'',
 			true,
-			'location-block-wrapper'
+			'location-block-wrapper'.(intval($locid) ? ' prop-'.intval($locid) : '')
 		);
 
 		$tmpLocation = ob_get_contents();
@@ -1519,9 +1535,25 @@ if (
 	{
 		$id = intval($id);
 		$userId = intval($userId);
+		$oldUserId = 0;
+		if (isset($_POST['oldUserId']))
+			$oldUserId = (int)$_POST['oldUserId'];
+		if ($oldUserId < 0)
+			$oldUserId = 0;
 		$buyerType = intval($buyerType);
 		$LID = trim($LID);
 		$currency = trim($currency);
+
+		$couponsMode = ($id > 0 ? DiscountCouponsManager::MODE_ORDER : DiscountCouponsManager::MODE_MANAGER);
+		$couponsParams = array(
+			'userId' => $userId
+		);
+		if ($oldUserId != $userId)
+			$couponsParams['oldUserId'] = $oldUserId;
+		if ($id > 0)
+			$couponsParams['orderId'] = $id;
+		DiscountCouponsManager::init($couponsMode, $couponsParams, false);
+		unset($couponsParams, $couponsMode);
 
 		$arFuserItems = CSaleUser::GetList(array("USER_ID" => $userId));
 		$fuserId = $arFuserItems["ID"];
@@ -1685,11 +1717,17 @@ if (
 		{
 			?>
 			<script type="text/javascript">
-				var arProps = {<?=$strPropsList?>};
-				for (var key in arProps)
+				var arProps = {<?=$strPropsList?>},
+					key,
+					el,
+					val,
+					i,
+					j;
+
+				for (key in arProps)
 				{
-					var el = document.getElementById("ORDER_PROP_" + key);
-					var val = arProps[key];
+					el = document.getElementById("ORDER_PROP_" + key);
+					val = arProps[key];
 					if(el)
 					{
 						var elType = el.getAttribute('type');
@@ -1700,7 +1738,7 @@ if (
 						else if (elType == "radio")
 						{
 							elRadio = el.getElementsByTagName("input");
-							for (var i = 0; i < elRadio.length; i++)
+							for (i = 0; i < elRadio.length; i++)
 							{
 								if (elRadio[i].value == val)
 								{
@@ -1724,10 +1762,10 @@ if (
 							if (val.length > 0)
 							{
 								var arVals = val.split(',');
-								for (var i = 0; i < el.length; i++)
+								for (i = 0; i < el.length; i++)
 									{
 										el[i].selected = false;
-										for (var j = 0; j < arVals.length; j++ )
+										for (j = 0; j < arVals.length; j++ )
 										{
 											if (arVals[j].trim() == el[i].value)
 												el[i].selected = true;
@@ -1743,11 +1781,11 @@ if (
 				}
 
 				<?if(CSaleLocation::isLocationProEnabled()):?>
-					var el = document.querySelector('[name="ORDER_PROP_' + locationID + '"]');
+					el = document.querySelector('[name="ORDER_PROP_' + locationID + '"]');
 					if(!BX.type.isDomNode(el))
 						el = document.querySelector('[name="CITY_ORDER_PROP_' + locationID + '"]');
 				<?else:?>
-					var el = document.getElementById("ORDER_PROP_" + locationID + "CITY_ORDER_PROP_"+locationID);
+					el = document.getElementById("ORDER_PROP_" + locationID + "CITY_ORDER_PROP_"+locationID);
 				<?endif?>
 
 				if(el && arProps[locationID])
@@ -1755,7 +1793,7 @@ if (
 					BX.ajax.post('/bitrix/admin/sale_order_new.php', '<?=bitrix_sessid_get()?>&ORDER_AJAX=Y&locid=' + locationID + '&propID=<?=$buyerType?>&LID=<?=CUtil::JSEscape($LID)?>&location=' + arProps[locationID], fLocationResult);
 				}
 				else
-					fRecalProduct('', '', 'N', 'N');
+					fRecalProduct('', '', 'N', 'N', null);
 
 			</script>
 		<?
@@ -1896,9 +1934,32 @@ if (
 		$cartFix = ('Y' == $cartFix ? 'Y' : 'N');
 		$currency = CSaleLang::GetLangCurrency($LID);
 
+		$couponManagerMode = ($id > 0 ? DiscountCouponsManager::MODE_ORDER : DiscountCouponsManager::MODE_MANAGER);
+		$couponManagerParams = array(
+			'userId' => $user_id
+		);
+		if ($id > 0)
+			$couponManagerParams['orderId'] = $id;
+		DiscountCouponsManager::init($couponManagerMode, $couponManagerParams, false);
+		unset($couponManagerParams, $couponManagerMode);
+		$newCoupons = array();
+		if (!empty($_REQUEST['coupon']))
+			$newCoupons = fGetCoupon($_REQUEST['coupon']);
+		if (!empty($newCoupons))
+		{
+			foreach ($newCoupons as &$oneCoupon)
+			{
+				$resultCoupon = DiscountCouponsManager::add($oneCoupon);
+			}
+			unset($resultCoupon, $oneCoupon);
+		}
+		unset($newCoupons);
+		if (!empty($_REQUEST['deleteCoupon']))
+		{
+			$resultCoupon = DiscountCouponsManager::delete($_REQUEST['deleteCoupon']);
+			unset($resultCoupon);
+		}
 		$arOrderProduct = CUtil::JsObjectToPhp($product);
-
-		$arCoupon = fGetCoupon($coupon);
 
 		$arOrderOptions = array(
 			'CART_FIX' => $cartFix
@@ -1921,7 +1982,7 @@ if (
 		}
 		else
 		{
-			$arShoppingCart = CSaleBasket::DoGetUserShoppingCart($LID, $user_id, $arOrderProductPrice, $arErrors, $arCoupon, $tmpOrderId);
+			$arShoppingCart = CSaleBasket::DoGetUserShoppingCart($LID, $user_id, $arOrderProductPrice, $arErrors, array(), $tmpOrderId);
 		}
 
 		$arOrderPropsValues = array();
@@ -1941,18 +2002,25 @@ if (
 		if ($arProperties = $dbProperties->Fetch())
 			$bDeleteFieldLocationID = $arProperties["INPUT_FIELD_LOCATION"];
 
-		$rsLocationsList = CSaleLocation::GetList(
-			array(),
-			array("ID" => $location),
-			false,
-			false,
-			array("ID", "CITY_ID")
-		);
-		$arCity = $rsLocationsList->GetNext();
-		if (intval($arCity["CITY_ID"]) <= 0)
-			$bDeleteFieldLocation = "Y";
+		if(CSaleLocation::isLocationProEnabled())
+		{
+			$bDeleteFieldLocation = 'Y';// CSaleLocation::checkLocationIsAboveCity($location) ? 'Y' : 'N';
+		}
 		else
-			$bDeleteFieldLocation = "N";
+		{
+			$rsLocationsList = CSaleLocation::GetList(
+				array(),
+				array("ID" => $location),
+				false,
+				false,
+				array("ID", "CITY_ID")
+			);
+			$arCity = $rsLocationsList->GetNext();
+			if (intval($arCity["CITY_ID"]) <= 0)
+				$bDeleteFieldLocation = "Y";
+			else
+				$bDeleteFieldLocation = "N";
+		}
 
 		$arOrder = CSaleOrder::DoCalculateOrder(
 			$LID,
@@ -1983,18 +2051,18 @@ if (
 					$priceBase = $val["PRICE"] + $val["DISCOUNT_PRICE"];
 					$priceDiscountPercent = roundEx(($val["DISCOUNT_PRICE"] * 100) / $priceBase, SALE_VALUE_PRECISION);
 
-					$arData[$val["TABLE_ROW_ID"]]["PRICE_BASE"] = CurrencyFormatNumber($priceBase, $val["CURRENCY"]);
+					$arData[$val["TABLE_ROW_ID"]]["PRICE_BASE"] = CCurrencyLang::CurrencyFormat($priceBase, $val["CURRENCY"], false);
 					$arData[$val["TABLE_ROW_ID"]]["DISCOUNT_REPCENT"] = $priceDiscountPercent;
 					$arData[$val["TABLE_ROW_ID"]]["DISCOUNT_PRICE"] = $val["DISCOUNT_PRICE"];
 					$arData[$val["TABLE_ROW_ID"]]["PRICE"] = $val["PRICE"];
-					$arData[$val["TABLE_ROW_ID"]]["PRICE_DISPLAY"] = CurrencyFormatNumber($val["PRICE"], $val["CURRENCY"]);
+					$arData[$val["TABLE_ROW_ID"]]["PRICE_DISPLAY"] = CCurrencyLang::CurrencyFormat($val["PRICE"], $val["CURRENCY"], false);
 					$arData[$val["TABLE_ROW_ID"]]["QUANTITY"] = $val["QUANTITY"];
 
 					if (isset($val["QUANTITY_DEFAULT"]) && $val["QUANTITY_DEFAULT"] > 0 && $val["QUANTITY_DEFAULT"] != $val["QUANTITY"])
 						$arData[$val["TABLE_ROW_ID"]]["WARNING_BALANCE"] = "Y";
 
-					$arData[$val["TABLE_ROW_ID"]]["DISCOUNT_PRICE_DISPLAY"] = CurrencyFormatNumber($val["DISCOUNT_PRICE"], $val["CURRENCY"]);
-					$arData[$val["TABLE_ROW_ID"]]["SUMMA_DISPLAY"] = CurrencyFormatNumber(($val["PRICE"] * $val["QUANTITY"]), $val["CURRENCY"]);
+					$arData[$val["TABLE_ROW_ID"]]["DISCOUNT_PRICE_DISPLAY"] = CCurrencyLang::CurrencyFormat($val["DISCOUNT_PRICE"], $val["CURRENCY"], false);
+					$arData[$val["TABLE_ROW_ID"]]["SUMMA_DISPLAY"] = CCurrencyLang::CurrencyFormat(($val["PRICE"] * $val["QUANTITY"]), $val["CURRENCY"], false);
 					$arData[$val["TABLE_ROW_ID"]]["CURRENCY"] = $val["CURRENCY"];
 					$arData[$val["TABLE_ROW_ID"]]["NOTES"] = $val["NOTES"];
 
@@ -2123,6 +2191,34 @@ if (
 			$arData[0]["RECOMMENDET_CALC"] = "Y";
 		}
 		$arData[0]["RECOMMENDET_PRODUCT"] = $recommendedProduct;
+
+		// coupons
+		$arData[0]['COUPON_LIST'] = array();
+		$couponsList = DiscountCouponsManager::get(true, array(), true, true);
+		if (!empty($couponsList))
+		{
+			foreach ($couponsList as &$oneCoupon)
+			{
+				if ($oneCoupon['STATUS'] == DiscountCouponsManager::STATUS_NOT_FOUND || $oneCoupon['STATUS'] == DiscountCouponsManager::STATUS_FREEZE)
+					$oneCoupon['JS_STATUS'] = 'BAD';
+				elseif ($oneCoupon['STATUS'] == DiscountCouponsManager::STATUS_NOT_APPLYED || $oneCoupon['STATUS'] == DiscountCouponsManager::STATUS_ENTERED)
+					$oneCoupon['JS_STATUS'] = 'ENTERED';
+				else
+					$oneCoupon['JS_STATUS'] = 'APPLYED';
+				$oneCoupon['JS_CHECK_CODE'] = '';
+				if (isset($oneCoupon['CHECK_CODE_TEXT']))
+				{
+					$oneCoupon['JS_CHECK_CODE'] = (
+						is_array($oneCoupon['CHECK_CODE_TEXT'])
+						? implode('<br>', $oneCoupon['CHECK_CODE_TEXT'])
+						: $oneCoupon['CHECK_CODE_TEXT']
+					);
+				}
+			}
+			unset($oneCoupon);
+			$arData[0]['COUPON_LIST'] = array_values($couponsList);
+		}
+		unset($couponsList);
 
 		$result = CUtil::PhpToJSObject($arData);
 
@@ -2346,9 +2442,13 @@ if (intval($str_PERSON_TYPE_ID) <= 0)
 	$arFilter["ACTIVE"] = "Y";
 	if(strlen($LID) > 0)
 		$arFilter["LID"] = $LID;
-	$dbPersonType = CSalePersonType::GetList(array("SORT" => "ASC", "NAME" => "ASC"), $arFilter, false, array('nTopCount' => 1), array('ID'));
-	if($arPersonType = $dbPersonType->Fetch())
-		$str_PERSON_TYPE_ID = $arPersonType["ID"];
+	$typeListCount = (int)CSalePersonType::GetList(array(), $arFilter, array());
+	if ($typeListCount > 0)
+	{
+		$dbPersonType = CSalePersonType::GetList(array("SORT" => "ASC", "NAME" => "ASC"), $arFilter, false, false, array('ID', 'NAME', 'SORT'));
+		if ($arPersonType = $dbPersonType->Fetch())
+			$str_PERSON_TYPE_ID = $arPersonType["ID"];
+	}
 }
 
 $arFuserItems = CSaleUser::GetList(array("USER_ID" => intval($str_USER_ID)));
@@ -2599,6 +2699,15 @@ if ($boolLocked)
 	));
 }
 
+if ($ID > 0)
+{
+	DiscountCouponsManager::init(DiscountCouponsManager::MODE_ORDER, array('orderId' => $ID, 'userId' => $str_USER_ID));
+}
+else
+{
+	DiscountCouponsManager::init(DiscountCouponsManager::MODE_MANAGER, array('userId' => 0));
+}
+
 CAdminMessage::ShowMessage($errorMessage);
 
 //double function from sale.ajax.location/process.js
@@ -2749,7 +2858,8 @@ $tabControl->BeginCustomField("ORDER_STATUS", GetMessage("SOE_STATUS"), true);
 				echo htmlspecialcharsEx("[".$str_STATUS_ID."] ".$arStatusLand["NAME"]);
 			}
 			?>
-			<input type="hidden" name="user_id" id="user_id" value="<?=$str_USER_ID?>" onChange="fUserGetProfile(this);" >
+			<input type="hidden" name="old_user_id" id="old_user_id" value="<?=$str_USER_ID?>">
+			<input type="hidden" name="user_id" id="user_id" value="<?=$str_USER_ID?>" onchange="fUserGetProfile(this);" >
 		</td>
 	</tr>
 <?
@@ -2841,7 +2951,6 @@ if ($ID <= 0)
 			function fChangeLocationCity(item, info, townPropId)
 			{
 				<?if(CSaleLocation::isLocationProEnabled()):?>
-
 				BX(function(){
 
 					/*
@@ -2888,11 +2997,11 @@ if ($ID <= 0)
 					}
 
 					BX('CART_FIX').value= 'N';
-					fRecalProduct('', '', 'N', 'N');
+					fRecalProduct('', '', 'N', 'N', null);
 				});
 				<?else:?>
 					BX('CART_FIX').value= 'N';
-					fRecalProduct('', '', 'N', 'N');
+					fRecalProduct('', '', 'N', 'N', null);
 				<?endif?>
 			}
 		</script>
@@ -3001,7 +3110,7 @@ if ($ID <= 0)
 				}
 				else
 				{
-					fRecalProduct('', '', 'N', 'N');
+					fRecalProduct('', '', 'N', 'N', null);
 				}
 			}
 		}
@@ -3031,34 +3140,56 @@ if ($ID <= 0)
 
 				<?if(CSaleLocation::isLocationProEnabled()):?>
 					window.jamLocationCallbackFire = true;
-					insertHtmlResult(document.querySelector('.location-selector-wrapper'), res["location"]);
+					insertHtmlResult(document.querySelector('.location-selector-wrapper.prop-'+parseInt(res["prop_id"])), res["location"]);
 					initZipHandling();
 					window.jamLocationCallbackFire = false;
 				<?else:?>
 					document.getElementById("LOCATION_CITY_ORDER_PROP_" + res["prop_id"]).innerHTML = res["location"];
 				<?endif?>
-				fRecalProduct('', '', 'N', 'N');
+				fRecalProduct('', '', 'N', 'N', null);
 			}
 		}
 
 		function fUserGetProfile(el)
 		{
-			var userId = el.value;
-			var buyerType = document.getElementById("buyer_type_id").value;
+			var userId = el.value,
+				buyerType = BX('buyer_type_id').value,
+				oldUserId = BX('old_user_id'),
+				postData;
+
 			document.getElementById("buyer_profile_display").style.display = "none";
 
 			if (userId != "" && buyerType != "")
 			{
 				BX.showWait();
-				BX.ajax.post('/bitrix/admin/sale_order_new.php', '<?=bitrix_sessid_get()?>&ORDER_AJAX=Y&id=<?=$ID?>&LID=<?=CUtil::JSEscape($LID)?>&currency=<?=$str_CURRENCY?>&userId=' + userId + '&buyerType=' + buyerType, fUserGetProfileResult);
+				postData = {
+					'sessid': BX.bitrix_sessid(),
+					'ORDER_AJAX': 'Y',
+					'id': <? echo $ID; ?>,
+					'LID': '<? echo CUtil::JSEscape($LID); ?>',
+					'currency': '<? echo $str_CURRENCY; ?>',
+					'userId': userId,
+					'buyerType': buyerType,
+					'oldUserId': (!!oldUserId ? oldUserId.value : 0)
+				};
+				BX.ajax.post(
+					'/bitrix/admin/sale_order_new.php',
+					postData,
+					fUserGetProfileResult
+				);
 			}
 		}
 		function fUserGetProfileResult(res)
 		{
-			var rs = eval( '('+res+')' );
+			var profile,
+				oldUserId = BX('old_user_id'),
+				userId = BX('user_id');
+				rs = eval( '('+res+')' );
 			if (rs["status"] == "ok")
 			{
 				BX.closeWait();
+				if (!!oldUserId && !!userId)
+					oldUserId.value = userId.value;
 				document.getElementById("buyer_profile_display").style.display = "table-row";
 				document.getElementById("buyer_profile_select").innerHTML = rs["userProfileSelect"];
 				document.getElementById("user_name").innerHTML = rs["userName"];
@@ -3097,7 +3228,7 @@ if ($ID <= 0)
 						fTabsSelect('buyer_viewed', 'tab_3');
 
 				}
-				var profile = document.getElementById("user_profile");
+				profile = document.getElementById("user_profile");
 				fChangeProfile(profile);
 			}
 			else
@@ -3464,7 +3595,7 @@ $tabControl->BeginCustomField("DELIVERY_SERVICE", GetMessage("NEWO_DELIVERY_SERV
 				function fChangeDeliveryPrice()
 				{
 					document.getElementById("change_delivery_price").value = "Y";
-					fRecalProduct('', '', 'N', 'N');
+					fRecalProduct('', '', 'N', 'N', null);
 				}
 
 				function fChangeDelivery()
@@ -3472,7 +3603,7 @@ $tabControl->BeginCustomField("DELIVERY_SERVICE", GetMessage("NEWO_DELIVERY_SERV
 					fGetRelatedOrderProps();
 					BX('CART_FIX').value= 'N';
 					document.getElementById("change_delivery_price").value = "N";
-					fRecalProduct('', '', 'N', 'N');
+					fRecalProduct('', '', 'N', 'N', null);
 				}
 			</script>
 		</td>
@@ -3558,7 +3689,7 @@ $tabControl->BeginCustomField("BUYER_PAY_SYSTEM", GetMessage("SOE_PAY_SYSTEM"), 
 			{
 				fGetRelatedOrderProps();
 				BX('CART_FIX').value= 'N';
-				fRecalProduct('', '', 'N', 'N');
+				fRecalProduct('', '', 'N', 'N', null);
 			}
 		</script>
 	</td>
@@ -3893,10 +4024,10 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 			$QUANTITY_FACTORIAL = 'N';
 
 		//edit form props
-		$formTemplate = '
+		$formTemplateTableStart = '
 			<input id="FORM_BASKET_PRODUCT_ID" name="BASKET_PRODUCT_ID" value="" type="hidden">
-			<table class="edit-table" style="background-color:rgb(245, 249, 249); border: 1px solid #B8C1DD; width: 600px;font-size:12px;" >
-				<tr style="background-color:rgb(224, 232, 234);color:#525355;font-weight:bold;text-align:center;">
+			<table class="edit-table" style="background-color:rgb(245, 249, 249); border: 1px solid #B8C1DD; width: 600px;font-size:12px;">';
+		$formTemplateMain = '<tr style="background-color:rgb(224, 232, 234);color:#525355;font-weight:bold;text-align:center;">
 					<td colspan="2" align="center">
 					<table width="100%">
 					<tr>
@@ -3926,8 +4057,8 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 							</tr>
 						</table>
 					</div></td>
-				</tr>
-				<tr id="FORM_NEWPROD_CODE" class="adm-detail-required-field">
+				</tr>';
+		$formTemplateProduct = '<tr id="FORM_NEWPROD_CODE" class="adm-detail-required-field">
 					<td class="field-name" align="right">'.GetMessage("SOE_ITEM_ID").':</td>
 					<td><input size="10" id="FORM_PROD_BASKET_ID" name="FORM_PROD_BASKET_ID" type="text" value="" tabindex="1"></td>
 				</tr>
@@ -3950,8 +4081,8 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 				<tr>
 					<td class="field-name" align="right">'.GetMessage("SOE_ITEM_DESCR").':</td>
 					<td><input name="FORM_PROD_BASKET_NOTES" id="FORM_PROD_BASKET_NOTES" size="40" maxlength="250" value="" type="text" tabindex="6"></td>
-				</tr>
-				<tr>
+				</tr>';
+		$formTemplateProductProps ='<tr>
 					<td class="field-name" align="right" valign="top" width="40%">'.GetMessage("SOE_ITEM_PROPS").':</td>
 					<td width="60%">
 						<table id="BASKET_PROP_TABLE" class="internal" border="0" cellpadding="3" cellspacing="1" style="width: 390px;">
@@ -3965,14 +4096,14 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 
 						<input value="'.GetMessage("SOE_PROPERTY_MORE").'" onclick="BasketAddPropSection()" type="button">
 					</td>
-				</tr>
-				<tr>
+				</tr>';
+		$formTemplateAction = '<tr>
 					<td class="field-name" align="right">'.GetMessage("SALE_F_QUANTITY").':</td>
 					<td><input name="FORM_PROD_BASKET_QUANTITY" id="FORM_PROD_BASKET_QUANTITY" size="10" maxlength="20" value="1" type="text" tabindex="7"></td>
 				</tr>
 				<tr>
 					<td class="field-name" align="right">'.GetMessage("SALE_F_PRICE").':</td>
-					<td><input name="FORM_PROD_BASKET_PRICE" id="FORM_PROD_BASKET_PRICE" size="10" maxlength="20" value="1" type="text" tabindex="8"> ('.CUtil::JSEscape($CURRENCY_FORMAT).')</td>
+					<td><input name="FORM_PROD_BASKET_PRICE" id="FORM_PROD_BASKET_PRICE" size="10" maxlength="20" value="1" type="text" tabindex="8"> ('.$CURRENCY_FORMAT.')</td>
 				</tr>
 				<tr>
 					<td class="field-name" align="right">'.GetMessage("SOE_WEIGHT").':</td>
@@ -3983,10 +4114,9 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 				</tr>
 				<tr>
 					<td colspan="2">&nbsp;</td>
-				</tr>
-			</table>';
+				</tr>';
 
-		$formTemplate = CUtil::JSEscape($formTemplate);
+		$formTemplateTableFinish = '</table>';
 
 		// basket table columns settings form
 		$arUserColumns = array();
@@ -4134,13 +4264,13 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 		<!-- table header with stores columns -->
 		<tr id="heading_with_stores" class="heading" <?=($useStores && ($str_DEDUCTED == "Y" || $hasSavedBarcodes)) ? "style=\"display:table-row\"" : "style=\"display:none\""?>>
 			<td id="table_settings" onclick="showColumnsForm();"></td>
-			<?=getColumnsHeaders($arUserColumns, "edit", true);?>
+			<? getColumnsHeaders($arUserColumns, "edit", true);?>
 		</tr>
 
 		<!-- table header WITHOUT stores columns. Only one is shown at the time -->
 		<tr id="heading_without_stores" class="heading" <?=($useStores && ($str_DEDUCTED == "Y" || $hasSavedBarcodes)) ? "style=\"display:none\"" : "style=\"display:table-row\""?>>
 			<td id="table_settings" onclick="showColumnsForm();"></td>
-			<?=getColumnsHeaders($arUserColumns, "edit", false);?>
+			<? getColumnsHeaders($arUserColumns, "edit", false);?>
 		</tr>
 
 		<?
@@ -4154,8 +4284,8 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 			$setItemClass = "";
 			if (CSaleBasketHelper::isSetItem($val))
 			{
-				$hidden = "style=\"display:none\"";
-				$setItemClass = "class=\"set_item_".$val["SET_PARENT_ID"]."\"";
+				$hidden = 'style="display:none"';
+				$setItemClass = 'class="set_item_'.$val['SET_PARENT_ID'].'"';
 			}
 
 			if ($bUseIblock)
@@ -4361,7 +4491,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 											value="<?=$val["QUANTITY"]?>"
 											size="4"
 											maxlength="7"
-											onchange="fRecalProduct(<?=$val["ID"]?>, '', 'N', 'N');"
+											onchange="fRecalProduct(<?=$val["ID"]?>, '', 'N', 'N', null);"
 										>
 									<?
 									else:
@@ -4739,7 +4869,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 							?>
 								<span class="default_price_product" id="default_price_<?=$val["ID"]?>">
 									<span class="formated_price" id="formated_price_<?=$val["ID"]?>" onclick="fEditPrice(<?=$val["ID"]?>, 'on');">
-										<?=CurrencyFormatNumber($val["PRICE"], $str_CURRENCY);?>
+										<?=CCurrencyLang::CurrencyFormat($val["PRICE"], $str_CURRENCY, false);?>
 									</span>
 								</span>
 								<span class="edit_price_product" id="edit_price_<?=$val["ID"]?>">
@@ -4756,7 +4886,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 							?>
 								<span class="default_price_product" id="default_price_<?=$val["ID"]?>">
 									<span class="formated_price" id="formated_price_<?=$val["ID"]?>">
-										<?=CurrencyFormatNumber($val["PRICE"], $str_CURRENCY);?>
+										<?=CCurrencyLang::CurrencyFormat($val["PRICE"], $str_CURRENCY, false);?>
 									</span>
 								</span>
 								<span id="currency_price_product" class="currency_price">
@@ -4767,14 +4897,14 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 							endif;
 							?>
 						</div>
-						<div id="DIV_PRICE_OLD_<?=$val["ID"]?>" class="base_price" style="display:none;"><?=CurrencyFormatNumber($val["PRICE"] + $val["DISCOUNT_PRICE"], $str_CURRENCY);?> <span><?=$CURRENCY_FORMAT?></span></div>
+						<div id="DIV_PRICE_OLD_<?=$val["ID"]?>" class="base_price" style="display:none;"><?=CCurrencyLang::CurrencyFormat($val["PRICE"] + $val["DISCOUNT_PRICE"], $str_CURRENCY, false);?> <span><?=$CURRENCY_FORMAT?></span></div>
 
 						<?
 						if ($priceDiscount > 0)
 							$discountPercent = "(".GetMessage('NEWO_PRICE_DISCOUNT')." ".$priceDiscount."%)";
 
 						if ($priceBase > 0 && $priceBase != $val["PRICE"])
-							$priceBaseValue = CurrencyFormatNumber($priceBase, $str_CURRENCY)." <span>".$CURRENCY_FORMAT."</span>";
+							$priceBaseValue = CCurrencyLang::CurrencyFormat($priceBase, $str_CURRENCY, false)." <span>".$CURRENCY_FORMAT."</span>";
 						?>
 							<div class="base_price" id="DIV_BASE_PRICE_WITH_DISCOUNT_<?=$val["ID"]?>"><?=$priceBaseValue;?></div>
 							<div class="discount" id="DIV_DISCOUNT_<?=$val["ID"]?>" <?=($val["CUSTOM_PRICE"] == "Y" ? 'style="display:none;"' : ""); ?>><?=$discountPercent?></div>
@@ -4790,7 +4920,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 					$hidden = (CSaleBasketHelper::isSetItem($val)) ? "style=\"display:none\"" : "";
 					?>
 					<td id="DIV_SUMMA_<?=$val["ID"]?>" class="COLUMN_SUM" nowrap>
-						<div <?=$hidden?>><?=CurrencyFormatNumber(($val["QUANTITY"] * $val["PRICE"]), $str_CURRENCY);?> <span><?=$CURRENCY_FORMAT?></span></div>
+						<div <?=$hidden?>><?=CCurrencyLang::CurrencyFormat(($val["QUANTITY"] * $val["PRICE"]), $str_CURRENCY, false);?> <span><?=$CURRENCY_FORMAT?></span></div>
 					</td>
 					<?
 				}
@@ -4853,11 +4983,48 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 <tr>
 	<td valign="top" align="left" colspan="2">
 		<br>
-		<div class="set_coupon">
-			<?=GetMessage("NEWO_BASKET_COUPON")?>:
-			<input type="text" name="COUPON" id="COUPON" value="<?=htmlspecialcharsbx($COUPON)?>" />
-			<a href="javascript:void(0);" onclick="fRecalByCoupon();"><?=GetMessage("NEWO_COUPON_RECALC")?></a><sup style="color:#BE0000;">1)</sup>
-			<div><?=GetMessage("NEWO_COUPON_DESC")?></div>
+		<div class="set_coupon" id="coupons_block">
+			<?=GetMessage("NEWO_BASKET_COUPON")?>:<br>
+			<input type="text" name="COUPON" id="COUPON" value="" /><a href="javascript:void(0);" onclick="fRecalByCoupon();"><?=GetMessage("NEWO_COUPON_RECALC")?></a><sup style="color:#BE0000;">1)</sup>
+			<?
+			$couponsList = DiscountCouponsManager::get(true, array(), true, true);
+			$couponErrors = array();
+			if ($couponsList === false)
+			{
+				$couponErrors = DiscountCouponsManager::getErrors();
+			}
+			elseif (!empty($couponsList))
+			{
+				foreach ($couponsList as $oneCoupon)
+				{
+					$couponClass = 'disabled';
+					switch ($oneCoupon['STATUS'])
+					{
+						case DiscountCouponsManager::STATUS_NOT_FOUND:
+						case DiscountCouponsManager::STATUS_FREEZE:
+							$couponClass = 'bad';
+							break;
+						case DiscountCouponsManager::STATUS_APPLYED:
+							$couponClass = 'good';
+							break;
+					}
+					?><div class="bx_ordercart_coupon"><input disabled readonly type="text" name="OLD_COUPON[]" value="<?=htmlspecialcharsbx($oneCoupon['COUPON']);?>" class="<? echo $couponClass; ?>"><span class="<? echo $couponClass; ?>" data-coupon="<? echo htmlspecialcharsbx($oneCoupon['COUPON']); ?>"></span><div class="bx_ordercart_coupon_notes"><?
+						if (isset($oneCoupon['CHECK_CODE_TEXT']))
+						{
+							echo (
+								is_array($oneCoupon['CHECK_CODE_TEXT'])
+								? implode('<br>', $oneCoupon['CHECK_CODE_TEXT'])
+								: $oneCoupon['CHECK_CODE_TEXT']
+							);
+						}
+					?></div></div><?
+				}
+				unset($couponClass, $oneCoupon);
+			}
+			?><div id="global-coupon-errors" style="display: <? echo (empty($couponErrors) ? 'none' : 'block'); ?>;"><?
+			if (!empty($couponErrors))
+				echo implode('<br>', $couponErrors);
+			?></div>
 		</div>
 
 		<div style="float:right">
@@ -4900,7 +5067,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 								obCartFix.value = 'N';
 						}
 					}
-					fRecalProduct(item, 'price', 'N', 'N');
+					fRecalProduct(item, 'price', 'N', 'N', null);
 				}
 
 				function AddProductSearch()
@@ -4940,7 +5107,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 
 			</script>
 			<?
-			$productAddBool = COption::GetOptionString('sale', 'SALE_ADMIN_NEW_PRODUCT', 'N');
+			$productAddBool = COption::GetOptionString('sale', 'SALE_ADMIN_NEW_PRODUCT');
 			?>
 			<?if ($productAddBool == "Y"):?>
 				<a title="<?=GetMessage("SOE_NEW_ITEMS")?>" onClick="ShowProductEdit('', 'Y');" class="adm-btn adm-btn-green" href="javascript:void(0);"><?=GetMessage("SOE_NEW_ITEMS")?></a>
@@ -4949,9 +5116,9 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 		</div>
 
 <script type="text/javascript">
-	var currencyBase = '<?=CSaleLang::GetLangCurrency($LID);?>';
-	var orderWeight = '<?=$productWeight?>';
-	var orderPrice = '<?=$str_PRICE?>';
+	var currencyBase = '<?=CSaleLang::GetLangCurrency($LID);?>',
+		orderWeight = '<?=$productWeight?>',
+		orderPrice = '<?=$str_PRICE?>';
 
 	function fEnableSub()
 	{
@@ -4968,7 +5135,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 		{
 			var zIndex = parseInt(div.style.zIndex);
 			if(zIndex <= 0 || isNaN(zIndex))
-				zIndex = 1100;
+				zIndex = 600;
 			div.style.zIndex = zIndex;
 			div.style.left = left + "px";
 			div.style.top = top + "px";
@@ -5079,7 +5246,12 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 		div.id = "product_edit";
 		div.style.visible = 'hidden';
 		div.style.position = 'absolute';
-		div.innerHTML = '<?=$formTemplate?>';
+		div.innerHTML = '<?=CUtil::JSEscape($formTemplateTableStart);?>' +
+			'<?=CUtil::JSEscape($formTemplateMain); ?>' +
+			'<?=CUtil::JSEscape($formTemplateProduct); ?>' +
+			'<?=CUtil::JSEscape($formTemplateProductProps); ?>' +
+			'<?=CUtil::JSEscape($formTemplateAction); ?>' +
+			'<?=CUtil::JSEscape($formTemplateTableFinish); ?>';
 
 		document.body.appendChild(div);
 		SaleBasketEditTool.PopupShow(div);
@@ -5261,7 +5433,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 				if (props.length > 0)
 					document.getElementById('product_props_' + prod_id).innerHTML = props;
 			}
-			fRecalProduct('', '', 'N', 'N');
+			fRecalProduct('', '', 'N', 'N', null);
 			SaleBasketEditTool.PopupHide();
 		}
 	}
@@ -5721,7 +5893,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 				value="' + quantity + '"\
 				size="4"\
 				maxlength="7"\
-				onchange="fRecalProduct(' + ID + ', \'\', \'N\', \'N\');"\
+				onchange="fRecalProduct(' + ID + ', \'\', \'N\', \'N\', null);"\
 				>' + ratioHTML;
 		}
 		else
@@ -5964,7 +6136,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 				BX("ids").value = product_id;
 		}
 
-		fRecalProduct(BX("PRODUCT[" + ID + "][QUANTITY]"), ID, 'Y', 'N');
+		fRecalProduct(BX("PRODUCT[" + ID + "][QUANTITY]"), ID, 'Y', 'N', null);
 	}
 
 	function getParamsByProductId(arParams, iblockID)
@@ -6044,7 +6216,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 			}
 
 			fUpdateProductCount();
-			fRecalProduct('', '', 'Y', 'N');
+			fRecalProduct('', '', 'Y', 'N', null);
 
 			fGetMoreBasket('');
 			fGetMoreViewed('');
@@ -6215,19 +6387,191 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 	function fRecalByCoupon()
 	{
 		var obCartFix = BX('CART_FIX'),
-			obCoupon = BX('COUPON');
-		if (!!obCartFix && obCartFix.value == 'Y')
+			obCoupon = BX('COUPON'),
+			recalcAllowed = true;
+		if (!!obCoupon && obCoupon.value.length > 0)
 		{
-			if (!!obCoupon && obCoupon.value.length > 0)
+			if (!!obCartFix && obCartFix.value == 'Y')
 			{
 				if (!BX('PAYED') || !BX('PAYED').checked)
 					obCartFix.value = 'N';
+				else
+					recalcAllowed = false;
 			}
+			if (recalcAllowed)
+				fRecalProduct('', '', 'N', 'Y', { 'coupon' : obCoupon.value });
 		}
-		fRecalProduct('', '', 'N', 'Y');
 	}
 
-	function fRecalProduct(id, type, recommendet, recalcAll)
+	function deleteCoupon(e)
+	{
+		var target = BX.proxy_context,
+			value,
+			obCartFix = BX('CART_FIX');
+		if (!obCartFix || obCartFix.value == 'N')
+		{
+			if (!!target && target.hasAttribute('data-coupon'))
+			{
+				value = target.getAttribute('data-coupon');
+				if (!!value && value.length > 0)
+				{
+					fRecalProduct('', '', 'N', 'Y', { 'deleteCoupon' : value });
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param couponBlock
+	 * @param {COUPON: string, JS_STATUS: string} oneCoupon - new coupon.
+	 */
+	function couponCreate(couponBlock, oneCoupon)
+	{
+		var couponClass = 'disabled';
+
+		if (!BX.type.isElementNode(couponBlock))
+			return;
+		if (oneCoupon.JS_STATUS === 'BAD')
+			couponClass = 'bad';
+		else if (oneCoupon.JS_STATUS === 'APPLYED')
+			couponClass = 'good';
+
+		couponBlock.appendChild(BX.create(
+			'div',
+			{
+				props: {
+					className: 'bx_ordercart_coupon'
+				},
+				children: [
+					BX.create(
+						'input',
+						{
+							props: {
+								className: couponClass,
+								type: 'text',
+								value: oneCoupon.COUPON,
+								name: 'OLD_COUPON[]'
+							},
+							attrs: {
+								disabled: true,
+								readonly: true
+							}
+						}
+					),
+					BX.create(
+						'span',
+						{
+							props: {
+								className: couponClass
+							},
+							attrs: {
+								'data-coupon': oneCoupon.COUPON
+							}
+						}
+					),
+					BX.create(
+						'div',
+						{
+							props: {
+								className: 'bx_ordercart_coupon_notes'
+							},
+							html: oneCoupon.JS_CHECK_CODE
+						}
+					)
+				]
+			}
+		));
+	}
+
+	function couponListUpdate(res)
+	{
+		var couponBlock,
+			couponClass,
+			fieldCoupon,
+			couponsCollection,
+			couponFound,
+			i,
+			j,
+			key;
+
+		if (!!res && typeof res !== 'object')
+		{
+			return;
+		}
+		couponBlock = BX('coupons_block');
+		if (!!couponBlock)
+		{
+			if (!!res.COUPON_LIST && BX.type.isArray(res.COUPON_LIST))
+			{
+				fieldCoupon = BX('COUPON');
+				if (!!fieldCoupon)
+				{
+					fieldCoupon.value = '';
+				}
+				couponsCollection = BX.findChildren(couponBlock, { tagName: 'input', property: { name: 'OLD_COUPON[]' } }, true);
+				if (!!couponsCollection)
+				{
+					if (BX.type.isElementNode(couponsCollection))
+					{
+						couponsCollection = [couponsCollection];
+					}
+					for (i = 0; i < res.COUPON_LIST.length; i++)
+					{
+						couponFound = false;
+						key = -1;
+						for (j = 0; j < couponsCollection.length; j++)
+						{
+							if (couponsCollection[j].value === res.COUPON_LIST[i].COUPON)
+							{
+								couponFound = true;
+								key = j;
+								couponsCollection[j].couponUpdate = true;
+								break;
+							}
+						}
+						if (couponFound)
+						{
+							couponClass = 'disabled';
+							if (res.COUPON_LIST[i].JS_STATUS === 'BAD')
+								couponClass = 'bad';
+							else if (res.COUPON_LIST[i].JS_STATUS === 'APPLYED')
+								couponClass = 'good';
+
+							BX.adjust(couponsCollection[key], {props: {className: couponClass}});
+							BX.adjust(couponsCollection[key].nextSibling, {props: {className: couponClass}});
+							BX.adjust(couponsCollection[key].nextSibling.nextSibling, {html: res.COUPON_LIST[i].JS_CHECK_CODE});
+						}
+						else
+						{
+							couponCreate(couponBlock, res.COUPON_LIST[i]);
+						}
+					}
+					for (j = 0; j < couponsCollection.length; j++)
+					{
+						if (typeof (couponsCollection[j].couponUpdate) === 'undefined' || !couponsCollection[j].couponUpdate)
+						{
+							BX.remove(couponsCollection[j].parentNode);
+							couponsCollection[j] = null;
+						}
+						else
+						{
+							couponsCollection[j].couponUpdate = null;
+						}
+					}
+				}
+				else
+				{
+					for (i = 0; i < res.COUPON_LIST.length; i++)
+					{
+						couponCreate(couponBlock, res.COUPON_LIST[i]);
+					}
+				}
+			}
+		}
+		couponBlock = null;
+	}
+
+	function fRecalProduct(id, type, recommendet, recalcAll, fields)
 	{
 		var location = '',
 			locationZip = '',
@@ -6282,7 +6626,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 
 			var pr = BX('PRODUCT[' + i + '][PRICE]').value.replace(',', '.');
 			pr = parseFloat(pr);
-			prOld = parseFloat(BX('PRODUCT[' + i + '][PRICE_DEFAULT]').value);
+//			prOld = parseFloat(BX('PRODUCT[' + i + '][PRICE_DEFAULT]').value);
 
 			if (isNaN(pr) || pr <= 0)
 				BX('PRODUCT[' + i + '][PRICE]').value = BX('PRODUCT[' + i + '][PRICE_DEFAULT]').value;
@@ -6381,7 +6725,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 
 		paySystemId = document.getElementById('PAY_SYSTEM_ID').value;
 		buyerTypeId = document.getElementById('buyer_type_id').value;
-		coupon = document.getElementById('COUPON').value;
+		//coupon = document.getElementById('COUPON').value;
 
 		var deliveryPriceChange = document.getElementById("change_delivery_price").value;
 		var recomMore = document.getElementById('recom_more').value;
@@ -6408,6 +6752,17 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 			+ '&locationZipID=' + locationZipID
 			+ '&locationZip=' + locationZip
 			+ '&product=' + productData;
+
+		if (!!fields && typeof fields === 'object')
+		{
+			for (i in fields)
+			{
+				if (fields.hasOwnProperty(i))
+				{
+					dateURL += ('&' + i + '=' + fields[i]);
+				}
+			}
+		}
 
 		BX.showWait();
 		BX.ajax.post('/bitrix/admin/sale_order_new.php', dateURL, fRecalProductResult);
@@ -6525,15 +6880,13 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 
 			if (res[0]["ORDER_ERROR"] == "N")
 			{
-				<?if(!CSaleLocation::isLocationProEnabled()):?>
-					if (BX('town_location_'+res[0]["LOCATION_TOWN_ID"]))
-					{
-						if (res[0]["LOCATION_TOWN_ENABLE"] == 'Y')
-							BX('town_location_'+res[0]["LOCATION_TOWN_ID"]).style.display = 'table-row';
-						else
-							BX('town_location_'+res[0]["LOCATION_TOWN_ID"]).style.display = 'none';
-					}
-				<?endif?>
+				if (BX('town_location_'+res[0]["LOCATION_TOWN_ID"]))
+				{
+					if (res[0]["LOCATION_TOWN_ENABLE"] == 'Y')
+						BX('town_location_'+res[0]["LOCATION_TOWN_ID"]).style.display = 'table-row';
+					else
+						BX('town_location_'+res[0]["LOCATION_TOWN_ID"]).style.display = 'none';
+				}
 
 				BX('ORDER_TOTAL_PRICE').innerHTML = res[0]["PRICE_TOTAL"];
 
@@ -6575,6 +6928,8 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 
 				if (parseFloat(res[0]["DISCOUNT_VALUE"]) > 0)
 					BX('ORDER_DISCOUNT_PRICE_VALUE').style.display = "table-row";
+
+				couponListUpdate(res[0]);
 
 				if (res[0]["RECOMMENDET_CALC"] == "Y")
 				{
@@ -6689,7 +7044,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 	function fGetMoreRecom()
 	{
 		BX('recom_more').value = "Y";
-		fRecalProduct('', '', 'Y', 'N');
+		fRecalProduct('', '', 'Y', 'N', null);
 	}
 
 	/*
@@ -7406,7 +7761,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 			}
 
 			BX(quantityFieldId).value = newVal;
-			fRecalProduct(basketId, '', 'N', 'N');
+			fRecalProduct(basketId, '', 'N', 'N', null);
 		}
 	}
 </script>
@@ -7451,30 +7806,33 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 						if (empty($arShoppingCart["ITEMS"]))
 							$displayNoneBasket = "none";
 
-
-						//
-						$viewedIterator = \Bitrix\Catalog\CatalogViewedProductTable::getList(
-							array(
-								"filter" => array("FUSER_ID" => $arFuserItems["ID"], "SITE_ID" => $str_LID),
-								"select" => array(
-									"ID",
-									"PRODUCT_ID",
-									"LID" => "SITE_ID",
-									"NAME" => "ELEMENT.NAME",
-									"PREVIEW_PICTURE" => "ELEMENT.PREVIEW_PICTURE",
-									"DETAIL_PICTURE" => "ELEMENT.DETAIL_PICTURE",
-								),
-								"order" => array("DATE_VISIT" => "DESC"),
-								"limit" => 10
-							)
-						);
-
 						$viewed = array();
-						while($row = $viewedIterator->fetch())
+						$arViewedResult = array();
+						//
+						if (Loader::includeModule('catalog'))
 						{
-							$row['MODULE'] = "catalog";
-							$viewed[$row['PRODUCT_ID']] = $row;
-						}
+							$viewedIterator = \Bitrix\Catalog\CatalogViewedProductTable::getList(
+								array(
+									"filter" => array("FUSER_ID" => $arFuserItems["ID"], "SITE_ID" => $str_LID),
+									"select" => array(
+										"ID",
+										"PRODUCT_ID",
+										"LID" => "SITE_ID",
+										"NAME" => "ELEMENT.NAME",
+										"PREVIEW_PICTURE" => "ELEMENT.PREVIEW_PICTURE",
+										"DETAIL_PICTURE" => "ELEMENT.DETAIL_PICTURE",
+									),
+									"order" => array("DATE_VISIT" => "DESC"),
+									"limit" => 10
+								)
+							);
+
+							while($row = $viewedIterator->fetch())
+							{
+								$row['MODULE'] = "catalog";
+								$viewed[$row['PRODUCT_ID']] = $row;
+							}
+
 
 						if (!empty($viewed))
 						{
@@ -7524,7 +7882,9 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 								}
 							}
 						}
+
 						//
+						}
 						$arViewedResult = fDeleteDoubleProduct($viewed, $arFilterRecommended, 'N');
 						if (empty($arViewedResult["ITEMS"]))
 							$displayNoneViewed = "none";
@@ -7662,7 +8022,7 @@ $tabControl->BeginCustomField("BASKET_CONTAINER", GetMessage("NEWO_BASKET_CONTAI
 								<?
 								$str_SUM_PAID = floatval($str_SUM_PAID);
 								?>
-								<?=CurrencyFormatNumber($str_SUM_PAID, $str_CURRENCY);?>
+								<?=CCurrencyLang::CurrencyFormat($str_SUM_PAID, $str_CURRENCY, false);?>
 							</span>
 
 							<span id="sum_paid_edit" style="display:none">
@@ -8062,11 +8422,11 @@ echo '</div>';//end div for form
 					if(typeof window.orderNewLocationPropId == 'undefined' && typeof BX.locationSelectors == 'undefined' || typeof BX.locationSelectors[window.orderNewLocationPropId] == 'undefined')
 						return;
 
-					if(/^\s*\d{6}\s*$/.test(value)){
+					if(BX.type.isNotEmptyString(value) && /^\s*\d+\s*$/.test(value) && value.length > 3){
 
 						getLocationByZip(value, function(locationId){
 							window.jamFire = true;
-							BX.locationSelectors[window.orderNewLocationPropId].setValueById(locationId, true);
+							BX.locationSelectors[window.orderNewLocationPropId].setValueByLocationId(locationId, true);
 						}, function(){
 							try{
 								window.jamFire = true;
@@ -8105,10 +8465,8 @@ echo '</div>';//end div for form
 				data: {'ACT': 'GET_LOC_BY_ZIP', 'ZIP': value, 'SITE_ID': '<?=CUtil::JSEscape($LID)?>'},
 				//cache: true,
 				onsuccess: function(result){
-
 					CloseWaitWindow();
 					if(result.result){
-
 						indexCache[value] = result.data.ID;
 
 						successCallback.apply(ctx, [result.data.ID]);
@@ -8177,6 +8535,11 @@ echo '</div>';//end div for form
 			window.doneInit = true;
 		});
 	<?endif?>
+BX.ready(function() {
+	var couponBlock = BX('coupons_block');
+	if (!!couponBlock)
+		BX.bindDelegate(couponBlock, 'click', { 'attribute': 'data-coupon' }, BX.delegate(function(e){ deleteCoupon(e); }, this));
+});
 </script>
 <?echo BeginNote();?>
 1) - <?=GetMessage("NEWO_ORDER_RECOUNT_HINT")?><br>

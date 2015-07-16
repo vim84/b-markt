@@ -313,6 +313,9 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 		"datetime" => "date",
 	);
 
+	// $timeZoneOffset for datetime fields formatting
+	$timeZoneOffset = CTimeZone::GetOffset();
+
 	$arSelectFields = array("ID", "CREATED_BY");
 
 	$arResult["GRID_ID"] = "bizproc_CBPVirtualDocument_".$arParams["BLOCK_ID"];
@@ -425,6 +428,26 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 				if (substr($value, 0, strlen("user_")) == "user_")
 					$value = substr($value, strlen("user_"));
 			}
+			elseif ($arDocumentFields[$newKey]["BaseType"] == "datetime" && strlen($value) > 0 && CheckDateTime($value))
+			{
+				$isShort = strlen(trim($value)) <= 10;
+				$appendTime = $op == '<=' ? '23:59:59' : '00:00:00';
+				if (strpos($newKey, 'PROPERTY_') === 0)
+				{
+					if ($timeZoneOffset != 0)
+					{
+						$value = date("Y-m-d ".($isShort? $appendTime : 'H:i:s'), MakeTimeStamp($value, CLang::GetDateFormat("FULL")) - $timeZoneOffset);
+					}
+					else
+					{
+						$value = CDatabase::FormatDate($value, CLang::GetDateFormat("FULL"), "YYYY-MM-DD ".($isShort? $appendTime : 'HH:MI:SS'));
+					}
+				}
+				elseif ($isShort)
+				{
+					$value .= ' '.$appendTime;
+				}
+			}
 
 			if ($newKey == "ACTIVE_FROM")
 				$newKey = "DATE_ACTIVE_FROM";
@@ -448,7 +471,7 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 		$gridOptions->GetNavParams(),
 		$arSelectFields
 	);
-	while ($arRecord = $dbRecordsList->GetNext())
+	while ($arRecord = $dbRecordsList->fetch())
 	{
 		$arKeys = array_keys($arRecord);
 		foreach ($arKeys as $key)
@@ -465,6 +488,11 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 						$arRecord[$key] .= " ";
 					$arRecord[$key] .= CFile::ShowFile($v, 100000, 50, 50, true);
 				}
+			}
+			elseif (strpos($key, '_PRINTABLE') !== false && $arDocumentFields[str_replace('_PRINTABLE', '', $key)]["BaseType"] == "user" && is_string($arRecord[$key]))
+			{
+				//compatibility: do not need to escape chars there, delegate this to main.integface.grid
+				$arRecord[$key] = htmlspecialcharsback($arRecord[$key]);
 			}
 			if (is_array($arRecord[$key]))
 			{

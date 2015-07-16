@@ -123,6 +123,8 @@ if ($bCatalog)
 		CCatalogProduct::TYPE_SKU => GetMessage('IBLIST_A_CATALOG_TYPE_MESS_SKU'),
 		CCatalogProduct::TYPE_OFFER => GetMessage('IBLIST_A_CATALOG_TYPE_MESS_OFFER')
 	);
+	if (!$boolCatalogSet)
+		unset($arProductTypeList[CCatalogProduct::TYPE_SET]);
 	$showCatalogWithOffers = (COption::GetOptionString('catalog', 'show_catalog_tab_with_offers') == 'Y');
 }
 
@@ -1139,7 +1141,7 @@ $CAdminCalendar_ShowScript = CAdminCalendar::ShowScript();
 
 // List header
 $arHeader = array();
-if ($bCatalog && $boolCatalogSet)
+if ($bCatalog)
 {
 	$arHeader[] = array(
 		"id" => "CATALOG_TYPE",
@@ -1672,7 +1674,7 @@ while($arRes = $rsData->NavNext(true, "f_"))
 			$arRes['CATALOG_QUANTITY_TRACE'] = $arRes['CATALOG_QUANTITY_TRACE_ORIG'];
 			$f_CATALOG_QUANTITY_TRACE = $f_CATALOG_QUANTITY_TRACE_ORIG;
 		}
-		if ($boolCatalogSet && isset($arVisibleColumnsMap['CATALOG_TYPE']))
+		if (isset($arVisibleColumnsMap['CATALOG_TYPE']))
 		{
 			$arRes['CATALOG_TYPE'] = intval($arRes['CATALOG_TYPE']);
 			if (0 >= $arRes['CATALOG_TYPE'])
@@ -2498,7 +2500,7 @@ while($arRes = $rsData->NavNext(true, "f_"))
 	$clearCounter = array(
 		"TEXT" => GetMessage('IBLIST_A_CLEAR_COUNTER'),
 		"TITLE" => GetMessage('IBLIST_A_CLEAR_COUNTER_TITLE'),
-		"ACTION" => $lAdmin->ActionDoGroup($f_TYPE.$f_ID, "clear_counter", $sThisSectionUrl),
+		"ACTION" => "if(confirm('".GetMessageJS("IBLIST_A_CLEAR_COUNTER_CONFIRM")."')) ".$lAdmin->ActionDoGroup($f_TYPE.$f_ID, "clear_counter", $sThisSectionUrl),
 		"ONCLICK" => ""
 	);
 
@@ -2572,7 +2574,9 @@ while($arRes = $rsData->NavNext(true, "f_"))
 					)))
 				);
 				$arActions[] = $arActive;
+				$arActions[] = array('SEPARATOR' => 'Y');
 				$arActions[] = $clearCounter;
+				$arActions[] = array('SEPARATOR' => 'Y');
 			}
 
 			if (
@@ -2740,7 +2744,9 @@ while($arRes = $rsData->NavNext(true, "f_"))
 				)))
 			);
 			$arActions[] = $arActive;
+			$arActions[] = array('SEPARATOR' => 'Y');
 			$arActions[] = $clearCounter;
+			$arActions[] = array('SEPARATOR' => 'Y');
 
 			$arActions[] = array(
 				"ICON" => "copy",
@@ -2785,7 +2791,9 @@ while($arRes = $rsData->NavNext(true, "f_"))
 				)))
 			);
 			$arActions[] = $arActive;
+			$arActions[] = array('SEPARATOR' => 'Y');
 			$arActions[] = $clearCounter;
+			$arActions[] = array('SEPARATOR' => 'Y');
 		}
 
 		if ($boolIBlockElementAdd && CIBlockElementRights::UserHasRightTo($IBLOCK_ID, $f_ID, "element_edit"))
@@ -3513,7 +3521,7 @@ foreach($arProps as $arProp):
 		<?elseif($arProp["PROPERTY_TYPE"]=='L'):?>
 			<select name="find_el_property_<?=$arProp["ID"]?>">
 				<option value=""><?echo GetMessage("IBLOCK_VALUE_ANY")?></option>
-				<option value="NOT_REF"><?echo GetMessage("IBLIST_A_PROP_NOT_SET")?></option><?
+				<option value="NOT_REF"<?if(${"find_el_property_".$arProp["ID"]} == "NOT_REF")echo " selected"?>><?echo GetMessage("IBLIST_A_PROP_NOT_SET")?></option><?
 				$dbrPEnum = CIBlockPropertyEnum::GetList(Array("SORT"=>"ASC", "NAME"=>"ASC"), Array("PROPERTY_ID"=>$arProp["ID"]));
 				while($arPEnum = $dbrPEnum->GetNext()):
 				?>
@@ -3563,7 +3571,7 @@ if ($boolSKU && $boolSKUFiltrable)
 		{
 			?><select name="find_sub_el_property_<?=$arProp["ID"]?>">
 				<option value=""><?echo GetMessage("IBLOCK_VALUE_ANY")?></option>
-				<option value="NOT_REF"><?echo GetMessage("IBLIST_NOT_SET")?></option><?
+				<option value="NOT_REF"<?if(${"find_sub_el_property_".$arProp["ID"]} == "NOT_REF")echo " selected"?>><?echo GetMessage("IBLIST_NOT_SET")?></option><?
 				$dbrPEnum = CIBlockPropertyEnum::GetList(array("SORT"=>"ASC", "NAME"=>"ASC"), array("PROPERTY_ID"=>$arProp["ID"]));
 				while($arPEnum = $dbrPEnum->GetNext())
 				{

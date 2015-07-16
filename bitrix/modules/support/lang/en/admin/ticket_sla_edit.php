@@ -37,4 +37,7 @@ $MESS["SUP_WHAT_ACCESSIBLE_S_N"] = "Category";
 $MESS["SUP_DEADLINE_SOURCE_BY_CLIENT_REPLY"] = "Customer replied on";
 $MESS["SUP_DEADLINE_SOURCE_BY_CREATE_DATE"] = "Ticket created on";
 $MESS["SUP_DEADLINE_SOURCE_BY"] = "Measure deadline from:";
+$MESS["SUP_CREATED"] = "Created";
+$MESS["MAIN_ADMIN_MENU_EDIT"] = "Edit";
+$MESS["SUP_MODIFIED"] = "Modified";
 ?>

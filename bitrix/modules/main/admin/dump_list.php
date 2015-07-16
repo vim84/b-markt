@@ -313,18 +313,21 @@ if (is_dir($p = DOCUMENT_ROOT.BX_ROOT.'/backup'))
 if ($bBitrixCloud)
 {
 	$backup = CBitrixCloudBackup::getInstance();
-	try {
+	try
+	{
 		foreach($backup->listFiles() as $ar)
 		{
 			$arTmpFiles[] = array(
 				'NAME' => $ar['FILE_NAME'],
 				'SIZE' => $ar['FILE_SIZE'],
-				'DATE' => preg_match('#^([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})#', $ar['FILE_NAME'], $r) ? strtotime("{$r[1]}-{$r[2]}-{$r[3]} {$r[4]}:{$r[5]}:{$r[6]}") : 0,
+				'DATE' => preg_match('#^([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})#', $ar['FILE_NAME'], $r) ? strtotime("{$r[1]}-{$r[2]}-{$r[3]} {$r[4]}:{$r[5]}:{$r[6]}") : '',
 				'BUCKET_ID' => -1,
 				'PLACE' => GetMessage('DUMP_MAIN_BITRIX_CLOUD')
 			);
 		}
-	} catch (Exception $e) {
+	}
+	catch (Exception $e)
+	{
 		$bBitrixCloud = false;
 		$strBXError = $e->getMessage();
 	}
@@ -341,7 +344,7 @@ if ($arAllBucket)
 				$arTmpFiles[] = array(
 					'NAME' => $v,
 					'SIZE' => $arCloudFiles['file_size'][$k],
-					'DATE' => preg_match('#^([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})#', $v, $r) ? strtotime("{$r[1]}-{$r[2]}-{$r[3]} {$r[4]}:{$r[5]}:{$r[6]}") : 0,
+					'DATE' => preg_match('#^([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})#', $v, $r) ? strtotime("{$r[1]}-{$r[2]}-{$r[3]} {$r[4]}:{$r[5]}:{$r[6]}") : '',
 					'BUCKET_ID' => $arBucket['ID'],
 					'PLACE' => htmlspecialcharsbx($arBucket['BUCKET'].' ('.$arBucket['SERVICE_ID'].')')
 				);
@@ -415,7 +418,8 @@ while($f = $rsDirContent->NavNext(true, "f_"))
 	$row->AddField("NAME", $f['NAME'].$parts);
 	$row->AddField("SIZE", CFile::FormatSize($size));
 	$row->AddField("PLACE", $f['PLACE']);
-	$row->AddField("DATE", ($t = time() - $f['DATE']) < 86400 && $t > 0 ? HumanTime($t).' '.GetMessage('DUMP_BACK') : ConvertTimeStamp($f['DATE'], 'FULL'));
+	if ($f['DATE'])
+		$row->AddField("DATE", ($t = time() - $f['DATE']) < 86400 && $t > 0 ? HumanTime($t).' '.GetMessage('DUMP_BACK') : ConvertTimeStamp($f['DATE'], 'FULL'));
 
 	$arActions = Array();
 

@@ -171,7 +171,7 @@ elseif ($action == 'show_list')
 
 	$bJustResult = $_REQUEST['sticker_just_res'] == "Y";
 	$colorSchemes = array('bxst-yellow', 'bxst-green', 'bxst-blue', 'bxst-red', 'bxst-purple', 'bxst-gray');
-	$curPage = $_REQUEST['cur_page'];
+	$curPage = urldecode($_REQUEST['cur_page']);
 
 	$arFilter = array(
 		'USER_ID' => $USER->GetId(),
@@ -313,7 +313,7 @@ elseif ($action == 'show_list')
 								if ($arPages[$i]['PAGE_URL'] == $curPage)
 									continue;
 								?>
-								<option value="<?= $arPages[$i]['PAGE_URL']?>" title="<?= htmlspecialcharsex($arPages[$i]['PAGE_TITLE']." - ".$arPages[$i]['PAGE_URL'])?>"><?= htmlspecialcharsex($arPages[$i]['PAGE_TITLE']." - ".$arPages[$i]['PAGE_URL'])?></option>
+								<option value="<?= str_replace('%20', ' ', $arPages[$i]['PAGE_URL'])?>" title="<?= htmlspecialcharsex($arPages[$i]['PAGE_TITLE']." - ".str_replace('%20', ' ', $arPages[$i]['PAGE_URL']))?>"><?= htmlspecialcharsex($arPages[$i]['PAGE_TITLE']." - ".str_replace('%20', ' ', $arPages[$i]['PAGE_URL']))?></option>
 							<?endfor;?>
 						</select>
 					</div>
@@ -339,6 +339,7 @@ elseif ($action == 'show_list')
 			<? if ($count > 0):?>
 			<? while($arRes = $dbStickers->Fetch()): ?>
 			<?
+			$arRes['PAGE_URL'] = str_replace('%20', ' ', $arRes['PAGE_URL']);
 			$html = CSticker::BBParseToHTML($arRes['CONTENT'], true);
 			$colorClass = isset($colorSchemes[$arRes['COLOR']]) ? $colorSchemes[$arRes['COLOR']] : $colorSchemes[0];
 			$date = CSticker::GetUsableDate($arRes['DATE_UPDATE2']);

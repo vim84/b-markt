@@ -1,11 +1,13 @@
 <?
-use Bitrix\Sale\Location\Admin\TypeHelper as Helper;
-
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location\Admin\TypeHelper as Helper;
+use Bitrix\Sale\Location\Admin\SearchHelper;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/include.php");
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/prolog.php');
 
 Loc::loadMessages(__FILE__);
 
@@ -140,16 +142,19 @@ if(empty($fatal))
 	$lAdmin->AddHeaders($headers);
 	while($elem = $adminResult->NavNext(true, "f_"))
 	{
+		// CAdminList will escape values by itself
+		/*
 		foreach($columns as $code => $fld)
 			if(isset($elem[$code]))
 				Helper::makeSafeDisplay($elem[$code], $code);
+		*/
 
 		// urls
 		$editUrl = Helper::getEditUrl(array('id' => $elem['ID']));
 		$copyUrl = Helper::getEditUrl(array('copy_id' => $elem['ID']));
-		
+
 		$row =& $lAdmin->AddRow($f_ID, $elem, $editUrl, Loc::getMessage('SALE_LOCATION_L_EDIT_ITEM'));
-		
+
 		foreach($columns as $code => $fld)
 		{
 			if($code == 'ID')
@@ -202,6 +207,8 @@ if(empty($fatal))
 
 <?//temporal code?>
 <?if(!CSaleLocation::locationProCheckEnabled())require($DOCUMENT_ROOT."/bitrix/modules/main/include/epilog_admin.php");?>
+
+<?SearchHelper::checkIndexesValid();?>
 
 <?if(strlen($fatal)):?>
 

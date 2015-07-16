@@ -260,8 +260,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && check_bitrix_sessid() && $isAdmin)
 			{
 				if (isset($_POST["mark_".$Field."_"]) && $_POST["mark_".$Field."_"] === "Y")
 					$arToInsert[$Field] = var_import($_POST[$Field]);
+				elseif (isset($_POST[$Field]) && strlen($_POST[$Field]) > 0)
+					$arToUpdate[$Field] = $_POST[$Field];
 				else
-					$arToInsert[$Field] = $_POST[$Field];
+					$arToUpdate[$Field] = false;
 			}
 		}
 		$res = $DB->Add($table_name, $arToInsert);
@@ -275,8 +277,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && check_bitrix_sessid() && $isAdmin)
 			{
 				if (isset($_POST["mark_".$Field."_"]) && $_POST["mark_".$Field."_"] === "Y")
 					$arToUpdate[$Field] = serialize(var_import($_POST[$Field]));
-				else
+				elseif (isset($_POST[$Field]) && strlen($_POST[$Field]) > 0)
 					$arToUpdate[$Field] = $_POST[$Field];
+				else
+					$arToUpdate[$Field] = false;
 			}
 		}
 

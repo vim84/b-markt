@@ -519,13 +519,13 @@
             {
                 BX.addClass(this.obBuyBtn, 'bx_bt_button');
                 BX.removeClass(this.obBuyBtn, 'bx_bt_button_type_2');
-                this.obBuyBtn.innerHTML = BX.message('MESS_BTN_BUY');
+                this.obBuyBtn.innerHTML = BX.message('CVP_MESS_BTN_BUY');
             }
             else
             {
                 BX.addClass(this.obBuyBtn, 'bx_bt_button_type_2');
                 BX.removeClass(this.obBuyBtn, 'bx_bt_button');
-                this.obBuyBtn.innerHTML = BX.message('MESS_NOT_AVAILABLE');
+                this.obBuyBtn.innerHTML = BX.message('CVP_MESS_NOT_AVAILABLE');
             }
             if (this.showQuantity)
             {
@@ -1219,7 +1219,7 @@
                     this.obPopupWin.setTitleBar({
                         content: BX.create('div', {
                             style: { marginRight: '30px', whiteSpace: 'nowrap' },
-                            text: BX.message('TITLE_BASKET_PROPS')
+                            text: BX.message('CVP_TITLE_BASKET_PROPS')
                         })
                     });
                     if (BX(this.visual.BASKET_PROP_DIV))
@@ -1230,7 +1230,7 @@
                     this.obPopupWin.setButtons([
                         new BasketButton({
                             ownerClass: this.obProduct.parentNode.parentNode.parentNode.className,
-                            text: BX.message('BTN_MESSAGE_SEND_PROPS'),
+                            text: BX.message('CVP_BTN_MESSAGE_SEND_PROPS'),
                             events: {
                                 click: BX.delegate(this.SendToBasket, this)
                             }
@@ -1287,10 +1287,10 @@
             buttons = [
                 new BasketButton({
                     ownerClass: this.obProduct.parentNode.parentNode.parentNode.className,
-                    text: BX.message("BTN_MESSAGE_BASKET_REDIRECT"),
+                    text: BX.message("CVP_BTN_MESSAGE_BASKET_REDIRECT"),
                     events: {
                         click: BX.delegate(function(){
-                            location.href = (!!this.basketData.basketUrl ? this.basketData.basketUrl : BX.message('BASKET_URL'));
+                            location.href = (!!this.basketData.basketUrl ? this.basketData.basketUrl : BX.message('CVP_BASKET_URL'));
                         }, this)
                     }
                 })
@@ -1298,11 +1298,11 @@
         }
         else
         {
-            strContent = (!!arResult.MESSAGE ? arResult.MESSAGE : BX.message('BASKET_UNKNOWN_ERROR'));
+            strContent = (!!arResult.MESSAGE ? arResult.MESSAGE : BX.message('CVP_BASKET_UNKNOWN_ERROR'));
             buttons = [
                 new BasketButton({
                     ownerClass: this.obProduct.parentNode.parentNode.parentNode.className,
-                    text: BX.message('BTN_MESSAGE_CLOSE'),
+                    text: BX.message('CVP_BTN_MESSAGE_CLOSE'),
                     events: {
                         click: BX.delegate(this.obPopupWin.close, this.obPopupWin)
                     }
@@ -1313,7 +1313,7 @@
         this.obPopupWin.setTitleBar({
             content: BX.create('div', {
                 style: { marginRight: '30px', whiteSpace: 'nowrap' },
-                text: (successful ? BX.message('TITLE_SUCCESSFUL') : BX.message('TITLE_ERROR'))
+                text: (successful ? BX.message('CVP_TITLE_SUCCESSFUL') : BX.message('CVP_TITLE_ERROR'))
             })
         });
         this.obPopupWin.setContent(strContent);

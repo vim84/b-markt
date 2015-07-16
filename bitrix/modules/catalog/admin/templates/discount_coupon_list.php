@@ -1,4 +1,5 @@
 <?
+use Bitrix\Catalog;
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)
 	die();
 
@@ -231,7 +232,7 @@ if (!in_array('ID', $arSelectFields))
 $arSelectFields = array_values($arSelectFields);
 $arSelectFieldsMap = array_merge($arSelectFieldsMap, array_fill_keys($arSelectFields, true));
 
-$arCouponType = CCatalogDiscountCoupon::GetCoupontTypes(true);
+$arCouponType = Catalog\DiscountCouponTable::getCouponTypes(true);
 
 $arUserList = array();
 $arUserID = array();

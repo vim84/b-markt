@@ -1,4 +1,7 @@
 <?
+use Bitrix\Main\Localization\LanguageTable;
+use Bitrix\Main\ModuleManager;
+
 global $MESS;
 $strPath2Lang = str_replace("\\", "/", __FILE__);
 $strPath2Lang = substr($strPath2Lang, 0, strlen($strPath2Lang)-strlen("/install/index.php"));
@@ -109,7 +112,11 @@ Class sale extends CModule
 			return false;
 		}
 
-		RegisterModule("sale");
+		ModuleManager::registerModule('sale');
+
+		$eventManager = \Bitrix\Main\EventManager::getInstance();
+		$eventManager->registerEventHandlerCompatible('main', 'OnUserLogout', 'sale', '\Bitrix\Sale\DiscountCouponsManager', 'logout');
+
 		RegisterModuleDependences("main", "OnUserLogin", "sale", "CSaleUser", "OnUserLogin");
 		RegisterModuleDependences("main", "OnUserLogout", "sale", "CSaleUser", "OnUserLogout");
 		RegisterModuleDependences("main", "OnBeforeLangDelete", "sale", "CSalePersonType", "OnBeforeLangDelete");
@@ -130,6 +137,7 @@ Class sale extends CModule
 		RegisterModuleDependences("main", "OnBeforeProlog", "main", "", "", 100, "/modules/sale/affiliate.php");
 
 		RegisterModuleDependences("main", "OnEventLogGetAuditTypes", "sale", "CSaleYMHandler", 'OnEventLogGetAuditTypes');
+		RegisterModuleDependences("main", "OnEventLogGetAuditTypes", "sale", "CSalePaySystemAction", 'OnEventLogGetAuditTypes');
 
 		RegisterModuleDependences("currency", "OnBeforeCurrencyDelete", "sale", "CSaleOrder", "OnBeforeCurrencyDelete");
 		RegisterModuleDependences("currency", "OnBeforeCurrencyDelete", "sale", "CSaleLang", "OnBeforeCurrencyDelete");
@@ -139,6 +147,9 @@ Class sale extends CModule
 
 		RegisterModuleDependences("mobileapp", "OnBeforeAdminMobileMenuBuild", "sale", "CSaleMobileOrderUtils", "buildSaleAdminMobileMenu");
 		RegisterModuleDependences("sender", "OnConnectorList", "sale", "\\Bitrix\\Sale\\SenderEventHandler", "onConnectorListBuyer");
+		RegisterModuleDependences("sender", "OnTriggerList", "sale", "\\Bitrix\\Sale\\Sender\\EventHandler", "onTriggerList");
+		RegisterModuleDependences("sender", "OnPresetMailingList", "sale", "\\Bitrix\\Sale\\Sender\\EventHandler", "onPresetMailingList");
+		RegisterModuleDependences("sender", "OnPresetTemplateList", "sale", "\\Bitrix\\Sale\\Sender\\EventHandler", "onPresetTemplateList");
 
 		RegisterModuleDependences("sale", "OnCondSaleControlBuildList", "sale", "CSaleCondCtrlGroup", "GetControlDescr", 100);
 		RegisterModuleDependences("sale", "OnCondSaleControlBuildList", "sale", "CSaleCondCtrlBasketGroup", "GetControlDescr", 200);
@@ -166,6 +177,15 @@ Class sale extends CModule
 		RegisterModuleDependences("sale", "OnSalePayOrder", "sale", "\\Bitrix\\Sale\\Product2ProductTable", "onSalePayOrderHandler", 100);
 		CAgent::AddAgent("\\Bitrix\\Sale\\Product2ProductTable::deleteOldProducts(10);", "sale", "N", 10 * 24 * 3600, "", "Y");
 
+		// conversion
+		RegisterModuleDependences('conversion', 'OnGetCounterTypes'    , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onGetCounterTypes'    );
+		RegisterModuleDependences('conversion', 'OnGetRateTypes'       , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onGetRateTypes'       );
+		RegisterModuleDependences('conversion', 'OnGenerateInitialData', 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onGenerateInitialData');
+		RegisterModuleDependences('sale'      , 'OnBeforeBasketAdd'    , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onBeforeBasketAdd'    );
+		RegisterModuleDependences('sale'      , 'OnBasketAdd'          , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onBasketAdd'          );
+		RegisterModuleDependences('sale'      , 'OnOrderAdd'           , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onOrderAdd'           );
+		RegisterModuleDependences('sale'      , 'OnSalePayOrder'       , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onSalePayOrder'       );
+
 		COption::SetOptionString("sale", "viewed_capability", "N");
 		COption::SetOptionString("sale", "viewed_count", 10);
 		COption::SetOptionString("sale", "viewed_time", 5);
@@ -178,7 +198,7 @@ Class sale extends CModule
 		CAgent::AddAgent("CSaleOrder::RemindPayment();", "sale", "N", 86400, "", "Y");
 		CAgent::AddAgent("CSaleViewedProduct::ClearViewed();", "sale", "N", 86400, "", "Y");
 
-		CAgent::AddAgent("CSaleOrder::ClearProductReservedQuantity();", "sale", "N", 259200, "", "Y");
+		CAgent::AddAgent("CSaleOrder::ClearProductReservedQuantity();", "sale", "N", 86400, "", "Y");
 		COption::SetOptionString("sale", "product_reserve_clear_period", "3");
 
 		if (CModule::IncludeModule("sale"))
@@ -189,44 +209,55 @@ Class sale extends CModule
 				$arLandDataN = array();
 				$arLandDataF = array();
 
-				$dbLangs = CLanguage::GetList(($b = ""), ($o = ""), array("ACTIVE" => "Y"));
-				while ($arLangs = $dbLangs->Fetch())
+				$languageIterator = LanguageTable::getList(array(
+					'select' => array('ID'),
+					'filter' => array('=ACTIVE' => 'Y')
+				));
+				while ($language = $languageIterator->fetch())
 				{
-					IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/status.php", $arLangs["LID"]);
+					IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/status.php", $language['ID']);
 
 					$arLandDataN[] = array(
-							"LID" => $arLangs["LID"],
-							"NAME" => GetMessage("SIM_ACCEPTED"),
-							"DESCRIPTION" => GetMessage("SIM_ACCEPTED_DESCR")
-						);
+						"LID" => $language['ID'],
+						"NAME" => GetMessage("SIM_ACCEPTED"),
+						"DESCRIPTION" => GetMessage("SIM_ACCEPTED_DESCR")
+					);
 
 					$arLandDataF[] = array(
-							"LID" => $arLangs["LID"],
-							"NAME" => GetMessage("SIM_FINISHED"),
-							"DESCRIPTION" => GetMessage("SIM_FINISHED_DESCR")
-						);
+						"LID" => $language['ID'],
+						"NAME" => GetMessage("SIM_FINISHED"),
+						"DESCRIPTION" => GetMessage("SIM_FINISHED_DESCR")
+					);
 				}
+				unset($language, $languageIterator);
 
 				CSaleStatus::Add(
-						array(
-								"ID" => "N",
-								"SORT" => 100,
-								"LANG" => $arLandDataN
-							)
-					);
+					array(
+						"ID" => "N",
+						"SORT" => 100,
+						"LANG" => $arLandDataN
+					)
+				);
 
 				CSaleStatus::Add(
-						array(
-								"ID" => "F",
-								"SORT" => 200,
-								"LANG" => $arLandDataF
-							)
-					);
+					array(
+						"ID" => "F",
+						"SORT" => 200,
+						"LANG" => $arLandDataF
+					)
+				);
 			}
 
 			// enabling location pro
-			COption::SetOptionString("sale", "sale_locationpro_migrated", "Y"); 
+			COption::SetOptionString("sale", "sale_locationpro_migrated", "Y");
 			COption::SetOptionString("sale", "sale_locationpro_enabled", "Y");
+
+			if(\Bitrix\Main\ModuleManager::isModuleInstalled('bitrix24'))
+			{
+				// this will create at least base types if we are at Bitrix24
+				include_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/sale/lib/location/migration/migrate.php");
+				\Bitrix\Sale\Location\Migration\CUpdaterLocationPro::createBaseTypes();
+			}
 
 			CSaleYMHandler::install();
 		}
@@ -275,6 +306,9 @@ Class sale extends CModule
 
 		UnRegisterModuleDependences("mobileapp", "OnBeforeAdminMobileMenuBuild", "sale", "CSaleMobileOrderUtils", "buildSaleAdminMobileMenu");
 		UnRegisterModuleDependences("sender", "OnConnectorList", "sale", "\\Bitrix\\Sale\\SenderEventHandler", "onConnectorListBuyer");
+		UnRegisterModuleDependences("sender", "OnTriggerList", "sale", "\\Bitrix\\Sale\\Sender\\EventHandler", "onTriggerList");
+		UnRegisterModuleDependences("sender", "OnPresetMailingList", "sale", "\\Bitrix\\Sale\\Sender\\EventHandler", "onPresetMailingList");
+		UnRegisterModuleDependences("sender", "OnPresetTemplateList", "sale", "\\Bitrix\\Sale\\Sender\\EventHandler", "onPresetTemplateList");
 
 		UnRegisterModuleDependences("sale", "OnCondSaleControlBuildList", "sale", "CSaleCondCtrlGroup", "GetControlDescr");
 		UnRegisterModuleDependences("sale", "OnCondSaleControlBuildList", "sale", "CSaleCondCtrlBasketGroup", "GetControlDescr");
@@ -299,9 +333,25 @@ Class sale extends CModule
 		UnRegisterModuleDependences("sale", "OnSaleCancelOrder", "sale", "\\Bitrix\\Sale\\Product2ProductTable", "onSaleCancelOrderHandler");
 		UnRegisterModuleDependences("sale", "OnSalePayOrder", "sale", "\\Bitrix\\Sale\\Product2ProductTable", "onSalePayOrderHandler");
 
+		UnRegisterModuleDependences("main", "OnEventLogGetAuditTypes", "sale", "CSaleYMHandler", 'OnEventLogGetAuditTypes');
+		UnRegisterModuleDependences("main", "OnEventLogGetAuditTypes", "sale", "CSalePaySystemAction", 'OnEventLogGetAuditTypes');
+
+		// conversion
+		UnRegisterModuleDependences('conversion', 'OnGetCounterTypes'    , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onGetCounterTypes'    );
+		UnRegisterModuleDependences('conversion', 'OnGetRateTypes'       , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onGetRateTypes'       );
+		UnRegisterModuleDependences('conversion', 'OnGenerateInitialData', 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onGenerateInitialData');
+		UnRegisterModuleDependences('sale'      , 'OnBeforeBasketAdd'    , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onBeforeBasketAdd'    );
+		UnRegisterModuleDependences('sale'      , 'OnBasketAdd'          , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onBasketAdd'          );
+		UnRegisterModuleDependences('sale'      , 'OnOrderAdd'           , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onOrderAdd'           );
+		UnRegisterModuleDependences('sale'      , 'OnSalePayOrder'       , 'sale', '\Bitrix\Sale\Internals\ConversionHandlers', 'onSalePayOrder'       );
+
+
+		$eventManager = \Bitrix\Main\EventManager::getInstance();
+		$eventManager->unRegisterEventHandler('main', 'OnUserLogout', 'sale', '\Bitrix\Sale\DiscountCouponsManager', 'logout');
+
 		CAgent::RemoveModuleAgents("sale");
 
-		UnRegisterModule("sale");
+		ModuleManager::unRegisterModule('sale');
 
 		return true;
 	}

@@ -40,16 +40,44 @@
 				this.reader = new FileReader();
 			return this.reader;
 		},
-		load : function(file, callback, id)
+		load : function(file, callback, id, callbackFail)
 		{
 			var image = this.getImage();
+
 			BX.unbindAll(image);
 			this.onload = null;
 			delete this.onload;
+			this.onerror = null;
+			delete this.onerror;
+			image.src = '/bitrix/images/1.gif';
 			this.onload = BX.delegate(function(){
 				if (!!callback)
 				{
-					callback(BX.proxy_context, this.getCanvas(), this.getContext());
+					try{
+						callback(BX.proxy_context, this.getCanvas(), this.getContext());
+					}
+					catch (e)
+					{
+						BX.debug(e);
+					}
+				}
+				if (!!id)
+				{
+					this.queue.removeItem(id);
+					setTimeout(BX.proxy(this.exec, this), this.timeLimit);
+				}
+			}, this);
+			this.onerror = BX.delegate(function(){
+				if (!!callbackFail)
+				{
+					try
+					{
+						callbackFail(BX.proxy_context);
+					}
+					catch (e)
+					{
+						BX.debug(e);
+					}
 				}
 				if (!!id)
 				{
@@ -59,8 +87,18 @@
 			}, this);
 			image.name = file.name;
 			BX.bind(image, 'load', this.onload);
+			BX.bind(image, 'error', this.onerror);
 
-			if (!!window["URL"])
+			var res = Object.prototype.toString.call(file);
+			if (file["tmp_url"])
+			{
+				image.src = file["tmp_url"];
+			}
+			else if (res !== '[object File]' && res !== '[object Blob]')
+			{
+				this.onerror(null);
+			}
+			else if (!!window["URL"])
 			{
 				image.src = window["URL"]["createObjectURL"](file);
 			}
@@ -75,20 +113,73 @@
 				this.getReader().readAsDataURL(file);
 			}
 		},
-		push : function(file, callback)
+		push : function(file, callback, failCallback)
 		{
 			var id = BX.UploaderUtils.getId();
-			this.queue.setItem(id, [id, file, callback]);
+			this.queue.setItem(id, [id, file, callback, failCallback]);
 			this.exec();
 		},
 		exec : function()
 		{
 			var item = this.queue.getFirst();
 			if (!!item)
-				this.load(item[1], item[2], item[0]);
+				this.load(item[1], item[2], item[0], item[3]);
 		}
 	};
 	BX.UploaderFileCnvConstr = cnvConstr;
+	var fileLoader = function(timelimit)
+	{
+		this.timeLimit = (typeof timelimit == "number" && timelimit > 0 ? timelimit : 50);
+		this.status = statuses.ready;
+		this.queue = new BX.UploaderUtils.Hash();
+		this._exec = BX.delegate(this.exec, this);
+	};
+	fileLoader.prototype = {
+		xhr : null,
+		goToNext : function(id)
+		{
+			delete this.xhr;
+			this.xhr = null;
+			this.queue.removeItem(id);
+			this.status = statuses.ready;
+			setTimeout(this._exec, this.timeLimit);
+		},
+		load : function(id, path, onsuccess, onfailure)
+		{
+			if (this.status != statuses.ready)
+				return;
+			this.status = statuses.inprogress;
+			var _this = this;
+			this.xhr = BX.ajax({
+				'method': 'GET',
+				'data' : '',
+				'url': path,
+				'onsuccess': function(blob){if (blob === null){onfailure(blob);} else {onsuccess(blob);} _this.goToNext(id);},
+				'onfailure': function(blob){onfailure(blob); _this.goToNext(id);},
+				'start': false,
+				'preparePost':false,
+				'processData':false
+			});
+			this.xhr.withCredentials = true;
+			this.xhr.responseType = 'blob';
+
+
+			this.xhr.send();
+		},
+		push : function(path, onsuccess, onfailure)
+		{
+			var id = BX.UploaderUtils.getId();
+			this.queue.setItem(id, [id, path, onsuccess, onfailure]);
+			this.exec();
+		},
+		exec : function()
+		{
+			var item = this.queue.getFirst();
+			if (!!item)
+				this.load(item[0], item[1], item[2], item[3]);
+		}
+	};
+	BX.UploaderFileFileLoader = fileLoader();
 	var prvw = new cnvConstr(), upld = new cnvConstr(), edtr = new cnvConstr(), canvas = BX.create('CANVAS'), ctx;
 	/**
 	 * @return {BX.UploaderFile}
@@ -103,17 +194,23 @@
 	{
 		this.dialogName = "BX.UploaderFile";
 		this.file = file;
-		this.id = 'file' + BX.UploaderUtils.getId();
+		this.id = (file['id'] || 'file' + BX.UploaderUtils.getId());
 		this.name = file.name;
+		this.isNode = false;
 		if (BX.type.isDomNode(file))
 		{
-			this.name = this.getFileNameOnly(file.value);
+			this.isNode = true;
+			this.name = BX.UploaderUtils.getFileNameOnly(file.value);
 			if (/\[(.+?)\]/.test(file.name))
 			{
 				var tmp = /\[(.+?)\]/.exec(file.name);
 				this.id = tmp[1];
 			}
 			this.file.bxuHandler = this;
+		}
+		else if (file["tmp_url"] && !file["name"])
+		{
+			this.name = BX.UploaderUtils.getFileNameOnly(file["tmp_url"]);
 		}
 		this.preview = '<span id="' + this.id + 'Canvas" class="bx-bxu-canvas"></span>';
 		this.nameWithoutExt = (this.name.lastIndexOf('.') > 0 ? this.name.substr(0, this.name.lastIndexOf('.')) : this.name);
@@ -155,6 +252,7 @@
 				placeHolder : null
 			}
 		};
+
 		if (!!params["fields"])
 		{
 			var ij, key;
@@ -183,6 +281,10 @@
 				}
 			}
 		}
+
+		BX.onCustomEvent(this, "onFileIsCreated", [this.id, this, this.caller]);
+		BX.onCustomEvent(this.caller, "onFileIsCreated", [this.id, this, this.caller]);
+
 		this.makePreview();
 		this.preparationStatus = statuses.done;
 		return this;
@@ -191,11 +293,6 @@
 		log : function(text)
 		{
 			BX.UploaderUtils.log('file ' + this.name, text);
-		},
-		getFileNameOnly : function (name) {
-			var lastPathDelimiter = name.lastIndexOf("\\");
-			if (lastPathDelimiter == -1) lastPathDelimiter = name.lastIndexOf("/");
-			return name.substring(lastPathDelimiter+1);
 		},
 		makeThumb : function()
 		{
@@ -433,44 +530,13 @@
 		{
 			return false;
 		},
-		makePreviewImageWork : function(image)
-		{
-			this.file.width = image.width;
-			this.file.height = image.height;
-			if (!!this.canvas)
-			{
-				BX.adjust(prvw.getCanvas(), { props : { width : image.width, height : image.height } } );
-				prvw.getContext().drawImage(image, 0, 0);
-
-				this.applyFile(prvw.getCanvas(), false);
-
-				if (BX(this.id + 'Canvas'))
-					BX(this.id + 'Canvas').appendChild(this.canvas);
-
-				return this.canvas;
-			}
-			else if (BX(this.id + 'Canvas'))
-			{
-				var res2 = BX.UploaderUtils.scaleImage(image, this.fields.preview.params),
-					props = {
-						props : { width : res2.destin.width, height : res2.destin.height, src : image.src },
-						attrs : {
-							className : (this.file.width > this.file.height ? "landscape" : "portrait")
-						}
-					},
-					img = BX.create("IMG", props);
-				BX(this.id + 'Canvas').appendChild(img);
-				return img;
-			}
-			return null;
-		},
 		makePreview: function()
 		{
 			this.status = statuses.ready;
 			BX.onCustomEvent(this, "onFileIsInited", [this.id, this, this.caller]);
 			BX.onCustomEvent(this.caller, "onFileIsInited", [this.id, this, this.caller]);
 
-			this.log('is initialized');
+			this.log('is initialized as a file');
 		},
 		preparationStatus : statuses.ready,
 		deleteFile: function()
@@ -515,7 +581,8 @@
 		this.isImage = true;
 		this.copies = new BX.UploaderUtils.Hash();
 		this.caller = caller;
-		if (this.file["fileType"] !== "image/xyz")
+
+		if (!this.isNode)
 		{
 			if (!!params["copies"])
 			{
@@ -551,31 +618,99 @@
 				}
 				this.preparationStatus = statuses["new"];
 			}, this));
+			this.canvas = BX.create('CANVAS', {attrs : { id : this.id + "ProperCanvas" } } );
 		}
 		else
 		{
 			this.preparationStatus = statuses.done;
+			this.canvas = null;
 		}
 		return this;
 	};
 	BX.extend(BX.UploaderImage, BX.UploaderFile);
+	BX.UploaderImage.prototype.makePreviewImageWork = function(image)
+	{
+		var result = null;
+		if (this.file)
+		{
+			this.file.width = image.width;
+			this.file.height = image.height;
+		}
+
+		if (!!this.canvas)
+		{
+			BX.adjust(prvw.getCanvas(), { props : { width : image.width, height : image.height } } );
+			prvw.getContext().drawImage(image, 0, 0);
+
+			this.applyFile(prvw.getCanvas(), false);
+
+			result = this.canvas;
+		}
+		else if (BX(this.id + 'Canvas'))
+		{
+			var res2 = BX.UploaderUtils.scaleImage(image, this.fields.preview.params),
+				props = {
+					props : { width : res2.destin.width, height : res2.destin.height, src : image.src },
+					attrs : {
+						className : (this.file.width > this.file.height ? "landscape" : "portrait")
+					}
+				};
+			result = BX.create("IMG", props);
+		}
+
+		if (BX(this.id + 'Canvas'))
+			BX(this.id + 'Canvas').appendChild(result);
+
+		return result;
+	};
+
+	BX.UploaderImage.prototype.makePreviewImageLoadHandler = function(image, canvas, context){
+		this.makePreviewImageWork(image);
+		this.status = statuses.ready;
+
+		BX.onCustomEvent(this, "onFileIsInited", [this.id, this, this.caller]);
+		BX.onCustomEvent(this.caller, "onFileIsInited", [this.id, this, this.caller]);
+		this.log('is initialized as an image with preview');
+		if (this.preparationStatus == statuses.inprogress)
+			this.makeCopies(image, canvas, context);
+		if (this["_makePreviewImageLoadHandler"])
+		{
+			this._makePreviewImageLoadHandler = null;
+			delete this._makePreviewImageLoadHandler;
+		}
+		if (this["_makePreviewImageFailedHandler"])
+		{
+			this._makePreviewImageFailedHandler = null;
+			delete this._makePreviewImageFailedHandler;
+		}
+	};
+
+	BX.UploaderImage.prototype.makePreviewImageFailedHandler = function(){
+		this.status = statuses.ready;
+		this.preparationStatus = statuses.done;
+
+		BX.onCustomEvent(this, "onFileIsInited", [this.id, this, this.caller]);
+		BX.onCustomEvent(this.caller, "onFileIsInited", [this.id, this, this.caller]);
+
+		this.log('is initialized without canvas');
+		if (this["_makePreviewImageLoadHandler"])
+		{
+			this._makePreviewImageLoadHandler = null;
+			delete this._makePreviewImageLoadHandler;
+		}
+		if (this["_makePreviewImageFailedHandler"])
+		{
+			this._makePreviewImageFailedHandler = null;
+			delete this._makePreviewImageFailedHandler;
+		}
+	};
 	BX.UploaderImage.prototype.makePreview = function()
 	{
-		if (this.file["fileType"] !== "image/xyz")
+		if (!this.isNode)
 		{
-			this.makePreviewImageLoadHandler = BX.delegate(function(image, canvas, context){
-				this.makePreviewImageWork(image);
-				this.status = statuses.ready;
-				BX.onCustomEvent(this, "onFileIsInited", [this.id, this, this.caller]);
-				BX.onCustomEvent(this.caller, "onFileIsInited", [this.id, this, this.caller]);
-				this.log('is initialized');
-				if (this.preparationStatus == statuses.inprogress)
-					this.makeCopies(image, canvas, context);
-				this.makePreviewImageLoadHandler = null;
-				delete this.makePreviewImageLoadHandler;
-			}, this);
-			this.canvas = BX.create('CANVAS', {attrs : { id : this.id + "ProperCanvas" } } );
-			prvw.push(this.file, this.makePreviewImageLoadHandler);
+			this._makePreviewImageLoadHandler = BX.delegate(this.makePreviewImageLoadHandler, this);
+			this._makePreviewImageFailedHandler = BX.delegate(this.makePreviewImageFailedHandler, this);
+			prvw.push(this.file, this._makePreviewImageLoadHandler, this._makePreviewImageFailedHandler);
 		}
 		else
 		{
@@ -583,9 +718,8 @@
 			BX.onCustomEvent(this, "onFileIsInited", [this.id, this, this.caller]);
 			BX.onCustomEvent(this.caller, "onFileIsInited", [this.id, this, this.caller]);
 
-			this.log('is initialized');
-
-			if (!!this.caller.queue.placeHolder && !!this.file["fileType"] && this.file.fileType.indexOf("image/") === 0)
+			this.log('is initialized as an image without preview');
+			if (this.caller.queue.placeHolder)
 			{
 				this._onFileHasGotPreview = BX.delegate(function(id, item){
 					if (id == this.id)
@@ -615,7 +749,6 @@
 		}
 		return true;
 	};
-
 	BX.UploaderImage.prototype.checkPreview = function()
 	{
 		// TODO check preview

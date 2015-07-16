@@ -13,7 +13,7 @@ $MESS ['SOA_TEMPL_DELIVERY'] = "Служба доставки";
 $MESS ['SOA_TEMPL_ORDER_SUC'] = "Ваш заказ <b>№#ORDER_ID#</b> от #ORDER_DATE# успешно создан.";
 $MESS ['SOA_TEMPL_ORDER_SUC1'] = "Вы можете следить за выполнением своего заказа в <a href=\"#LINK#\">Персональном разделе сайта</a>. Обратите внимание, что для входа в этот раздел вам необходимо будет ввести логин и пароль пользователя сайта.";
 $MESS ['SOA_TEMPL_PAY'] = "Оплата заказа";
-$MESS ['SOA_TEMPL_PAY_LINK'] = "Если окно с платежной информацией не открылось автоматически, нажмите на ссылку<br/><a href=\"#LINK#\" class=\"button_red_small\" style=\"right: auto;\" target=\"_blank\">Оплатить</a>";
+$MESS ['SOA_TEMPL_PAY_LINK'] = "<a href=\"#LINK#\" class=\"button_red_small\" style=\"right: auto;\" target=\"_blank\">Оплатить</a>";
 $MESS ['SOA_TEMPL_ERROR_ORDER'] = "Ошибка формирования заказа";
 $MESS ['SOA_TEMPL_ERROR_ORDER_LOST'] = "Заказ №#ORDER_ID# не найден.";
 $MESS ['SOA_TEMPL_ERROR_ORDER_LOST1'] = "Пожалуйста обратитесь к администрации интернет-магазина или попробуйте оформить ваш заказ еще раз.";

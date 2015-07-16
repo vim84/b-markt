@@ -231,14 +231,22 @@ if(!empty($arResult["CommentsResult"]) && is_array($arResult["CommentsResult"]))
 					$APPLICATION->IncludeComponent(
 						"bitrix:system.field.view",
 						$arPostField["USER_TYPE"]["USER_TYPE_ID"],
-						array("arUserField" => $arPostField), 
+						array(
+							"LAZYLOAD" => $arParams["LAZYLOAD"],
+							"arUserField" => $arPostField
+						), 
 						null, 
 						array("HIDE_ICONS"=>"Y")
 					);
 				}
 			}
-			if ($eventHandlerID !== false && ( intval($eventHandlerID) > 0 ))
+			if (
+				$eventHandlerID !== false 
+				&& intval($eventHandlerID) > 0
+			)
+			{
 				RemoveEventHandler('main', 'system.field.view.file', $eventHandlerID);
+			}
 			$res["AFTER"] .= ob_get_clean();
 			$res["CLASSNAME"] = "feed-com-block-uf";
 
@@ -259,6 +267,7 @@ if(!empty($arResult["CommentsResult"]) && is_array($arResult["CommentsResult"]))
 							"bitrix:system.field.view",
 							$arPostField["USER_TYPE"]["USER_TYPE_ID"],
 							array(
+								"LAZYLOAD" => $arParams["LAZYLOAD"],
 								"arUserField" => $arPostField,
 								"MOBILE" => "Y"
 							), 
@@ -267,64 +276,71 @@ if(!empty($arResult["CommentsResult"]) && is_array($arResult["CommentsResult"]))
 						);
 					}
 				}
-				if ($eventHandlerID !== false && ( intval($eventHandlerID) > 0 ))
+				if (
+					$eventHandlerID !== false 
+					&& intval($eventHandlerID) > 0
+				)
+				{
 					RemoveEventHandler('main', 'system.field.view.file', $eventHandlerID);
+				}
 				$res["AFTER_MOBILE"] .= ob_get_clean();
 			}
 		}
+
 		if($comment["CAN_EDIT"] == "Y")
 		{
 			ob_start();
-			?>
-<script>
-	top.text<?=$comment["ID"]?> = text<?=$comment["ID"]?> = '<?=CUtil::JSEscape(htmlspecialcharsBack($comment["POST_TEXT"]))?>';
-	top.title<?=$comment["ID"]?> = title<?=$comment["ID"]?> = '<?=CUtil::JSEscape($comment["TITLE"])?>';
-	top.arComFiles<?=$comment["ID"]?> = [];<?
-if ($comment["COMMENT_PROPERTIES"]["DATA"])
-{
-	foreach($comment["COMMENT_PROPERTIES"]["DATA"] as $userField)
-	{
-		if (empty($userField["VALUE"]))
-			continue;
-		else if ($userField["USER_TYPE_ID"] == "disk_file")
-		{
-			?>
-			top.arComDFiles<?=$comment["ID"]?> = BX.util.array_merge((top.arComDFiles<?=$comment["ID"]?> || []), <?=CUtil::PhpToJSObject($userField["VALUE"])?>);
-			<?
-		}
-		else if ($userField["USER_TYPE_ID"] == "webdav_element")
-		{
-			?>
-			top.arComDocs<?=$comment["ID"]?> = BX.util.array_merge((top.arComDocs<?=$comment["ID"]?> || []), <?=CUtil::PhpToJSObject($userField["VALUE"])?>);
-			<?
-		}
-		else if ($userField["USER_TYPE_ID"] == "file")
-		{
-			?>
-			top.arComFilesUf<?=$comment["ID"]?> = BX.util.array_merge((top.arComDocs<?=$comment["ID"]?> || []), <?=CUtil::PhpToJSObject($userField["VALUE"])?>);
-			<?
-		}
-	}
 
-	}
-	if(!empty($comment["showedImages"]))
-	{
-		foreach($comment["showedImages"] as $imgId)
-		{
-			if(!empty($arResult["Images"][$imgId]))
-			{
-	?>top.arComFiles<?=$comment["ID"]?>.push({
-			id : '<?=$imgId?>',
-			name : '<?=CUtil::JSEscape($arResult["Images"][$imgId]["fileName"])?>',
-			type: 'image',
-			src: '<?=CUtil::JSEscape($arResult["Images"][$imgId]["source"]["src"])?>',
-			thumbnail: '<?=CUtil::JSEscape($arResult["Images"][$imgId]["src"])?>',
-			isImage: true
-		});<?
-			}
-		}
-	}
-?></script><?
+			?><script>
+				top.text<?=$comment["ID"]?> = text<?=$comment["ID"]?> = '<?=CUtil::JSEscape($comment["POST_TEXT"])?>';
+				top.title<?=$comment["ID"]?> = title<?=$comment["ID"]?> = '<?=CUtil::JSEscape($comment["TITLE"])?>';
+				top.arComFiles<?=$comment["ID"]?> = [];<?
+
+				if ($comment["COMMENT_PROPERTIES"]["DATA"])
+				{
+					foreach($comment["COMMENT_PROPERTIES"]["DATA"] as $userField)
+					{
+						if (empty($userField["VALUE"]))
+							continue;
+						else if ($userField["USER_TYPE_ID"] == "disk_file")
+						{
+							?>
+							top.arComDFiles<?=$comment["ID"]?> = BX.util.array_merge((top.arComDFiles<?=$comment["ID"]?> || []), <?=CUtil::PhpToJSObject($userField["VALUE"])?>);
+							<?
+						}
+						else if ($userField["USER_TYPE_ID"] == "webdav_element")
+						{
+							?>
+							top.arComDocs<?=$comment["ID"]?> = BX.util.array_merge((top.arComDocs<?=$comment["ID"]?> || []), <?=CUtil::PhpToJSObject($userField["VALUE"])?>);
+							<?
+						}
+						else if ($userField["USER_TYPE_ID"] == "file")
+						{
+							?>
+							top.arComFilesUf<?=$comment["ID"]?> = BX.util.array_merge((top.arComDocs<?=$comment["ID"]?> || []), <?=CUtil::PhpToJSObject($userField["VALUE"])?>);
+							<?
+						}
+					}
+				}
+
+				if(!empty($comment["showedImages"]))
+				{
+					foreach($comment["showedImages"] as $imgId)
+					{
+						if(!empty($arResult["Images"][$imgId]))
+						{
+							?>top.arComFiles<?=$comment["ID"]?>.push({
+								id : '<?=$imgId?>',
+								name : '<?=CUtil::JSEscape($arResult["Images"][$imgId]["fileName"])?>',
+								type: 'image',
+								src: '<?=CUtil::JSEscape($arResult["Images"][$imgId]["source"]["src"])?>',
+								thumbnail: '<?=CUtil::JSEscape($arResult["Images"][$imgId]["src"])?>',
+								isImage: true
+							});<?
+						}
+					}
+				}
+			?></script><?
 			$res["AFTER"] .= ob_get_clean();
 		}
 		$arResult["RECORDS"][$comment["ID"]] = $res;

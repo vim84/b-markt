@@ -1,8 +1,9 @@
 <?php
 use \Bitrix\Main;
+use Bitrix\Iblock;
 use \Bitrix\Catalog\CatalogViewedProductTable as CatalogViewedProductTable;
 use \Bitrix\Main\Text\String as String;
-use \Bitrix\Main\Localization\Loc as Loc;
+use \Bitrix\Main\Localization\Loc;
 use \Bitrix\Main\SystemException as SystemException;
 
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
@@ -101,7 +102,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		{
 			if (isset($_REQUEST[$this->arParams["PRODUCT_QUANTITY_VARIABLE"]]))
 			{
-				$quantity = doubleval($_REQUEST[$this->arParams["PRODUCT_QUANTITY_VARIABLE"]]);
+				$quantity = (float)$_REQUEST[$this->arParams["PRODUCT_QUANTITY_VARIABLE"]];
 			}
 		}
 		return $quantity;
@@ -109,7 +110,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 
 	/**
 	 * Return product product properties to add in basket
-	 * @return string[]
+	 * @return array
 	 */
 	protected function getProductPropertiesFromRequest()
 	{
@@ -123,19 +124,20 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 
 	/**
 	 * Process buy action.
-	 * @return void
 	 */
 	protected function processBuyAction()
 	{
 		global $APPLICATION;
 		if (!(isset($_REQUEST[$this->arParams["ACTION_VARIABLE"]]) && $_REQUEST[$this->arParams["ACTION_VARIABLE"]] == "BUY"))
 			return;
-		$productID = intval($_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]]);
-		if (!$productID)
+
+		$productID = 0;
+		if (isset($_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]]))
+			$productID = (int)$_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]];
+		if ($productID <= 0)
 			throw new SystemException(Loc::getMessage("CVP_ACTION_PRODUCT_ID_REQUIRED"));
 
 		$this->addProductToBasket($productID, $this->getProductQuantityFromRequest(), $this->getProductPropertiesFromRequest());
-
 
 		if (!$this->isAjax())
 		{
@@ -151,16 +153,17 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 
 	/**
 	 * Process buy action.
-	 * @return void
 	 */
 	protected function processAddToBasketAction()
 	{
 		global $APPLICATION;
 		if (!(isset($_REQUEST[$this->arParams["ACTION_VARIABLE"]]) && $_REQUEST[$this->arParams["ACTION_VARIABLE"]] == "ADD2BASKET"))
 			return;
-		$productID = intval($_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]]);
 
-		if (!$productID)
+		$productID = 0;
+		if (isset($_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]]))
+			$productID = (int)$_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]];
+		if ($productID <= 0)
 			throw new SystemException(Loc::getMessage("CVP_ACTION_PRODUCT_ID_REQUIRED"));
 
 		$this->addProductToBasket($productID, $this->getProductQuantityFromRequest(), $this->getProductPropertiesFromRequest());
@@ -179,15 +182,17 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 
 	/**
 	 * Process buy action.
-	 * @return void
 	 */
 	protected function processSubscribeAction()
 	{
 		global $APPLICATION;
 		if (!(isset($_REQUEST[$this->arParams["ACTION_VARIABLE"]]) && $_REQUEST[$this->arParams["ACTION_VARIABLE"]] == "SUBSCRIBE_PRODUCT"))
 			return;
-		$productID = intval($_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]]);
-		if (!$productID)
+
+		$productID = 0;
+		if (isset($_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]]))
+			$productID = (int)$_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]];
+		if ($productID <= 0)
 			throw new SystemException(Loc::getMessage("CVP_ACTION_PRODUCT_ID_REQUIRED"));
 
 		$rewriteFields = array("SUBSCRIBE" => "Y", "CAN_BUY" => "N");
@@ -244,17 +249,21 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	}
 
 	/**
-	 * Process Puy Product
+	 * Process Puy Product.
 	 *
-	 * @param $productID
-	 * @param $quantity
+	 * @param int $productID
+	 * @param float $quantity
+	 * @param array $values
+	 * @param array $arRewriteFields
+	 * @throws void|Bitrix\Main\SystemException
 	 */
 	protected function addProductToBasket($productID, $quantity, $values = array(), $arRewriteFields = array())
 	{
 		$productProperties = array();
-		$intProductIBlockID = intval(CIBlockElement::GetIBlockByID($productID));
+		$productID = (int)$productID;
+		$intProductIBlockID = (int)CIBlockElement::GetIBlockByID($productID);
 
-		if (0 < $intProductIBlockID)
+		if ($intProductIBlockID > 0)
 		{
 			$productCatalogInfo = CCatalogSKU::getInfoByIblock($intProductIBlockID);
 			$isOffer = CCatalogSKU::TYPE_OFFERS == $productCatalogInfo['CATALOG_TYPE'];
@@ -305,8 +314,8 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 				);
 				if ($arRatio = $rsRatios->Fetch())
 				{
-					$intRatio = intval($arRatio['RATIO']);
-					$dblRatio = doubleval($arRatio['RATIO']);
+					$intRatio = (int)$arRatio['RATIO'];
+					$dblRatio = (float)$arRatio['RATIO'];
 					$quantity = ($dblRatio > $intRatio ? $dblRatio : $intRatio);
 				}
 			}
@@ -328,13 +337,11 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	 */
 	protected function checkModules()
 	{
-		if (!Main\Loader::includeModule("catalog"))
-			throw new SystemException(Loc::getMessage("CVP_CATALOG_MODULE_NOT_INSTALLED"));
+		if (!Main\Loader::includeModule('catalog'))
+			throw new SystemException(Loc::getMessage('CVP_CATALOG_MODULE_NOT_INSTALLED'));
 		$this->isCurrency = true;
-		if (!Main\Loader::includeModule("sale"))
-		{
+		if (!Main\Loader::includeModule('sale'))
 			$this->isSale = false;
-		}
 	}
 
 	/**
@@ -413,19 +420,22 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			if (preg_match("/^PROPERTY_CODE_(\d+)$/", $name, $arMatches))
 			{
 				$iBlockID = (int)$arMatches[1];
-				if($iBlockID <= 0)
+				if ($iBlockID <= 0)
 					continue;
 
-				foreach ($params[$name] as $k => $v)
-					if ($v === "")
-						unset($params[$name][$k]);
-				$params['PROPERTY_CODE'][$iBlockID] = $params[$name];
+				if (!empty($params[$name]) && is_array($params[$name]))
+				{
+					foreach ($params[$name] as $k => $v)
+						if ($v === "")
+							unset($params[$name][$k]);
+					$params['PROPERTY_CODE'][$iBlockID] = $params[$name];
+				}
 				unset($params[$arMatches[0]]);
 			} // Additional Picture property
 			elseif (preg_match("/^ADDITIONAL_PICT_PROP_(\d+)$/", $name, $arMatches))
 			{
 				$iBlockID = (int)$arMatches[1];
-				if($iBlockID <= 0)
+				if ($iBlockID <= 0)
 					continue;
 
 				if ($params[$name] != "" && $params[$name] != "-")
@@ -437,7 +447,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			elseif (preg_match("/^LABEL_PROP_(\d+)$/", $name, $arMatches))
 			{
 				$iBlockID = (int)$arMatches[1];
-				if($iBlockID <= 0)
+				if ($iBlockID <= 0)
 					continue;
 
 				if ($params[$name] != "" && $params[$name] != "-")
@@ -449,13 +459,16 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			elseif (preg_match("/^OFFER_TREE_PROPS_(\d+)$/", $name, $arMatches))
 			{
 				$iBlockID = (int)$arMatches[1];
-				if($iBlockID <= 0)
+				if ($iBlockID <= 0)
 					continue;
 
-				foreach ($params[$name] as $k => $v)
-					if ($v == "" || $v == "-")
-						unset($params[$name][$k]);
-				$params['OFFER_TREE_PROPS'][$iBlockID] = $params[$name];
+				if (!empty($params[$name]) && is_array($params[$name]))
+				{
+					foreach ($params[$name] as $k => $v)
+						if ($v == "" || $v == "-")
+							unset($params[$name][$k]);
+					$params['OFFER_TREE_PROPS'][$iBlockID] = $params[$name];
+				}
 				unset($params[$arMatches[0]]);
 			} // Add to Basket Props
 			elseif (preg_match("/^CART_PROPERTIES_(\d+)$/", $name, $arMatches))
@@ -464,9 +477,12 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 				if($iBlockID <= 0)
 					continue;
 
-				foreach ($params[$name] as $k => $v)
-					if ($v == "" || $v == "-")
-						unset($params[$name][$k]);
+				if (!empty($params[$name]) && is_array($params[$name]))
+				{
+					foreach ($params[$name] as $k => $v)
+						if ($v == "" || $v == "-")
+							unset($params[$name][$k]);
+				}
 
 				$params['CART_PROPERTIES'][$iBlockID] = $params[$name];
 				unset($params[$arMatches[0]]);
@@ -548,25 +564,22 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	protected function getSectionIdByElement($elementId, $elementCode = '')
 	{
 		$sectionId = 0;
+		$elementId = (int)$elementId;
 		$elementCode = (string)$elementCode;
-		$filter = array('IBLOCK_ID' => $this->arParams['IBLOCK_ID']);
+		$filter = array('=IBLOCK_ID' => $this->arParams['IBLOCK_ID']);
 
-		if (intval($elementId) > 0)
-			$filter['ID'] = $elementId;
+		if ($elementId > 0)
+			$filter['=ID'] = $elementId;
 		elseif ($elementCode !== '')
 			$filter['=CODE'] = $elementCode;
 		else
 			return $sectionId;
 
-		$itemIterator = CIBlockElement::GetList(
-			array(),
-			$filter,
-			false,
-			false,
-			array('ID', 'IBLOCK_SECTION_ID')
-		);
-
-		if ($item = $itemIterator->Fetch())
+		$itemIterator = Iblock\ElementTable::getList(array(
+			'select' => array('ID', 'IBLOCK_SECTION_ID'),
+			'filter' => $filter
+		));
+		if ($item = $itemIterator->fetch())
 			$sectionId = (int)$item['IBLOCK_SECTION_ID'];
 
 		return $sectionId;
@@ -586,6 +599,9 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	protected function getProductIdsMap()
 	{
 		$map = array();
+
+		if (!Main\Loader::includeModule('sale'))
+			return array();
 
 		$basketUserId = (int)CSaleBasket::GetBasketUserID(false);
 		if ($basketUserId <= 0)
@@ -614,24 +630,51 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		}
 		else
 		{
+			$emptyProducts = array();
 			$siteId = Main\Application::getInstance()->getContext()->getSite();
+
+			$filter = array('FUSER_ID' => $basketUserId, 'SITE_ID' => $siteId);
+			if ($this->arParams['SECTION_ELEMENT_ID'] > 0)
+				$filter['!ELEMENT_ID'] = $this->arParams['SECTION_ELEMENT_ID'];
 
 			$viewedIterator = CatalogViewedProductTable::GetList(array(
 				'select' => array('PRODUCT_ID', 'ELEMENT_ID'),
-				'filter' => array('FUSER_ID' => $basketUserId, 'SITE_ID' => $siteId, '!ELEMENT_ID' => array( $this->arParams['SECTION_ELEMENT_ID'], 0)),
+				'filter' => $filter,
 				'order' => array('DATE_VISIT' => 'DESC'),
 				'limit' => $this->arParams['PAGE_ELEMENT_COUNT']
 			));
+			unset($filter);
 
 			while ($viewedProduct = $viewedIterator->fetch())
+			{
+				$viewedProduct['ELEMENT_ID'] = (int)$viewedProduct['ELEMENT_ID'];
+				$viewedProduct['PRODUCT_ID'] = (int)$viewedProduct['PRODUCT_ID'];
 				$map[$viewedProduct['PRODUCT_ID']] = $viewedProduct['ELEMENT_ID'];
+				if ($viewedProduct['ELEMENT_ID'] <= 0)
+					$emptyProducts[] = $viewedProduct['PRODUCT_ID'];
+			}
+
+			if (!empty($emptyProducts))
+			{
+				$emptyProducts = CatalogViewedProductTable::getProductsMap($emptyProducts);
+				if (!empty($emptyProducts))
+				{
+					foreach ($emptyProducts as $product => $parent)
+					{
+						if ($parent == $this->arParams['SECTION_ELEMENT_ID'])
+							unset($map[$product]);
+						else
+							$map[$product] = $parent;
+					}
+				}
+			}
 		}
 
 		return $map;
 	}
 
 	/**
-	 * Return converted product ids map.
+	 * Return converted product ids map. Now unused method for compatibility only.
 	 *
 	 * @param array $ids source product ids
 	 *
@@ -639,52 +682,8 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	 */
 	private function makeSkuMap(array $ids = array())
 	{
-		if (empty($ids))
-			return array();
-
-		$newIds = array();
-		$catalogs = $this->data['CATALOG'];
-
-		foreach ($catalogs as $catalog)
-		{
-			if ($catalog['CATALOG_TYPE'] == CCatalogSKU::TYPE_OFFERS)
-			{
-
-				$elementIterator = CIBlockElement::getList(
-					array(),
-					array("ID" => $ids, "IBLOCK_ID" => $catalog['IBLOCK_ID']),
-					false,
-					false,
-					array("ID", "IBLOCK_ID", "PROPERTY_" . $catalog['SKU_PROPERTY_ID'])
-				);
-
-				while ($item = $elementIterator->fetch())
-				{
-					$propertyName = "PROPERTY_" . $catalog['SKU_PROPERTY_ID'] . "_VALUE";
-					$parentId = $item[$propertyName];
-
-					if (!empty($parentId))
-						$newIds[$item['ID']] = $parentId;
-					else
-						$newIds[$item['ID']] = $item['ID'];
-				}
-			}
-		}
-
-
-		// Push missing
-		foreach ($ids as $id)
-			if (!isset($newIds[$id]))
-				$newIds[$id] = $id;
-
-		// Resort map
-		$tmpMap = array();
-		foreach ($ids as $id)
-			$tmpMap[$id . ""] = $newIds[$id];
-
-		return $tmpMap;
+		return CatalogViewedProductTable::getProductsMap($ids);
 	}
-
 
 	/**
 	 * Resort $items field according to input ids parameter
@@ -905,6 +904,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	 * Gets catalog prices needed for component.
 	 *
 	 * @param array $priceCodes
+	 * @return array
 	 */
 	protected function getCatalogPrices(array $priceCodes = array())
 	{
@@ -934,7 +934,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		}
 		else
 		{
-			$this->productIdsMap = $this->makeSkuMap($this->productIds);
+			$this->productIdsMap = CatalogViewedProductTable::getProductsMap($this->productIds);
 		}
 
 		$this->data['CATALOG_PRICES'] = $this->getCatalogPrices($this->arParams["PRICE_CODE"]);
@@ -1201,45 +1201,8 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			"IBLOCK_ID" => array_keys($this->arParams['SHOW_PRODUCTS'])
 		);
 
-		// find section
-	/*	$bSectionFound = false;
-		$sectionFilter = array(
-			"IBLOCK_ID" => $this->arParams['IBLOCK_ID'] > 0 ? $this->arParams['IBLOCK_ID'] : -1,
-			"IBLOCK_ACTIVE"=>"Y",
-		);
-
-		$sectionId = 0;
-		if($this->arParams["SECTION_ID"] > 0)
-		{
-			$sectionFilter["ID"] = $this->arParams["SECTION_ID"];
-			$sectionIt = CIBlockSection::GetList(array(), $sectionFilter, false, array("ID"));
-			if($section = $sectionIt->getNext())
-			{
-				$sectionId = $section['ID'];
-				$bSectionFound = true;
-			}
-		}
-		if(!$bSectionFound && strlen($this->arParams["SECTION_CODE"]) > 0)
-		{
-			$sectionFilter["=CODE"] = $this->arParams["SECTION_CODE"];
-			$sectionIt = CIBlockSection::getList(array(), $sectionFilter, false, array("ID"));
-			if($section = $sectionIt->getNext())
-			{
-				$sectionId = $section['ID'];
-				$bSectionFound = true;
-			}
-		}
-
-		if($bSectionFound)
-		{
-			$this->filter["IBLOCK_ID"] = $this->arParams['IBLOCK_ID'];
-			$this->filter['SECTION_ID'] = $sectionId;
-			$this->filter['INCLUDE_SUBSECTIONS'] = "Y";
-		}
-		*/
-		if ('Y' == $this->arParams['HIDE_NOT_AVAILABLE'])
-			$filter['CATALOG_AVAILABLE'] = 'Y';
-
+		if ($this->arParams['HIDE_NOT_AVAILABLE'] == 'Y')
+			$this->filter['CATALOG_AVAILABLE'] = 'Y';
 
 		foreach ($prices as $value)
 		{
@@ -1330,5 +1293,3 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		}
 	}
 }
-
-?>

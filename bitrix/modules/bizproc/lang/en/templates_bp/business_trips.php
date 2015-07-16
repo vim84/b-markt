@@ -17,15 +17,15 @@ $MESS ['BPT_BT_T_DATE_END'] = "Planned End Date";
 $MESS ['BPT_BT_T_EXP'] = "Planned Expenses";
 $MESS ['BPT_BT_T_TICKETS'] = "Attached Files";
 $MESS ['BPT_BT_SWA'] = "Sequential Business Process";
-$MESS ['BPT_BT_SFA1_NAME'] = "Business Trip  {=Template:TargetUser_printable}, {=Template:country}-{=Template:city}";
+$MESS ['BPT_BT_SFA1_NAME'] = "Business Trip  {=Template:TargetUser_printable}, {=Template:COUNTRY}-{=Template:CITY}";
 $MESS ['BPT_BT_SFA1_TITLE'] = "Save Trip Parameters";
 $MESS ['BPT_BT_STA1_STATE_TITLE'] = "Project";
 $MESS ['BPT_BT_STA1_TITLE'] = "Set Status Text";
-$MESS ['BPT_BT_AA1_NAME'] = "Approve Business Trip {=Template:TargetUser_printable}, {=Template:country} - {=Template:city}";
+$MESS ['BPT_BT_AA1_NAME'] = "Approve Business Trip {=Template:TargetUser_printable}, {=Template:COUNTRY} - {=Template:CITY}";
 $MESS ['BPT_BT_AA1_DESCR'] = "A business trip requires approval {=Template:TargetUser_printable}
 
-Mission Country: {=Template:country}
-Mission City: {=Template:city}
+Mission Country: {=Template:COUNTRY}
+Mission City: {=Template:CITY}
 Dates: {=Template:date_start} - {=Template:date_end}
 Planned Expenditure: {=Template:expenditures}
 
@@ -38,13 +38,13 @@ $MESS ['BPT_BT_SSTA2_STATE_TITLE'] = "Register a business trip";
 $MESS ['BPT_BT_SSTA2_TITLE'] = "Set Status: Registering";
 $MESS ['BPT_BT_SNMA1_TEXT'] = "Your business trip has been approved.";
 $MESS ['BPT_BT_SNMA1_TITLE'] = "Social Network Message";
-$MESS ['BPT_BT_RA1_NAME'] = "Register a business trip for {=Template:TargetUser_printable}, {=Template:country}-{=Template:city}";
+$MESS ['BPT_BT_RA1_NAME'] = "Register a business trip for {=Template:TargetUser_printable}, {=Template:COUNTRY}-{=Template:CITY}";
 $MESS ['BPT_BT_RA1_DESCR'] = "This business trip has been approved and must be registered by accounting.
 
 Employee: {=Template:TargetUser_printable}
 
-Destination Country: {=Template:country}
-Destination City: {=Template:city}
+Destination Country: {=Template:COUNTRY}
+Destination City: {=Template:CITY}
 Dates: {=Template:date_start} - {=Template:date_end}
 Planned Expenses: {=Template:expenditures}
 
@@ -112,7 +112,7 @@ $MESS ['BPT_BT_SSTA4_TITLE'] = "Set Status Text";
 $MESS ['BPT_BT_SA3_TITLE'] = "Sequence of Actions";
 $MESS ['BPT_BT_SSTA5_STATE_TITLE'] = "Rejected by Management";
 $MESS ['BPT_BT_SSTA5_TITLE'] = "Set Status: Rejected";
-$MESS ['BPT_BT_SNMA2_TEXT'] = "Your business has not been confirmed by management.";
+$MESS ['BPT_BT_SNMA2_TEXT'] = "Your business trip has not been confirmed by management.";
 $MESS ['BPT_BT_SNMA2_TITLE'] = "Social Network Message";
 $MESS ['BPT_BT_DF_CITY'] = "Destination City";
 $MESS ['BPT_BT_DF_COUNTRY'] = "Destination Country";

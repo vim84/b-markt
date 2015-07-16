@@ -145,6 +145,8 @@
 			this.isEmpty = true;
 			this.params = options || {};
 			this.watched = [];
+			this.elementStrokeColor = "#999";
+			this.cageStrokeColor = "#C5CEF0";
 			this.baseElement = null;
 			this.canvasElement = null;
 			this.valuesSet = {};
@@ -575,7 +577,14 @@
 			if (this.apps.length !== 0)
 			{
 				this.editorContainer.style.display = "inline-block";
-				this.setCurrentProject(this.projects[this.appSwitcher.activeApp]);
+				if(this.initedApp != null && this.appSwitcher[this.initedApp])
+				{
+					this.setCurrentProject(this.projects[this.initedApp]);
+				}
+				else
+				{
+					this.setCurrentProject(this.projects[this.appSwitcher.activeApp]);
+				}
 			}
 			else
 			{
@@ -1514,7 +1523,7 @@
 			}
 
 
-			var data = params.data;
+			var data = params.data || {};
 			data['sessid'] = BX.bitrix_sessid();
 			BX.ajax(
 				{
@@ -2089,7 +2098,6 @@
 				this.showGroup(this.activeGroupId);
 			}
 		},
-
 		getParamNameLine: function (key)
 		{
 			return BX.create("TR", {
@@ -2107,7 +2115,6 @@
 				]
 			});
 		},
-
 		getParamControlLine: function (control)
 		{
 			return BX.create("TR", {
@@ -2489,6 +2496,7 @@
 					this.getTitleElement().baseElement,
 					this.getBackButtonElement().baseElement,
 					this.getButtonElement().baseElement,
+					this.getSlidingPanel().baseElement,
 					this.getToolBarElement().baseElement
 
 				]
@@ -2637,6 +2645,60 @@
 				}
 
 			});
+		},
+		getSlidingPanel: function ()
+		{
+			var panelElements = [];
+			var slidingPanel = new BX.Mobile.ViewerElement(this, {
+				element: {
+					className: "preview_sliding_bar",
+					size: {width: 320, height: 44},
+					position: {top: 44, left: 0}
+				},
+				bindedParams: {
+					"sliding_panel/background/color": "color",
+					"sliding_panel/background/image": "image",
+					"sliding_panel/background/image_large": "image"
+				}
+			});
+
+			panelElements.push(slidingPanel.canvasElement);
+
+			var buttonWidth = Math.round(slidingPanel.canvasElement.width / 3)-5;
+			for(var i=0;i<2;i++)
+			{
+				panelElements.push(
+					(new BX.Mobile.ViewerElement(this, {
+						element: {
+							className: "preview_button",
+							position: {top: 45, left: buttonWidth*i},
+							size: {width: buttonWidth, height: 30}
+						},
+						text: "Button",
+						defaultValues: {textColor: "#ffffff"},
+						bindedParams: {
+							"sliding_panel/text_color": "textColor"
+						}
+
+					})).canvasElement
+				);
+			}
+
+
+
+
+			return {
+				baseElement: BX.create("DIV",
+					{
+						style: {
+							top: "44px",
+							width: "320px",
+							height: "44px",
+							overflowX: "hidden"
+						},
+						children: panelElements
+					})
+			};
 		},
 		getTopBarElement: function ()
 		{
@@ -3007,7 +3069,7 @@
 			context.shadowOffsetY = 0;
 			context.shadowOffsetX = 0;
 			context.shadowBlur = 0;
-			context.strokeStyle = "#f0f0f0";
+			context.strokeStyle = this.cageStrokeColor;
 			context.beginPath();
 
 			for (var i = 0; i < countH; i++)
@@ -3030,7 +3092,7 @@
 			context.shadowOffsetY = 0;
 			context.shadowOffsetX = 0;
 			context.shadowBlur = 0;
-			context.strokeStyle = "#c4c4c4";
+			context.strokeStyle = this.elementStrokeColor;
 			context.beginPath();
 			context.moveTo(2, 2);
 			context.lineTo(canvas.width - 2, 2);

@@ -9,4 +9,6 @@ $MESS["CT_BLF_LIST_TYPE"] = "Type";
 $MESS["CT_BLF_LIST_IS_REQUIRED"] = "Required";
 $MESS["CT_BLF_LIST_MULTIPLE"] = "Multiple";
 $MESS["CT_BLF_TOOLBAR_ELEMENTS_TITLE"] = "View and edit list elements";
+$MESS["CT_BLF_TOOLBAR_LIST_EDIT_PROCESS"] = "Configure workflow";
+$MESS["CT_BLF_TOOLBAR_LIST_TITLE_PROCESS"] = "Back to workflow configuration";
 ?>

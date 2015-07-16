@@ -96,7 +96,7 @@ ShowPopup: function()
 	this.Popup.style.display = 'block';
 	this.bPopupShowed = true;
 
-	this.Popup.style.zIndex = 3000;
+	this.Popup.style.zIndex = 4000;
 	var pos = BX.pos(this.pWnd);
 
 	this.pCont = BX('bx_popup_content');
@@ -159,7 +159,7 @@ CreatePopup: function()
 	var
 		_this = this,
 		i, pDiv, pImg,
-		imgPath = this.arElements["SKIN_PATH"].value,
+		//imgPath = this.arElements["SKIN_PATH"].value,
 		l = this.arSkins.length;
 
 	this.arDivs = {};

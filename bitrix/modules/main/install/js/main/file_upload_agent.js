@@ -631,3 +631,4 @@ BX.FileUploadAgent.prototype.GetNewObject = function(parent)
 	return new BX.FileUploadAgent((!!parent ? parent : this));
 }
 })();
+

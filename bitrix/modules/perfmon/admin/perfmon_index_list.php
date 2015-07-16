@@ -256,17 +256,11 @@ while ($arRes = $rsData->NavNext(true, "f_"))
 	$arRes["SQL_TEXT"] = CPerfomanceSQL::Format($arRes["SQL_TEXT"]);
 	$row =& $lAdmin->AddRow($f_NAME, $arRes);
 
-	if ($_REQUEST["mode"] == "excel")
-		$row->AddViewField("SQL_TIME", number_format($f_SQL_TIME, 6, ".", ""));
-	else
-		$row->AddViewField("SQL_TIME", str_replace(" ", "&nbsp;", number_format($f_SQL_TIME, 6, ".", " ")));
+	$row->AddViewField("SQL_TIME", perfmon_NumberFormat($f_SQL_TIME, 6));
 
 	if ($f_SQL_COUNT > 0)
 	{
-		if ($_REQUEST["mode"] == "excel")
-			$row->AddViewField("SQL_TIME_AVG", number_format($f_SQL_TIME / $f_SQL_COUNT, 6, ".", ""));
-		else
-			$row->AddViewField("SQL_TIME_AVG", str_replace(" ", "&nbsp;", number_format($f_SQL_TIME / $f_SQL_COUNT, 6, ".", " ")));
+		$row->AddViewField("SQL_TIME_AVG", perfmon_NumberFormat($f_SQL_TIME / $f_SQL_COUNT, 6));
 	}
 
 	$row->AddViewField("SQL_COUNT", '<a href="perfmon_sql_list.php?lang='.LANGUAGE_ID.'&amp;set_filter=Y&amp;find_suggest_id='.$f_ID.'">'.$f_SQL_COUNT.'</a>');

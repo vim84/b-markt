@@ -1,12 +1,14 @@
 <?
-require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
-CModule::IncludeModule("iblock");
-require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/iblock/prolog.php");
+use Bitrix\Main\Loader;
+use Bitrix\Iblock;
 
 /** @global CUser $USER */
-global $USER;
 /** @global CMain $APPLICATION */
-global $APPLICATION;
+
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/main/include/prolog_admin_before.php');
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/iblock/prolog.php');
+
+Loader::includeModule('iblock');
 
 $io = CBXVirtualIo::GetInstance();
 
@@ -69,10 +71,10 @@ $arShowTabs = array(
 	'product_group' => false
 );
 
-$bWorkflow = CModule::IncludeModule("workflow") && (CIBlock::GetArrayByID($IBLOCK_ID, "WORKFLOW") != "N");
-$bBizproc = CModule::IncludeModule("bizproc") && (CIBlock::GetArrayByID($IBLOCK_ID, "BIZPROC") != "N");
+$bWorkflow = Loader::includeModule("workflow") && (CIBlock::GetArrayByID($IBLOCK_ID, "WORKFLOW") != "N");
+$bBizproc = Loader::includeModule("bizproc") && (CIBlock::GetArrayByID($IBLOCK_ID, "BIZPROC") != "N");
 
-$bCatalog = CModule::IncludeModule('catalog');
+$bCatalog = Loader::includeModule('catalog');
 $arMainCatalog = false;
 $arCatalogTabs = false;
 $bOffers = false;
@@ -424,7 +426,7 @@ do{ //one iteration loop
 					CBPCanUserOperateOperation::WriteDocument,
 					$USER->GetID(),
 					array(MODULE_ID, ENTITY, DOCUMENT_TYPE),
-					array("AllUserGroups" => $arCurrentUserGroups, "DocumentStates" => $arDocumentStates)
+					array("AllUserGroups" => $arCurrentUserGroups, "DocumentStates" => $arDocumentStates, 'sectionId' => $MENU_SECTION_ID)
 				);
 				$canRead = false;
 			}
@@ -432,6 +434,14 @@ do{ //one iteration loop
 			if (!$canWrite && !$canRead)
 			{
 				$error = new _CIBlockError(1, "ACCESS_DENIED", GetMessage("IBLOCK_ACCESS_DENIED_STATUS"));
+				$errorTriger = true;
+			}
+		}
+		else
+		{
+			if($ID > 0 && !CIBlockElementRights::UserHasRightTo($IBLOCK_ID, $ID, "element_edit"))
+			{
+				$error = new _CIBlockError(2, "ACCESS_DENIED", GetMessage("IBLOCK_ACCESS_DENIED_STATUS"));
 				$errorTriger = true;
 			}
 		}
@@ -459,7 +469,7 @@ do{ //one iteration loop
 			);
 	}
 
-	$tabControl = new CAdminForm($bCustomForm? "tabControl": "form_element_".$IBLOCK_ID, $aTabs, true, $denyAutosave);
+	$tabControl = new CAdminForm("form_element_".$IBLOCK_ID, $aTabs, !$bPropertyAjax, $denyAutosave);
 	$customTabber = new CAdminTabEngine("OnAdminIBlockElementEdit", array("ID" => $ID, "IBLOCK"=>$arIBlock, "IBLOCK_TYPE"=>$arIBTYPE));
 	$tabControl->AddTabs($customTabber);
 
@@ -482,9 +492,13 @@ do{ //one iteration loop
 	{
 		//Find out files properties
 		$arFileProps = array();
-		$properties = CIBlockProperty::GetList(array(), array("IBLOCK_ID"=>$IBLOCK_ID, "PROPERTY_TYPE" => "F", "ACTIVE"=>"Y"));
-		while($prop_fields = $properties->Fetch())
-			$arFileProps[] = $prop_fields['ID'];
+		$propertyIterator = Iblock\PropertyTable::getList(array(
+			'select' => array('ID'),
+			'filter' => array('=IBLOCK_ID' => $IBLOCK_ID, '=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_FILE, '=ACTIVE' => 'Y')
+		));
+		while ($property = $propertyIterator->fetch())
+			$arFileProps[] = $property['ID'];
+		unset($property, $propertyIterator);
 
 		//Assembly properties values from $_POST and $_FILES
 		$PROP = array();
@@ -647,7 +661,7 @@ do{ //one iteration loop
 			&& $canWrite
 			&& $historyId <= 0
 			&& $ID > 0
-			&& $REQUEST_METHOD=="GET"
+			&& $_SERVER['REQUEST_METHOD'] == "GET"
 			&& isset($_REQUEST["stop_bizproc"]) && strlen($_REQUEST["stop_bizproc"]) > 0
 			&& check_bitrix_sessid()
 		)
@@ -1661,7 +1675,7 @@ else
 	if($error)
 		CAdminMessage::ShowOldStyleError($error->GetErrorText());
 
-	$bFileman = CModule::IncludeModule("fileman");
+	$bFileman = Loader::includeModule("fileman");
 	$arTranslit = $arIBlock["FIELDS"]["CODE"]["DEFAULT_VALUE"];
 	$bLinked = (!strlen($str_TIMESTAMP_X) || $bCopy) && $_POST["linked_state"]!=='N';
 
@@ -2324,7 +2338,7 @@ $tabControl->EndCustomField("DETAIL_TEXT",
 		<tr id="tr_TAGS">
 			<td><?echo $tabControl->GetCustomLabelHTML()?><br><?echo GetMessage("IBLOCK_ELEMENT_EDIT_TAGS_TIP")?></td>
 			<td>
-				<?if(CModule::IncludeModule('search')):
+				<?if(Loader::includeModule('search')):
 					$arLID = array();
 					$rsSites = CIBlock::GetSite($IBLOCK_ID);
 					while($arSite = $rsSites->Fetch())
@@ -2698,8 +2712,8 @@ if ($arShowTabs['sku'])
 	if (!$boolCatalogRead && !$boolCatalogPrice)
 		$boolSubCatalog = false;
 
-	$boolSubWorkFlow = CModule::IncludeModule("workflow") && $arSubIBlock["WORKFLOW"] != "N";
-	$boolSubBizproc = CModule::IncludeModule("bizproc") && $arSubIBlock["BIZPROC"] != "N";
+	$boolSubWorkFlow = Loader::includeModule("workflow") && $arSubIBlock["WORKFLOW"] != "N";
+	$boolSubBizproc = Loader::includeModule("bizproc") && $arSubIBlock["BIZPROC"] != "N";
 
 	$intSubPropValue = (0 == $ID || $bCopy ? '-'.$TMP_ID : $ID);
 	$strSubTMP_ID = $TMP_ID;
@@ -2957,7 +2971,7 @@ if ($arShowTabs['bizproc']):
 		}
 		?>
 		<?
-		$arEvents = CBPDocument::GetAllowableEvents($GLOBALS["USER"]->GetID(), $arCurrentUserGroups, $arDocumentState);
+		$arEvents = CBPDocument::GetAllowableEvents($GLOBALS["USER"]->GetID(), $arCurrentUserGroups, $arDocumentState, $arIBlock["RIGHTS_MODE"] === "E");
 		if (!empty($arEvents))
 		{
 			?>

@@ -1,16 +1,31 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
+/**
+ * @property integer $ID
+ * @property string $ACTIVE
+ * @property integer $SORT
+ * @property string $READ_ONLY
+ * @property string $SERVICE_ID
+ * @property string $BUCKET
+ * @property string $LOCATION
+ * @property string $CNAME
+ * @property integer $FILE_COUNT
+ * @property float $FILE_SIZE
+ * @property integer $LAST_FILE_ID
+ * @property string $PREFIX
+ * @property string $SETTINGS
+ * @property string $FILE_RULES
+ */
 class CCloudStorageBucket extends CAllCloudStorageBucket
 {
 	protected/*.array[string]string.*/$arBucket;
 	/** @var CCloudStorageService $service */
 	protected/*.CCloudStorageService.*/ $service;
-				protected static/*.array[int][string]string.*/$arBuckets;
+	protected static/*.array[int][string]string.*/$arBuckets;
 	/**
 	 * @param int $ID
-	 * @return void
-	*/
+	 */
 	public function __construct($ID)
 	{
 		$this->_ID = intval($ID);
@@ -477,6 +492,16 @@ class CCloudStorageBucket extends CAllCloudStorageBucket
 				"TABLE_ALIAS" => "s",
 				"FIELD_NAME" => "s.ID",
 				"FIELD_TYPE" => "int",
+			),
+			"ACTIVE" => array(
+				"TABLE_ALIAS" => "s",
+				"FIELD_NAME" => "s.ACTIVE",
+				"FIELD_TYPE" => "string",
+			),
+			"READ_ONLY" => array(
+				"TABLE_ALIAS" => "s",
+				"FIELD_NAME" => "s.READ_ONLY",
+				"FIELD_TYPE" => "string",
 			),
 			"SERVICE_ID" => array(
 				"TABLE_ALIAS" => "s",

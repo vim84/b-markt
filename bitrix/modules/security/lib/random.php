@@ -7,18 +7,103 @@ use Bitrix\Main\Text\String;
 class Random
 {
 	const RANDOM_BLOCK_LENGTH = 64;
+	// ToDo: In future versions (PHP >= 5.6.0) use shift to the left instead this s**t
+	const ALPHABET_NUM = 1;
+	const ALPHABET_ALPHALOWER = 2;
+	const ALPHABET_ALPHAUPPER = 4;
+	const ALPHABET_SPECIAL = 8;
+	const ALPHABET_ALL = 15;
+
+	protected static $alphabet = array(
+		self::ALPHABET_NUM => '0123456789',
+		self::ALPHABET_ALPHALOWER => 'abcdefghijklmnopqrstuvwxyz',
+		self::ALPHABET_ALPHAUPPER => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+		self::ALPHABET_SPECIAL => ',.#!*%$:-^@{}[]()_+=<>?&;'
+	);
 
 	/**
-	 * Returns random (if possible) ASCII string
+	 * Returns random integer with the given range
+	 *
+	 * @param int $min The lower bound of the range.
+	 * @param int $max The upper bound of the range.
+	 * @return int
+	 * @throws \Bitrix\Main\SystemException
+	 */
+	public static function getInteger($min = 0, $max = \PHP_INT_MAX)
+	{
+		if ($min > $max)
+		{
+			throw new \Bitrix\Main\ArgumentException(
+				'The min parameter must be lower than max parameter'
+			);
+		}
+
+		$range = $max - $min;
+
+		if ($range == 0)
+			return $max;
+
+		if ($range > \PHP_INT_MAX || is_float($range))
+		{
+			throw new \Bitrix\Main\SystemException(
+				'The supplied range is too great'
+			);
+		}
+
+		$bits = static::countBits($range) + 1;
+		$length = (int) max(ceil($bits / 8), 1);
+		$filter = pow(2, $bits) - 1;
+		if ($filter >= \PHP_INT_MAX)
+			$filter = \PHP_INT_MAX;
+		else
+			$filter = (int) $filter;
+
+		do
+		{
+			$rnd = hexdec(bin2hex(self::getBytes($length)));
+			$rnd = $rnd & $filter;
+		}
+		while ($rnd > $range);
+
+		return ($min + $rnd);
+	}
+
+	/**
+	 * Returns random (if possible) alphanum string
 	 *
 	 * @param int $length Result string length.
+	 * @param bool $caseSensitive Generate case sensitive random string (e.g. `SoMeRandom1`).
 	 * @return string
 	 */
-	public function getString($length)
+	public static function getString($length, $caseSensitive = false)
 	{
-		$result = $this->getBytes((int) ($length/2 + 1));
-		$result = bin2hex($result);
-		return String::getBinarySubstring($result, 0, $length);
+		$alphabet = self::ALPHABET_NUM | self::ALPHABET_ALPHALOWER;
+		if ($caseSensitive)
+			$alphabet |= self::ALPHABET_ALPHAUPPER;
+
+		return static::getStringByAlphabet($length, $alphabet);
+	}
+
+	/**
+	 * Returns random (if possible) ASCII string for a given alphabet mask (@see self::ALPHABET_ALL)
+	 *
+	 * @param int $length Result string length.
+	 * @param string $alphabet Alpabet masks (e.g. Random::ALPHABET_NUM|Random::ALPHABET_ALPHALOWER).
+	 * @return string
+	 */
+	public static function getStringByAlphabet($length, $alphabet)
+	{
+		$charsetList = static::getCharsetsforAlphabet($alphabet);
+		$charsetVariants = strlen($charsetList);
+		$randomSequence = static::getBytes($length);
+
+		$result = '';
+		for ($i = 0; $i < $length; $i++)
+		{
+			$randomNumber = ord($randomSequence[$i]);
+			$result .= $charsetList[$randomNumber % $charsetVariants];
+		}
+		return $result;
 	}
 
 	/**
@@ -27,11 +112,11 @@ class Random
 	 * @param int $length Result byte string length.
 	 * @return string
 	 */
-	public function getBytes($length)
+	public static function getBytes($length)
 	{
 		$backup = null;
 
-		if (static::isOpensslSkipped())
+		if (static::isOpensslAvailable())
 		{
 			$bytes = openssl_random_pseudo_bytes($length, $strong);
 			if ($bytes && String::getBinaryLength($bytes) >= $length)
@@ -70,7 +155,7 @@ class Random
 		$bytes = '';
 		while (String::getBinaryLength($bytes) < $length)
 		{
-			$bytes .= $this->getPseudoRandomBlock();
+			$bytes .= static::getPseudoRandomBlock();
 		}
 
 		return String::getBinarySubstring($bytes, 0, $length);
@@ -81,11 +166,11 @@ class Random
 	 *
 	 * @return string
 	 */
-	protected function getPseudoRandomBlock()
+	protected static function getPseudoRandomBlock()
 	{
 		global $APPLICATION;
 
-		if (static::isOpensslSkipped())
+		if (static::isOpensslAvailable())
 		{
 			$bytes = openssl_random_pseudo_bytes(static::RANDOM_BLOCK_LENGTH);
 			if ($bytes && String::getBinaryLength($bytes) >= static::RANDOM_BLOCK_LENGTH)
@@ -104,21 +189,73 @@ class Random
 
 		return hash('sha512', $bytes, true);
 	}
-
-	protected function isOpensslSkipped()
+	
+	/**
+	 * Checks OpenSSL available
+	 *
+	 * @return bool
+	 */
+	protected static function isOpensslAvailable()
 	{
 		static $result = null;
 		if ($result === null)
 		{
 			$result = (
-				!function_exists('openssl_random_pseudo_bytes')
-				|| (
+				function_exists('openssl_random_pseudo_bytes')
+				&& (
 					// PHP have strange behavior for "openssl_random_pseudo_bytes" on older PHP versions
-					\CSecuritySystemInformation::isRunOnWin()
-					&& version_compare(phpversion(),"5.4.0","<")
+					!\CSecuritySystemInformation::isRunOnWin()
+					|| version_compare(phpversion(),"5.4.0",">=")
 				)
 			);
 		}
+
+		return $result;
+	}
+
+	/**
+	 * Returns strings with charsets based on alpabet mask (see $this->alphabet)
+	 *
+	 * Simple example:
+	 * <code>
+	 * echo $this->getCharsetsforAlphabet(static::ALPHABET_NUM|static::ALPHABET_ALPHALOWER);
+	 * //output: 0123456789abcdefghijklmnopqrstuvwxyz
+	 *
+	 * echo $this->getCharsetsforAlphabet(static::ALPHABET_SPECIAL|static::ALPHABET_ALPHAUPPER);
+	 * //output:ABCDEFGHIJKLMNOPQRSTUVWXYZ,.#!*%$:-^@{}[]()_+=<>?&;
+	 *
+	 * echo $this->getCharsetsforAlphabet(static::ALPHABET_ALL);
+	 * //output: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,.#!*%$:-^@{}[]()_+=<>?&;
+	 * </code>
+	 *
+	 * @param string $alphabet Alpabet masks (e.g. static::ALPHABET_NUM|static::ALPHABET_ALPHALOWER).
+	 * @return string
+	 */
+	protected static function getCharsetsForAlphabet($alphabet)
+	{
+		$result = '';
+		foreach (static::$alphabet as $mask => $value)
+		{
+			if (!($alphabet & $mask))
+				continue;
+
+			$result .= $value;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Returns number of bits needed to represent an integer
+	 *
+	 * @param int $value Integer value for calculate.
+	 * @return int
+	 */
+	protected static function countBits($value)
+	{
+		$result = 0;
+		while ($value >>= 1)
+			$result++;
 
 		return $result;
 	}

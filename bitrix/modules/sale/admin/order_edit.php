@@ -637,7 +637,7 @@ if ($action == "update"
 				{
 					$arDeliveryOrder = array(
 						"LOCATION_TO" => $DELIVERY_LOCATION,
-						"LOCATION_FROM" => COption::GetOptionInt('sale', 'location', '', $LID),
+						"LOCATION_FROM" => COption::GetOptionString('sale', 'location', '', $LID),
 						"WEIGHT" => $basketTotalWeight,
 						"PRICE" => $basketTotalPrice + array_sum($arTaxPrice),
 					);

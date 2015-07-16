@@ -9,6 +9,7 @@ $MESS["IBLOCK_ENTITY_SORT_FIELD"] = "Сортировка";
 $MESS["IBLOCK_ENTITY_LIST_PAGE_URL_FIELD"] = "URL страницы информационного блока";
 $MESS["IBLOCK_ENTITY_DETAIL_PAGE_URL_FIELD"] = "URL страницы детального просмотра";
 $MESS["IBLOCK_ENTITY_SECTION_PAGE_URL_FIELD"] = "URL страницы раздела";
+$MESS["IBLOCK_ENTITY_CANONICAL_PAGE_URL_FIELD"] = "Канонический URL элемента";
 $MESS["IBLOCK_ENTITY_PICTURE_FIELD"] = "Изображение";
 $MESS["IBLOCK_ENTITY_DESCRIPTION_FIELD"] = "Описание";
 $MESS["IBLOCK_ENTITY_DESCRIPTION_TYPE_FIELD"] = "Тип описания";

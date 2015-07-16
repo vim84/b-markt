@@ -16,6 +16,7 @@ class CBPDelayActivity
 			"TimeoutDuration" => null,
 			"TimeoutDurationType" => "s",
 			"TimeoutTime" => null,
+			"TimeoutTimeCurrent" => null,
 		);
 	}
 
@@ -32,8 +33,12 @@ class CBPDelayActivity
 		if ($this->isInEventActivityMode)
 			return CBPActivityExecutionStatus::Closed;
 
-		if ($this->TimeoutTime != null && (intval($this->TimeoutTime)."|" != $this->TimeoutTime."|"))
-			$this->TimeoutTime = MakeTimeStamp($this->TimeoutTime);
+		if ($this->TimeoutTime != null)
+		{
+			$this->TimeoutTimeCurrent = $this->TimeoutTime;
+			if (intval($this->TimeoutTime)."|" != $this->TimeoutTime."|")
+				$this->TimeoutTimeCurrent = MakeTimeStamp($this->TimeoutTime);
+		}
 
 		$this->Subscribe($this);
 
@@ -44,7 +49,7 @@ class CBPDelayActivity
 		}
 		elseif ($this->TimeoutTime != null)
 		{
-			$this->WriteToTrackingService(str_replace("#PERIOD#", ConvertTimeStamp($this->TimeoutTime, "FULL"), GetMessage("BPDA_TRACK1")));
+			$this->WriteToTrackingService(str_replace("#PERIOD#", ConvertTimeStamp($this->TimeoutTimeCurrent, "FULL"), GetMessage("BPDA_TRACK1")));
 		}
 		else
 		{
@@ -64,7 +69,16 @@ class CBPDelayActivity
 		if ($this->TimeoutDuration != null)
 			$expiresAt = time() + $this->CalculateTimeoutDuration();
 		elseif ($this->TimeoutTime != null)
-			$expiresAt = $this->TimeoutTime;
+		{
+			if ($this->TimeoutTimeCurrent === null)
+			{
+				$this->TimeoutTimeCurrent = $this->TimeoutTime;
+				if (intval($this->TimeoutTime)."|" != $this->TimeoutTime."|")
+					$this->TimeoutTimeCurrent = MakeTimeStamp($this->TimeoutTime);
+			}
+
+			$expiresAt = $this->TimeoutTimeCurrent;
+		}
 		else
 			$expiresAt = time();
 

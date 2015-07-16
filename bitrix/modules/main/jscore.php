@@ -158,6 +158,14 @@ $arJSCoreConfig = array(
 		'js' => '/bitrix/js/main/jquery/jquery-1.8.3.js',
 		'skip_core' => true,
 	),
+	'jquery2' => array(
+		'js' => '/bitrix/js/main/jquery/jquery-2.1.3.min.js',
+		'skip_core' => true,
+	),
+	'jquery2_src' => array(
+		'js' => '/bitrix/js/main/jquery/jquery-2.1.3.js',
+		'skip_core' => true,
+	),
 	'json' => array(
 		'js' => '/bitrix/js/main/json/json2.min.js',
 		'skip_core' => true,
@@ -167,36 +175,36 @@ $arJSCoreConfig = array(
 		'skip_core' => true,
 	),
 	'amcharts' => array(
-		'js' => '/bitrix/js/main/amcharts/3.3/amcharts.js',
+		'js' => '/bitrix/js/main/amcharts/3.13/amcharts.js',
 		'skip_core' => true,
 	),
 	'amcharts_funnel' => array(
-		'js' => '/bitrix/js/main/amcharts/3.3/funnel.js',
+		'js' => '/bitrix/js/main/amcharts/3.13/funnel.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_gauge' => array(
-		'js' => '/bitrix/js/main/amcharts/3.3/gauge.js',
+		'js' => '/bitrix/js/main/amcharts/3.13/gauge.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_pie' => array(
-		'js' => '/bitrix/js/main/amcharts/3.3/pie.js',
+		'js' => '/bitrix/js/main/amcharts/3.13/pie.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_radar' => array(
-		'js' => '/bitrix/js/main/amcharts/3.3/radar.js',
+		'js' => '/bitrix/js/main/amcharts/3.13/radar.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_serial' => array(
-		'js' => '/bitrix/js/main/amcharts/3.3/serial.js',
+		'js' => '/bitrix/js/main/amcharts/3.13/serial.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_xy' => array(
-		'js' => '/bitrix/js/main/amcharts/3.3/xy.js',
+		'js' => '/bitrix/js/main/amcharts/3.13/xy.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),

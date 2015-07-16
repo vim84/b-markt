@@ -127,7 +127,8 @@ if($_SERVER['REQUEST_METHOD'] == "POST" && (strlen($save)>0 || strlen($apply)>0)
 		"ROOT_DEPARTMENT"	=>	$_REQUEST['ROOT_DEPARTMENT'],
 		"DEFAULT_DEPARTMENT_NAME"	=>	$_REQUEST['DEFAULT_DEPARTMENT_NAME'],
 		"FIELD_MAP"	=>	$arUserFieldMap,
-		"MAX_PAGE_SIZE" => $_REQUEST['MAX_PAGE_SIZE']
+		"MAX_PAGE_SIZE" => $_REQUEST['MAX_PAGE_SIZE'],
+		"SYNC_USER_ADD" => $_REQUEST['SYNC_USER_ADD']
 	);
 
 	if(is_array($arGroups))
@@ -868,6 +869,10 @@ else
 		<td><?=$str_SYNC_LAST?></td>
 	</tr>
 <?endif?>
+	<tr>
+		<td width="40%"><label for="SYNC_USER_ADD"><?echo GetMessage("LDAP_EDIT_SYNC_USER_ADD")?></label></td>
+		<td width="60%"><input type="checkbox" id="SYNC_USER_ADD" name="SYNC_USER_ADD" value="Y" <?if($str_SYNC_USER_ADD=="Y")echo ' checked'?>></td>
+	</tr>
 	<tr>
 		<td width="40%"><label for="SYNC"><?echo GetMessage("LDAP_EDIT_SYNC")?></label></td>
 		<td width="60%"><input type="checkbox" id="SYNC" name="SYNC" value="Y" <?if($str_SYNC=="Y")echo ' checked'?> onclick="_SCh(this.checked);"></td>

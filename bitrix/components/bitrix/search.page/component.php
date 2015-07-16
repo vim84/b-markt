@@ -168,6 +168,9 @@ if($obCache->StartDataCache($arParams["CACHE_TIME"], $this->GetCacheID(), "/".SI
 					case "intranet":
 						$arrDropdown[$code] = GetMessage("SEARCH_INTRANET");
 						break;
+					case "crm":
+						$arrDropdown[$code] = GetMessage("SEARCH_CRM");
+						break;
 				}
 			}
 			else

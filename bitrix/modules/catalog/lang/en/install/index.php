@@ -18,6 +18,6 @@ $MESS["CATALOG_UNINSTALL_COMPLETE"] = "Uninstall complete.";
 $MESS["CATALOG_INSTALL_PUBLIC_SETUP"] = "Install";
 $MESS["CATALOG_UNINS_CURRENCY"] = "Commercial Catalog module requires Currency module to be installed.<br />Install the Currency module first.";
 $MESS["CATALOG_UNINS_IBLOCK"] = "The \"Catalog\" module requires the installation of the \"Information Blocks\" module.";
-$MESS["CATALOG_INSTALL_DESCRIPTION2"] = "The Commercial Catalog module to create product catalogs, prices, markups and discounts; export and import data.";
+$MESS["CATALOG_INSTALL_DESCRIPTION2"] = "The Commercial Catalog module is ideal for creating product catalogs, prices, markups and discounts; and for exporting and importing data.";
 $MESS["CATALOG_INSTALL_PROFILE_IRR2"] = "irr.ru";
 ?>

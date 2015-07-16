@@ -63,10 +63,10 @@ class CLDAP
 			$password = $APPLICATION->ConvertCharset($password, SITE_CHARSET, "utf-8");
 		}
 
-		if(strlen($password) > 0)
-			$r = @ldap_bind($this->conn, $login, $password);
-		else
+		if(strpos($password, "\0") !== false || strlen($password) <= 0)
 			$r = false;
+		else
+			$r = @ldap_bind($this->conn, $login, $password);
 
 		return $r;
 	}
@@ -106,9 +106,12 @@ class CLDAP
 		{
 			if($this->arFields["CONVERT_UTF8"]=="Y")
 				return $APPLICATION->ConvertCharset($values[0], "utf-8", SITE_CHARSET);
+
 			return $values[0];
 		}
+
 		unset($values['count']);
+
 		if($this->arFields["CONVERT_UTF8"]=="Y")
 			foreach($values as $key=>$val)
 				$values[$key] = $APPLICATION->ConvertCharset($val, "utf-8", SITE_CHARSET);
@@ -217,6 +220,17 @@ class CLDAP
 		return $result;
 	}
 
+	protected function setFieldAsAttr(array $attrArray, $fieldName)
+	{
+		$field = isset($this->arFields["~".$fieldName]) ? $this->arFields["~".$fieldName] : $this->arFields[$fieldName];
+		$field = strtolower($field);
+
+		if(!in_array($field, $attrArray))
+			$attrArray[] = $field;
+
+		return $attrArray;
+	}
+
 	// query for group list from AD - server
 	function GetGroupListArray($query = '')
 	{
@@ -232,22 +246,25 @@ class CLDAP
 			$this->BindAdmin();
 
 			$arGroupAttr = array(
-				isset($this->arFields["~GROUP_ID_ATTR"]) ? $this->arFields["~GROUP_ID_ATTR"] : $this->arFields["GROUP_ID_ATTR"],
-				isset($this->arFields["~GROUP_NAME_ATTR"]) ? $this->arFields["~GROUP_NAME_ATTR"] : $this->arFields["GROUP_NAME_ATTR"],
-				isset($this->arFields["~GROUP_MEMBERS_ATTR"]) ? $this->arFields["~GROUP_MEMBERS_ATTR"] : $this->arFields["GROUP_MEMBERS_ATTR"],
 				"name", "cn", "gidNumber", "description", "memberof",
 				"primarygrouptoken", "primarygroupid", "samaccountname",
 				"distinguishedname"
 			);
+
+			foreach(array("GROUP_ID_ATTR", "GROUP_NAME_ATTR", "GROUP_MEMBERS_ATTR") as $fieldName)
+				$arGroupAttr = $this->setFieldAsAttr($arGroupAttr, $fieldName);
+
 			if ($this->arFields['USER_GROUP_ACCESSORY'] == 'Y')
-				$arGroupAttr[] = (isset($this->arFields["~USER_GROUP_ATTR"]) ? $this->arFields["~USER_GROUP_ATTR"] : $this->arFields["USER_GROUP_ATTR"]);
+				$arGroupAttr = $this->setFieldAsAttr($arGroupAttr, "USER_GROUP_ATTR");
 
 			$arGroupsTmp = $this->QueryArray($query, $arGroupAttr);
+
 			if (!$arGroupsTmp)
 				return false;
 
 			$arGroups = array();
 			$group_id_attr = strtolower($this->arFields['GROUP_ID_ATTR']);
+
 			if(is_set($this->arFields, 'GROUP_NAME_ATTR'))
 				$group_name_attr = strtolower($this->arFields['GROUP_NAME_ATTR']);
 			else
@@ -256,6 +273,7 @@ class CLDAP
 			foreach ($arGroupsTmp as $grp)
 			{
 				$grp['ID'] = $grp[$group_id_attr];
+
 				if ($group_name_attr && is_set($grp, $group_name_attr))
 					$grp['NAME'] = $grp[$group_name_attr];
 
@@ -330,12 +348,13 @@ class CLDAP
 		}
 
 		$db_ldap_serv = CLdapServer::GetList(Array(), $arFilter);
+
 		while($xLDAP = $db_ldap_serv->GetNextServer())
 		{
 			if($xLDAP->Connect())
 			{
 				// user AD parameters are queried here, inside FindUser function
-				if ($arLdapUser = $xLDAP->FindUser($LOGIN, $PASSWORD))
+				if($arLdapUser = $xLDAP->FindUser($LOGIN, $PASSWORD))
 				{
 					$ID = $xLDAP->SetUser($arLdapUser, (COption::GetOptionString("ldap", "add_user_when_auth", "Y")=="Y"));
 
@@ -346,9 +365,11 @@ class CLDAP
 						return $ID;
 					}
 				}
+
 				$xLDAP->Disconnect();
 			}
 		}
+
 		return false;
 	}
 
@@ -618,9 +639,10 @@ class CLDAP
 		// if there's a manager - query it
 		if ($managerDN)
 		{
-			$user = substr($managerDN, 0, strpos($managerDN, ','));
-
+			preg_match('/^(CN=.*?)(\,){1}(OU|DC){1}/i', $managerDN, $matches); //Extract "CN=User Name" from full name
+			$user = isset($matches[1]) ? str_replace('\\', '',$matches[1]) : "";
 			$userArr = $this->GetUserArray($user);
+
 			if (count($userArr)>0)
 			{
 				// contents of userArr are already in local encoding, no need for conversion here
@@ -845,17 +867,22 @@ class CLDAP
 			$db_ldap_serv = CLdapServer::GetList(Array(), $arFilterServer);
 
 			/*@var $xLDAP CLDAP*/
-			if ($xLDAP = $db_ldap_serv->GetNextServer())
+			while($xLDAP = $db_ldap_serv->GetNextServer())
 			{
-				if ($xLDAP->Connect())
+				if($xLDAP->Connect())
 				{
-					if ($arLdapUser = $xLDAP->FindUser($LOGIN))
+					if($arLdapUser = $xLDAP->FindUser($LOGIN))
 					{
 						$ID = $xLDAP->SetUser($arLdapUser);
 
 						if($ID > 0)
+						{
 							$USER->Authorize($ID);
+							$xLDAP->Disconnect();
+							return;
+						}
 					}
+
 					$xLDAP->Disconnect();
 				}
 			}

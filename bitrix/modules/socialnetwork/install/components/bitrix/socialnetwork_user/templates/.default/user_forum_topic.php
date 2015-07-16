@@ -52,7 +52,7 @@ include("util_profile.php");
 	$component,
 	array("HIDE_ICONS" => "Y"));
 ?><?
-if (!empty($arInfo) && $arInfo["PERMISSION"] >= "E"):
+if (!empty($arInfo) && $arInfo["PERMISSION"] > "E"):
 ?><div class='forum_post_form'><?$APPLICATION->IncludeComponent(
 	"bitrix:socialnetwork.forum.post_form", 
 	"", 

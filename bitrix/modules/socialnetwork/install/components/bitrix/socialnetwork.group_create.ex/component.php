@@ -295,7 +295,9 @@ else
 					}
 
 					if (
-						empty($arUserIDs)
+						array_key_exists("TAB", $arResult)
+						&& $arResult["TAB"] == "invite"
+						&& empty($arUserIDs)
 						&& !$arResult["bIntranet"])
 					{
 						$errorMessage .= GetMessage("SONET_GCE_NO_USERS").". ";

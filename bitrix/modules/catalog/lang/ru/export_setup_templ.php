@@ -120,6 +120,7 @@ $MESS["CAT_ADM_CSV_EXP_SEP_PRICES"] = "Цены";
 $MESS["CAT_ADM_CSV_EXP_SEP_SKU"] = "Поля и свойства торговых предложений";
 $MESS["CAT_ADM_CSV_EXP_DESCR_SECT_PROP"] = "Пользовательское свойство";
 $MESS["CAT_ADM_CSV_EXP_SECTION_LEVEL"] = "Раздел уровня #LEVEL#";
+$MESS["YANDEX_ROOT_DIRECTORY_EXT"] = "Основной раздел каталога #NAME#";
 $MESS["CATI_FI_PRICE_TYPE2"] = "Цена типа \"#TYPE#\"";
 $MESS["CATI_FI_PRICE_TYPE3"] = "Цена типа \"#NAME#\" (#TYPE#)";
 $MESS["CATI_FI_PRICE_CURRENCY"] = "в валюте #CURRENCY#";

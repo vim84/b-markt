@@ -223,8 +223,6 @@ while($arRes = $rsData->NavNext(true, "f_"))
 		$arActions[] = array("DEFAULT"=>"Y", "ICON"=>"edit", "TITLE"=>GetMessage("FORM_EDIT_ALT"), "ACTION"=>$lAdmin->ActionRedirect("form_edit.php?lang=".LANGUAGE_ID."&ID=$f_ID"), "TEXT"=>GetMessage("FORM_EDIT"));
 	if (CForm::IsAdmin())
 		$arActions[] = array("ICON"=>"copy", "TITLE"=>GetMessage("FORM_COPY_ALT"),"ACTION"=>$lAdmin->ActionRedirect("form_list.php?lang=".LANGUAGE_ID."&amp;makecopy_id=$f_ID&".bitrix_sessid_get()),"TEXT"=>GetMessage("FORM_COPY"));
-	if ($old_module_version=="Y" && $F_RIGHT>=10)
-		$arActions[] = array("TITLE"=>GetMessage("FORM_PREVIEW_ALT"),"ACTION"=>$lAdmin->ActionRedirect("form_view.php?lang=".LANGUAGE_ID."&WEB_FORM_ID=$f_ID"),"TEXT"=>GetMessage("FORM_PREVIEW"));
 	if ($F_RIGHT>=30)
 	{
 		$arActions[] = array("SEPARATOR"=>true);

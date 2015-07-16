@@ -27,6 +27,10 @@ $arActivityDescription = array(
 			"NAME" => GetMessage("BPAR_DESCR_TA1"),
 			"TYPE" => "int",
 		),
+		"LastReviewer" => array(
+			"NAME" => GetMessage("BPAR_DESCR_LR"),
+			"TYPE" => "user",
+		),
 	),
 );
 ?>

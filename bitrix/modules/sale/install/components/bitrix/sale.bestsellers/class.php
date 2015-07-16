@@ -132,7 +132,7 @@ class CSaleBestsellersComponent extends CCatalogViewedProductsComponent
 	{
 		if (!empty($this->arParams['FILTER']))
 		{
-			$filter = array("=LID" => SITE_ID);
+			$filter = (defined('SITE_ID') && !SITE_ID ? array('=LID' => SITE_ID) : array());
 			$subFilter = array("LOGIC" => "OR");
 
 			$statuses = array(
@@ -144,24 +144,27 @@ class CSaleBestsellersComponent extends CCatalogViewedProductsComponent
 			if ($this->arParams['PERIOD'] > 0)
 			{
 				$date = ConvertTimeStamp(AddToTimeStamp(array("DD" => "-" . $this->arParams['PERIOD'])));
-				foreach ($this->arParams['FILTER'] as &$field)
+				if (!empty($date))
 				{
-					if (isset($statuses[$field]))
+					foreach ($this->arParams['FILTER'] as &$field)
 					{
-						$subFilter[] = array(
-							">=DATE_{$field}" => $date,
-							"={$field}" => "Y"
-						);
+						if (isset($statuses[$field]))
+						{
+							$subFilter[] = array(
+								">=DATE_{$field}" => $date,
+								"={$field}" => "Y"
+							);
+						}
+						else
+						{
+							$subFilter[] = array(
+								"=STATUS_ID" => $field,
+								">=DATE_UPDATE" => $date,
+							);
+						}
 					}
-					else
-					{
-						$subFilter[] = array(
-							"=STATUS_ID" => $field,
-							">=DATE_UPDATE" => $date,
-						);
-					}
+					unset($field);
 				}
-				unset($field);
 			}
 			else
 			{
@@ -227,6 +230,4 @@ class CSaleBestsellersComponent extends CCatalogViewedProductsComponent
 		if(!$this->isSale)
 			throw new SystemException(Loc::getMessage("CVP_SALE_MODULE_NOT_INSTALLED"));
 	}
-
 }
-?>

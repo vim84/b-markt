@@ -28,7 +28,6 @@ $MESS["SALE_SLI_FILE_UPLOAD_ERROR"] = "File upload error.";
 $MESS["SALE_SLI_RETRY_FILE_UPLOAD"] = "try again";
 $MESS["SALE_SLI_FILE_IS_BEING_UPLOADED"] = "Uploading file";
 $MESS["SALE_SLI_SOURCE_FILE_NOTES"] = "When using this data source, you have to create #ANCHOR_LOCTYPES#location types#ANCHOR_END# and #ANCHOR_EXT_SERVS#external services#ANCHOR_END# manually.";
-$MESS["SALE_SLI_LOAD_LOCATIONS_TILL"] = "Location import depth";
 $MESS["SALE_SLI_DONT_LIMIT_LOCATION_DEPTH"] = "All";
 $MESS["SALE_SLI_EXTRA_DATA"] = "Select extra data";
 $MESS["SALE_SLI_EXTRA_EXTERNAL_ZIP"] = "ZIP codes";

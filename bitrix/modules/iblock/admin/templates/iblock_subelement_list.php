@@ -1,4 +1,5 @@
 <?
+/** @global CUser $USER */
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)
 	die();
 
@@ -743,7 +744,7 @@ if (true == B_ADMIN_SUBELEMENTS_LIST)
 	$CAdminCalendar_ShowScript = CAdminCalendar::ShowScript();
 
 $arHeader = array();
-if ($boolSubCatalog && $boolCatalogSet)
+if ($boolSubCatalog)
 {
 	$arHeader[] = array(
 		"id" => "CATALOG_TYPE",
@@ -1119,7 +1120,7 @@ if (!(false == B_ADMIN_SUBELEMENTS_LIST && $bCopy))
 			$arRes['CATALOG_QUANTITY_TRACE'] = $arRes['CATALOG_QUANTITY_TRACE_ORIG'];
 			$f_CATALOG_QUANTITY_TRACE = $f_CATALOG_QUANTITY_TRACE_ORIG;
 		}
-		if ($boolCatalogSet && isset($arSelectedFieldsMap['CATALOG_TYPE']))
+		if (isset($arSelectedFieldsMap['CATALOG_TYPE']))
 		{
 			$arRes['CATALOG_TYPE'] = CCatalogProduct::TYPE_OFFER;
 			$arProductGroupIDs[$f_ID] = false;
@@ -1549,7 +1550,7 @@ if (!(false == B_ADMIN_SUBELEMENTS_LIST && $bCopy))
 						$selectCur = "";
 						if ($boolSubCurrency)
 						{
-							$price = CurrencyFormat($arRes["CATALOG_PRICE_".$CatGroup["ID"]],$arRes["CATALOG_CURRENCY_".$CatGroup["ID"]]);
+							$price = CCurrencyLang::CurrencyFormat($arRes["CATALOG_PRICE_".$CatGroup["ID"]],$arRes["CATALOG_CURRENCY_".$CatGroup["ID"]], true);
 							if ($boolCatalogPrice && $boolEditPrice)
 							{
 								$selectCur = '<select name="CATALOG_CURRENCY['.$f_ID.']['.$CatGroup["ID"].']" id="CATALOG_CURRENCY['.$f_ID.']['.$CatGroup["ID"].']"';
@@ -1760,6 +1761,7 @@ if (!empty($arRows))
 		"",
 		CIBlockRights::RETURN_OPERATIONS
 	);
+	/** @var CAdminListRow $row */
 	foreach ($arRows as $f_ID => $row)
 	{
 		$edit_url = CIBlock::GetAdminSubElementEditLink(
@@ -1897,7 +1899,7 @@ if (!empty($arRows))
 					{
 						if ($boolSubCurrency)
 						{
-							$price = CurrencyFormat($row->arRes["CATALOG_PURCHASING_PRICE"], $row->arRes["CATALOG_PURCHASING_CURRENCY"]);
+							$price = CCurrencyLang::CurrencyFormat($row->arRes["CATALOG_PURCHASING_PRICE"], $row->arRes["CATALOG_PURCHASING_CURRENCY"], true);
 						}
 						else
 						{
@@ -1920,7 +1922,7 @@ if (!empty($arRows))
 					{
 						if ($boolSubCurrency)
 						{
-							$price = CurrencyFormat($row->arRes["CATALOG_PURCHASING_PRICE"], $row->arRes["CATALOG_PURCHASING_CURRENCY"]);
+							$price = CCurrencyLang::CurrencyFormat($row->arRes["CATALOG_PURCHASING_PRICE"], $row->arRes["CATALOG_PURCHASING_CURRENCY"], true);
 						}
 						else
 						{
@@ -1956,7 +1958,7 @@ if (!empty($arRows))
 					{
 						if ($boolSubCurrency)
 						{
-							$price = CurrencyFormat($row->arRes["CATALOG_PURCHASING_PRICE"], $row->arRes["CATALOG_PURCHASING_CURRENCY"]);
+							$price = CCurrencyLang::CurrencyFormat($row->arRes["CATALOG_PURCHASING_PRICE"], $row->arRes["CATALOG_PURCHASING_CURRENCY"], true);
 						}
 						else
 						{
@@ -1968,7 +1970,7 @@ if (!empty($arRows))
 				$row->AddInputField("CATALOG_MEASURE_RATIO", false);
 			}
 		}
-		if ($boolCatalogSet && isset($arSelectedFieldsMap['CATALOG_TYPE']))
+		if (isset($arSelectedFieldsMap['CATALOG_TYPE']))
 		{
 			$strProductType = '';
 			if (isset($arProductTypeList[$row->arRes["CATALOG_TYPE"]]))
@@ -2036,7 +2038,7 @@ if (!empty($arRows))
 		$clearCounter = array(
 			"TEXT" => GetMessage('IBSEL_A_CLEAR_COUNTER'),
 			"TITLE" => GetMessage('IBSEL_A_CLEAR_COUNTER_TITLE'),
-			"ACTION" => $lAdmin->ActionDoGroup($row->arRes['orig']['ID'], "clear_counter", $sThisSectionUrl),
+			"ACTION" => "if (confirm('".GetMessageJS("IBSEL_A_CLEAR_COUNTER_CONFIRM")."')) ".$lAdmin->ActionDoGroup($row->arRes['orig']['ID'], "clear_counter", $sThisSectionUrl),
 			"ONCLICK" => ""
 		);
 
@@ -2089,7 +2091,9 @@ if (!empty($arRows))
 						"ACTION"=>"(new BX.CAdminDialog(".$actionEdit.")).Show();",
 					);
 					$arActions[] = $arActive;
+					$arActions[] = array('SEPARATOR' => 'Y');
 					$arActions[] = $clearCounter;
+					$arActions[] = array('SEPARATOR' => 'Y');
 				}
 
 				if ($boolIBlockElementAdd
@@ -2171,7 +2175,9 @@ if (!empty($arRows))
 					"ACTION"=>"(new BX.CAdminDialog(".$actionEdit.")).Show();",
 				);
 				$arActions[] = $arActive;
+				$arActions[] = array('SEPARATOR' => 'Y');
 				$arActions[] = $clearCounter;
+				$arActions[] = array('SEPARATOR' => 'Y');
 
 				$arActions[] = array(
 					"ICON" => "copy",
@@ -2202,7 +2208,9 @@ if (!empty($arRows))
 					"ACTION"=>"(new BX.CAdminDialog(".$actionEdit.")).Show();",
 				);
 				$arActions[] = $arActive;
+				$arActions[] = array('SEPARATOR' => 'Y');
 				$arActions[] = $clearCounter;
+				$arActions[] = array('SEPARATOR' => 'Y');
 			}
 
 			if ($boolIBlockElementAdd && isset($arElementOps[$f_ID])
@@ -2285,10 +2293,12 @@ function CheckProductName(id)
 {
 	if (!id)
 		return false;
-	var obj = BX(id);
+	var obj = BX(id),
+		obFormElement;
 	if (!obj)
 		return false;
-	var obFormElement = BX.findParent(obj,{tag: 'form'});
+	obj.blur();
+	obFormElement = BX.findParent(obj,{tag: 'form'});
 	if (!obFormElement)
 		return false;
 	if ((obFormElement.elements['NAME']) && (0 < obFormElement.elements['NAME'].value.length))
@@ -2353,8 +2363,9 @@ function ShowNewOfferExt(id)
 
 function ShowSkuGenerator(id)
 {
-	var mxProductName = CheckProductName(id);
-	var requriedFields = '';
+	var mxProductName = CheckProductName(id),
+		requriedFields = '',
+		PostParams = {};
 	<?
 	$arIBlock = CIBlock::GetArrayByID($intSubIBlockID);
 	if (isset($arIBlock['FIELDS']) && is_array($arIBlock['FIELDS']))
@@ -2392,7 +2403,6 @@ function ShowSkuGenerator(id)
 		alert('<? echo CUtil::JSEscape(GetMessage('IB_SE_L_ENTER_PRODUCT_NAME')); ?>');
 	else
 	{
-	var PostParams = {};
 	PostParams.bxpublic = 'Y';
 	PostParams.PRODUCT_NAME = mxProductName;
 	<? if (!(defined('BX_PUBLIC_MODE') && BX_PUBLIC_MODE == 1))
@@ -2434,9 +2444,9 @@ function ShowSkuGenerator(id)
 	if (($_REQUEST["mode"]=='list' || $_REQUEST["mode"]=='frame') && $boolSubCatalog && $boolSubCurrency)
 	{
 		?><script type="text/javascript">
-		top.arSubCatalogShowedGroups = new Array();
-		top.arSubExtra = new Array();
-		top.arSubCatalogGroups = new Array();
+		top.arSubCatalogShowedGroups = [];
+		top.arSubExtra = [];
+		top.arSubCatalogGroups = [];
 		top.SubBaseIndex = "";
 		<?
 		if (is_array($arCatGroup) && !empty($arCatGroup))
@@ -2475,39 +2485,49 @@ function ShowSkuGenerator(id)
 		?>
 		top.SubChangeBasePrice = function(id)
 		{
-			for (var i = 0, cnt = top.arSubCatalogShowedGroups.length; i < cnt; i++)
+			var i,
+				cnt,
+				pr,
+				price,
+				extraId,
+				esum,
+				eps;
+			for (i = 0, cnt = top.arSubCatalogShowedGroups.length; i < cnt; i++)
 			{
-				var pr = top.document.getElementById("CATALOG_PRICE["+id+"]"+"["+top.arSubCatalogShowedGroups[i]+"]");
+				pr = top.document.getElementById("CATALOG_PRICE["+id+"]"+"["+top.arSubCatalogShowedGroups[i]+"]");
 				if (pr.disabled)
 				{
-					var price = top.document.getElementById("CATALOG_PRICE["+id+"]"+"["+top.SubBaseIndex+"]").value;
+					price = top.document.getElementById("CATALOG_PRICE["+id+"]"+"["+top.SubBaseIndex+"]").value;
 					if (price > 0)
 					{
-						var extraId = top.document.getElementById("CATALOG_EXTRA["+id+"]"+"["+top.arSubCatalogShowedGroups[i]+"]").value;
-						var esum = parseFloat(price) * (1 + top.arSubExtra[extraId] / 100);
-						var eps = 1.00/Math.pow(10, 6);
+						extraId = top.document.getElementById("CATALOG_EXTRA["+id+"]"+"["+top.arSubCatalogShowedGroups[i]+"]").value;
+						esum = parseFloat(price) * (1 + top.arSubExtra[extraId] / 100);
+						eps = 1.00/Math.pow(10, 6);
 						esum = Math.round((esum+eps)*100)/100;
 					}
 					else
-						var esum = "";
+						esum = "";
 
 					pr.value = esum;
 				}
 			}
-		}
+		};
 
 		top.SubChangeBaseCurrency = function(id)
 		{
-			var currency = top.document.getElementById("CATALOG_CURRENCY["+id+"]["+top.SubBaseIndex+"]");
-			for (var i = 0, cnt = top.arSubCatalogShowedGroups.length; i < cnt; i++)
+			var currency = top.document.getElementById("CATALOG_CURRENCY["+id+"]["+top.SubBaseIndex+"]"),
+				i,
+				cnt,
+				pr;
+			for (i = 0, cnt = top.arSubCatalogShowedGroups.length; i < cnt; i++)
 			{
-				var pr = top.document.getElementById("CATALOG_CURRENCY["+id+"]["+top.arSubCatalogShowedGroups[i]+"]");
+				pr = top.document.getElementById("CATALOG_CURRENCY["+id+"]["+top.arSubCatalogShowedGroups[i]+"]");
 				if (pr.disabled)
 				{
 					pr.selectedIndex = currency.selectedIndex;
 				}
 			}
-		}
+		};
 	</script>
 	<?
 	}
@@ -2540,9 +2560,9 @@ function ShowSkuGenerator(id)
 	if ($boolIBlockElementAdd)
 	{
 		$aContext[] = array(
-			"ICON"=>"btn",
+			"ICON"=>"btn_sub_gen",
 			"TEXT"=>htmlspecialcharsex(GetMessage('IB_SE_L_GENERATE_ELEMENTS')),
-			"LINK" => "javascript:ShowSkuGenerator('btn');",
+			"LINK" => "javascript:ShowSkuGenerator('btn_sub_gen');",
 			"TITLE"=>GetMessage("IB_SE_L_GENERATE_ELEMENTS")
 		);
 	}
@@ -2556,4 +2576,3 @@ else
 {
 	ShowMessage(GetMessage('IB_SE_L_SHOW_PRICES_AFTER_COPY'));
 }
-?>

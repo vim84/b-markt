@@ -246,7 +246,7 @@ if (IsModuleInstalled("fileman") && $USER->CanDoOperation("fileman_add_element_t
 			"ACTUAL_FILE" => ($actualDir === false ? $currentMenuFile : $actualMenuFile),
 			"CURRENT_FILE" => $currentMenuFile,
 			"CAN_CREATE_NEW" => ($actualDir !== false && $currentDir !== false && $actualDir != $currentDir),
-			"ITEMS" => $arMenuItems,
+			"ITEMS" => (($actualMenuFile == $currentMenuFile) ? $arMenuItems : array()),
 			"TEMPLATE" => $menu->template
 		);
 	}
@@ -435,7 +435,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_REQUEST["save"]) && $strWarn
 		//Save menu
 		if ($addToMenu && array_key_exists($menuType, $arMenu) && CModule::IncludeModule("fileman"))
 		{
-			$menuFile = $arMenu[$menuType]["ACTUAL_FILE"];
+			$menuFile = $arMenu[$menuType]["CURRENT_FILE"];
 			$arResult = CFileMan::GetMenuArray($documentRoot.$menuFile);
 			$arMenuItems = $arResult["aMenuLinks"];
 			$menuTemplate = $arResult["sMenuTemplate"];

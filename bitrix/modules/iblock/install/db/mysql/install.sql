@@ -31,6 +31,7 @@ create table if not exists b_iblock
 	LIST_PAGE_URL varchar(255) null,
 	DETAIL_PAGE_URL varchar(255) null,
 	SECTION_PAGE_URL varchar(255) null,
+	CANONICAL_PAGE_URL varchar(255) null,
 	PICTURE int(18) null,
 	DESCRIPTION text null,
 	DESCRIPTION_TYPE char(4) not null DEFAULT 'text',
@@ -164,6 +165,7 @@ create table if not exists b_iblock_section_property
 	SMART_FILTER char(1),
 	DISPLAY_TYPE char(1),
 	DISPLAY_EXPANDED char(1),
+	FILTER_HINT varchar(255),
 	PRIMARY KEY pk_b_iblock_section_property (IBLOCK_ID, SECTION_ID, PROPERTY_ID),
 	INDEX ix_b_iblock_section_property_1 (PROPERTY_ID),
 	INDEX ix_b_iblock_section_property_2 (SECTION_ID)

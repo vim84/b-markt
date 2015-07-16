@@ -67,4 +67,5 @@ $MESS["IBLOCK_PROP_G"] = "Bind To Sections";
 $MESS["IBLOCK_PROP_E"] = "Bind To Elements";
 $MESS["BT_ADM_IEP_PROP_DISPLAY_TYPE"] = "Smart filter view";
 $MESS["BT_ADM_IEP_PROP_DISPLAY_EXPANDED"] = "Show expanded";
+$MESS["BT_ADM_IEP_PROP_FILTER_HINT"] = "Show hint in smart filter";
 ?>

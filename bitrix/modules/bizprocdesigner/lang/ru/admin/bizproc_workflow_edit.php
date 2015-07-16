@@ -33,4 +33,5 @@ $MESS["BIZPROC_IMPORT_BUTTON"] = "Импортировать";
 $MESS["BIZPROC_IMPORT_TITLE"] = "Импорт шаблона";
 $MESS["BIZPROC_IMPORT_FILE"] = "Файл";
 $MESS["BIZPROC_USER_PARAMS_SAVE_ERROR"] = "Размер действий в панели \"Мои действия\" слишком большой. Изменения в панели сохранены не будут.";
+$MESS['BIZPROC_EMPTY_EXPORT'] = 'Необходимо сохранить шаблон перед экспортом';
 ?>

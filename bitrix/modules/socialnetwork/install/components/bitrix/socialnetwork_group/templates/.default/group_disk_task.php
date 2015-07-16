@@ -62,9 +62,7 @@ if ($arParams["TASK_ID"] > 0)
 	$arResult["TASK"] = $dbTask->GetNext();
 }
 ?>
-<div class="bx-disk-tab-container"></div>
-<div class="bx-disk-filepage-title"><?= Loc::getMessage('DISK_BP') ?></div>
-<div class="bx-disk-filepage-section">
+<div class="bx-disk-bizproc-section">
 <?
 if ($arResult["TASK"])
 {
@@ -81,6 +79,11 @@ if ($arResult["TASK"])
 		$component,
 		array("HIDE_ICONS" => "Y")
 	);
+}
+else
+{
+	$back_url = (isset($_REQUEST["back_url"])) ? urldecode($_REQUEST["back_url"]) : CComponentEngine::MakePathFromTemplate($arResult['PATH_TO_GROUP_DISK'], array('group_id' => $arResult['VARIABLES']['group_id'], "PATH" => ""));
+	LocalRedirect($back_url);
 }
 ?>
 </div>

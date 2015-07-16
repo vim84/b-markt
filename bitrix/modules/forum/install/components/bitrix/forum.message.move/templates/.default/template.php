@@ -143,9 +143,8 @@ foreach ($arResult["MESSAGE_LIST"] as $res)
 </div>
 </form>
 <script>
-if (typeof oForum != "object")
-	var oForum = {};
-oForum['topic_search'] = {
+BX.Forum = (BX.Forum || {});
+BX.Forum['topic_search'] = {
 	url : '<?=CUtil::JSEscape($arResult["topic_search"])?>',
 	object : false,
 	value : '<?=intVal($arResult["newTID"])?>',

@@ -45,6 +45,9 @@ if(!function_exists("qiwiWalletCheckAuth"))
 {
 	function qiwiWalletCheckAuth($login, $password)
 	{
+		if(strlen($password) <=0)
+			return false;
+
 		$header = qiwiWalletGetAuthHeader();
 		
 		if(!$header)

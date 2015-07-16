@@ -33,7 +33,7 @@ else
 			<table cellpadding="0" cellspacing="0" border="0" width="100%">
 				<tr>
 					<td><?echo $sCopyright?></td>
-					<td align="right"><?if(file_exists($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/this_site_support.php")):?><?include($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/this_site_support.php");?><?else:?><?echo $sLinks?><?endif;?></td>
+					<td align="right"><?if(($siteSupport = getLocalPath("php_interface/this_site_support.php", BX_PERSONAL_ROOT)) !== false):?><?include($_SERVER["DOCUMENT_ROOT"].$siteSupport);?><?else:?><?echo $sLinks?><?endif;?></td>
 				</tr>
 			</table>
 <?

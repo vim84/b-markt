@@ -3,6 +3,14 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/general/status.php"
 
 class CSaleStatus extends CAllSaleStatus
 {
+	/**
+	 * @param array $arOrder
+	 * @param array $arFilter
+	 * @param bool|array  $arGroupBy
+	 * @param bool|array  $arNavStartParams
+	 * @param array $arSelectFields
+	 * @return bool|int|CDBResult
+	 */
 	function GetList($arOrder = array(), $arFilter = array(), $arGroupBy = false, $arNavStartParams = false, $arSelectFields = array())
 	{
 		global $DB;
@@ -164,13 +172,13 @@ class CSaleStatus extends CAllSaleStatus
 			$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 		}
 
-		if (array_key_exists('LANG', $arFields) && is_array($arFields['LANG']))
+		if (isset($arFields['LANG']) && is_array($arFields['LANG']))
 		{
 			$DB->Query("DELETE FROM b_sale_status_lang WHERE STATUS_ID = '".$ID."'");
 
-			for ($i = 0; $i<count($arFields["LANG"]); $i++)
+			foreach ($arFields['LANG'] as $statusLang)
 			{
-				$langUpdateFields = $langInsertFields = $arFields["LANG"][$i];
+				$langUpdateFields = $langInsertFields = $statusLang;
 				$langInsertFields['STATUS_ID'] = $ID;
 				$arInsert = $DB->PrepareInsert("b_sale_status_lang", $langInsertFields);
 				if (isset($langUpdateFields['STATUS_ID']))
@@ -181,15 +189,14 @@ class CSaleStatus extends CAllSaleStatus
 				if (count($langUpdateFields) > 0)
 					$langUpdate = " ON DUPLICATE KEY UPDATE ".$DB->PrepareUpdate("b_sale_status_lang", $langUpdateFields);
 				$strSql =
-					"INSERT INTO b_sale_status_lang(".$arInsert[0].") ".
-					"VALUES(".$arInsert[1].")".$langUpdate;
+					"INSERT INTO b_sale_status_lang(".$arInsert[0].") VALUES(".$arInsert[1].")".$langUpdate;
 				$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 			}
-			if (isset($arOneLang))
-				unset($arOneLang);
+			if (isset($statusLang))
+				unset($statusLang);
 		}
 
-		if (array_key_exists('PERMS', $arFields) && is_array($arFields["PERMS"]))
+		if (isset($arFields['PERMS']) && is_array($arFields["PERMS"]))
 		{
 			$DB->Query("DELETE FROM b_sale_status2group WHERE STATUS_ID = '".$ID."'");
 
@@ -300,4 +307,3 @@ class CSaleStatus extends CAllSaleStatus
 		return $dbRes;
 	}
 }
-?>

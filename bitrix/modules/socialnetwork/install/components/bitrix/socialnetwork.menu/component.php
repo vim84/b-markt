@@ -474,7 +474,6 @@ if(!$errorMessage && $_REQUEST['menu_ajax'] == $arParams["ID"])
 								$arFeatureTmp["PermsVar"] = array(
 									SONET_RELATIONS_TYPE_NONE => GetMessage("SONET_SM_PVU_NONE"),
 									SONET_RELATIONS_TYPE_FRIENDS => GetMessage("SONET_SM_PVU_FR"),
-									SONET_RELATIONS_TYPE_FRIENDS2 => GetMessage("SONET_SM_PVU_FR2"),
 									SONET_RELATIONS_TYPE_AUTHORIZED => GetMessage("SONET_SM_PVU_AUTHORIZED"),
 									SONET_RELATIONS_TYPE_ALL => GetMessage("SONET_SM_PVU_ALL"),
 								);

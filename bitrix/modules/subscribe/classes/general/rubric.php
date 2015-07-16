@@ -6,7 +6,7 @@ class CRubric
 	var $LAST_ERROR="";
 
 	//Get list
-	function GetList($aSort=array(), $aFilter=array())
+	public static function GetList($aSort=array(), $aFilter=array())
 	{
 		global $DB;
 

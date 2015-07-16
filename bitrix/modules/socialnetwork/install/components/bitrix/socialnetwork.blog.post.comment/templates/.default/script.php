@@ -62,7 +62,6 @@ $formParams = Array(
 		"documentCSS" => "body {color:#434343;}",
 		"ctrlEnterHandler" => "__submit".$rand,
 		"id" => "idLHE_blogCommentForm".$rand,
-		"jsObjName" => "oPostFormLHE_blogCommentForm".$rand,
 		"fontFamily" => "'Helvetica Neue', Helvetica, Arial, sans-serif",
 		"fontSize" => "12px",
 		"bInitByJS" => true,

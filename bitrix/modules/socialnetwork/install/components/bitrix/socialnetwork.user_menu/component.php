@@ -114,9 +114,20 @@ else
 	}
 
 	if (!is_array($arResult["User"]))
+	{
 		$arResult["FatalError"] = GetMessage("SONET_P_USER_NO_USER");
+	}
 	else
 	{
+		$arResult["User"]["IS_EXTRANET"] = (
+			IsModuleInstalled('extranet')
+			&& (
+				empty($arResult["User"]["UF_DEPARTMENT"])
+				|| empty($arResult["User"]["UF_DEPARTMENT"][0])
+			)
+				? "Y"
+				: "N"
+		);
 		$arResult["CurrentUserPerms"] = CSocNetUserPerms::InitUserPerms($GLOBALS["USER"]->GetID(), $arResult["User"]["ID"], CSocNetUser::IsCurrentUserModuleAdmin());
 
 		if (CModule::IncludeModule('extranet') && CExtranet::IsExtranetSite())
@@ -151,16 +162,19 @@ else
 
 		$arResult["ActiveFeatures"] = CSocNetFeatures::GetActiveFeaturesNames(SONET_ENTITY_USER, $arResult["User"]["ID"]);
 
-		$arResult["CanView"]["files"] = (
-			array_key_exists("files", $arResult["ActiveFeatures"]) &&
-			(
-				CSocNetUser::IsCurrentUserModuleAdmin() ||
-				(
-					CModule::IncludeModule('webdav') &&
-					CIBlockWebdavSocnet::CanAccessFiles($arParams["FILES_USER_IBLOCK_ID"], 'user', $arResult["User"]["ID"]) // cached
-				)
-			)
-		);
+		$arResult["CanView"]["files"] = array_key_exists("files", $arResult["ActiveFeatures"]);
+		if($arResult["CanView"]["files"])
+		{
+			$diskEnabled = CModule::includeModule('disk') && \Bitrix\Disk\Driver::isSuccessfullyConverted();
+			if($diskEnabled)
+			{
+				$arResult["Urls"]["Files"] = CComponentEngine::makePathFromTemplate($arParams["PATH_TO_USER_DISK"], array(
+					"user_id" => $arResult["User"]["ID"],
+					"PATH" => ""
+				));
+			}
+		}
+
 		$arResult["CanView"]["tasks"] = (array_key_exists("tasks", $arResult["ActiveFeatures"]) && CSocNetFeaturesPerms::CanPerformOperation($GLOBALS["USER"]->GetID(), SONET_ENTITY_USER, $arResult["User"]["ID"], "tasks", "view", CSocNetUser::IsCurrentUserModuleAdmin()));
 
 		$arResult["CanView"]["calendar"] = (

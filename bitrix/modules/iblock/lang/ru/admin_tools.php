@@ -21,4 +21,5 @@ $MESS["IBLOCK_WATERMARK_POSITION_BR"] = "Снизу справа";
 $MESS["IBLOCK_AT_FILE_NAME_TRANSLIT"] = "Транслитерировать";
 $MESS["IBLOCK_AT_FILE_NAME_LOWER"] = "Привести к нижнему регистру";
 $MESS["IBLOCK_AT_FILE_NAME_SPACE"] = "Замена для пробельных символов после транслитерации";
+$MESS["IBLOCK_AT_POPUP_EDIT"] = "Изменить";
 ?>

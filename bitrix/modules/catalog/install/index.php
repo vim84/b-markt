@@ -101,7 +101,10 @@ class catalog extends CModule
 			return false;
 		}
 
-		RegisterModule("catalog");
+		ModuleManager::registerModule('catalog');
+
+		$eventManager = \Bitrix\Main\EventManager::getInstance();
+		$eventManager->registerEventHandler('sale', 'onBuildCouponProviders', 'catalog', '\Bitrix\Catalog\DiscountCouponTable', 'couponManager');
 
 		RegisterModuleDependences("iblock", "OnIBlockDelete", "catalog", "CCatalog", "OnIBlockDelete");
 		RegisterModuleDependences("iblock", "OnIBlockElementDelete", "catalog", "CCatalogProduct", "OnIBlockElementDelete");
@@ -116,8 +119,6 @@ class catalog extends CModule
 		RegisterModuleDependences("iblock", "OnBeforeIBlockDelete", "catalog", "CCatalog", "OnBeforeCatalogDelete", 300);
 		RegisterModuleDependences("iblock", "OnBeforeIBlockElementDelete", "catalog", "CCatalog", "OnBeforeIBlockElementDelete", 10000);
 		RegisterModuleDependences("main", "OnEventLogGetAuditTypes", "catalog", "CCatalogEvent", "GetAuditTypes");
-		RegisterModuleDependences('sale', 'OnSetCouponList', 'catalog', 'CCatalogDiscountCoupon', 'OnSetCouponList');
-		RegisterModuleDependences('sale', 'OnClearCouponList', 'catalog', 'CCatalogDiscountCoupon', 'OnClearCouponList');
 		RegisterModuleDependences('main', 'OnBuildGlobalMenu', 'catalog', 'CCatalogAdmin', 'OnBuildGlobalMenu');
 		RegisterModuleDependences('main', 'OnAdminListDisplay', 'catalog', 'CCatalogAdmin', 'OnAdminListDisplay');
 		RegisterModuleDependences('main', 'OnBuildGlobalMenu', 'catalog', 'CCatalogAdmin', 'OnBuildSaleMenu');
@@ -159,7 +160,7 @@ class catalog extends CModule
 			$languageID = '';
 			$siteIterator = SiteTable::getList(array(
 				'select' => array('LID', 'LANGUAGE_ID'),
-				'filter' => array('DEF' => 'Y', 'ACTIVE' => 'Y')
+				'filter' => array('=DEF' => 'Y', '=ACTIVE' => 'Y')
 			));
 			if ($site = $siteIterator->fetch())
 			{
@@ -248,10 +249,10 @@ class catalog extends CModule
 	{
 		global $APPLICATION, $DB, $errors;
 
-		if(!defined("BX_CATALOG_UNINSTALLED"))
-			define("BX_CATALOG_UNINSTALLED", true);
+		if (!defined('BX_CATALOG_UNINSTALLED'))
+			define('BX_CATALOG_UNINSTALLED', true);
 
-		if(!isset($arParams["savedata"]) || $arParams["savedata"] != "Y")
+		if (!isset($arParams["savedata"]) || $arParams["savedata"] != "Y")
 		{
 			$errors = $DB->RunSQLBatch($_SERVER['DOCUMENT_ROOT']."/bitrix/modules/catalog/install/db/".strtolower($DB->type)."/uninstall.sql");
 			if (!empty($errors))
@@ -275,8 +276,6 @@ class catalog extends CModule
 		UnRegisterModuleDependences("iblock", "OnBeforeIBlockDelete", "catalog", "CCatalog", "OnBeforeCatalogDelete");
 		UnRegisterModuleDependences("iblock", "OnBeforeIBlockElementDelete", "catalog", "CCatalog", "OnBeforeIBlockElementDelete");
 		UnRegisterModuleDependences("main", "OnEventLogGetAuditTypes", "catalog", "CCatalogEvent", "GetAuditTypes");
-		UnRegisterModuleDependences('sale', 'OnSetCouponList', 'catalog', 'CCatalogDiscountCoupon', 'OnSetCouponList');
-		UnRegisterModuleDependences('sale', 'OnClearCouponList', 'catalog', 'CCatalogDiscountCoupon', 'OnClearCouponList');
 		UnRegisterModuleDependences('main', 'OnBuildGlobalMenu', 'catalog', 'CCatalogAdmin', 'OnBuildGlobalMenu');
 		UnRegisterModuleDependences('main', 'OnAdminListDisplay', 'catalog', 'CCatalogAdmin', 'OnAdminListDisplay');
 		UnRegisterModuleDependences('main', 'OnBuildGlobalMenu', 'catalog', 'CCatalogAdmin', 'OnBuildSaleMenu');
@@ -296,9 +295,12 @@ class catalog extends CModule
 
 		UnRegisterModuleDependences('iblock', 'OnModuleUnInstall', 'catalog', 'CCatalog', 'OnIBlockModuleUnInstall');
 
-		CAgent::RemoveModuleAgents("catalog");
+		$eventManager = \Bitrix\Main\EventManager::getInstance();
+		$eventManager->unRegisterEventHandler('sale', 'onBuildCouponProviders', 'catalog', '\Bitrix\Catalog\DiscountCouponTable', 'couponManager');
 
-		UnRegisterModule("catalog");
+		CAgent::RemoveModuleAgents('catalog');
+
+		ModuleManager::unRegisterModule('catalog');
 
 		return true;
 	}

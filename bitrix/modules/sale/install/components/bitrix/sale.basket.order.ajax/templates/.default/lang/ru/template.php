@@ -60,9 +60,7 @@ $MESS ['SALE_NO_DELAY_PROD'] = "В вашей корзине нет отложе
 $MESS ['SALE_NO_SUBSCRIBE_PROD'] = "В вашей корзине нет подписанных товаров.";
 $MESS ['SALE_NOACTIVE'] = "отсутствующие";
 $MESS ['SALE_NO_NOACTIVE'] = "В вашей корзине нет отсутствующих товаров.";
-
 $MESS ['SALE_BASKET_SUBSCRIBE'] = "подписанные";
-
 $MESS ['SALE_BASKET_NOTIFY'] = "ожидаемые";
-
+$MESS ['SOA_TEMPL_ORDER_PS_ERROR'] = "Ошибка выбранного способа оплаты. Обратитесь к Администрации сайта, либо выберите другой способ оплаты.";
 ?>

@@ -103,7 +103,6 @@ readyList = [],
 proxySalt = Math.random(),
 proxyId = 1,
 proxyList = [],
-deferList = [],
 
 /* getElementById cache */
 NODECACHE = {},
@@ -224,13 +223,26 @@ BX.namespace = function(namespace)
 
 BX.debug = function()
 {
-	if (window.BXDEBUG)
+	if (BX.debugStatus())
 	{
 		if (window.console && window.console.log)
 			window.console.log('BX.debug: ', arguments.length > 0 ? arguments : arguments[0]);
 		if (window.console && window.console.trace)
 			console.trace();
 	}
+};
+
+BX.debugEnable = function(flag)
+{
+	flag = typeof (flag) == 'boolean'? flag: true;
+	BX.debugEnableFlag = flag;
+
+	console.info('Debug mode is '+(BX.debugEnableFlag? 'ON': 'OFF'))
+};
+
+BX.debugStatus = function()
+{
+	return BX.debugEnableFlag || false;
 };
 
 BX.is_subclass_of = function(ob, parent_class)
@@ -386,12 +398,56 @@ BX.cleanNode = function(node, bSuicide)
 	return node;
 };
 
-BX.html = function(node, html)
+BX.html = function(node, html, parameters)
 {
 	if(typeof html == 'undefined')
 		return node.innerHTML;
-	
-	node.innerHTML = html;
+
+	if(typeof parameters == 'undefined')
+		parameters = {};
+
+	html = BX.processHTML(html.toString());
+
+	var assets = [];
+	var inlineJS = [];
+
+	if(typeof html.STYLE != 'undefined' && html.STYLE.length > 0)
+	{
+		for(var k in html.STYLE)
+			assets.push(html.STYLE[k]);
+	}
+
+	if(typeof html.SCRIPT != 'undefined' && html.SCRIPT.length > 0)
+	{
+		for(var k in html.SCRIPT)
+		{
+			if(html.SCRIPT[k].isInternal)
+				inlineJS.push(html.SCRIPT[k].JS);
+			else
+				assets.push(html.SCRIPT[k].JS);
+		}
+	}
+
+	if(parameters.htmlFirst && typeof html.HTML != 'undefined')
+		node.innerHTML = html.HTML;
+
+	var afterAsstes = function(){
+		if(!parameters.htmlFirst && typeof html.HTML != 'undefined')
+			node.innerHTML = html.HTML;
+
+		for(var k in inlineJS)
+			BX.evalGlobal(inlineJS[k]);
+
+		if(BX.type.isFunction(parameters.callback))
+			parameters.callback();
+	}
+
+	if(assets.length > 0)
+	{
+		BX.load(assets, afterAsstes);
+	}
+	else
+		afterAsstes();
 }
 
 BX.insertAfter = function(node, dstNode)
@@ -606,13 +662,13 @@ BX.focusEventsBlur = function(){BX.removeClass(this,'bx-focus');this.BXFOCUS=fal
 
 BX.setUnselectable = function(node)
 {
-	BX.addClass(node, 'bx-unselectable');
+	node.style.userSelect = node.style.MozUserSelect = node.style.WebkitUserSelect = node.style.KhtmlUserSelect = node.style = 'none';
 	node.setAttribute('unSelectable', 'on');
 };
 
 BX.setSelectable = function(node)
 {
-	BX.removeClass(node, 'bx-unselectable');
+	node.style.userSelect = node.style.MozUserSelect = node.style.WebkitUserSelect = node.style.KhtmlUserSelect = node.style = '';
 	node.removeAttribute('unSelectable');
 };
 
@@ -1359,6 +1415,29 @@ BX.defer_proxy = function(func, thisObject)
 	return proxyList[thisObject['__proxy_id_' + proxySalt]][func['__defer_id_' + proxySalt]];
 };
 
+BX.once = function(el, evname, func)
+{
+	if (typeof func['__once_id_' + evname + '_' + proxySalt] == 'undefined')
+	{
+		func['__once_id_' + evname + '_' + proxySalt] = proxyId++;
+	}
+
+	this._initObjectProxy(el);
+
+	if (!proxyList[el['__proxy_id_' + proxySalt]][func['__once_id_' + evname + '_' + proxySalt]])
+	{
+		var g = function()
+		{
+			BX.unbind(el, evname, g);
+			func.apply(this, arguments);
+		};
+
+		proxyList[el['__proxy_id_' + proxySalt]][func['__once_id_' + evname + '_' + proxySalt]] = g;
+	}
+
+	return proxyList[el['__proxy_id_' + proxySalt]][func['__once_id_' + evname + '_' + proxySalt]];
+};
+
 BX.bindDelegate = function (elem, eventName, isTarget, handler)
 {
 	var h = BX.delegateEvent(isTarget, handler);
@@ -1606,7 +1685,7 @@ BX.bindDebouncedChange = function(node, fn, fnInstant, timeout, ctx)
 		BX.bind(node, 'change', actI);
 		BX.bind(node, 'input', actI);
 	}
-}
+};
 
 BX.parseJSON = function(data, context)
 {
@@ -2049,6 +2128,19 @@ BX.util = {
 		for(var i in ar)
 			if (ar[i] !== null && typeof ar[i] != 'undefined')
 				arv.push(i);
+		return arv;
+	},
+
+	object_keys: function(obj)
+	{
+		var arv = [];
+		for(var k in obj)
+		{
+			if(obj.hasOwnProperty(k))
+			{
+				arv.push(k);
+			}
+		}
 		return arv;
 	},
 
@@ -2977,7 +3069,7 @@ BX.pos = function(el, bRelative)
 	{
 		if(r.hasOwnProperty(i))
 		{
-			r[i] = parseInt(r[i]);
+			r[i] = Math.round(r[i]);
 		}
 	}
 
@@ -3071,8 +3163,18 @@ BX.showWait = function(node, msg)
 
 	var obMsg = node.bxmsg = document.body.appendChild(BX.create('DIV', {
 		props: {
-			id: 'wait_' + container_id,
-			className: 'bx-core-waitwindow'
+			id: 'wait_' + container_id
+		},
+		style: {
+			background: 'url("/bitrix/js/main/core/images/wait.gif") no-repeat scroll 10px center #fcf7d1',
+			border: '1px solid #E1B52D',
+			color: 'black',
+			fontFamily: 'Verdana,Arial,sans-serif',
+			fontSize: '11px',
+			padding: '10px 30px 10px 37px',
+			position: 'absolute',
+			zIndex:'10000',
+			textAlign:'center'
 		},
 		text: msg
 	}));
@@ -3314,6 +3416,26 @@ BX.load = function(items, callback, doc)
 	return isAsync ? loadAsync(items, callback, doc) : loadAsyncEmulation(items, callback, doc);
 };
 
+BX.convert =
+{
+	nodeListToArray: function(nodes)
+	{
+		try
+		{
+			return (Array.prototype.slice.call(nodes, 0));
+		}
+		catch (ex)
+		{
+			var ary = [];
+			for(var i = 0, l = nodes.length; i < l; i++)
+			{
+				ary.push(nodes[i]);
+			}
+			return ary;
+		}
+	}
+};
+
 function loadAsync(items, callback, doc)
 {
 	if (!BX.type.isArray(items))
@@ -3420,7 +3542,7 @@ function loadAsyncEmulation(items, callback, doc)
 	}
 
 	load(getAsset(items[0]), items.length === 1 ? callback : function () {
-		loadAsyncEmulation.apply(null, [rest, callback]);
+		loadAsyncEmulation.apply(null, [rest, callback, doc]);
 	}, doc);
 }
 
@@ -4819,28 +4941,23 @@ BX.data = function(node, key, value)
 	}
 	else
 	{
-		var values = [],
-			data;
+		var data = undefined;
 
 		// from manager
-		if((data = dataStorage.get(node, key, value)) != undefined)
-			values.push(data);
+		if((data = dataStorage.get(node, key)) != undefined)
+		{
+			return data;
+		}
+		else
+		{
+			// from attribute data-*
+			if('getAttribute' in node && (data = node.getAttribute('data-'+key.toString())))
+				return data;
+		}
 
-		// from attribute data-*
-		key = 'data-'+key.toString();
-
-		if('getAttribute' in node && (data = node.getAttribute(key)))
-			values.push(data);
-
-		// force to scalar value if only one found
-		if(values.length == 1)
-			return values[0];
-		if(values.length == 0)
-			return undefined;
-
-		return values;
+		return undefined;
 	}
-}
+};
 
 BX.DataStorage = function()
 {
@@ -4853,7 +4970,7 @@ BX.DataStorage = function()
 		if(typeof owner[this.uniqueTag] == 'undefined')
 			if(create)
 			{
-				try 
+				try
 				{
 					Object.defineProperty(owner, this.uniqueTag, {
 						value: this.keyOffset++
@@ -4870,7 +4987,7 @@ BX.DataStorage = function()
 		return owner[this.uniqueTag];
 	};
 	this.get = function(owner, key){
-		if((owner != document && !BX.type.isElementNode(owner)) || typeof key == 'undefined') 
+		if((owner != document && !BX.type.isElementNode(owner)) || typeof key == 'undefined')
 			return undefined;
 
 		owner = this.resolve(owner, false);
@@ -4882,7 +4999,7 @@ BX.DataStorage = function()
 	};
 	this.set = function(owner, key, value){
 
-		if((owner != document && !BX.type.isElementNode(owner)) || typeof value == 'undefined') 
+		if((owner != document && !BX.type.isElementNode(owner)) || typeof value == 'undefined')
 			return;
 
 		var o = this.resolve(owner, true);
@@ -4897,4 +5014,188 @@ BX.DataStorage = function()
 // some internal variables for new logic
 var dataStorage = new BX.DataStorage();	// manager which BX.data() uses to keep data
 
+BX.LazyLoad = {
+	images: [],
+	imageStatus: {
+		hidden: -2,
+		error: -1,
+		"undefined": 0,
+		inited: 1,
+		loaded: 2
+	},
+	imageTypes: {
+		image: 1,
+		background: 2
+	},
+
+	registerImage: function(id, isImageVisibleCallback)
+	{
+		if (BX.type.isNotEmptyString(id))
+		{
+			this.images.push({
+				id: id,
+				node: null,
+				src: null,
+				type: null,
+				func: BX.type.isFunction(isImageVisibleCallback) ? isImageVisibleCallback : null,
+				status: this.imageStatus.undefined
+			});
+		}
+	},
+
+	registerImages: function(ids, isImageVisibleCallback)
+	{
+		if (BX.type.isArray(ids))
+		{
+			for (var i = 0, length = ids.length; i < length; i++)
+			{
+				this.registerImage(ids[i], isImageVisibleCallback);
+			}
+		}
+	},
+
+	showImages: function(checkOwnVisibility)
+	{
+		var image = null;
+		var isImageVisible = false;
+
+		checkOwnVisibility = checkOwnVisibility === false ? false : true;
+		for (var i = 0, length = this.images.length; i < length; i++)
+		{
+			image = this.images[i];
+
+			if (image.status == this.imageStatus.undefined)
+			{
+				this.initImage(image);
+			}
+
+			if (image.status !== this.imageStatus.inited)
+			{
+				continue;
+			}
+
+			if (
+				!image.node
+				|| !image.node.parentNode
+			)
+			{
+				image.node = null;
+				image.status = this.imageStatus.error;
+				continue;
+			}
+
+			isImageVisible = true;
+			if (checkOwnVisibility && image.func)
+			{
+				isImageVisible = image.func(image);
+			}
+
+			if (
+				isImageVisible === true
+				&& this.isElementVisibleOnScreen(image.node)
+			)
+			{
+				if (image.type == this.imageTypes.image)
+				{
+					image.node.src = image.src;
+				}
+				else
+				{
+					image.node.style.backgroundImage = "url('" + image.src + "')";
+				}
+
+				image.node.setAttribute("data-src", "");
+				image.status = this.imageStatus.loaded;
+			}
+		}
+	},
+
+	initImage: function(image)
+	{
+		image.status = this.imageStatus.error;
+		var node = BX(image.id);
+		if (node)
+		{
+			var src = node.getAttribute("data-src");
+			if (BX.type.isNotEmptyString(src))
+			{
+				image.node = node;
+				image.src = src;
+				image.status = this.imageStatus.inited;
+				image.type = (image.node.tagName.toLowerCase() == "img"
+					? this.imageTypes.image
+					: this.imageTypes.background
+				);
+			}
+		}
+	},
+
+	isElementVisibleOnScreen: function (element)
+	{
+		var coords = this.getElementCoords(element);
+
+		var windowTop = window.pageYOffset || document.documentElement.scrollTop;
+		var windowBottom = windowTop + document.documentElement.clientHeight;
+
+		coords.bottom = coords.top + element.offsetHeight;
+
+		var topVisible = coords.top > windowTop && coords.top < windowBottom;
+		var bottomVisible = coords.bottom < windowBottom && coords.bottom > windowTop;
+
+		return topVisible || bottomVisible;
+	},
+
+	isElementVisibleOn2Screens: function(element)
+	{
+		var coords = this.getElementCoords(element);
+
+		var windowHeight = document.documentElement.clientHeight;
+		var windowTop = window.pageYOffset || document.documentElement.scrollTop;
+		var windowBottom = windowTop + windowHeight;
+
+		coords.bottom = coords.top + element.offsetHeight;
+
+		windowTop -= windowHeight;
+		windowBottom += windowHeight;
+
+		var topVisible = coords.top > windowTop && coords.top < windowBottom;
+		var bottomVisible = coords.bottom < windowBottom && coords.bottom > windowTop;
+
+		return topVisible || bottomVisible;
+	},
+
+	getElementCoords: function(element)
+	{
+		var box = element.getBoundingClientRect();
+
+		return {
+			originTop: box.top,
+			originLeft: box.left,
+			top: box.top + window.pageYOffset,
+			left: box.left + window.pageXOffset
+		};
+	},
+
+	onScroll: function()
+	{
+		BX.LazyLoad.showImages();
+	},
+
+	clearImages: function ()
+	{
+		this.images = [];
+	}
+
+};
+
+BX.getCookie = function (name)
+{
+	var matches = document.cookie.match(new RegExp(
+		"(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+	));
+
+	return matches ? decodeURIComponent(matches[1]) : undefined;
+};
+
 })(window);
+

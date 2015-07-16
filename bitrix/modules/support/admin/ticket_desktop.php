@@ -501,6 +501,7 @@ $lAdmin->AddAdminContextMenu($aContext, false, false);
 $lAdmin->CheckListMode();
 
 $APPLICATION->SetTitle(GetMessage("SUP_PAGE_TITLE"));
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 ?>
 <form name="form1" method="GET" action="<?=$APPLICATION->GetCurPage()?>?">

@@ -11,7 +11,9 @@ use Bitrix\Main;
 use Bitrix\Main\DB;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
+
 use Bitrix\Sale\Location;
+use Bitrix\Sale\Location\DB\Helper;
 
 Loc::loadMessages(__FILE__);
 
@@ -24,61 +26,63 @@ final class SiteLinkTable extends Entity\DataManager
 
 	public static function getTableName()
 	{
-		return 'b_sale_loc_search_sitelink';
+		return 'b_sale_loc_search_sitlnk';
 	}
 
-	public static function cleanUp()
+	public static function checkTableExists()
 	{
-		$dbConnection = Main\HttpApplication::getConnection();
+		static $tableExists;
 
-		try
-		{
-			$dbConnection->query('truncate table '.static::getTableName());
-		}
-		catch(\Bitrix\Main\DB\SqlQueryException $e)
-		{
-		}
+		if($tableExists === null)
+			$tableExists = Main\HttpApplication::getConnection()->isTableExists(static::getTableName());
+
+		return $tableExists;
 	}
 
-	public static function createTable()
+	public static function cleanUpData()
 	{
-			$sql = "create table b_sale_loc_search_sitelink 
-				(
-					LOCATION_ID int,
-					SITE_ID char(2),
+		Helper::dropTable(static::getTableName());
 
-					primary key (LOCATION_ID, SITE_ID)
-				)";
+		// ORACLE: OK, MSSQL: OK
+		$sql = "create table ".static::getTableName()." 
+			(
+				LOCATION_ID ".Helper::getSqlForDataType('int').",
+				SITE_ID ".Helper::getSqlForDataType('char', 2).",
+
+				primary key (LOCATION_ID, SITE_ID)
+			)";
+
+		Main\HttpApplication::getConnection()->query($sql);
+	}
+
+	public static function initializeData()
+	{
+		$locationTable = Location\LocationTable::getTableName();
+		$groupLocationTable = Location\GroupLocationTable::getTableName();
+		$siteLocationTable = Location\SiteLocationTable::getTableName();
+
+		// ORACLE: OK, MSSQL: OK
+		$sql = "
+			insert into ".static::getTableName()." 
+				(LOCATION_ID, SITE_ID) 
+			select LC.ID, LS.SITE_ID
+				from ".$siteLocationTable." LS
+					inner join ".$locationTable." L on LS.LOCATION_ID = L.ID and LS.LOCATION_TYPE = 'L'
+					inner join ".$locationTable." LC on LC.LEFT_MARGIN >= L.LEFT_MARGIN and LC.RIGHT_MARGIN <= L.RIGHT_MARGIN
+			union 
+			select LC.ID, LS.SITE_ID
+				from ".$siteLocationTable." LS
+					inner join ".$groupLocationTable." LG on LS.LOCATION_ID = LG.LOCATION_ID and LS.LOCATION_TYPE = 'G'
+					inner join ".$locationTable." L on LG.LOCATION_ID = L.ID
+					inner join ".$locationTable." LC on LC.LEFT_MARGIN >= L.LEFT_MARGIN and LC.RIGHT_MARGIN <= L.RIGHT_MARGIN
+		";
 
 		Main\HttpApplication::getConnection()->query($sql);
 	}
 
 	public static function createIndex()
 	{
-		$sql = 'create index IX_B_SALE_SITELINK_SITE on b_sale_loc_search_sitelink (
-
-				SITE_ID
-		)';
-
-		Main\HttpApplication::getConnection()->query($sql);
-	}
-
-	const STEP_SIZE = 100;
-
-	public static function initData($parameters = array())
-	{
-		static::cleanUp();
-
-		$sql = "
-			insert into b_sale_loc_search_sitelink 
-				(LOCATION_ID, SITE_ID) 
-			select distinct LC.ID, LS.SITE_ID
-				from b_sale_loc_2site LS
-					inner join b_sale_location L on LS.LOCATION_ID = L.ID
-					inner join b_sale_location LC on LC.LEFT_MARGIN >= L.LEFT_MARGIN and LC.RIGHT_MARGIN <= L.RIGHT_MARGIN
-		";
-
-		Main\HttpApplication::getConnection()->query($sql);
+		Helper::createIndex(static::getTableName(), 'S', array('SITE_ID'));
 	}
 
 	public static function getMap()
@@ -87,70 +91,13 @@ final class SiteLinkTable extends Entity\DataManager
 
 			'LOCATION_ID' => array(
 				'data_type' => 'integer',
-				'primary' => true // tmp
+				'required' => true,
+				'primary' => true
 			),
-			'TYPE_ID' => array(
+			'SITE_ID' => array(
 				'data_type' => 'integer',
-			),
-
-
-			'REGION_ID' => array(
-				'data_type' => 'integer',
-			),
-
-			'SUBREGION_ID' => array(
-				'data_type' => 'integer',
-			),
-			'CITY_ID' => array(
-				'data_type' => 'integer',
-			),
-			'VILLAGE_ID' => array(
-				'data_type' => 'integer',
-			),
-			'STREET_ID' => array(
-				'data_type' => 'integer',
-			),
-
-			'W_1' => array(
-				'data_type' => 'string',
-			),
-			'W_2' => array(
-				'data_type' => 'string',
-			),
-			'W_3' => array(
-				'data_type' => 'string',
-			),
-			'W_4' => array(
-				'data_type' => 'string',
-			),
-			'W_5' => array(
-				'data_type' => 'string',
-			),
-			'W_6' => array(
-				'data_type' => 'string',
-			),
-			'W_7' => array(
-				'data_type' => 'string',
-			),
-			'W_8' => array(
-				'data_type' => 'string',
-			),
-			'W_9' => array(
-				'data_type' => 'string',
-			),
-			'W_10' => array(
-				'data_type' => 'string',
-			),
-
-			'WORD_COUNT' => array(
-				'data_type' => 'integer',
-			),
-
-			'TYPE_SORT' => array(
-				'data_type' => 'integer',
-			),
-			'SORT' => array(
-				'data_type' => 'integer',
+				'required' => true,
+				'primary' => true
 			),
 		);
 	}

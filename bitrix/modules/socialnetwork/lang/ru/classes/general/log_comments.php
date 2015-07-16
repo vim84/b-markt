@@ -12,4 +12,7 @@ $MESS["SONET_GLC_EMPTY_DATE_CREATE"] = "Неверная дата создани
 $MESS["SONET_GLC_WRONG_PARAMETER_ID"] = "Параметр ID не верен";
 $MESS["SONET_GLC_SEND_EVENT_LINK"] = "Перейти: ";
 $MESS["SONET_GLC_ERROR_CHECKFIELDS_FAILED"] = "Некорректные данные";
+$MESS["SONET_GLC_FORUM_MENTION"] = "Упомянул(а) вас в комментарии к сообщению форума \"#title#\"";
+$MESS["SONET_GLC_FORUM_MENTION_M"] = "Упомянул вас в комментарии к сообщению форума \"#title#\"";
+$MESS["SONET_GLC_FORUM_MENTION_F"] = "Упомянула вас в комментарии к сообщению форума \"#title#\"";
 ?>

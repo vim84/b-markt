@@ -6,6 +6,23 @@ IncludeModuleLangFile(__FILE__);
 */
 class CBPDocument
 {
+	public static function MigrateDocumentType($oldType, $newType)
+	{
+		$templateIds = array();
+		$db = CBPWorkflowTemplateLoader::GetList(array(), array("DOCUMENT_TYPE" => $oldType), false, false, array("ID"));
+		while ($ar = $db->Fetch())
+			$templateIds[] = $ar["ID"];
+
+		foreach ($templateIds as $id)
+			CBPWorkflowTemplateLoader::Update($id, array("DOCUMENT_TYPE" => $newType));
+
+		if (count($templateIds) > 0)
+		{
+			CBPHistoryService::MigrateDocumentType($oldType, $newType, $templateIds);
+			CBPStateService::MigrateDocumentType($oldType, $newType, $templateIds);
+		}
+	}
+
 	/**
 	* Метод возвращает массив всех рабочих потоков и их состояний для данного документа.
 	* Если задан код документа, то метод возвращает массив всех запущенных для данного документа рабочих потоков (в том числе и завершенные), а так же шаблонов рабочих потоков, настроенных на автозапуск при изменении документа.
@@ -115,28 +132,39 @@ class CBPDocument
 	* @param int $userId - код пользователя.
 	* @param array $arGroups - массив групп пользователя.
 	* @param array $arState - состояние рабочего потока.
+	* @param bool $extendedGroups.
 	* @return array - массив событий вида array(array("NAME" => событие, "TITLE" => название_события), ...).
 	*/
-	public static function GetAllowableEvents($userId, $arGroups, $arState)
+	public static function GetAllowableEvents($userId, $arGroups, $arState, $extendedGroups = false)
 	{
 		if (!is_array($arState))
 			throw new Exception("arState");
 		if (!is_array($arGroups))
 			throw new Exception("arGroups");
 
-		if (!in_array("user_".$userId, $arGroups))
+		if (!$extendedGroups && !in_array("user_".$userId, $arGroups))
 			$arGroups[] = "user_".$userId;
+		if ($extendedGroups && !in_array("group_u".$userId, $arGroups))
+			$arGroups[] = "group_u".$userId;
 
-		$ks = array_keys($arGroups);
-		foreach ($ks as $k)
-			$arGroups[$k] = strtolower($arGroups[$k]);
+		if ($extendedGroups)
+		{
+			$arGroups = array_merge($arGroups, CBPHelper::getUserExtendedGroups($userId));
+		}
 
+		$arGroups = array_map('strtolower', $arGroups);
 		$arResult = array();
+
 
 		if (is_array($arState["STATE_PARAMETERS"]) && count($arState["STATE_PARAMETERS"]) > 0)
 		{
 			foreach ($arState["STATE_PARAMETERS"] as $arStateParameter)
 			{
+				$arStateParameter["PERMISSION"] = $extendedGroups?
+					CBPHelper::convertToExtendedGroups($arStateParameter["PERMISSION"])
+					: CBPHelper::convertToSimpleGroups($arStateParameter["PERMISSION"], true);
+				$arStateParameter["PERMISSION"] = array_map('strtolower', $arStateParameter["PERMISSION"]);
+
 				if (count($arStateParameter["PERMISSION"]) <= 0
 					|| count(array_intersect($arGroups, $arStateParameter["PERMISSION"])) > 0)
 				{
@@ -202,22 +230,26 @@ class CBPDocument
 	* @param int $userId - код пользователя.
 	* @param array $arGroups - массив групп пользователя.
 	* @param array $arStates - массив состояний рабочих потоков документа.
+	* @param bool $extendedGroups - use extended groups mode
 	* @return mixed - массив доступных операций или null.
 	*/
-	public static function GetAllowableOperations($userId, $arGroups, $arStates)
+	public static function GetAllowableOperations($userId, $arGroups, $arStates, $extendedGroups = false)
 	{
 		if (!is_array($arStates))
 			throw new Exception("arStates");
 		if (!is_array($arGroups))
 			throw new Exception("arGroups");
 
-		if (!in_array("user_".$userId, $arGroups))
+		if (!$extendedGroups && !in_array("user_".$userId, $arGroups))
 			$arGroups[] = "user_".$userId;
+		if ($extendedGroups && !in_array("group_u".$userId, $arGroups))
+			$arGroups[] = "group_u".$userId;
 
-		$ks = array_keys($arGroups);
-		foreach ($ks as $k)
-			$arGroups[$k] = strtolower($arGroups[$k]);
-
+		if ($extendedGroups)
+		{
+			$arGroups = array_merge($arGroups, CBPHelper::getUserExtendedGroups($userId));
+		}
+		$arGroups = array_map('strtolower', $arGroups);
 		$result = null;
 
 		foreach ($arStates as $arState)
@@ -229,8 +261,14 @@ class CBPDocument
 
 				foreach ($arState["STATE_PERMISSIONS"] as $operation => $arOperationGroups)
 				{
+					$arOperationGroups = $extendedGroups?
+						CBPHelper::convertToExtendedGroups($arOperationGroups)
+						: CBPHelper::convertToSimpleGroups($arOperationGroups, true);
+					$arOperationGroups = array_map('strtolower', $arOperationGroups);
+
 					if (count(array_intersect($arGroups, $arOperationGroups)) > 0)
 						$result[] = strtolower($operation);
+
 
 //					foreach ($arOperationGroups as $operationGroup)
 //					{
@@ -358,7 +396,7 @@ class CBPDocument
 	* @param array $arParameters - параметры события.
 	* @param array $arErrors - массив ошибок, которые произошли при отправке события в виде array(array("code" => код_ошибки, "message" => сообщение, "file" => путь_к_файлу), ...).
 	*/
-	public function SendExternalEvent($workflowId, $workflowEvent, $arParameters, &$arErrors)
+	public static function SendExternalEvent($workflowId, $workflowEvent, $arParameters, &$arErrors)
 	{
 		$arErrors = array();
 
@@ -435,15 +473,18 @@ class CBPDocument
 
 	public static function PostTaskForm($arTask, $userId, $arRequest, &$arErrors, $userName = "")
 	{
+		$originalUserId = CBPTaskService::getOriginalTaskUserId($arTask['ID'], $userId);
+
 		return CBPActivity::CallStaticMethod(
 			$arTask["ACTIVITY"],
 			"PostTaskForm",
 			array(
 				$arTask,
-				$userId,
+				$originalUserId,
 				$arRequest,
 				&$arErrors,
-				$userName
+				$userName,
+				$userId
 			)
 		);
 	}
@@ -458,6 +499,79 @@ class CBPDocument
 				$userId,
 				$userName,
 				$arRequest
+			)
+		);
+	}
+
+
+	public static function setTasksUserStatus($userId, $status, $ids = array(), &$errors = array())
+	{
+		$filter = array(
+			'USER_ID' => $userId,
+			'STATUS' => CBPTaskStatus::Running,
+			'USER_STATUS' => CBPTaskUserStatus::Waiting,
+		);
+		if ($ids && is_array($ids))
+		{
+			$ids = array_filter(array_map('intval', $ids));
+			if ($ids)
+				$filter['ID'] = $ids;
+		}
+
+		$iterator = CBPTaskService::GetList(array('ID'=>'ASC'),
+			$filter,
+			false,
+			false,
+			array('ID', 'NAME', 'WORKFLOW_ID', 'ACTIVITY', 'ACTIVITY_NAME', 'IS_INLINE'));
+		while ($task = $iterator->fetch())
+		{
+			if ($task['IS_INLINE'] == 'Y')
+			{
+				$taskErrors = array();
+				self::PostTaskForm($task, $userId, array('INLINE_USER_STATUS' => $status), $taskErrors);
+				if (!empty($taskErrors))
+					foreach ($taskErrors as $error)
+						$errors[] = GetMessage('BPCGDOC_ERROR_ACTION', array('#NAME#' => $task['NAME'], '#ERROR#' => $error['message']));
+			}
+			else
+				$errors[] = GetMessage('BPCGDOC_ERROR_TASK_IS_NOT_INLINE', array('#NAME#' => $task['NAME']));
+
+		}
+		return true;
+	}
+
+	public static function delegateTasks($fromUserId, $toUserId, $ids = array(), &$errors = array())
+	{
+		$filter = array(
+			'USER_ID' => $fromUserId,
+			'STATUS' => CBPTaskStatus::Running,
+			'USER_STATUS' => CBPTaskUserStatus::Waiting
+		);
+		if ($ids && is_array($ids))
+		{
+			$ids = array_filter(array_map('intval', $ids));
+			if ($ids)
+				$filter['ID'] = $ids;
+		}
+
+		$iterator = CBPTaskService::GetList(array('ID'=>'ASC'), $filter, false, false, array('ID', 'NAME'));
+		while ($task = $iterator->fetch())
+		{
+			if (!CBPTaskService::delegateTask($task['ID'], $fromUserId, $toUserId))
+			{
+				$errors[] = GetMessage('BPCGDOC_ERROR_DELEGATE', array('#NAME#' => $task['NAME']));
+			}
+		}
+		return true;
+	}
+
+	public static function getTaskControls($arTask)
+	{
+		return CBPActivity::CallStaticMethod(
+			$arTask["ACTIVITY"],
+			"getTaskControls",
+			array(
+				$arTask
 			)
 		);
 	}
@@ -604,78 +718,116 @@ class CBPDocument
 ?>
 <script src="/bitrix/js/bizproc/bizproc.js"></script>
 <script>
-function BPAShowSelector(id, type, mode, arCurValues)
+if (typeof window['BPAShowSelector'] === 'undefined')
 {
-	<?if($type=="only_users"):?>
-	var def_mode = "only_users";
-	<?else:?>
-	var def_mode = "";
-	<?endif?>
-
-	if(!mode)
-		mode = def_mode;
-
-	if(mode == "only_users")
+	function BPAShowSelector(id, type, mode, arCurValues)
 	{
-		(new BX.CDialog({
-			'content_url': '/bitrix/admin/<?=htmlspecialcharsbx($module)?>_bizproc_selector.php?mode=public&bxpublic=Y&lang=<?=LANGUAGE_ID?>&entity=<?=htmlspecialcharsbx($entity)?>',
-			'content_post':
-				{
-					'document_type'	: '<?=CUtil::JSEscape($document_type)?>',
-					'fieldName'		:	id,
-					'fieldType'		:	type,
-					'only_users'	:	'Y',
-					'sessid'        :   '<?= bitrix_sessid() ?>'
-				},
-			'height': 400,
-			'width': 425
-		})).Show();
-	}
-	else
-	{
-		var workflowTemplateNameCur = workflowTemplateName;
-		var workflowTemplateDescriptionCur = workflowTemplateDescription;
-		var workflowTemplateAutostartCur = workflowTemplateAutostart;
-		var arWorkflowParametersCur = arWorkflowParameters;
-		var arWorkflowVariablesCur = arWorkflowVariables;
-		var arWorkflowTemplateCur = Array(rootActivity.Serialize());
+		<?if($type=="only_users"):?>
+		var def_mode = "only_users";
+		<?else:?>
+		var def_mode = "";
+		<?endif?>
 
-		if(arCurValues)
+		if (!mode)
+			mode = def_mode;
+
+		/* if (type == 'xuser')
 		{
-			if(arCurValues['workflowTemplateName'])
-				workflowTemplateNameCur = arCurValues['workflowTemplateName'];
-			if(arCurValues['workflowTemplateDescription'])
-				workflowTemplateDescriptionCur = arCurValues['workflowTemplateDescription'];
-			if(arCurValues['workflowTemplateAutostart'])
-				workflowTemplateAutostartCur = arCurValues['workflowTemplateAutostart'];
-			if(arCurValues['arWorkflowParameters'])
-				arWorkflowParametersCur = arCurValues['arWorkflowParameters'];
-			if(arCurValues['arWorkflowVariables'])
-				arWorkflowVariablesCur = arCurValues['arWorkflowVariables'];
-			if(arCurValues['arWorkflowTemplate'])
-				arWorkflowTemplateCur = arCurValues['arWorkflowTemplate'];
+			BX.Access.Init({other:{disabled:true}});
+			BX.Access.ShowForm({
+				callback: function (obSelected)
+				{
+					var result = [];
+					for (var provider in obSelected)
+					{
+						if (obSelected.hasOwnProperty(provider))
+						{
+							for (var varId in obSelected[provider])
+							{
+								if (obSelected[provider].hasOwnProperty(varId))
+								{
+									result.push(BX.Access.GetProviderName(provider) + ' ' + obSelected[provider][varId].name + ' [' + varId + ']');
+								}
+							}
+						}
+					}
+					if (result)
+					{
+						var el = BX(id), v = el.value;
+						if (v)
+							v += '; ';
+						el.value = v + result.join('; ');
+					}
+				}
+			});
 		}
+		else */
+		if (mode == "only_users")
+		{
+			BX.WindowManager.setStartZIndex(1150);
+			(new BX.CDialog({
+				'content_url': '/bitrix/admin/<?=htmlspecialcharsbx($module)?>_bizproc_selector.php?mode=public&bxpublic=Y&lang=<?=LANGUAGE_ID?>&entity=<?=htmlspecialcharsbx($entity)?>',
+				'content_post': {
+					'document_type': '<?=CUtil::JSEscape($document_type)?>',
+					'fieldName': id,
+					'fieldType': type,
+					'only_users': 'Y',
+					'sessid': '<?= bitrix_sessid() ?>'
+				},
+				'height': 400,
+				'width': 485
+			})).Show();
+		}
+		else
+		{
+			var workflowTemplateNameCur = workflowTemplateName;
+			var workflowTemplateDescriptionCur = workflowTemplateDescription;
+			var workflowTemplateAutostartCur = workflowTemplateAutostart;
+			var arWorkflowParametersCur = arWorkflowParameters;
+			var arWorkflowVariablesCur = arWorkflowVariables;
+			var arWorkflowConstantsCur = arWorkflowConstants;
+			var arWorkflowTemplateCur = Array(rootActivity.Serialize());
 
-		var p = {
-					'document_type'	: '<?=CUtil::JSEscape($document_type)?>',
-					'fieldName'		:	id,
-					'fieldType'		:	type,
-					'workflowTemplateName'			:	workflowTemplateNameCur,
-					'workflowTemplateDescription'	: 	workflowTemplateDescriptionCur,
-					'workflowTemplateAutostart'		:	workflowTemplateAutostartCur,
-					'sessid'        :   '<?= bitrix_sessid() ?>'
+			if (arCurValues)
+			{
+				if (arCurValues['workflowTemplateName'])
+					workflowTemplateNameCur = arCurValues['workflowTemplateName'];
+				if (arCurValues['workflowTemplateDescription'])
+					workflowTemplateDescriptionCur = arCurValues['workflowTemplateDescription'];
+				if (arCurValues['workflowTemplateAutostart'])
+					workflowTemplateAutostartCur = arCurValues['workflowTemplateAutostart'];
+				if (arCurValues['arWorkflowParameters'])
+					arWorkflowParametersCur = arCurValues['arWorkflowParameters'];
+				if (arCurValues['arWorkflowVariables'])
+					arWorkflowVariablesCur = arCurValues['arWorkflowVariables'];
+				if (arCurValues['arWorkflowConstants'])
+					arWorkflowConstantsCur = arCurValues['arWorkflowConstants'];
+				if (arCurValues['arWorkflowTemplate'])
+					arWorkflowTemplateCur = arCurValues['arWorkflowTemplate'];
+			}
+
+			var p = {
+				'document_type': '<?=CUtil::JSEscape($document_type)?>',
+				'fieldName': id,
+				'fieldType': type,
+				'workflowTemplateName': workflowTemplateNameCur,
+				'workflowTemplateDescription': workflowTemplateDescriptionCur,
+				'workflowTemplateAutostart': workflowTemplateAutostartCur,
+				'sessid': '<?= bitrix_sessid() ?>'
 			};
 
-		JSToPHPHidd(p, arWorkflowParametersCur, 'arWorkflowParameters');
-		JSToPHPHidd(p, arWorkflowVariablesCur, 'arWorkflowVariables');
-		JSToPHPHidd(p, arWorkflowTemplateCur, 'arWorkflowTemplate');
+			JSToPHPHidd(p, arWorkflowParametersCur, 'arWorkflowParameters');
+			JSToPHPHidd(p, arWorkflowVariablesCur, 'arWorkflowVariables');
+			JSToPHPHidd(p, arWorkflowConstantsCur, 'arWorkflowConstants');
+			JSToPHPHidd(p, arWorkflowTemplateCur, 'arWorkflowTemplate');
 
-		(new BX.CDialog({
-			'content_url': '/bitrix/admin/<?=htmlspecialcharsbx($module)?>_bizproc_selector.php?mode=public&bxpublic=Y&lang=<?=LANGUAGE_ID?>&entity=<?=htmlspecialcharsbx($entity)?>',
-			'content_post': p,
-			'height': 425,
-			'width': 425
-		})).Show();
+			(new BX.CDialog({
+				'content_url': '/bitrix/admin/<?=htmlspecialcharsbx($module)?>_bizproc_selector.php?mode=public&bxpublic=Y&lang=<?=LANGUAGE_ID?>&entity=<?=htmlspecialcharsbx($entity)?>',
+				'content_post': p,
+				'height': 425,
+				'width': 485
+			})).Show();
+		}
 	}
 }
 </script>
@@ -720,6 +872,16 @@ function BPAShowSelector(id, type, mode, arCurValues)
 			$s .= 'id="'.htmlspecialcharsbx($id).'">'.htmlspecialcharsbx($values).'</textarea>';
 			$s .= '</td><td valign="top" style="padding-left:4px"><input type="button" value="..." title="'.GetMessage("BIZPROC_AS_SEL_FIELD_BUTTON").' (Insert)'.'" onclick="BPAShowSelector(\''.Cutil::JSEscape(htmlspecialcharsbx($id)).'\', \''.Cutil::JSEscape($type).'\');"></td></tr></table>';
 		}
+		/* elseif($type == "xuser")
+		{
+			$s = '<table cellpadding="0" cellspacing="0" border="0"><tr><td valign="top"><textarea onkeydown="if(event.keyCode==45)BPAShowSelector(\''.Cutil::JSEscape(htmlspecialcharsbx($id)).'\', \''.Cutil::JSEscape($type).'\');" ';
+			$s .= 'rows="'.($arParams['rows']>0?intval($arParams['rows']):3).'" ';
+			$s .= 'cols="'.($arParams['cols']>0?intval($arParams['cols']):45).'" ';
+			$s .= 'name="'.htmlspecialcharsbx($name).'" ';
+			$s .= 'id="'.htmlspecialcharsbx($id).'">'.htmlspecialcharsbx($values).'</textarea>';
+			$s .= '</td><td valign="top" style="padding-left:4px"><input type="button" value="..." title="'.GetMessage("BIZPROC_AS_SEL_FIELD_BUTTON").' (Insert)'.'" onclick="BPAShowSelector(\''.Cutil::JSEscape(htmlspecialcharsbx($id)).'\', \'user\');">
+			<input type="button" value="[X]" title="'.GetMessage("BIZPROC_AS_SEL_FIELD_BUTTON").' (Insert)'.'" onclick="BPAShowSelector(\''.Cutil::JSEscape(htmlspecialcharsbx($id)).'\', \''.Cutil::JSEscape($type).'\');"></td></tr></table>';
+		} */
 		elseif($type == "bool")
 		{
 			$s = '<select name="'.htmlspecialcharsbx($name).'"><option value=""></option><option value="Y"'.($values=='Y'?' selected':'').'>'.GetMessage('MAIN_YES').'</option><option value="N"'.($values=='N'?' selected':'').'>'.GetMessage('MAIN_NO').'</option>';
@@ -745,9 +907,12 @@ function BPAShowSelector(id, type, mode, arCurValues)
 
 	public static function _ReplaceTaskURL($str, $documentType)
 	{
+		$chttp = new CHTTP();
+		$baseHref = $chttp->URN2URI('');
+
 		return str_replace(
-			Array('#HTTP_HOST#', '#TASK_URL#'),
-			Array($_SERVER['HTTP_HOST'], ($documentType[0]=="iblock"?"/bitrix/admin/bizproc_task.php?workflow_id={=Workflow:id}":"/company/personal/bizproc/{=Workflow:id}/")),
+			Array('#HTTP_HOST#', '#TASK_URL#', '#BASE_HREF#'),
+			Array($_SERVER['HTTP_HOST'], ($documentType[0]=="iblock"?"/bitrix/admin/bizproc_task.php?workflow_id={=Workflow:id}":"/company/personal/bizproc/{=Workflow:id}/"), $baseHref),
 			$str
 			);
 	}
@@ -1067,7 +1232,7 @@ function BPAShowSelector(id, type, mode, arCurValues)
 
 		$dbTask = CBPTaskService::GetList(
 			array(),
-			array("WORKFLOW_ID" => $workflowId, "USER_ID" => $userId),
+			array("WORKFLOW_ID" => $workflowId, "USER_ID" => $userId, 'STATUS' => CBPTaskStatus::Running),
 			false,
 			false,
 			array("ID", "WORKFLOW_ID", "NAME", "DESCRIPTION")

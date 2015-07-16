@@ -438,7 +438,7 @@ $arComponentParameters = array(
 			"NAME" => GetMessage("SONET_SEF_USER_TASKS_TEMPLATES"),
 			"TYPE" => "STRING",
 			"MULTIPLE" => "N",
-			"DEFAULT" => "user/#user_id#/tasks/templates/",
+			"DEFAULT" => "/company/personal/user/#user_id#/tasks/templates/",
 			"COLS" => 25,
 			"PARENT" => "URL_TEMPLATES",
 		),
@@ -446,7 +446,7 @@ $arComponentParameters = array(
 			"NAME" => GetMessage("SONET_SEF_USER_TEMPLATES_TEMPLATE"),
 			"TYPE" => "STRING",
 			"MULTIPLE" => "N",
-			"DEFAULT" => "user/#user_id#/tasks/templates/template/#action#/#template_id#/",
+			"DEFAULT" => "/company/personal/user/#user_id#/tasks/templates/template/#action#/#template_id#/",
 			"COLS" => 25,
 			"PARENT" => "URL_TEMPLATES",
 		),
@@ -1384,20 +1384,24 @@ if (CModule::IncludeModule("iblock"))
 			"TYPE" => "STRING",
 			"DEFAULT" => "1280");
 
-		$arComponentParameters["PARAMETERS"]["PHOTO_UPLOADER_TYPE"] = array(
-			"PARENT" => "PHOTO_SETTINGS",
-			"NAME" => GetMessage("P_UPLOADER_TYPE"),
-			"TYPE" => "LIST",
-			"VALUES" => array(
-				"form" => GetMessage("P_UPLOADER_TYPE_FORM_SIMPLE"),
-				"applet" => GetMessage("P_UPLOADER_TYPE_APPLET"),
-				"flash" => GetMessage("P_UPLOADER_TYPE_FLASH")
-			),
-			"DEFAULT" => "applet",
-			"REFRESH" => "Y");
+		if ($arCurrentValues["PHOTO_UPLOADER_TYPE"])
+		{
+			$arComponentParameters["PARAMETERS"]["PHOTO_UPLOADER_TYPE"] = array(
+				"PARENT" => "PHOTO_SETTINGS",
+				"NAME" => GetMessage("P_UPLOADER_TYPE"),
+				"TYPE" => "LIST",
+				"VALUES" => array(
+					"form" => GetMessage("P_UPLOADER_TYPE_FORM_SIMPLE"),
+					"applet" => GetMessage("P_UPLOADER_TYPE_APPLET"),
+					"flash" => GetMessage("P_UPLOADER_TYPE_FLASH")
+				),
+				"DEFAULT" => "form",
+				"HIDDEN" => $arCurrentValues["PHOTO_UPLOADER_TYPE"] == "form" ? "Y" : "N",
+				"REFRESH" => "Y"
+			);
+		}
 
-
-		if (!$arCurrentValues["PHOTO_UPLOADER_TYPE"] || $arCurrentValues["PHOTO_UPLOADER_TYPE"] == "applet")
+		if ($arCurrentValues["PHOTO_UPLOADER_TYPE"] == "applet")
 		{
 			$arComponentParameters["PARAMETERS"]["PHOTO_APPLET_LAYOUT"] = array(
 					"PARENT" => "UPLOADER",
@@ -1745,6 +1749,18 @@ if (IsModuleInstalled("search"))
 		"NAME" => GetMessage("SONET_SEARCH_FILTER_DATE_NAME"),
 		"TYPE" => "STRING",
 		"DEFAULT" => "sonet_search_filter_date");
+	$arComponentParameters["PARAMETERS"]["SEARCH_RESTART"] = Array(
+		"PARENT" => "SEARCH_SETTINGS",
+		"NAME" => GetMessage("SONET_SEARCH_RESTART"),
+		"TYPE" => "CHECKBOX",
+		"MULTIPLE" => "N",
+		"DEFAULT" => "N");
+	$arComponentParameters["PARAMETERS"]["SEARCH_USE_LANGUAGE_GUESS"] = Array(
+		"PARENT" => "SEARCH_SETTINGS",
+		"NAME" => GetMessage("SONET_SEARCH_USE_LANGUAGE_GUESS"),
+		"TYPE" => "CHECKBOX",
+		"MULTIPLE" => "N",
+		"DEFAULT" => "Y");
 }
 
 $arComponentParameters["PARAMETERS"]["GROUP_USE_KEYWORDS"] = Array(

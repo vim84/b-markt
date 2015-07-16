@@ -28,8 +28,11 @@ $Sum = number_format($Sum, 2, ',', '');
 $shopId = CSalePaySystemAction::GetParamValue("SHOP_ID");
 $scid = CSalePaySystemAction::GetParamValue("SCID");
 $customerNumber = CSalePaySystemAction::GetParamValue("ORDER_ID");
-$shopPassword = CSalePaySystemAction::GetParamValue("SHOP_KEY");
 $changePayStatus =  trim(CSalePaySystemAction::GetParamValue("CHANGE_STATUS_PAY"));
+$shopPassword = CSalePaySystemAction::GetParamValue("SHOP_KEY");
+
+if(strlen($shopPassword) <=0)
+	$bCorrectPayment = False;
 
 $strCheck = md5(implode(";", array($orderIsPaid, $orderSumAmount, $orderSumCurrencyPaycash, $orderSumBankPaycash, $shopId, $invoiceId,  $customerNumber, $shopPassword)));
 

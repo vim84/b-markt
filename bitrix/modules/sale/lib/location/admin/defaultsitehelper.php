@@ -148,6 +148,12 @@ class DefaultSiteHelper extends Helper
 	{
 		$entityClass = static::getEntityClass();
 
+		// only active sites to show
+		if(is_array($parameters))
+		{
+			$parameters['filter']['=ACTIVE'] = 'Y';
+		}
+
 		return new \CAdminResult($entityClass::getList($parameters), $tableId);
 	}
 

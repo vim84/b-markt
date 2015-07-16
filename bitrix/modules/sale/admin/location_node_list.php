@@ -1,11 +1,14 @@
 <?
-use Bitrix\Sale\Location\Admin\LocationHelper as Helper;
-
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location;
+use Bitrix\Sale\Location\Admin\LocationHelper as Helper;
+use Bitrix\Sale\Location\Admin\SearchHelper;
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/include.php");
+require_once($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/sale/prolog.php');
 
 Loc::loadMessages(__FILE__);
 
@@ -72,7 +75,7 @@ try
 
 			try
 			{
-				$res = Helper::update($id, $arFields);
+				$res = Helper::update($id, $arFields, true);
 
 				if(!empty($res['errors']))
 				{
@@ -92,6 +95,8 @@ try
 
 			$DB->Commit();
 		}
+
+		Location\LocationTable::resetLegacyPath();
 	}
 
 	// group DELETE
@@ -114,7 +119,7 @@ try
 
 				try
 				{
-					$res = Helper::delete($id);
+					$res = Helper::delete($id, true);
 					if(!$res['success'])
 						throw new Main\SystemException(Loc::getMessage('SALE_LOCATION_L_ITEM').' '.$id.' : '.implode('<br />', $res['errors']));
 					$DB->Commit();
@@ -126,6 +131,8 @@ try
 				}
 			}
 		}
+
+		Location\LocationTable::resetLegacyPath();
 	}
 
 	$adminResult = Helper::getList($listParams, $sTableID);
@@ -150,11 +157,14 @@ if(empty($fatal))
 	$lAdmin->AddHeaders($headers);
 	while($elem = $adminResult->NavNext(true, "f_"))
 	{
+		// CAdminList will escape values by itself
+		/*
 		foreach($columns as $code => $fld)
 		{
 			if(isset($elem[$code]))
 				Helper::makeSafeDisplay($elem[$code], $code);
 		}
+		*/
 
 		// urls
 		$editUrl = Helper::getEditUrl($elem['ID']);
@@ -162,7 +172,7 @@ if(empty($fatal))
 		$listUrl = Helper::getListUrl($elem['ID'], array());
 
 		$row =& $lAdmin->AddRow($f_ID, $elem, $listUrl, Loc::getMessage('SALE_LOCATION_L_VIEW_CHILDREN'));
-		
+
 		foreach($columns as $code => $fld)
 		{
 			if($code == 'ID')
@@ -214,6 +224,8 @@ if(empty($fatal))
 #### Data output
 #####################################
 ?>
+
+<?SearchHelper::checkIndexesValid();?>
 
 <?if(strlen($fatal)):?>
 

@@ -75,6 +75,20 @@ class Compare
 			{
 				$this->compareTable($pair[0], $pair[1]);
 			}
+			elseif (!isset($pair[0]) && isset($pair[1])) //Table created
+			{
+				$this->difference[] = $pair;
+				$emptyCollection = new Collection;
+				foreach ($emptyCollection->compare($pair[1]->indexes) as $pair2)
+				{
+					$this->difference[] = $pair2;
+				}
+				$emptyCollection = new Collection;
+				foreach ($emptyCollection->compare($pair[1]->triggers) as $pair2)
+				{
+					$this->difference[] = $pair2;
+				}
+			}
 			else
 			{
 				$this->difference[] = $pair;
@@ -120,8 +134,8 @@ class Compare
 	/**
 	 * Compares columns
 	 *
-	 * @param Table $source Source column.
-	 * @param Table $target Target column.
+	 * @param Column $source Source column.
+	 * @param Column $target Target column.
 	 *
 	 * @return void
 	 */

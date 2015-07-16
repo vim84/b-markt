@@ -20,7 +20,9 @@ if($ex = $APPLICATION->GetException())
 	die();
 }
 
-$id = IntVal($_REQUEST["ID"]);
+$id = (isset($_REQUEST['ID']) ? (int)$_REQUEST['ID'] : 0);
+if ($id < 0)
+	$id = 0;
 
 if(!CBXFeatures::IsFeatureEnabled('CatMultiStore'))
 {
@@ -28,9 +30,7 @@ if(!CBXFeatures::IsFeatureEnabled('CatMultiStore'))
 	if(($arResult = $dbResultList->Fetch()) && $id != $arResult["ID"])
 	{
 		require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
-
 		ShowError(GetMessage("CAT_FEATURE_NOT_ALLOW"));
-
 		require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin.php");
 		die();
 	}
@@ -39,27 +39,25 @@ if(!CBXFeatures::IsFeatureEnabled('CatMultiStore'))
 IncludeModuleLangFile(__FILE__);
 ClearVars();
 
-$errorMessage = "";
+$errorMessage = '';
 $bVarsFromForm = false;
 
-$userId = intval($USER->GetID());
+$userId = (int)$USER->GetID();
 
 $entityId = "CAT_STORE";
-$lang = \Bitrix\Main\Application::getInstance()->getContext()->getLanguage();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !$bReadOnly && check_bitrix_sessid())
 {
 	$arPREVIEW_PICTURE = $_FILES["IMAGE_ID"];
 	$arPREVIEW_PICTURE["del"] = $IMAGE_ID_del;
 	$arPREVIEW_PICTURE["MODULE_ID"] = "catalog";
-	$ACTIVE = ($ACTIVE == 'Y') ? $ACTIVE : 'N';
 	$ISSUING_CENTER = ($_POST["ISSUING_CENTER"] == 'Y') ? 'Y' : 'N';
 	$SHIPPING_CENTER = ($_POST["SHIPPING_CENTER"] == 'Y') ? 'Y' : 'N';
 	$fileId = 0;
 	$isImage = CFile::CheckImageFile($arPREVIEW_PICTURE);
 
 	if (trim($ADDRESS) == '')
-		$errorMessage .= GetMessage("ADDRESS_EMPTY")."\n";
+		$errorMessage .= GetMessage("ADDRESS_EMPTY")."<br>";
 
 	if (strlen($isImage) == 0 && (strlen($arPREVIEW_PICTURE["name"]) > 0 || strlen($arPREVIEW_PICTURE["del"]) > 0))
 	{
@@ -67,23 +65,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 	}
 	elseif (strlen($isImage) > 0)
 	{
-		$errorMessage .= $isImage."\n";
+		$errorMessage .= $isImage."<br>";
 	}
 
-	$arFields = Array(
-		"TITLE" => $TITLE,
-		"SORT" => intval($CSTORE_SORT),
-		"ACTIVE" => $ACTIVE,
-		"ADDRESS" => $ADDRESS,
-		"DESCRIPTION" => $DESCRIPTION,
-		"GPS_N" => $GPS_N,
-		"GPS_S" => $GPS_S,
-		"PHONE" => $PHONE,
-		"SCHEDULE" => $SCHEDULE,
-		"XML_ID" => $XML_ID,
+	$arFields = array(
+		"TITLE" => (isset($_POST['TITLE']) ? $_POST['TITLE'] : ''),
+		"SORT" => (isset($_POST['CSTORE_SORT']) ? (int)$_POST['CSTORE_SORT'] : 0),
+		"ACTIVE" => (isset($_POST['ACTIVE']) && $_POST['ACTIVE'] == 'Y' ? 'Y' : 'N'),
+		"ADDRESS" => (isset($_POST['ADDRESS']) ? $_POST['ADDRESS'] : ''),
+		"DESCRIPTION" => (isset($_POST['DESCRIPTION']) ? $_POST['DESCRIPTION'] : ''),
+		"GPS_N" => (isset($_POST['GPS_N']) ? $_POST['GPS_N'] : ''),
+		"GPS_S" => (isset($_POST['GPS_S']) ? $_POST['GPS_S'] : ''),
+		"PHONE" => (isset($_POST['PHONE']) ? $_POST['PHONE'] : ''),
+		"SCHEDULE" => (isset($_POST['SCHEDULE']) ? $_POST['SCHEDULE'] : ''),
+		"XML_ID" => (isset($_POST['XML_ID']) ? $_POST['XML_ID'] : ''),
 		"USER_ID" => $userId,
 		"MODIFIED_BY" => $userId,
-		"EMAIL" => $_POST["EMAIL"],
+		"EMAIL" => (isset($_POST["EMAIL"]) ? $_POST["EMAIL"] : ''),
 		"ISSUING_CENTER" => $ISSUING_CENTER,
 		"SHIPPING_CENTER" => $SHIPPING_CENTER,
 		"SITE_ID" => $_POST["SITE_ID"]
@@ -98,25 +96,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 
 	$DB->StartTransaction();
 
-	if (strlen($errorMessage) == 0 && ($res = CCatalogStore::Update($id, $arFields) || ($id == 0 && $res = CCatalogStore::Add($arFields))))
+	if ($errorMessage == '')
 	{
-		$id = $res;
-
-		$ufUpdated = $USER_FIELD_MANAGER->Update($entityId, $id, $arFields);
-		if ($ufUpdated)
-			$DB->Query("UPDATE b_catalog_store SET DATE_MODIFY = ".$DB->CurrentTimeFunction()." WHERE ID = ".$id);
-
+		if ($id > 0)
+		{
+			$res = CCatalogStore::Update($id, $arFields);
+		}
+		else
+		{
+			$res = CCatalogStore::Add($arFields);
+			if ($res)
+				$id = (int)$res;
+		}
+		if (!$res)
+		{
+			if ($ex = $APPLICATION->GetException())
+				$errorMessage .= $ex->GetString()."<br>";
+			else
+				$errorMessage .= GetMessage('STORE_SAVE_ERROR').'<br>';
+		}
+		else
+		{
+			$ufUpdated = $USER_FIELD_MANAGER->Update($entityId, $id, $arFields);
+		}
+	}
+	if ($errorMessage == '')
+	{
 		$DB->Commit();
 
 		if (strlen($_REQUEST["apply"]) <= 0)
-			LocalRedirect("/bitrix/admin/cat_store_list.php?lang=".LANG."&".GetFilterParams("filter_", false));
+			LocalRedirect("/bitrix/admin/cat_store_list.php?lang=".LANGUAGE_ID."&".GetFilterParams("filter_", false));
 		else
-			LocalRedirect("/bitrix/admin/cat_store_edit.php?lang=".LANG."&ID=".$id."&".GetFilterParams("filter_", false));
+			LocalRedirect("/bitrix/admin/cat_store_edit.php?lang=".LANGUAGE_ID."&ID=".$id."&".GetFilterParams("filter_", false));
 	}
 	else
 	{
-		if ($ex = $APPLICATION->GetException())
-			$errorMessage .= $ex->GetString()."<br>";
 		$bVarsFromForm = true;
 		$DB->Rollback();
 	}
@@ -235,7 +249,7 @@ if ($rsCount <= 0)
 
 	<tr colspan="2">
 		<td align="left">
-			<a href="/bitrix/admin/userfield_edit.php?lang=<?=$lang;?>&amp;ENTITY_ID=<?=$entityId;?>&amp;back_url=<?echo urlencode($APPLICATION->GetCurPageParam('', array('bxpublic'))."&tabControl_active_tab=user_fields_tab")?>"><?=GetMessage("STORE_E_USER_FIELDS_ADD_HREF");?></a>
+			<a href="/bitrix/admin/userfield_edit.php?lang=<?=LANGUAGE_ID;?>&amp;ENTITY_ID=<?=$entityId;?>&amp;back_url=<?echo urlencode($APPLICATION->GetCurPageParam('', array('bxpublic'))."&tabControl_active_tab=user_fields_tab")?>"><?=GetMessage("STORE_E_USER_FIELDS_ADD_HREF");?></a>
 		</td>
 	</tr>
 	<?if ($id > 0):?>
@@ -348,7 +362,7 @@ if ($rsCount <= 0)
 		</td>
 	</tr>
 	<?
-		$arUserFields = $USER_FIELD_MANAGER->GetUserFields($entityId, $id, $lang);
+		$arUserFields = $USER_FIELD_MANAGER->GetUserFields($entityId, $id, LANGUAGE_ID);
 		foreach($arUserFields as $FIELD_NAME => $arUserField)
 		{
 			$arUserField["VALUE_ID"] = intval($id);

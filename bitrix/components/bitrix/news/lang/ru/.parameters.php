@@ -79,4 +79,5 @@ $MESS["CP_BN_SET_STATUS_404"] = "Устанавливать статус 404, е
 $MESS["CP_BN_DETAIL_PAGER_SHOW_ALL"] = "Показывать ссылку \"Все\"";
 $MESS["CP_BN_BROWSER_TITLE"] = "Установить заголовок окна браузера из свойства";
 $MESS["CP_BN_CACHE_GROUPS"] = "Учитывать права доступа";
+$MESS["CP_BN_DETAIL_SET_CANONICAL_URL"] = "Устанавливать канонический URL";
 ?>

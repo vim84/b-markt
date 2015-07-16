@@ -31,6 +31,9 @@ $shopPassword = CSalePaySystemAction::GetParamValue("SHOP_KEY");
 $changePayStatus =  trim(CSalePaySystemAction::GetParamValue("CHANGE_STATUS_PAY"));
 $head = "";
 
+if(strlen($shopPassword) <=0 )
+	$bCorrectPayment = False;
+
 $strCheck = md5(implode(";", array($action, $orderSumAmount, $orderSumCurrencyPaycash, $orderSumBankPaycash, $shopId, $invoiceId,  $customerNumber, $shopPassword)));
 
 if ($bCorrectPayment && ToUpper($md5) != ToUpper($strCheck))

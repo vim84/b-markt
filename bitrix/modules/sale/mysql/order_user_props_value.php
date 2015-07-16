@@ -34,7 +34,6 @@ class CSaleOrderUserPropsValue extends CAllSaleOrderUserPropsValue
 				"USER_PROPS_ID" => array("FIELD" => "UP.USER_PROPS_ID", "TYPE" => "int"),
 				"ORDER_PROPS_ID" => array("FIELD" => "UP.ORDER_PROPS_ID", "TYPE" => "int"),
 				"NAME" => array("FIELD" => "UP.NAME", "TYPE" => "string"),
-				"VALUE" => array("FIELD" => "UP.VALUE", "TYPE" => "string"),
 
 				"PROP_ID" => array("FIELD" => "P.ID", "TYPE" => "int", "FROM" => "INNER JOIN b_sale_order_props P ON (UP.ORDER_PROPS_ID = P.ID)"),
 				"PROP_PERSON_TYPE_ID" => array("FIELD" => "P.PERSON_TYPE_ID", "TYPE" => "int", "FROM" => "INNER JOIN b_sale_order_props P ON (UP.ORDER_PROPS_ID = P.ID)"),
@@ -71,6 +70,8 @@ class CSaleOrderUserPropsValue extends CAllSaleOrderUserPropsValue
 				"CODE" => array("FIELD" => "P.CODE", "TYPE" => "string", "FROM" => "INNER JOIN b_sale_order_props P ON (UP.ORDER_PROPS_ID = P.ID)")
 			);
 		// <-- FIELDS
+
+		CSaleOrderPropsValue::addPropertyValueField('UP', $arFields, $arSelectFields);
 
 		$arSqls = CSaleOrder::PrepareSql($arFields, $arOrder, $arFilter, $arGroupBy, $arSelectFields);
 
@@ -155,6 +156,9 @@ class CSaleOrderUserPropsValue extends CAllSaleOrderUserPropsValue
 	function Add($arFields)
 	{
 		global $DB;
+
+		// translate here
+		$arFields['VALUE'] = CSaleOrderPropsValue::translateLocationIDToCode($arFields['VALUE'], $arFields['ORDER_PROPS_ID']);
 
 		$arInsert = $DB->PrepareInsert("b_sale_user_props_value", $arFields);
 

@@ -45,7 +45,9 @@ $p_extcode = $_POST["EXTCODE"];
 
 $bError = true;
 
-if($arOrder = CSaleOrder::GetByID(IntVal($p_order)))
+$mac = CSalePaySystemAction::GetParamValue("MAC");
+
+if(strlen($mac) > 0 && $arOrder = CSaleOrder::GetByID(IntVal($p_order)))
 {
 	CSalePaySystemAction::InitParamArrays($arOrder, $arOrder["ID"]);
 	
@@ -66,8 +68,8 @@ if($arOrder = CSaleOrder::GetByID(IntVal($p_order)))
 	$desc = trim(CSalePaySystemAction::GetParamValue("ORDER_DESC").CSalePaySystemAction::GetParamValue("ORDER_ID")); 
 	$merchant = CSalePaySystemAction::GetParamValue("MERCHANT");
 	$terminal = CSalePaySystemAction::GetParamValue("TERMINAL");
-	$email = CSalePaySystemAction::GetParamValue("EMAIL"); 
-	$mac = CSalePaySystemAction::GetParamValue("MAC");
+	$email = CSalePaySystemAction::GetParamValue("EMAIL");
+
 	$PAY_OK = str_replace("#ID#", $arOrder["ID"], CSalePaySystemAction::GetParamValue("PAY_OK"));
 	$PAY_ERROR = str_replace("#ID#", $arOrder["ID"], CSalePaySystemAction::GetParamValue("PAY_ERROR"));
 	$ALLOW_DELIVERY = CSalePaySystemAction::GetParamValue("ALLOW_DELIVERY");

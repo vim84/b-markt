@@ -1,5 +1,6 @@
 <?
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Sale\DiscountCouponsManager;
 
 Loc::loadMessages(__FILE__);
 
@@ -220,6 +221,8 @@ class CAllSaleOrder
 		return $arResult;
 	}
 
+	// $direct == true => ID => CODE
+	// $direct == false => CODE => ID
 	public static function TranslateLocationPropertyValues($personTypeId, &$orderProps, $direct = true)
 	{
 		if(CSaleLocation::isLocationProMigrated())
@@ -237,7 +240,12 @@ class CAllSaleOrder
 			while($item = $dbOrderProps->fetch())
 			{
 				if($item['TYPE'] == 'LOCATION' && strlen($orderProps[$item['ID']]))
-					$orderProps[$item['ID']] = $direct ? CSaleLocation::getLocationCODEbyID($orderProps[$item['ID']]) : CSaleLocation::getLocationIDbyCODE($orderProps[$item['ID']]);
+				{
+					$source = $orderProps[$item['ID']];
+					$replace = $direct ? CSaleLocation::getLocationCODEbyID($source) : CSaleLocation::getLocationIDbyCODE($source);
+
+					$orderProps[$item['ID']] = $replace;
+				}
 			}
 		}
 	}
@@ -306,6 +314,9 @@ class CAllSaleOrder
 		CSaleBasket::DoSaveOrderBasket($orderId, $arOrder["SITE_ID"], $arOrder["USER_ID"], $arOrder["BASKET_ITEMS"], $arErrors, $arCoupons, $arStoreBarcodeOrderFormData, $bSaveBarcodes);
 		CSaleTax::DoSaveOrderTax($orderId, $arOrder["TAX_LIST"], $arErrors);
 		CSaleOrderProps::DoSaveOrderProps($orderId, $arOrder["PERSON_TYPE_ID"], $arOrder["ORDER_PROP"], $arErrors);
+
+		DiscountCouponsManager::finalApply();
+		DiscountCouponsManager::saveApplied();
 
 		foreach(GetModuleEvents("sale", "OnOrderSave", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array($orderId, $arFields, $arOrder, $isNew));
@@ -3111,6 +3122,28 @@ class CAllSaleOrder
 			return "( (NOT (".$fields["STATUS_ID"]["FIELD"]." ".$op." ".$values.")) AND (".$fields["CANCELED"]["FIELD"]." = 'N'))";
 		else
 			return "((".$fields["STATUS_ID"]["FIELD"]." ".$op." ".$values.") OR (".$fields["CANCELED"]["FIELD"]." = 'Y'))";
+	}
+
+	// returns reference of all properties of TYPE = LOCATION
+	public static function getLocationPropertyInfo()
+	{
+		static $info;
+
+		if($info === null)
+		{
+			$info = array();
+			if(CSaleLocation::isLocationProMigrated())
+			{
+				$res = CSaleOrderProps::GetList(array(), array('TYPE' => 'LOCATION'), false, false, array('ID', 'CODE'));
+				while($item = $res->fetch())
+				{
+					$info['ID'][$item['ID']] = $item['CODE'];
+					$info['CODE'][$item['CODE']] = $item['ID'];
+				}
+			}
+		}
+
+		return $info;
 	}
 }
 ?>

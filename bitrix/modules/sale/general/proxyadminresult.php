@@ -32,16 +32,31 @@ class CSaleProxyAdminResult extends CAdminResult
 		// force to db resource type, although we got empty array on input
 		$en = $this->entityName;
 
-		if($this->parameters['runtime'])
-			$runtime = $this->parameters['runtime'];
-		else
-			$runtime = array();
+		$runtime = is_array($this->parameters['runtime']) ? $this->parameters['runtime'] : array();
+		$filter = is_array($this->parameters['filter']) ? $this->parameters['filter'] : array();
+
+		// to increase perfomance, have to throw away unused (in filter) runtimes
+		foreach($runtime as $fld => $desc)
+		{
+			$found = false;
+			foreach($filter as $condition => $value)
+			{
+				if(strpos($condition, $fld) !== false)
+				{
+					$found = true;
+					break;
+				}
+			}
+
+			if(!$found)
+				unset($runtime[$fld]);
+		}
 
 		$count = $en::getList(array(
-			'filter' => is_array($this->parameters['filter']) ? $this->parameters['filter'] : array(),
-			'select' => array('CNT'),
+			'filter' => $filter,
+			'select' => array('REC_CNT'),
 			'runtime' => array_merge($runtime, array(
-				'CNT' => array(
+				'REC_CNT' => array(
 					'data_type' => 'integer',
 					'expression' => array(
 						'count(*)'
@@ -49,7 +64,7 @@ class CSaleProxyAdminResult extends CAdminResult
 				)
 			))
 		))->fetch();
-		$this->NavRecordCount = $count['CNT'];
+		$this->NavRecordCount = $count['REC_CNT'];
 
 		// the following code was taken from DBNavStart()
 

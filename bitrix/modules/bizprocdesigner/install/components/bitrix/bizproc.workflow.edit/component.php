@@ -42,6 +42,7 @@ if($ID > 0)
 		$arWorkflowTemplate = $arTemplate["TEMPLATE"];
 		$arWorkflowParameters = $arTemplate["PARAMETERS"];
 		$arWorkflowVariables = $arTemplate["VARIABLES"];
+		$arWorkflowConstants = $arTemplate["CONSTANTS"];
 	}
 	else
 		$ID = 0;
@@ -85,8 +86,9 @@ if($ID <= 0)
 			);
 	}
 
-	$arWorkflowParameters =  Array();
-	$arWorkflowVariables = Array();
+	$arWorkflowParameters =  array();
+	$arWorkflowVariables = array();
+	$arWorkflowConstants = array();
 }
 
 if(!$canWrite)
@@ -119,37 +121,6 @@ if($_SERVER['REQUEST_METHOD']=='POST' && $_REQUEST['saveajax']=='Y' && check_bit
 		die();
 	}
 
-
-	/*if(LANG_CHARSET != "UTF-8")
-	{
-		if(is_array($_POST["arWorkflowParameters"]))
-		{
-			foreach($_POST["arWorkflowParameters"] as $name=>$param)
-			{
-				if(is_array($_POST["arWorkflowParameters"][$name]["Options"]))
-				{
-					$newarr = Array();
-					foreach($_POST["arWorkflowParameters"][$name]["Options"] as $k=>$v)
-						$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
-					$_POST["arWorkflowParameters"][$name]["Options"] = $newarr;
-				}
-			}
-		}
-	}
-
-	if(LANG_CHARSET != "UTF-8" && is_array($_POST["arWorkflowVariables"]))
-	{
-		foreach($_POST["arWorkflowVariables"] as $name=>$param)
-		{
-			if(is_array($_POST["arWorkflowVariables"][$name]["Options"]))
-			{
-				$newarr = Array();
-				foreach($_POST["arWorkflowVariables"][$name]["Options"] as $k=>$v)
-					$newarr[$GLOBALS["APPLICATION"]->ConvertCharset($k, "UTF-8", LANG_CHARSET)] = $v;
-				$_POST["arWorkflowVariables"][$name]["Options"] = $newarr;
-			}
-		}
-	}*/
 	if (LANG_CHARSET != "UTF-8")
 	{
 		function BPasDecodeArrayKeys($item)
@@ -182,15 +153,15 @@ if($_SERVER['REQUEST_METHOD']=='POST' && $_REQUEST['saveajax']=='Y' && check_bit
 		"TEMPLATE" 		=> $_POST["arWorkflowTemplate"],
 		"PARAMETERS"	=> $_POST["arWorkflowParameters"],
 		"VARIABLES" 	=> $_POST["arWorkflowVariables"],
+		"CONSTANTS" 	=> $_POST["arWorkflowConstants"],
 		"USER_ID"		=> intval($USER->GetID()),
 		"MODIFIER_USER" => new CBPWorkflowTemplateUser(CBPWorkflowTemplateUser::CurrentUser),
 		);
 
 	if(!is_array($arFields["VARIABLES"]))
-		$arFields["VARIABLES"] = Array();
-
-	if($arTemplate["TEMPLATE"]!=$arFields["TEMPLATE"])
-		$arFields["SYSTEM_CODE"] = '';
+		$arFields["VARIABLES"] = array();
+	if(!is_array($arFields["CONSTANTS"]))
+		$arFields["CONSTANTS"] = array();
 
 	function wfeexception_handler($e)
 	{
@@ -317,6 +288,7 @@ $arResult['TEMPLATE_AUTOSTART'] = $workflowTemplateAutostart;
 $arResult['TEMPLATE'] = $arWorkflowTemplate;
 $arResult['PARAMETERS'] = $arWorkflowParameters;
 $arResult['VARIABLES'] = $arWorkflowVariables;
+$arResult['CONSTANTS'] = $arWorkflowConstants;
 
 $arResult["ID"] = $ID;
 

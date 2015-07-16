@@ -1,6 +1,8 @@
 <?
 //<title>Yandex</title>
 
+use Bitrix\Currency;
+
 IncludeModuleLangFile($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/catalog/export_yandex.php');
 set_time_limit(0);
 
@@ -21,9 +23,7 @@ if (!CCatalog::IsUserExists())
 CCatalogDiscountSave::Disable();
 CCatalogDiscountCoupon::ClearCoupon();
 if ($USER->IsAuthorized())
-{
 	CCatalogDiscountCoupon::ClearCouponsByManage($USER->GetID());
-}
 
 $arYandexFields = array('vendor', 'vendorCode', 'model', 'author', 'name', 'publisher', 'series', 'year', 'ISBN', 'volume', 'part', 'language', 'binding', 'page_extent', 'table_of_contents', 'performed_by', 'performance_type', 'storage', 'format', 'recording_length', 'artist', 'title', 'year', 'media', 'starring', 'director', 'originalName', 'country', 'aliases', 'description', 'sales_notes', 'promo', 'provider', 'tarifplan', 'xCategory', 'additional', 'worldRegion', 'region', 'days', 'dataTour', 'hotel_stars', 'room', 'meal', 'included', 'transport', 'price_min', 'price_max', 'options', 'manufacturer_warranty', 'country_of_origin', 'downloadable', 'param', 'place', 'hall', 'hall_part', 'is_premiere', 'is_kids', 'date',);
 
@@ -209,9 +209,7 @@ function yandex_get_value($arOffer, $param, $PROPERTY, &$arProperties, &$arUserT
 								if ($ar_file = CFile::GetFileArray($intValue))
 								{
 									if(substr($ar_file["SRC"], 0, 1) == "/")
-										$strFile = "http://".$iblockServerName.implode("/", array_map("rawurlencode", explode("/", $ar_file["SRC"])));
-									elseif(preg_match("/^(http|https):\\/\\/(.*?)\\/(.*)\$/", $ar_file["SRC"], $match))
-										$strFile = "http://".$match[2].'/'.implode("/", array_map("rawurlencode", explode("/", $match[3])));
+										$strFile = "http://".$iblockServerName.CHTTP::urnEncode($ar_file['SRC'], 'utf-8');
 									else
 										$strFile = $ar_file["SRC"];
 									$value .= ($value ? ', ' : '').$strFile;
@@ -229,9 +227,7 @@ function yandex_get_value($arOffer, $param, $PROPERTY, &$arProperties, &$arUserT
 							if ($ar_file = CFile::GetFileArray($arProperty['VALUE']))
 							{
 								if(substr($ar_file["SRC"], 0, 1) == "/")
-									$strFile = "http://".$iblockServerName.implode("/", array_map("rawurlencode", explode("/", $ar_file["SRC"])));
-								elseif(preg_match("/^(http|https):\\/\\/(.*?)\\/(.*)\$/", $ar_file["SRC"], $match))
-									$strFile = "http://".$match[2].'/'.implode("/", array_map("rawurlencode", explode("/", $match[3])));
+									$strFile = "http://".$iblockServerName.CHTTP::urnEncode($ar_file['SRC'], 'utf-8');
 								else
 									$strFile = $ar_file["SRC"];
 								$value = $strFile;
@@ -565,55 +561,60 @@ if (empty($arRunErrors))
 
 if (empty($arRunErrors))
 {
-	@fwrite($fp, '<? header("Content-Type: text/xml; charset=windows-1251");?>');
-	@fwrite($fp, '<? echo "<"."?xml version=\"1.0\" encoding=\"windows-1251\"?".">"?>');
-	@fwrite($fp, "\n<!DOCTYPE yml_catalog SYSTEM \"shops.dtd\">\n");
-	@fwrite($fp, "<yml_catalog date=\"".Date("Y-m-d H:i")."\">\n");
-	@fwrite($fp, "<shop>\n");
+	fwrite($fp, '<? header("Content-Type: text/xml; charset=windows-1251");?>');
+	fwrite($fp, '<? echo "<"."?xml version=\"1.0\" encoding=\"windows-1251\"?".">"?>');
+	fwrite($fp, "\n".'<!DOCTYPE yml_catalog SYSTEM "shops.dtd">'."\n");
+	fwrite($fp, '<yml_catalog date="'.date("Y-m-d H:i").'">'."\n");
+	fwrite($fp, '<shop>'."\n");
 
-	@fwrite($fp, "<name>".$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString("main", "site_name", "")), LANG_CHARSET, 'windows-1251')."</name>\n");
+	fwrite($fp, '<name>'.$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString('main', 'site_name', '')), LANG_CHARSET, 'windows-1251')."</name>\n");
 
-	@fwrite($fp, "<company>".$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString("main", "site_name", "")), LANG_CHARSET, 'windows-1251')."</company>\n");
-	@fwrite($fp, "<url>http://".htmlspecialcharsbx($ar_iblock['SERVER_NAME'])."</url>\n");
-	@fwrite($fp, "<platform>1C-Bitrix</platform>\n");
+	fwrite($fp, '<company>'.$APPLICATION->ConvertCharset(htmlspecialcharsbx(COption::GetOptionString('main', 'site_name', '')), LANG_CHARSET, 'windows-1251')."</company>\n");
+	fwrite($fp, '<url>http://'.htmlspecialcharsbx($ar_iblock['SERVER_NAME'])."</url>\n");
+	fwrite($fp, '<platform>1C-Bitrix</platform>'."\n");
 
-	$strTmp = "<currencies>\n";
+	$strTmp = '<currencies>'."\n";
 
-	if ($arCurrency = CCurrency::GetByID('RUR'))
+	$RUR = 'RUB';
+	$currencyIterator = Currency\CurrencyTable::getList(array(
+		'select' => array('CURRENCY'),
+		'filter' => array('=CURRENCY' => 'RUR')
+	));
+	if ($currency = $currencyIterator->fetch())
 		$RUR = 'RUR';
-	else
-		$RUR = 'RUB';
+	unset($currency, $currencyIterator);
 
 	$arCurrencyAllowed = array($RUR, 'USD', 'EUR', 'UAH', 'BYR', 'KZT');
 
-	$BASE_CURRENCY = CCurrency::GetBaseCurrency();
+	$BASE_CURRENCY = Currency\CurrencyManager::getBaseCurrency();
 	if (is_array($XML_DATA['CURRENCY']))
 	{
 		foreach ($XML_DATA['CURRENCY'] as $CURRENCY => $arCurData)
 		{
 			if (in_array($CURRENCY, $arCurrencyAllowed))
 			{
-				$strTmp.= "<currency id=\"".$CURRENCY."\""
-				." rate=\"".($arCurData['rate'] == 'SITE' ? CCurrencyRates::ConvertCurrency(1, $CURRENCY, $RUR) : $arCurData['rate'])."\""
-				.($arCurData['plus'] > 0 ? ' plus="'.intval($arCurData['plus']).'"' : '')
+				$strTmp.= '<currency id="'.$CURRENCY.'"'
+				.' rate="'.($arCurData['rate'] == 'SITE' ? CCurrencyRates::ConvertCurrency(1, $CURRENCY, $RUR) : $arCurData['rate']).'"'
+				.($arCurData['plus'] > 0 ? ' plus="'.(int)$arCurData['plus'].'"' : '')
 				." />\n";
 			}
 		}
+		unset($CURRENCY, $arCurData);
 	}
 	else
 	{
-		$by="sort";
-		$order="asc";
-		$db_acc = CCurrency::GetList($by, $order);
-		while ($arAcc = $db_acc->Fetch())
-		{
-			if (in_array($arAcc['CURRENCY'], $arCurrencyAllowed))
-				$strTmp.= '<currency id="'.$arAcc["CURRENCY"].'" rate="'.(CCurrencyRates::ConvertCurrency(1, $arAcc["CURRENCY"], $RUR)).'" />'."\n";
-		}
+		$currencyIterator = Currency\CurrencyTable::getList(array(
+			'select' => array('CURRENCY'),
+			'filter' => array('@CURRENCY' => $arCurrencyAllowed),
+			'order' => array('SORT' => 'ASC')
+		));
+		while ($currency = $currencyIterator->fetch())
+			$strTmp.= '<currency id="'.$currency['CURRENCY'].'" rate="'.(CCurrencyRates::ConvertCurrency(1, $currency['CURRENCY'], $RUR)).'" />'."\n";
+		unset($currency, $currencyIterator);
 	}
 	$strTmp.= "</currencies>\n";
 
-	@fwrite($fp, $strTmp);
+	fwrite($fp, $strTmp);
 	unset($strTmp);
 
 	//*****************************************//
@@ -668,6 +669,8 @@ if (empty($arRunErrors))
 			}
 			unset($section, $sectionIterator);
 		}
+		if (!empty($arSectionIDs))
+			$arSectionIDs = array_unique($arSectionIDs);
 	}
 	else
 	{
@@ -881,9 +884,7 @@ if (empty($arRunErrors))
 				if ($ar_file = CFile::GetFileArray($pictNo))
 				{
 					if(substr($ar_file["SRC"], 0, 1) == "/")
-						$strFile = "http://".$ar_iblock['SERVER_NAME'].implode("/", array_map("rawurlencode", explode("/", $ar_file["SRC"])));
-					elseif(preg_match("/^(http|https):\\/\\/(.*?)\\/(.*)\$/", $ar_file["SRC"], $match))
-						$strFile = "http://".$match[2].'/'.implode("/", array_map("rawurlencode", explode("/", $match[3])));
+						$strFile = "http://".$ar_iblock['SERVER_NAME'].CHTTP::urnEncode($ar_file["SRC"], 'utf-8');
 					else
 						$strFile = $ar_file["SRC"];
 					$strTmpOff.="<picture>".$strFile."</picture>\n";
@@ -1087,9 +1088,7 @@ if (empty($arRunErrors))
 				if ($ar_file = CFile::GetFileArray($pictNo))
 				{
 					if(substr($ar_file["SRC"], 0, 1) == "/")
-						$strFile = "http://".$ar_iblock['SERVER_NAME'].implode("/", array_map("rawurlencode", explode("/", $ar_file["SRC"])));
-					elseif(preg_match("/^(http|https):\\/\\/(.*?)\\/(.*)\$/", $ar_file["SRC"], $match))
-						$strFile = "http://".$match[2].'/'.implode("/", array_map("rawurlencode", explode("/", $match[3])));
+						$strFile = "http://".$ar_iblock['SERVER_NAME'].CHTTP::urnEncode($ar_file['SRC'], 'utf-8');
 					else
 						$strFile = $ar_file["SRC"];
 				}
@@ -1300,9 +1299,7 @@ if (empty($arRunErrors))
 						if ($ar_file = CFile::GetFileArray($pictNo))
 						{
 							if(substr($ar_file["SRC"], 0, 1) == "/")
-								$strFile = "http://".$ar_iblock['SERVER_NAME'].implode("/", array_map("rawurlencode", explode("/", $ar_file["SRC"])));
-							elseif(preg_match("/^(http|https):\\/\\/(.*?)\\/(.*)\$/", $ar_file["SRC"], $match))
-								$strFile = "http://".$match[2].'/'.implode("/", array_map("rawurlencode", explode("/", $match[3])));
+								$strFile = "http://".$ar_iblock['SERVER_NAME'].CHTTP::urnEncode($ar_file['SRC'], 'utf-8');
 							else
 								$strFile = $ar_file["SRC"];
 						}
@@ -1546,9 +1543,7 @@ if (empty($arRunErrors))
 						if ($ar_file = CFile::GetFileArray($pictNo))
 						{
 							if(substr($ar_file["SRC"], 0, 1) == "/")
-								$strFile = "http://".$ar_iblock['SERVER_NAME'].implode("/", array_map("rawurlencode", explode("/", $ar_file["SRC"])));
-							elseif(preg_match("/^(http|https):\\/\\/(.*?)\\/(.*)\$/", $ar_file["SRC"], $match))
-								$strFile = "http://".$match[2].'/'.implode("/", array_map("rawurlencode", explode("/", $match[3])));
+								$strFile = "http://".$ar_iblock['SERVER_NAME'].CHTTP::urnEncode($ar_file['SRC'], 'utf-8');
 							else
 								$strFile = $ar_file["SRC"];
 						}
@@ -1895,22 +1890,22 @@ if (empty($arRunErrors))
 		}
 	}
 
-	@fwrite($fp, "<categories>\n");
-	if (true == $boolNeedRootSection)
+	fwrite($fp, "<categories>\n");
+	if ($boolNeedRootSection)
 	{
 		$strTmpCat .= "<category id=\"".$intMaxSectionID."\">".yandex_text2xml(GetMessage('YANDEX_ROOT_DIRECTORY'), true)."</category>\n";
 	}
-	@fwrite($fp, $strTmpCat);
-	@fwrite($fp, "</categories>\n");
+	fwrite($fp, $strTmpCat);
+	fwrite($fp, "</categories>\n");
 
-	@fwrite($fp, "<offers>\n");
-	@fwrite($fp, $strTmpOff);
-	@fwrite($fp, "</offers>\n");
+	fwrite($fp, "<offers>\n");
+	fwrite($fp, $strTmpOff);
+	fwrite($fp, "</offers>\n");
 
-	@fwrite($fp, "</shop>\n");
-	@fwrite($fp, "</yml_catalog>\n");
+	fwrite($fp, "</shop>\n");
+	fwrite($fp, "</yml_catalog>\n");
 
-	@fclose($fp);
+	fclose($fp);
 }
 
 CCatalogDiscountSave::Enable();
@@ -1927,4 +1922,3 @@ if ($bTmpUserCreated)
 		unset($USER_TMP);
 	}
 }
-?>

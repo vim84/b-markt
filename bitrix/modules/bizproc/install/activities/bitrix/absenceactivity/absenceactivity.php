@@ -51,6 +51,11 @@ class CBPAbsenceActivity
 		while ($arTypeValue = $dbTypeRes->GetNext())
 			$arAbsenceTypes[$arTypeValue['XML_ID']] = $arTypeValue['ID'];
 
+		$name = $this->AbsenceName;
+		// if multiple or list element
+		if (is_array($name))
+			$name = implode(', ', $name);
+
 		foreach ($arAbsenceUser as $absenceUser)
 		{
 			$arFields = Array(
@@ -58,7 +63,7 @@ class CBPAbsenceActivity
 				"IBLOCK_ID" => $absenceIblockId,
 				'ACTIVE_FROM' => $this->AbsenceFrom,
 				'ACTIVE_TO' => $this->AbsenceTo,
-				"NAME" => $this->AbsenceName,
+				"NAME" => $name,
 				"PREVIEW_TEXT" => $this->AbsenceDesrc,
 				"PREVIEW_TEXT_TYPE" => "text",
 				"PROPERTY_VALUES" => array(

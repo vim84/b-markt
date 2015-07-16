@@ -273,4 +273,6 @@ $MESS["IB_E_PROP_BASE_TYPE_GROUP"] = "Standard types";
 $MESS["IB_E_PROP_USER_TYPE_GROUP"] = "Custom types";
 $MESS["IB_E_ERR_PROPERTY_CODE_DUBLICATE_EXT"] = "Information block properties cannot share the same symbolic code. The following codes are used more than once (case insensitive):";
 $MESS["IBLOCK_BACK_TO_ADMIN"] = "Back to information block list";
+$MESS["IB_E_CANONICAL_PAGE_URL"] = "Element canonical URL:<br>(specify the protocol, server address and path)";
+$MESS["IB_E_FIELD_IBLOCK_SECTION_KEEP_IBLOCK_SECTION_ID"] = "Enable to select main section for binding.";
 ?>

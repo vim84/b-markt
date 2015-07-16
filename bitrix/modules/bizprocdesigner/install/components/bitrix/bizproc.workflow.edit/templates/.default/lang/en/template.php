@@ -21,4 +21,5 @@ $MESS["BIZPROC_IMPORT_BUTTON"] = "Import";
 $MESS["BIZPROC_IMPORT_TITLE"] = "Import Template";
 $MESS["BIZPROC_IMPORT_FILE"] = "File";
 $MESS["BIZPROC_WFEDIT_MENU_IMPORT_PROMT"] = "Current business process template will be replaced with the imported one. Continue?";
+$MESS["BIZPROC_EMPTY_EXPORT"] = "Please save the template before exporting it.";
 ?>

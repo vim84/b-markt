@@ -10,15 +10,15 @@ ul#bx_google_points li, ul#bx_google_polylines li, #bx_google_position li {
 	font-size: 11px;
 	display: block;
 	overflow: hidden;
-	height: 18px;
-	margin: 0px 0px 0px 15px;
+	height: auto;
+	margin: 2px 0px 2px 15px;
 	padding: 0px;
 	white-space: nowrap;
 	position: relative;
 }
 
-ul#bx_google_points li a, ul#bx_google_polylines li a {display: block;}
-ul#bx_google_points li a.bx-google-point {display: block; overflow: hidden; margin-right: 20px; padding: 2px; height: 18px;}
+ul#bx_google_points li a, ul#bx_google_polylines li a {display: block; font-size: 13px;}
+ul#bx_google_points li a.bx-google-point {display: block; overflow: hidden; margin-right: 20px; padding: 2px;}
 * html .bx-google-point {width: 215px;}
 ul#bx_google_points li a.bx-google-delete {
 	background-image: url(/bitrix/themes/.default/public/panel_new/buttons/delete.gif); 

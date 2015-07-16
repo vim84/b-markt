@@ -6,13 +6,19 @@ class CSocNetLogFollow
 		static $LOG_CACHE;
 
 		if (strlen($code) <= 0)
+		{
 			$code = "**";
+		}
 
 		if ($type != "Y")
+		{
 			$type = "N";
+		}
 
 		if (intval($user_id) <= 0)
+		{
 			$user_id = $GLOBALS["USER"]->GetID();
+		}
 
 		$arFollows = array();
 
@@ -30,10 +36,11 @@ class CSocNetLogFollow
 			);
 		}
 
-		if (array_key_exists("**", $arFollows))
-			$default_type = $arFollows["**"]["TYPE"];
-		else
-			$default_type = COption::GetOptionString("socialnetwork", "follow_default_type", "Y");
+		$default_type = (
+			array_key_exists("**", $arFollows)
+				? $arFollows["**"]["TYPE"]
+				: COption::GetOptionString("socialnetwork", "follow_default_type", "Y")
+		);
 
 		if (preg_match('/^L(\d+)$/', $code, $matches))
 		{
@@ -41,7 +48,9 @@ class CSocNetLogFollow
 			if ($log_id > 0)
 			{
 				if (isset($LOG_CACHE[$log_id]))
+				{
 					$arLog = $LOG_CACHE[$log_id];
+				}
 				else
 				{
 					$rsLog = CSocNetLog::GetList(
@@ -105,10 +114,11 @@ class CSocNetLogFollow
 		}
 		else // **, change of default type
 		{
-			if (array_key_exists($code, $arFollows))
-				$res = CSocNetLogFollow::Update($user_id, $code, $type, false);
-			else
-				$res = CSocNetLogFollow::Add($user_id, $code, $type, false);
+			$res = (
+				array_key_exists($code, $arFollows)
+					? CSocNetLogFollow::Update($user_id, $code, $type, false)
+					: CSocNetLogFollow::Add($user_id, $code, $type, false)
+			);
 		}
 
 		return $res;

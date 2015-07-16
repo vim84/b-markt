@@ -348,11 +348,11 @@ h3.bx-otp-wrap-container-title{
             box-sizing:border-box;
     padding:0 15px;
     cursor:pointer;
-    -webkit-transition:border .3s ease, background-color .3s ease, color .3s ease;
-       -moz-transition:border .3s ease, background-color .3s ease, color .3s ease;
-        -ms-transition:border .3s ease, background-color .3s ease, color .3s ease;
-         -o-transition:border .3s ease, background-color .3s ease, color .3s ease;
-            transition:border .3s ease, background-color .3s ease, color .3s ease;
+    -webkit-transition:border .3s ease, background .3s ease, color .3s ease;
+       -moz-transition:border .3s ease, background .3s ease, color .3s ease;
+        -ms-transition:border .3s ease, background .3s ease, color .3s ease;
+         -o-transition:border .3s ease, background .3s ease, color .3s ease;
+            transition:border .3s ease, background .3s ease, color .3s ease;
     text-align:center;
     vertical-align:middle;
     text-decoration:none;
@@ -367,36 +367,38 @@ h3.bx-otp-wrap-container-title{
             background-size: auto 70% !important;
     color: rgba(0,0,0,0) !important;
 }
-
 .bx-otp-btn.big     {line-height:40px;height:40px;font-size:12px;}
 .bx-otp-btn.medium  {line-height:32px;height:32px;font-size:12px;}
 .bx-otp-btn.small   {line-height:29px;height:29px;font-size:12px;}
 .bx-otp-btn.xsmall  {line-height:18px;height:20px;font-size:11px;padding-bottom: 2px;font-weight: normal;}
 
 .bx-otp-btn.gray                            {background-color:#868d95;color:#fff;}
-.bx-otp-btn.gray:hover                      {background-color:#5b6573;}
-.bx-otp-btn.gray:active                     {background-color:#3b506e;}
+.bx-otp-btn.gray:hover                      {background-color:#5b6573;color:#fff;}
+.bx-otp-btn.gray:active                     {background-color:#3b506e;color:#fff;}
+.bx-otp-btn.gray.wait                       {background:#3b506e url(images/ld_gray.gif) center center no-repeat;}
 
 .bx-otp-btn.red                             {background-color:#f1361b;color:#fff;}
-.bx-otp-btn.red:hover                       {background-color:#cc1a00;}
-.bx-otp-btn.red:active                      {background-color:#d24430;}
+.bx-otp-btn.red:hover                       {background-color:#cc1a00;color:#fff;}
+.bx-otp-btn.red:active                      {background-color:#d24430;color:#fff;}
 .bx-otp-btn.red.wait                        {background:#d24430 url(images/ld_red.gif) center center no-repeat;}
 
 .bx-otp-btn.green                           {background-color:#bbed21;}
-.bx-otp-btn.green:hover                     {background-color:#d2f95f;}
-.bx-otp-btn.green:active                    {background-color:#b2e233;}
+.bx-otp-btn.green:hover                     {background-color:#d2f95f;color:#535b69;}
+.bx-otp-btn.green:active                    {background-color:#b2e233;color:#535b69;}
+.bx-otp-btn.green.wait                      {background:#b2e233 url(images/ld_green.gif) center center no-repeat;}
 
-.bx-otp-btn.blue                            {background-color:#3bc8f5;color:#fff;}
-.bx-otp-btn.blue:hover                      {background-color:#3fddff;}
-.bx-otp-btn.blue:active                     {background-color:#13b1e3;}
+.bx-otp-btn.blue                            {background-color:#3bc8f5;}
+.bx-otp-btn.blue:hover                      {background-color:#3fddff;color:#fff;}
+.bx-otp-btn.blue:active                     {background-color:#13b1e3;color:#fff;}
+.bx-otp-btn.blue.wait                       {background:#13b1e3 url(images/ld_blue.gif) center center no-repeat;}
 
 .bx-otp-btn.lightgray                       {background-color:#d9dfe3;}
-.bx-otp-btn.lightgray:hover                 {background-color:#cfd3d6;}
+.bx-otp-btn.lightgray:hover                 {background-color:#cfd3d6;color:#535b69;}
 .bx-otp-btn.lightgray.wait                  {background:#cfd3d6 url(images/ld_lightgray.gif) center center no-repeat;}
 
 .bx-otp-btn.transparent                     {background-color:transparent;}
-.bx-otp-btn.transparent:hover               {background-color:#e5e8eb;}
-
+.bx-otp-btn.transparent:hover               {background-color:#e5e8eb;color:#535b69;}
+.bx-otp-btn.transparent.wait                {background:#e5e8eb url(images/ld_transparent.gif) center center no-repeat;}
 
 .bx-otp-btn.transparent.border              {border:1px solid #c4cace;}
 .bx-otp-btn.transparent.border:hover        {border:1px solid #9fa4ab;}
@@ -425,3 +427,4 @@ h3.bx-otp-wrap-container-title{
 .tdn  {text-decoration:none     !important}
 .lhn  {line-height:    normal   !important}
 .ttn  {text-transform: none     !important}
+

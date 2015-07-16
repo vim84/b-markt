@@ -53,7 +53,7 @@ else
 	{
 		$eventsTmp = "";
 		foreach ($arResult["BP"]["DOCUMENT_STATE_EVENTS"] as $e)
-			$eventsTmp = '<a href="'.$e["URL"].'">'.$e["TITLE"].'</a><br />';
+			$eventsTmp .= '<a href="'.$e["URL"].'">'.$e["TITLE"].'</a><br />';
 		$arFieldsTmp[] = array("id" => "EVENTS", "name" => GetMessage("BPWC_WNCT_EVENTS"), "type" => "custom", "value" => $eventsTmp);
 	}
 
@@ -105,31 +105,6 @@ else
 
 	$dbTrack->NavStart($arNav["nPageSize"]);
 
-	$GLOBALS["__bwl_ParseStringParameterTmp1_arAllowableUserGroups"] = CBPDocument::GetAllowableUserGroups($arResult["DocumentType"]);
-	function __bwl_ParseStringParameterTmp1($matches)
-	{
-		$result = "";
-		if ($matches[1] == "user")
-		{
-			$user = $matches[2];
-
-			$l = strlen("user_");
-			if (substr($user, 0, $l) == "user_")
-				$result = htmlspecialcharsbx(CBPHelper::ConvertUserToPrintableForm(intval(substr($user, $l))));
-			else
-				$result = $GLOBALS["__bwl_ParseStringParameterTmp1_arAllowableUserGroups"][$user];
-		}
-		elseif ($matches[1] == "group")
-		{
-			$result = $GLOBALS["__bwl_ParseStringParameterTmp1_arAllowableUserGroups"][$matches[2]];
-		}
-		else
-		{
-			$result = $matches[0];
-		}
-		return $result;
-	}
-
 	$arRowsTmp = array();
 	while ($arTrackRecord = $dbTrack->GetNext())
 	{
@@ -141,11 +116,7 @@ else
 			}
 		}
 		$note = $arTrackRecord["ACTION_NOTE"];
-		$note = preg_replace_callback(
-			"/\{=([A-Za-z0-9_]+)\:([A-Za-z0-9_]+)\}/i",
-			"__bwl_ParseStringParameterTmp1",
-			$note
-		);
+		$note = CBPTrackingService::parseStringParameter($note,$arResult["DocumentType"]);
 
 		$arCols = array("ACTION_NOTE" => $note);
 

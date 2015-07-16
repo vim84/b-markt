@@ -5,7 +5,8 @@ if (
 	|| SITE_TEMPLATE_ID != "bitrix24"
 )
 {
-	?><?$APPLICATION->IncludeComponent(
+	?><?
+	$arUserProfileResult = $APPLICATION->IncludeComponent(
 		"bitrix:socialnetwork.user_profile",
 		"short", 
 		Array(

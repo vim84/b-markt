@@ -449,9 +449,9 @@ class CBackup
 	function SkipTableData($table)
 	{
 		$table = strtolower($table);
-		if (preg_match("#^b_stat#",$table) && IntOption('dump_base_skip_stat'))
+		if (preg_match("#^b_stat#", $table) && IntOption('dump_base_skip_stat'))
 			return true;
-		elseif (preg_match("#^b_search_%#", $table) && !preg_match('^(b_search_custom_rank|b_search_phrase)$') && IntOption('dump_base_skip_search'))
+		elseif (preg_match("#^b_search_%#", $table) && !preg_match('^(b_search_custom_rank|b_search_phrase)$', $table) && IntOption('dump_base_skip_search'))
 			return true;
 		elseif($table == 'b_event_log' && IntOption('dump_base_skip_log'))
 			return true;

@@ -94,8 +94,10 @@ if($arUserField["USER_TYPE"])
 	{
 		$enum = array();
 
-		if(
-			($arUserField["MANDATORY"] != "Y")
+		$showNoValue = $arUserField["MANDATORY"] != "Y"
+			|| (isset($arParams["SHOW_NO_VALUE"]) && $arParams["SHOW_NO_VALUE"] == true);
+
+		if($showNoValue
 			&& ($arUserField["SETTINGS"]["DISPLAY"] != "CHECKBOX" || $arUserField["MULTIPLE"] <> "Y")
 		)
 		{

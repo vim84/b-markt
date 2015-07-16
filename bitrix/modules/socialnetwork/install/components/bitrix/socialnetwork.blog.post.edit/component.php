@@ -13,9 +13,13 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 if (!CModule::IncludeModule("blog"))
 {
 	if ($arParams["IS_REST"] == "Y")
+	{
 		$APPLICATION->ThrowException(GetMessage("BLOG_MODULE_NOT_INSTALL"), "BLOG_MODULE_NOT_INSTALL");
+	}
 	else
+	{
 		ShowError(GetMessage("BLOG_MODULE_NOT_INSTALL"));
+	}
 
 	return false;
 }
@@ -93,11 +97,43 @@ if (CModule::IncludeModule("socialnetwork") && (IntVal($arParams["SOCNET_GROUP_I
 	*/
 }
 $arParams["ID"] = IntVal($arParams["ID"]);
-if(!is_array($arParams["GROUP_ID"]))
+if (!is_array($arParams["GROUP_ID"]))
+{
 	$arParams["GROUP_ID"] = array($arParams["GROUP_ID"]);
-foreach($arParams["GROUP_ID"] as $k=>$v)
-	if(IntVal($v) <= 0)
+}
+
+foreach ($arParams["GROUP_ID"] as $k=>$v)
+{
+	if (IntVal($v) <= 0)
+	{
 		unset($arParams["GROUP_ID"][$k]);
+	}
+}
+
+if (empty($arParams["GROUP_ID"]))
+{
+	$tmpVal = COption::GetOptionString("socialnetwork", "sonet_blog_group", false, SITE_ID);
+	if ($tmpVal)
+	{
+		$arTmpVal = unserialize($tmpVal);
+		if (is_array($arTmpVal))
+		{
+			$arParams["GROUP_ID"] = $arTmpVal;
+		}
+		elseif(intval($tmpVal) > 0)
+		{
+			$arParams["GROUP_ID"] = array($arTmpVal);
+		}
+	}
+}
+else
+{
+	$tmpVal = COption::GetOptionString("socialnetwork", "sonet_blog_group", false, SITE_ID);
+	if (!$tmpVal)
+	{
+		COption::SetOptionString("socialnetwork", "sonet_blog_group", serialize($arParams["GROUP_ID"]), false, SITE_ID);
+	}
+}
 
 if(strLen($arParams["BLOG_VAR"])<=0)
 	$arParams["BLOG_VAR"] = "blog";
@@ -162,13 +198,26 @@ $arParams["IMAGE_MAX_HEIGHT"] = 400;
 $arParams["POST_PROPERTY_SOURCE"] = $arParams["POST_PROPERTY"] = (is_array($arParams["POST_PROPERTY"]) ? $arParams["POST_PROPERTY"] : array($arParams["POST_PROPERTY"]));
 $arParams["POST_PROPERTY"][] = "UF_BLOG_POST_DOC";
 $arParams["POST_PROPERTY"][] = "UF_BLOG_POST_IMPRTNT";
-if(CModule::IncludeModule("webdav") || CModule::IncludeModule("disk"))
+
+if(
+	CModule::IncludeModule("webdav")
+	|| CModule::IncludeModule("disk")
+)
 {
 	$arParams["POST_PROPERTY"][] = "UF_BLOG_POST_FILE";
 	$arParams["POST_PROPERTY"][] = "UF_BLOG_POST_F_EDIT";
 }
 if (IsModuleInstalled("vote"))
+{
 	$arParams["POST_PROPERTY"][] = "UF_BLOG_POST_VOTE";
+}
+
+if(CModule::IncludeModule("lists") && COption::GetOptionString("lists", "turnProcessesOn") == "Y" &&
+	!$arParams["SOCNET_GROUP_ID"] && !$arResult["bExtranetSite"] && IsModuleInstalled('intranet'))
+	$arResult['BLOG_POST_LISTS'] = true;
+else
+	$arResult['BLOG_POST_LISTS'] = false;
+
 $arFilterblg = Array(
 		"ACTIVE" => "Y",
 		"USE_SOCNET" => "Y",
@@ -183,7 +232,10 @@ $a->UpdateCodes();
 $arResult["perms"] = BLOG_PERMS_DENY;
 if($arResult["bGroupMode"])
 {
-	if (CSocNetFeaturesPerms::CanPerformOperation($user_id, SONET_ENTITY_GROUP, $arParams["SOCNET_GROUP_ID"], "blog", "full_post", CSocNetUser::IsCurrentUserModuleAdmin()) || $APPLICATION->GetGroupRight("blog") >= "W")
+	if (
+		CSocNetFeaturesPerms::CanPerformOperation($user_id, SONET_ENTITY_GROUP, $arParams["SOCNET_GROUP_ID"], "blog", "full_post", CSocNetUser::IsCurrentUserModuleAdmin())
+		|| $APPLICATION->GetGroupRight("blog") >= "W"
+	)
 	{
 		$arResult["perms"] = BLOG_PERMS_FULL;
 	}
@@ -209,7 +261,6 @@ elseif (
 	$arResult["perms"] = BLOG_PERMS_FULL;
 }
 
-
 $cacheTtl = 3153600;
 $cacheId = 'blog_post_blog_'.md5(serialize($arFilterblg));
 $cacheDir = '/blog/form/blog/';
@@ -233,7 +284,11 @@ else
 			$rsSite = CSite::GetList($by="sort", $order="desc", Array("ACTIVE" => "Y"));
 			while($arSite = $rsSite->Fetch())
 			{
-				$arIdeaBlogGroupID[] = COption::GetOptionInt("idea", "blog_group_id", false, $arSite["LID"]);
+				$val = COption::GetOptionInt("idea", "blog_group_id", false, $arSite["LID"]);
+				if ($val)
+				{
+					$arIdeaBlogGroupID[] = $val;
+				}
 			}
 		}
 
@@ -347,7 +402,13 @@ if(
 		$APPLICATION->SetTitle(GetMessage("BLOG_POST_EDIT"));
 	}
 
-	if($arParams["USER_ID"] == $user_id)
+	if(
+		$arParams["USER_ID"] == $user_id
+		|| (
+			$_POST["apply"]
+			&& CSocNetUser::IsCurrentUserModuleAdmin(SITE_ID, false)
+		)
+	)
 	{
 		$arResult["perms"] = BLOG_PERMS_FULL;
 	}
@@ -438,36 +499,39 @@ if (IntVal($_GET["delete_blog_post_id"]) > 0 && $_GET["ajax_blog_post_delete"] =
 		$delId = IntVal($_GET["delete_blog_post_id"]);
 		if($arPost = CBlogPost::GetByID($delId))
 		{
-			if($arPost["AUTHOR_ID"] == $user_id)
-			{
-				$perms = BLOG_PERMS_FULL;
-			}
-			else
-			{
-				$perms = CBlogPost::GetSocNetPostPerms($_GET["delete_blog_post_id"], true);
-			}
+			$perms = ($arPost["AUTHOR_ID"] == $user_id ? BLOG_PERMS_FULL : CBlogPost::GetSocNetPostPerms($_GET["delete_blog_post_id"], true));
 
 			if($perms >= BLOG_PERMS_FULL)
 			{
 				CBlogPost::DeleteLog($delId);
 				BXClearCache(True, "/".SITE_ID."/blog/popular_posts/");
-				BXClearCache(true, "/blog/socnet_post/".$delId."/");
-				BXClearCache(true, "/blog/socnet_post/gen/".$delId."/");
+				BXClearCache(true, "/blog/socnet_post/".intval($delId / 100)."/".$delId."/");
+				BXClearCache(true, "/blog/socnet_post/gen/".intval($delId / 100)."/".$delId."/");
 				BXClearCache(true, CComponentEngine::MakeComponentPath("bitrix:socialnetwork.blog.blog"));
 
 				if (!CBlogPost::Delete($delId))
+				{
 					$arResult["ERROR_MESSAGE"] .= GetMessage("BLOG_BLOG_BLOG_MES_DEL_ERROR");
+				}
 				else
+				{
 					$arResult["OK_MESSAGE"] .= GetMessage("BLOG_BLOG_BLOG_MES_DEL_OK");
+				}
 			}
 			else
+			{
 				$arResult["ERROR_MESSAGE"] .= GetMessage("BLOG_BLOG_BLOG_MES_DEL_NO_RIGHTS");
+			}
 		}
 		else
+		{
 			$arResult["ERROR_MESSAGE"] .= GetMessage("BLOG_BLOG_BLOG_MES_DEL_ERROR");
+		}
 	}
 	else
+	{
 		$arResult["ERROR_MESSAGE"] .= GetMessage("BLOG_BLOG_SESSID_WRONG");
+	}
 
 	$arResult["delete_blog_post"] = "Y";
 	$this->IncludeComponentTemplate();
@@ -505,26 +569,45 @@ if (
 )
 {
 	$arP = Array();
-	if(IntVal($arParams["ID"]) > 0 && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_READY)
+	if (
+		IntVal($arParams["ID"]) > 0
+		&& $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_READY
+	)
+	{
 		$arP = CBlogPost::GetSocnetPerms($arPost["ID"]);
-	if(IntVal($arParams["ID"]) > 0 && $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_READY && empty($arP["U"]) && empty($arP["DR"]))
+	}
+
+	if (
+		IntVal($arParams["ID"]) > 0
+		&& $arPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_READY
+		&& empty($arP["U"])
+		&& empty($arP["DR"])
+	)
+	{
 		$arResult["OK_MESSAGE"] = GetMessage("BPE_HIDDEN_POSTED");
+	}
 
 	$bAllowToAll = (COption::GetOptionString("socialnetwork", "allow_livefeed_toall", "Y") == "Y");
 	if ($bAllowToAll)
 	{
 		$arToAllRights = unserialize(COption::GetOptionString("socialnetwork", "livefeed_toall_rights", 'a:1:{i:0;s:2:"AU";}'));
 		if (!$arToAllRights)
+		{
 			$arToAllRights = array("AU");
+		}
 
 		$arUserGroupCode = array_merge(array("AU"), CAccess::GetUserCodesArray($GLOBALS["USER"]->GetID()));
 		if (count(array_intersect($arToAllRights, $arUserGroupCode)) <= 0)
+		{
 			$bAllowToAll = false;
+		}
 	}
 
-	$bDefaultToAll = false;
-	if ($bAllowToAll)
-		$bDefaultToAll = (COption::GetOptionString("socialnetwork", "default_livefeed_toall", "Y") == "Y");
+	$bDefaultToAll = (
+		$bAllowToAll
+			? (COption::GetOptionString("socialnetwork", "default_livefeed_toall", "Y") == "Y")
+			: false
+	);
 
 	if ($_POST["apply"] || $_POST["save"] || $_POST["do_upload"] || $_POST["draft"])
 	{
@@ -534,9 +617,11 @@ if (
 		)
 		{
 			if ($_POST["decode"] == "Y")
+			{
 				CUtil::JSPostUnescape();
+			}
 
-			if(empty($arBlog))
+			if (empty($arBlog))
 			{
 				if(!empty($arParams["GROUP_ID"]))
 				{
@@ -565,9 +650,13 @@ if (
 					$rsUser = CUser::GetByID($arParams["USER_ID"]);
 					$arUser = $rsUser->Fetch();
 					if(strlen($arUser["NAME"]."".$arUser["LAST_NAME"]) <= 0)
+					{
 						$arFields["NAME"] = GetMessage("BLG_NAME")." ".$arUser["LOGIN"];
+					}
 					else
+					{
 						$arFields["NAME"] = GetMessage("BLG_NAME")." ".$arUser["NAME"]." ".$arUser["LAST_NAME"];
+					}
 
 					$arFields["URL"] = str_replace(" ", "_", $arUser["LOGIN"])."-blog-".SITE_ID;
 					$arFields["OWNER_ID"] = $arParams["USER_ID"];
@@ -591,25 +680,31 @@ if (
 
 					$featureOperationPerms = CSocNetFeaturesPerms::GetOperationPerm(SONET_ENTITY_USER, $arFields["OWNER_ID"], "blog", "view_post");
 					if ($featureOperationPerms == SONET_RELATIONS_TYPE_ALL)
+					{
 						$bRights = true;
+					}
 
 					$arFields["PATH"] = CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_BLOG"], array("blog" => $arFields["URL"], "user_id" => $arFields["OWNER_ID"], "group_id" => $arFields["SOCNET_GROUP_ID"]));
 
 					$blogID = CBlog::Add($arFields);
 					BXClearCache(true, "/blog/form/blog/");
-					if($bRights)
+					if ($bRights)
+					{
 						CBlog::AddSocnetRead($blogID);
+					}
 					$arBlog = CBlog::GetByID($blogID, $arParams["GROUP_ID"]);
 				}
 			}
 		}
 		else
+		{
 			$arResult["ERROR_MESSAGE"] = GetMessage("BPE_SESS");
+		}
 	}
 
 	if ($_GET["image_upload_frame"] == "Y" || $_GET["image_upload"] || $_POST["do_upload"] || $_GET["del_image_id"])
 	{
-		if(
+		if (
 			check_bitrix_sessid()
 			|| $arParams["IS_REST"] == "Y"
 		)
@@ -618,8 +713,13 @@ if (
 			{
 				$del_image_id = IntVal($_GET["del_image_id"]);
 				$aImg = CBlogImage::GetByID($del_image_id);
-				if($aImg["BLOG_ID"] == $arBlog["ID"] && $aImg["POST_ID"] == IntVal($arParams["ID"]))
+				if (
+					$aImg["BLOG_ID"] == $arBlog["ID"]
+					&& $aImg["POST_ID"] == IntVal($arParams["ID"])
+				)
+				{
 					CBlogImage::Delete($del_image_id);
+				}
 				$APPLICATION->RestartBuffer();
 				die();
 			}
@@ -700,7 +800,9 @@ if (
 						$arResult["Image"] = $aImg;
 					}
 					elseif ($ex = $APPLICATION->GetException())
+					{
 						$arResult["ERROR_MESSAGE"] = $ex->GetString();
+					}
 				}
 			}
 		}
@@ -762,7 +864,20 @@ if (
 			LocalRedirect($redirectUrl);
 		}
 
-		if (($_POST["apply"] || $_POST["save"] || $_POST["draft"]) && empty($_POST["reset"])) // Save on button click
+		if($_POST["save"] == "Y" && $_POST["changePostFormTab"] == "lists" && (check_bitrix_sessid() || $arParams["IS_REST"] == "Y"))
+		{
+			$redirectUrl = CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_BLOG"], array("user_id" => $arBlog["OWNER_ID"]));
+			LocalRedirect($redirectUrl);
+		}
+
+		if (
+			(
+				$_POST["apply"]
+				|| $_POST["save"]
+				|| $_POST["draft"]
+			)
+			&& empty($_POST["reset"])
+		) // Save on button click
 		{
 			if (
 				check_bitrix_sessid()
@@ -778,17 +893,23 @@ if (
 					{
 						$dbCategory = CBlogCategory::GetList(Array(), Array("BLOG_ID" => $arBlog["ID"]));
 						while($arCategory = $dbCategory->Fetch())
+						{
 							$arCatBlog[ToLower($arCategory["NAME"])] = $arCategory["ID"];
+						}
 						$tags = explode (",", $_POST["TAGS"]);
 						foreach($tags as $tg)
 						{
 							$tg = trim($tg);
-							if(!in_array($arCatBlog[ToLower($tg)], $CATEGORYtmp) && strlen($tg) > 0)
+							if(
+								!in_array($arCatBlog[ToLower($tg)], $CATEGORYtmp)
+								&& strlen($tg) > 0
+							)
 							{
-								if(IntVal($arCatBlog[ToLower($tg)]) > 0)
-									$CATEGORYtmp[] = $arCatBlog[ToLower($tg)];
-								else
-									$CATEGORYtmp[] = CBlogCategory::Add(array("BLOG_ID" => $arBlog["ID"], "NAME" => $tg));
+								$CATEGORYtmp[] = (
+									IntVal($arCatBlog[ToLower($tg)]) > 0
+									? $arCatBlog[ToLower($tg)]
+									: CBlogCategory::Add(array("BLOG_ID" => $arBlog["ID"], "NAME" => $tg))
+								);
 							}
 						}
 					}
@@ -800,32 +921,36 @@ if (
 							{
 								$CATEGORYtmp[] = CBlogCategory::Add(array("BLOG_ID"=>$arBlog["ID"],"NAME"=>substr($v, 4
 )));
-
-								if($arResult["bGroupMode"] && $arGroupSites)
-									$arSites = $arGroupSites;
-								else
-									$arSites = array(SITE_ID);
+								$arSites = ($arResult["bGroupMode"] && $arGroupSites ? $arGroupSites : array(SITE_ID));
 							}
 							else
+							{
 								$CATEGORYtmp[] = $v;
+							}
 						}
 					}
 					else
+					{
 						$CATEGORY_ID = "";
+					}
+
 					$CATEGORY_ID = implode(",", $CATEGORYtmp);
 
 					$DATE_PUBLISH = "";
-					if(strlen($_POST["DATE_PUBLISH_DEF"]) > 0)
+					if (strlen($_POST["DATE_PUBLISH_DEF"]) > 0)
+					{
 						$DATE_PUBLISH = $_POST["DATE_PUBLISH_DEF"];
-					elseif (strlen($_POST["DATE_PUBLISH"])<=0)
+					}
+					elseif (strlen($_POST["DATE_PUBLISH"]) <= 0)
+					{
 						$DATE_PUBLISH = ConvertTimeStamp(time()+CTimeZone::GetOffset(), "FULL");
+					}
 					else
+					{
 						$DATE_PUBLISH = $_POST["DATE_PUBLISH"];
+					}
 
-					if(strlen($_POST["draft"]) > 0)
-						$PUBLISH_STATUS = BLOG_PUBLISH_STATUS_DRAFT;
-					else
-						$PUBLISH_STATUS = BLOG_PUBLISH_STATUS_PUBLISH;
+					$PUBLISH_STATUS = (strlen($_POST["draft"]) > 0 ? BLOG_PUBLISH_STATUS_DRAFT : BLOG_PUBLISH_STATUS_PUBLISH);
 
 					$arFields = array(
 						"TITLE" => trim($_POST["POST_TITLE"]),
@@ -865,7 +990,7 @@ if (
 					if(strlen($arFields["TITLE"]) <= 0 || $_POST["show_title"] == "N")
 					{
 						$arFields["MICRO"] = "Y";
-						$arFields["TITLE"] = trim(preg_replace(array("/\n+/is", "/\s+/is"), " ", blogTextParser::killAllTags($arFields["DETAIL_TEXT"])));
+						$arFields["TITLE"] = trim(preg_replace(array("/\n+/is".BX_UTF_PCRE_MODIFIER, "/\s+/is".BX_UTF_PCRE_MODIFIER), " ", blogTextParser::killAllTags($arFields["DETAIL_TEXT"])));
 						if(strlen($arFields["TITLE"]) <= 0)
 							$arFields["TITLE"] = GetMessage("BLOG_EMPTY_TITLE_PLACEHOLDER");
 					}
@@ -916,7 +1041,9 @@ if (
 										$oGrId = IntVal($v);
 									}
 									else
+									{
 										$bOnesg = false;
+									}
 								}
 							}
 							if(
@@ -926,7 +1053,9 @@ if (
 								&& !CSocNetFeaturesPerms::CanPerformOperation($user_id, SONET_ENTITY_GROUP, $oGrId, "blog", "moderate_post")
 								&& !CSocNetFeaturesPerms::CanPerformOperation($user_id, SONET_ENTITY_GROUP, $oGrId, "blog", "full_post")
 							)
+							{
 								$arFields["PUBLISH_STATUS"] = BLOG_PUBLISH_STATUS_READY;
+							}
 						}
 					}
 
@@ -959,9 +1088,11 @@ if (
 					if(!$bError)
 					{
 						$fieldName = 'UF_BLOG_POST_DOC';
-						if (isset($GLOBALS[$fieldName]) && is_array($GLOBALS[$fieldName]))
+						if (
+							isset($GLOBALS[$fieldName])
+							&& is_array($GLOBALS[$fieldName])
+						)
 						{
-
 							$arOldFiles = array();
 							if($arParams["ID"] > 0 && strlen($_POST["blog_upload_cid"]) <= 0)
 							{
@@ -991,8 +1122,13 @@ if (
 									)
 								)
 								{
-									if(empty($arOldFiles) || !in_array($fileID, $arOldFiles))
+									if (
+										empty($arOldFiles)
+										|| !in_array($fileID, $arOldFiles)
+									)
+									{
 										continue;
+									}
 								}
 
 								$arFile = CFile::GetFileArray($fileID);
@@ -1011,20 +1147,36 @@ if (
 									);
 									$imgID = CBlogImage::Add($arImgFields);
 									if (intval($imgID) <= 0)
+									{
 										$GLOBALS["APPLICATION"]->ThrowException("Error Adding file by CBlogImage::Add");
+									}
 									else
+									{
 										$arFields["DETAIL_TEXT"] = str_replace("[IMG ID=".$fileID."file", "[IMG ID=".$imgID."", $arFields["DETAIL_TEXT"]);
+									}
 								}
 								else
+								{
 									$arAttachedFiles[] = $fileID;
+								}
 							}
-							if (is_array($arPostFields) && is_array($arPostFields[$fieldName]) && is_array($arPostFields[$fieldName]["VALUE"]))
+							if (
+								is_array($arPostFields)
+								&& is_array($arPostFields[$fieldName])
+								&& is_array($arPostFields[$fieldName]["VALUE"])
+							)
+							{
 								$arAttachedFiles = array_unique(array_merge($arAttachedFiles, array_intersect($GLOBALS[$fieldName], $arPostFields[$fieldName]["VALUE"])));
+							}
 							$GLOBALS[$fieldName] = $arAttachedFiles;
 						}
 
+						CSocNetLogComponent::checkEmptyUFValue('UF_BLOG_POST_FILE');
+
 						if (!empty($arParams["POST_PROPERTY"]))
+						{
 							$GLOBALS["USER_FIELD_MANAGER"]->EditFormAddFields("BLOG_POST", $arFields);
+						}
 
 						preg_match_all("/\[user\s*=\s*([^\]]*)\](.+?)\[\/user\]/ies".BX_UTF_PCRE_MODIFIER, $_POST["POST_MESSAGE"], $arMention);
 
@@ -1042,6 +1194,23 @@ if (
 						)
 						{
 							$bNeedAddGrat = true;
+						}
+
+						if (
+							!empty($_POST["attachedFilesRaw"])
+							&& is_array($_POST["attachedFilesRaw"])
+						)
+						{
+							CSocNetLogComponent::saveRawFilesToUF(
+								$_POST["attachedFilesRaw"],
+								(
+									IsModuleInstalled("webdav")
+									|| IsModuleInstalled("disk")
+										? "UF_BLOG_POST_FILE"
+										: "UF_BLOG_POST_DOC"
+								),
+								$arFields
+							);
 						}
 
 						if ($arParams["ID"] > 0)
@@ -1098,21 +1267,30 @@ if (
 							$socnetRightsOld = CBlogPost::GetSocnetPerms($arParams["ID"]);
 
 							unset($arFields["DATE_PUBLISH"]);
+
 							if($newID = CBlogPost::Update($arParams["ID"], $arFields))
 							{
-								BXClearCache(true, "/blog/socnet_post/".$arParams["ID"]."/");
-								BXClearCache(true, "/blog/socnet_post/gen/".$arParams["ID"]."/");
+								BXClearCache(true, "/blog/socnet_post/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/");
+								BXClearCache(true, "/blog/socnet_post/gen/".intval($arParams["ID"] / 100)."/".$arParams["ID"]."/");
 								BXClearCache(True, "/".SITE_ID."/blog/popular_posts/");
 
 								$arFields["AUTHOR_ID"] = $arOldPost["AUTHOR_ID"];
-								if ($arFields["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_DRAFT && $arOldPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH)
+								if (
+									$arFields["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_DRAFT
+									&& $arOldPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH
+								)
+								{
 									CBlogPost::DeleteLog($newID);
-								elseif ($arFields["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH && $arOldPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH)
+								}
+								elseif (
+									$arFields["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH
+									&& $arOldPost["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH
+								)
 								{
 									$arParamsUpdateLog = Array(
-											"allowVideo" => $arResult["allowVideo"],
-											"PATH_TO_SMILE" => $arParams["PATH_TO_SMILE"],
-										);
+										"allowVideo" => $arResult["allowVideo"],
+										"PATH_TO_SMILE" => $arParams["PATH_TO_SMILE"],
+									);
 									CBlogPost::UpdateLog($newID, $arFields, $arBlog, $arParamsUpdateLog);
 								}
 							}
@@ -1124,10 +1302,22 @@ if (
 							$arFields["BLOG_ID"] = $arBlog["ID"];
 
 							$ar = (is_array($arFields["UF_BLOG_POST_FILE"]) ? array_values($arFields["UF_BLOG_POST_FILE"]) : array());
-							$dbDuplPost = CBlogPost::GetList(array("ID" => "DESC"), array("BLOG_ID" => $arBlog["ID"]), false, array("nTopCount" => 1), array("ID", "BLOG_ID", "AUTHOR_ID", "DETAIL_TEXT", "TITLE"));
+							$dbDuplPost = CBlogPost::GetList(
+								array("ID" => "DESC"),
+								array("BLOG_ID" => $arBlog["ID"]),
+								false,
+								array("nTopCount" => 1),
+								array("ID", "BLOG_ID", "AUTHOR_ID", "DETAIL_TEXT", "TITLE")
+							);
 							if($arDuplPost = $dbDuplPost->Fetch())
 							{
-								if(empty($ar[0]) && $arDuplPost["BLOG_ID"] == $arFields["BLOG_ID"] && IntVal($arDuplPost["AUTHOR_ID"]) == IntVal($arFields["AUTHOR_ID"]) && md5($arDuplPost["DETAIL_TEXT"]) == md5($arFields["DETAIL_TEXT"]) && md5($arDuplPost["TITLE"]) == md5($arFields["TITLE"]))
+								if(
+									empty($ar[0])
+									&& $arDuplPost["BLOG_ID"] == $arFields["BLOG_ID"]
+									&& IntVal($arDuplPost["AUTHOR_ID"]) == IntVal($arFields["AUTHOR_ID"])
+									&& md5($arDuplPost["DETAIL_TEXT"]) == md5($arFields["DETAIL_TEXT"])
+									&& md5($arDuplPost["TITLE"]) == md5($arFields["TITLE"])
+								)
 								{
 									$bError = true;
 									$arResult["ERROR_MESSAGE"] = GetMessage("B_B_PC_DUPLICATE_POST");
@@ -1242,11 +1432,11 @@ if (
 								$bHasOnlyAll = true;
 
 							$arFieldsHave = array(
-									"HAS_IMAGES" => ($bHasImg ? "Y" : "N"),
-									"HAS_TAGS" => ($bHasTag ? "Y" : "N"),
-									"HAS_PROPS" => ($bHasProps ? "Y" : "N"),
-									"HAS_SOCNET_ALL" => ($bHasOnlyAll ? "Y" : "N"),
-								);
+								"HAS_IMAGES" => ($bHasImg ? "Y" : "N"),
+								"HAS_TAGS" => ($bHasTag ? "Y" : "N"),
+								"HAS_PROPS" => ($bHasProps ? "Y" : "N"),
+								"HAS_SOCNET_ALL" => ($bHasOnlyAll ? "Y" : "N"),
+							);
 							CBlogPost::Update($newID, $arFieldsHave, false);
 						}
 
@@ -1356,6 +1546,7 @@ if (
 								$redirectUrl = CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_POST_EDIT"], array("post_id"=>$newID, "user_id" => $arBlog["OWNER_ID"]));
 							}
 							$as = new CAutoSave(); // It is necessary to clear autosave buffer
+							$as->Reset();
 							LocalRedirect($redirectUrl);
 						}
 						else
@@ -1592,16 +1783,22 @@ if (
 			$res = CBlogCategory::GetList(array("NAME"=>"ASC"),array("BLOG_ID"=>$arBlog["ID"]));
 			while ($arCategory=$res->GetNext())
 			{
-				if(is_array($arResult["PostToShow"]["CATEGORY_ID"]))
+				if (is_array($arResult["PostToShow"]["CATEGORY_ID"]))
 				{
-					if(in_array($arCategory["ID"], $arResult["PostToShow"]["CATEGORY_ID"]))
+					if (in_array($arCategory["ID"], $arResult["PostToShow"]["CATEGORY_ID"]))
+					{
 						$arCategory["Selected"] = "Y";
+					}
 				}
-				elseif(IntVal($arCategory["ID"])==IntVal($arResult["PostToShow"]["CATEGORY_ID"]))
+				elseif (IntVal($arCategory["ID"]) == IntVal($arResult["PostToShow"]["CATEGORY_ID"]))
+				{
 					$arCategory["Selected"] = "Y";
+				}
 
-				if($arCategory["Selected"] == "Y")
+				if ($arCategory["Selected"] == "Y")
+				{
 					$arResult["PostToShow"]["CategoryText"] .= $arCategory["~NAME"].",";
+				}
 
 				$arResult["Category"][$arCategory["ID"]] = $arCategory;
 			}
@@ -1613,8 +1810,14 @@ if (
 			$arPostField = $arPostFields[$FIELD_NAME];
 			if (!!$arPostField)
 			{
-				if (!empty($arResult["ERROR_MESSAGE"]) && !empty($_POST[$FIELD_NAME]))
+				if (
+					!empty($arResult["ERROR_MESSAGE"])
+					&& !empty($_POST[$FIELD_NAME])
+				)
+				{
 					$arPostField["VALUE"] = $_POST[$FIELD_NAME];
+				}
+
 				$arPostField["~EDIT_FORM_LABEL"] = ($arPostField["EDIT_FORM_LABEL"] !== "" ? $arPostField["EDIT_FORM_LABEL"] : $arPostField["FIELD_NAME"]);
 				$arPostField["EDIT_FORM_LABEL"] = htmlspecialcharsEx($arPostField["~EDIT_FORM_LABEL"]);
 				$arResult["POST_PROPERTIES"]["DATA"][$FIELD_NAME] = $arPostField;
@@ -1622,15 +1825,36 @@ if (
 			}
 		}
 
-		if(isset($_REQUEST["WFILES"]) && !empty($_REQUEST["WFILES"]) && is_array($_REQUEST["WFILES"]) && !$_POST["save"])
+		if(
+			isset($_REQUEST["WFILES"])
+			&& !empty($_REQUEST["WFILES"])
+			&& is_array($_REQUEST["WFILES"])
+			&& !$_POST["save"]
+		)
 		{
+			$isDiskProperty = (
+				isset($arResult["POST_PROPERTIES"]["DATA"]["UF_BLOG_POST_FILE"]['USER_TYPE_ID'])
+				&& $arResult["POST_PROPERTIES"]["DATA"]["UF_BLOG_POST_FILE"]['USER_TYPE_ID'] === 'disk_file'
+			);
+
 			foreach($_REQUEST["WFILES"] as $val)
 			{
-				if(IntVal($val) > 0)
-					$arResult["POST_PROPERTIES"]["DATA"]["UF_BLOG_POST_FILE"]["VALUE"][] = IntVal($val);
+				$val = intval($val);
+				if($val <= 0)
+				{
+					continue;
+				}
+				if($isDiskProperty)
+				{
+					//@see Bitrix\Disk\Uf\FileUserType::NEW_FILE_PREFIX
+					$val = 'n' . $val;
+				}
+				$arResult["POST_PROPERTIES"]["DATA"]["UF_BLOG_POST_FILE"]["VALUE"][] = $val;
 			}
 			if(!empty($arResult["POST_PROPERTIES"]["DATA"]["UF_BLOG_POST_FILE"]["VALUE"]))
+			{
 				$arResult["needShow"] = true;
+			}
 		}
 
 		$arResult["urlToDelImage"] = $APPLICATION->GetCurPageParam("del_image_id=#del_image_id#&".bitrix_sessid_get(), Array("sessid", "image_upload_frame", "image_upload", "do_upload","del_image_id"));
@@ -1641,12 +1865,17 @@ if (
 		$serverName = $arSite["SERVER_NAME"];
 		if (strLen($serverName) <=0)
 		{
-			if (defined("SITE_SERVER_NAME") && strlen(SITE_SERVER_NAME)>0)
-				$serverName = SITE_SERVER_NAME;
-			else
-				$serverName = COption::GetOptionString("main", "server_name", "www.bitrixsoft.com");
-			if (strLen($serverName) <=0)
+			$serverName = (
+				defined("SITE_SERVER_NAME")
+				&& strlen (SITE_SERVER_NAME) > 0
+					? SITE_SERVER_NAME
+					: COption::GetOptionString("main", "server_name", "www.bitrixsoft.com")
+			);
+
+			if (strLen($serverName) <= 0)
+			{
 				$serverName = $_SERVER["HTTP_HOST"];
+			}
 		}
 		$serverName = "http://".$serverName;
 
@@ -1665,7 +1894,9 @@ if (
 
 	$obCache = new CPHPCache;
 	if($obCache->InitCache($cacheTtl, $cacheId, $cacheDir))
+	{
 		$arResult["PostToShow"]["FEED_DESTINATION"]['SONETGROUPS'] = $obCache->GetVars();
+	}
 	else
 	{
 		$obCache->StartDataCache();

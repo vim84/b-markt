@@ -10,7 +10,7 @@ $arComponentParameters = Array(
 		),
 	),
 	"PARAMETERS" => Array(
-		"SET_NAVCHAIN" => Array(
+		"SET_NAV_CHAIN" => Array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
 			"NAME" => GetMessage("SONET_SET_NAVCHAIN"),
 			"TYPE" => "CHECKBOX",

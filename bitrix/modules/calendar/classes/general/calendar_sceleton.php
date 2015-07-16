@@ -528,7 +528,7 @@ var EC_MESS = {0:0<?foreach($arLangMess as $m1 => $m2){echo ', '.$m1." : '".GetM
 		$userId = CCalendar::GetCurUserId();
 
 		$arHost = CCalendar::GetUser($userId, true);
-		$arHost['AVATAR_SRC'] = CCalendar::GetUserAvatar($arHost);
+		$arHost['AVATAR_SRC'] = CCalendar::GetUserAvatarSrc($arHost);
 		$arHost['URL'] = CCalendar::GetUserUrl($event['MEETING_HOST'], $Params["PATH_TO_USER"]);
 		$arHost['DISPLAY_NAME'] = CCalendar::GetUserName($arHost);
 		$Params['host'] = $arHost;
@@ -567,7 +567,7 @@ var EC_MESS = {0:0<?foreach($arLangMess as $m1 => $m2){echo ', '.$m1." : '".GetM
 					$userIds[] = $att["USER_ID"];
 					if ($userId == $att["USER_ID"])
 						$curUserStatus = $att['STATUS'];
-					$att['AVATAR_SRC'] = CCalendar::GetUserAvatar($att);
+					$att['AVATAR_SRC'] = CCalendar::GetUserAvatarSrc($att);
 					$att['URL'] = CCalendar::GetUserUrl($att["USER_ID"], $Params["PATH_TO_USER"]);
 					$attendees[strtolower($att['STATUS'])]['users'][] = $att;
 				}
@@ -928,7 +928,7 @@ var EC_MESS = {0:0<?foreach($arLangMess as $m1 => $m2){echo ', '.$m1." : '".GetM
 		$event['FROM_MONTH'] = FormatDate('n', $event['DT_FROM_TS']);
 
 		$arHost = CCalendar::GetUser($event['MEETING_HOST'], true);
-		$arHost['AVATAR_SRC'] = CCalendar::GetUserAvatar($arHost);
+		$arHost['AVATAR_SRC'] = CCalendar::GetUserAvatarSrc($arHost);
 		$arHost['URL'] = CCalendar::GetUserUrl($event['MEETING_HOST'], $Params["PATH_TO_USER"]);
 		$arHost['DISPLAY_NAME'] = CCalendar::GetUserName($arHost);
 		$curUserStatus = '';
@@ -974,7 +974,7 @@ var EC_MESS = {0:0<?foreach($arLangMess as $m1 => $m2){echo ', '.$m1." : '".GetM
 						$curUserStatus = $att['STATUS'];
 						$viewComments = true;
 					}
-					$att['AVATAR_SRC'] = CCalendar::GetUserAvatar($att);
+					$att['AVATAR_SRC'] = CCalendar::GetUserAvatarSrc($att);
 					$att['URL'] = CCalendar::GetUserUrl($att["USER_ID"], $Params["PATH_TO_USER"]);
 					$attendees[strtolower($att['STATUS'])]['users'][] = $att;
 				}
@@ -1668,10 +1668,10 @@ var EC_MESS = {0:0<?foreach($arLangMess as $m1 => $m2){echo ', '.$m1." : '".GetM
 	<div class="bxec-mobile-cont">
 		<div class="bxec-mobile-header"><?= GetMessage('EC_MOBILE_HELP_HEADER');?></div>
 		<a id="bxec_mob_link_iphone_<?=$id?>" class="bxec-mobile-link bxec-link-hidden" href="javascript: void(0)"><div class="bxec-iconkit bxec-arrow"></div><?= GetMessage('EC_MOBILE_APPLE');?></a>
-		<div id="bxec_mobile_iphone_all<?=$id?>" style="display: none;"><?= GetMessage('EC_MOBILE_HELP_IPHONE_ALL_HELP', array('#POINT_SET_PORT#' => GetMessage(CCalendar::IsBitrix24() ? 'EC_SET_PORT_BX24' : 'EC_SET_PORT')))?></div>
-		<div id="bxec_mobile_iphone_one<?=$id?>" style="display: none;"><?= GetMessage('EC_MOBILE_HELP_IPHONE_ONE_HELP', array('#POINT_SET_PORT#' => GetMessage(CCalendar::IsBitrix24() ? 'EC_SET_PORT_BX24' : 'EC_SET_PORT')))?></div>
+		<div id="bxec_mobile_iphone_all<?=$id?>" style="display: none;"><?= GetMessage('EC_MOBILE_HELP_IPHONE_ALL_HELP', array('#POINT_SET_PORT#' => GetMessage('EC_SET_PORT')))?></div>
+		<div id="bxec_mobile_iphone_one<?=$id?>" style="display: none;"><?= GetMessage('EC_MOBILE_HELP_IPHONE_ONE_HELP', array('#POINT_SET_PORT#' => GetMessage('EC_SET_PORT')))?></div>
 		<a id="bxec_mob_link_mac_<?=$id?>" class="bxec-mobile-link bxec-link-hidden" href="javascript: void(0)"><div class="bxec-iconkit bxec-arrow"></div><?= GetMessage('EC_MOBILE_MAC_OS');?></a>
-		<div id="bxec_mobile_mac_cont<?=$id?>" style="display: none;"><?= GetMessage('EC_MOBILE_HELP_MAC_1', array('#POINT_SET_PORT#' => GetMessage(CCalendar::IsBitrix24() ? 'EC_SET_PORT_BX24' : 'EC_SET_PORT')))?></div>
+		<div id="bxec_mobile_mac_cont<?=$id?>" style="display: none;"><?= GetMessage('EC_MOBILE_HELP_MAC_1', array('#POINT_SET_PORT#' => GetMessage('EC_SET_PORT')))?></div>
 		<a id="bxec_mob_link_bird_<?=$id?>" class="bxec-mobile-link bxec-link-hidden" href="javascript: void(0)"><div class="bxec-iconkit bxec-arrow"></div><?= GetMessage('EC_MOBILE_SUNBIRD');?></a>
 		<div id="bxec_mobile_sunbird_all<?=$id?>" style="display: none;"><?= GetMessage("EC_MOBILE_HELP_SUNBIRD_ALL_HELP")?></div>
 		<div id="bxec_mobile_sunbird_one<?=$id?>" style="display: none;"><?= GetMessage("EC_MOBILE_HELP_SUNBIRD_ONE_HELP")?></div>

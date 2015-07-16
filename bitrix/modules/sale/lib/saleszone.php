@@ -57,8 +57,21 @@ class SalesZone
 	 */
 	public static function checkCountryId($countryId, $siteId)
 	{
-		$cIds = static::getCountriesIds($siteId);
-		return in_array($countryId, $cIds) || in_array("", $cIds);
+
+		if(\CSaleLocation::isLocationProMigrated())
+		{
+			if(!intval($countryId) || !strlen($siteId))
+				return false;
+
+			return self::checkLocationIsInLinkedPart($countryId, $siteId);
+		}
+		else
+		{
+
+			$cIds = static::getCountriesIds($siteId);
+			return in_array($countryId, $cIds) || in_array("", $cIds);
+
+		}
 	}
 
 	/**
@@ -69,8 +82,20 @@ class SalesZone
 	 */
 	public static function checkRegionId($regionId, $siteId)
 	{
-		$rIds = static::getRegionsIds($siteId);
-		return in_array($regionId, $rIds) || in_array("", $rIds);
+		if(\CSaleLocation::isLocationProMigrated())
+		{
+			if(!intval($regionId) || !strlen($siteId))
+				return false;
+
+			return self::checkLocationIsInLinkedPart($regionId, $siteId);
+		}
+		else
+		{
+
+			$rIds = static::getRegionsIds($siteId);
+			return in_array($regionId, $rIds) || in_array("", $rIds);
+
+		}
 	}
 
 	/**
@@ -81,8 +106,23 @@ class SalesZone
 	 */
 	public static function checkCityId($cityId, $siteId)
 	{
-		$cIds = static::getCitiesIds($siteId);
-		return in_array($cityId, $cIds) || in_array("", $cIds);
+		if(\CSaleLocation::isLocationProMigrated())
+		{
+			if(!strlen($siteId))
+				return false;
+
+			if(!strlen($cityId) || $cityId == 0)
+				return in_array("", static::getCitiesIds($siteId));
+
+			return self::checkLocationIsInLinkedPart($cityId, $siteId);
+		}
+		else
+		{
+
+			$cIds = static::getCitiesIds($siteId);
+			return in_array($cityId, $cIds) || in_array("", $cIds);
+
+		}
 	}
 
 	/**
@@ -93,26 +133,63 @@ class SalesZone
 	 */
 	public static function checkLocationId($locationId, $siteId)
 	{
-		// rewrite this
-
-		$result = false;
-
-		$arLocation = \CSaleLocation::GetByID($locationId);
-
-		if(static::checkCountryId($arLocation["COUNTRY_ID"], $siteId)
-			&& static::checkRegionId($arLocation["REGION_ID"], $siteId)
-			&& static::checkCityId($arLocation["CITY_ID"], $siteId)
-		)
+		if(\CSaleLocation::isLocationProMigrated())
 		{
-			$result = true;
-		}
+			if(!intval($locationId) || !strlen($siteId))
+				return false;
 
-		return $result;
+			return Location\SiteLocationTable::checkConnectionExists($siteId, $locationId);
+		}
+		else
+		{
+
+			$result = false;
+
+			$arLocation = \CSaleLocation::GetByID($locationId);
+
+			if(static::checkCountryId($arLocation["COUNTRY_ID"], $siteId)
+				&& static::checkRegionId($arLocation["REGION_ID"], $siteId)
+				&& static::checkCityId($arLocation["CITY_ID"], $siteId)
+			)
+			{
+				$result = true;
+			}
+
+			return $result;
+
+		}
 	}
 
+	private static function checkLocationIsInLinkedPart($locationId, $siteId)
+	{
+		$types = \CSaleLocation::getTypes();
+		$class = self::CONN_ENTITY_NAME.'Table';
+
+		if(!$class::checkLinkUsageAny($siteId))
+			return true;
+
+		if((string) $locationId == '')
+			return false;
+
+		$node = \Bitrix\Sale\Location\LocationTable::getList(array(
+			'filter' => array('=ID' => $locationId),
+			'select' => array('ID', 'LEFT_MARGIN', 'RIGHT_MARGIN')
+		))->fetch();
+		if(!is_array($node))
+			return false;
+
+		$stat = $class::getLinkStatusForMultipleNodes(array($node), $siteId);
+
+		return $stat[$node['ID']] !== $class::LSTAT_IN_NOT_CONNECTED_BRANCH;
+	}
+
+	// returns a list of IDs of locations that are linked with $siteId and have type of $type
 	private static function getSelectedTypeIds($type, $siteId)
 	{
 		static $index; // this function is called hell number of times outside, so a little cache is provided
+
+		if(!strlen($siteId))
+			return array(''); // means "all"
 
 		if($index == null)
 			$index = array();
@@ -140,8 +217,17 @@ class SalesZone
 							'data_type' => self::LOCATION_ENTITY_NAME,
 							'reference' => array(
 								'=ref.TYPE_ID' => array('?', $types[$type]),
-								'>=ref.LEFT_MARGIN' => 'this.LEFT_MARGIN',
-								'<=ref.RIGHT_MARGIN' => 'this.RIGHT_MARGIN'
+								array(
+									'LOGIC' => 'OR',
+									array(
+										'<=ref.LEFT_MARGIN' => 'this.LEFT_MARGIN',
+										'>=ref.RIGHT_MARGIN' => 'this.RIGHT_MARGIN'
+									),
+									array(
+										'>=ref.LEFT_MARGIN' => 'this.LEFT_MARGIN',
+										'<=ref.RIGHT_MARGIN' => 'this.RIGHT_MARGIN'
+									)
+								)
 							),
 							'join_type' => 'inner'
 						)
@@ -164,6 +250,8 @@ class SalesZone
 				{
 					$index[$type][$siteId][] = $item['ID__'];
 				}
+
+				// special case: when all types are actually selected, an empty string ('') SHOULD be present among $index[$type][$siteId]
 
 				$res = Location\LocationTable::getList(array(
 					'filter' => array(

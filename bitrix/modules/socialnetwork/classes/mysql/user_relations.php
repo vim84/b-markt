@@ -257,31 +257,47 @@ class CSocNetUserRelations extends CAllSocNetUserRelations
 			&& count($arGroupBy) == 0
 		)
 		{
-			$strSql =
-				"SELECT ".$arSqls["SELECT"]." ".
-				"FROM b_sonet_user_relations UR ".
-				"	".$arSqls["FROM"]." ";
-			if (strlen($arSqls["WHERE"]) > 0)
-			{
-				$strSql .= "WHERE ".$arSqls["WHERE"]." ";
-			}
-
 			if (
-				$arSqls2 
+				$arSqls2
 				&& strlen($arSqls2["WHERE"]) > 0
 			)
 			{
+				$strSql = "SELECT COUNT(*) AS CNT FROM  (";
+
 				$strSql .=
+					"SELECT UR.ID ".
+					"FROM b_sonet_user_relations UR ".
+					"	".$arSqls["FROM"]." ".
+					"WHERE ".$arSqls["WHERE"]." ".
 					"UNION ".
-					"SELECT ".$arSqls["SELECT"]." ".
+					"SELECT UR.ID ".
 					"FROM b_sonet_user_relations UR ".
 					"	".$arSqls["FROM"]." ".
 					"WHERE ".$arSqls2["WHERE"]." ";
-			}
 
-			if (strlen($arSqls["GROUPBY"]) > 0)
+				if (strlen($arSqls["GROUPBY"]) > 0)
+				{
+					$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+				}
+
+				$strSql .= ") AS RELS";
+			}
+			else
 			{
-				$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+				$strSql =
+					"SELECT ".$arSqls["SELECT"]." ".
+					"FROM b_sonet_user_relations UR ".
+					"	".$arSqls["FROM"]." ";
+
+				if (strlen($arSqls["WHERE"]) > 0)
+				{
+					$strSql .= "WHERE ".$arSqls["WHERE"]." ";
+				}
+
+				if (strlen($arSqls["GROUPBY"]) > 0)
+				{
+					$strSql .= "GROUP BY ".$arSqls["GROUPBY"]." ";
+				}
 			}
 
 			//echo "!1!=".htmlspecialcharsbx($strSql)."<br>";
@@ -323,7 +339,7 @@ class CSocNetUserRelations extends CAllSocNetUserRelations
 			{
 				$strSql .= "ORDER BY ".$arSqls2["ORDERBY"]." ";
 			}
-			$strSql .= ") ";			
+			$strSql .= ") ";
 		}
 
 		if (strlen($arSqls["GROUPBY"]) > 0)

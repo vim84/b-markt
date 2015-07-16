@@ -22,14 +22,45 @@ $menufilename = "";
 $io = CBXVirtualIo::GetInstance();
 
 $path = $io->CombinePath("/", $path);
-$dbSitesList = CSite::GetList($b = "SORT", $o = "asc");
+$dbSitesList = CSite::GetList($b = "lendir", $o = "desc");
+$multiSite = false;
+$docRoot = $dbSitesList->Fetch();
+$docRoot = $docRoot['DOC_ROOT'];
+
 while($arSite = $dbSitesList->GetNext())
 {
-	$dir = rtrim($arSite["DIR"], "/");
-	if ($dir != '' && substr($path, 0, strlen($dir)) == $dir)
+	if($arSite['DOC_ROOT'] == '' || $arSite['DOC_ROOT'] == $docRoot)
 	{
-		$site = $arSite["ID"];
-		break;
+		$docRoot = $arSite['DOC_ROOT'];
+		continue;
+	}
+	$multiSite = true;
+	break;
+}
+reset($dbSitesList->arResult);
+
+if($multiSite)
+{
+	while($arSite = $dbSitesList->GetNext())
+	{
+		$dir = rtrim($arSite["DIR"], "/");
+		if (substr($path, 0, strlen($dir)) == $dir && $arSite["DOC_ROOT"] == CSite::GetSiteDocRoot($site))
+		{
+			$site = $arSite["ID"];
+			break;
+		}
+	}
+}
+else
+{
+	while($arSite = $dbSitesList->GetNext())
+	{
+		$dir = rtrim($arSite["DIR"], "/");
+		if (substr($path, 0, strlen($dir)) == $dir)
+		{
+			$site = $arSite["ID"];
+			break;
+		}
 	}
 }
 
@@ -98,7 +129,7 @@ else
 
 		//соберем $aMenuLinksTmp из того что пришло с формы
 		$aMenuSort = Array();
-		for($i=0; $i<count($ids); $i++)
+		for($i = 0, $l = count($ids); $i < $l; $i++)
 		{
 			$num = $ids[$i];
 			if (!isset($aMenuLinksTmp[$num-1]) && $only_edit)
@@ -126,7 +157,7 @@ else
 				$arAddLinks = Array();
 				$additional_link = ${"additional_link_".$num};
 				$arAddLinksTmp = explode("\n", $additional_link);
-				for($j=0; $j<count($arAddLinksTmp); $j++)
+				for($j = 0, $m = count($arAddLinksTmp); $j < $m; $j++)
 				{
 					if(strlen(trim($arAddLinksTmp[$j]))>0)
 						$arAddLinks[] = trim($arAddLinksTmp[$j]);
@@ -156,8 +187,8 @@ else
 		if(!$bSimple)
 			$aMenuLinksTmp = $aMenuLinksTmp_;
 
-		for($i=0; $i<count($aMenuSort)-1; $i++)
-			for($j=$i+1; $j<count($aMenuSort); $j++)
+		for($i = 0, $l = count($aMenuSort)-1; $i < $l; $i++)
+			for($j = $i + 1, $len = count($aMenuSort); $j < $len; $j++)
 				if($aMenuSort[$i]>$aMenuSort[$j])
 				{
 					$tmpSort = $aMenuLinksTmp[$i];
@@ -418,12 +449,12 @@ function AddMenuItem(ob)
 		'	<td nowrap valign="top">'+
 		'		<table cellpadding="0" cellspacing="1" border="0">'+
 		'		<tr>'+
-		'			<td align="center"><?=GetMessage("FILEMAN_MENU_EDIT_PARAM_NAME")?></td>'+
+		'			<td align="center"><?=GetMessage("FILEMAN_MENU_EDIT_PARAM_NAME")?></td><td></td>'+
 		'			<td align="center"><?=GetMessage("FILEMAN_MENU_EDIT_PARAM_VALUE")?></td>'+
 		'		</tr>'+
 				<?for($k = 0; $k < $number_new_params; $k++):?>
 		'			<tr>'+
-		'			<td nowrap><input type="text" size="15"  name="param_name_' + nums+'_<?= $k+1?>" value="">=</td>'+
+		'			<td nowrap><input type="text" size="15"  name="param_name_' + nums+'_<?= $k+1?>" value=""></td><td>=</td>'+
 		'			<td><input type="text" size="25"  name="param_value_'+nums+'_<?= $k+1?>" value=""></td>'+
 		'			</tr>'+
 				<?endfor?>
@@ -444,6 +475,7 @@ function AddMenuItem(ob)
 <input type="hidden" name="site" value="<?= htmlspecialcharsex($site) ?>">
 <input type="hidden" name="path" value="<?= htmlspecialcharsex($path) ?>">
 <input type="hidden" name="lang" value="<?= LANG ?>">
+<input type="hidden" name="extended" value="<?= ($bSimple ? "N" : "Y") ?>">
 <input type="hidden" name="save" value="Y">
 <input type="hidden" name="back_url" value="<?= htmlspecialcharsex($back_url)?>">
 <?if(!$bEdit):?><input type="hidden" name="new" value="Y"><?endif?>
@@ -485,7 +517,7 @@ $tabControl->BeginNextTab();
 			<select name="name" onChange="ChType(this)">
 			<?
 			$bExists=false;
-			for($i=0; $i<count($arTypes); $i++)
+			for($i = 0, $l = count($arTypes); $i < $l; $i++)
 			{
 				$t = $arTypes[$i];
 				?><option value="<?= htmlspecialcharsex($t[0])?>"<?if($name == $t[0]){$bExists=true; echo " selected";}?>>
@@ -522,7 +554,7 @@ $tabControl->BeginNextTab();
 		</tr>
 		<?
 		$itemcnt = 0;
-		for($i=1; $i<=count($aMenuLinksTmp)+5; $i++):
+		for($i = 1, $l = count($aMenuLinksTmp)+5; $i <= $l; $i++):
 			$itemcnt++;
 			if($i<=count($aMenuLinksTmp))
 				$aMenuLinksItem = $aMenuLinksTmp[$i-1];
@@ -560,7 +592,7 @@ $tabControl->BeginNextTab();
 		<?endif;?>
 		<?
 		$itemcnt = 0;
-		for($i=1; $i <= count($aMenuLinksTmp); $i++):
+		for($i = 1, $l = count($aMenuLinksTmp); $i <= $l; $i++):
 			$itemcnt++;
 			$aMenuLinksItem = $aMenuLinksTmp[$i-1];
 		?>
@@ -590,7 +622,7 @@ $tabControl->BeginNextTab();
 			<table>
 			<tr>
 				<td valign="top" align="right"><?=GetMessage("FILEMAN_MENU_EDIT_ADDITIONAL_LINK")?></td>
-				<td valign="top"><textarea rows="3" cols="30" name="additional_link_<?= $i?>" WRAP="off"><?for($j=0; $j<count($aMenuLinksItem[2]); $j++)echo htmlspecialcharsex($aMenuLinksItem[2][$j])."\n"?></textarea></td>
+				<td valign="top"><textarea rows="3" cols="30" name="additional_link_<?= $i?>" WRAP="off"><?for($j=0, $m=count($aMenuLinksItem[2]); $j<$m; $j++)echo htmlspecialcharsex($aMenuLinksItem[2][$j])."\n"?></textarea></td>
 			</tr>
 			<tr>
 				<td valign="top" align="right"><?=GetMessage("FILEMAN_MENU_EDIT_CONDITION_TYPE")?></td>

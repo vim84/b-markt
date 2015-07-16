@@ -263,7 +263,7 @@ $arComponentParameters = array(
 			"DEFAULT" => "2",
 			"HIDDEN" => ($showFromSection ? "N" : "Y")
 		),
-		"CACHE_TIME" => array("DEFAULT"=>36000000),
+		"CACHE_TIME" => array("DEFAULT"=>3600),
 		"CACHE_GROUPS" => array(
 			"PARENT" => "CACHE_SETTINGS",
 			"NAME" => GetMessage("CVP_CACHE_GROUPS"),

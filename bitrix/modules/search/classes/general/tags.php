@@ -101,10 +101,7 @@ class CSearchTags
 			default:
 				if(!is_array($arFilterEvents))
 				{
-					$arFilterEvents = array();
-					$events = GetModuleEvents("search", "OnSearchPrepareFilter");
-					while($arEvent = $events->Fetch())
-						$arFilterEvents[] = $arEvent;
+					$arFilterEvents = GetModuleEvents("search", "OnSearchPrepareFilter", true);
 				}
 				//Try to get someone to make the filter sql
 				foreach($arFilterEvents as $arEvent)

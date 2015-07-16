@@ -216,4 +216,6 @@ $MESS["PRICE_VAT_SHOW_VALUE_TIP"] = "Specifies to show the tax value.";
 $MESS["HIDE_NOT_AVAILABLE_TIP"] = "If checked: the products whose stock at all the warehouses is zero or less will be hidden; stock control will be enabled; out-of-stock items will be available for purchase.";
 $MESS["ADD_SECTIONS_CHAIN_TIP"] = "If the option is active and the current information block contains sections, their names will be shown in the navigation chain.";
 $MESS["ADD_ELEMENT_CHAIN_TIP"] = "If checked, the item name will be added to navigation breadcrumbs.";
+$MESS["CP_BC_SHOW_DEACTIVATED"] = "Show deactivated products";
+$MESS["SHOW_DEACTIVATED_TIP"] = "If checked, the component will also show inactive products.";
 ?>

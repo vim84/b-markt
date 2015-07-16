@@ -90,23 +90,33 @@ body {font-size: 10pt;}
 			<tr>
 				<td width="1%" nowrap>Адрес плательщика&nbsp;&nbsp;</td>
 				<td width="100%" style="border-bottom:1pt solid #000000;"><?
-					//собираем фактический
-					$sAddrFact = "";
-					(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_COUNTRY"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_COUNTRY"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_REGION"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_REGION"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_CITY"))>0)
+				
+					$sAddrFact = array();
+					if(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_COUNTRY") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_COUNTRY");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_REGION") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_REGION");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_CITY") != '')
 					{
 						$g = substr(CSalePaySystemAction::GetParamValue("PAYER_CITY"), 0, 2);
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").($g<>"г." && $g<>"Г."? "г. ":"").(CSalePaySystemAction::GetParamValue("PAYER_CITY"));
+						$sAddrFact[] = '<nobr>'.($g<>"г." && $g<>"Г."? "г. ":"").(CSalePaySystemAction::GetParamValue("PAYER_CITY")).'</nobr>';
 					}
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT"));
-					echo $sAddrFact;
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_VILLAGE") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_VILLAGE");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_STREET") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_STREET");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT");
+
+					echo implode(', ', $sAddrFact);
 				?>&nbsp;</td>
 			</tr>
 		</table>
@@ -226,23 +236,33 @@ body {font-size: 10pt;}
 			<tr>
 				<td width="1%" nowrap>Адрес плательщика&nbsp;&nbsp;</td>
 				<td width="100%" style="border-bottom:1pt solid #000000;"><?
-					//собираем фактический
-					$sAddrFact = "";
-					(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_COUNTRY"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_COUNTRY"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_REGION"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_REGION"));
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_CITY"))>0)
+				
+					$sAddrFact = array();
+					if(CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_ZIP_CODE");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_COUNTRY") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_COUNTRY");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_REGION") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_REGION");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_CITY") != '')
 					{
 						$g = substr(CSalePaySystemAction::GetParamValue("PAYER_CITY"), 0, 2);
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").($g<>"г." && $g<>"Г."? "г. ":"").(CSalePaySystemAction::GetParamValue("PAYER_CITY"));
+						$sAddrFact[] = '<nobr>'.($g<>"г." && $g<>"Г."? "г. ":"").(CSalePaySystemAction::GetParamValue("PAYER_CITY")).'</nobr>';
 					}
-					if(strlen(CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT"))>0)
-						$sAddrFact .= ($sAddrFact<>""? ", ":"").(CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT"));
-					echo $sAddrFact;
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_VILLAGE") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_VILLAGE");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_STREET") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_STREET");
+
+					if(CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT") != '')
+						$sAddrFact[] = CSalePaySystemAction::GetParamValue("PAYER_ADDRESS_FACT");
+
+					echo implode(', ', $sAddrFact);
 				?>&nbsp;</td>
 			</tr>
 		</table>

@@ -1,68 +1,75 @@
 <?
+/**
+ * @global CMain $APPLICATION
+ * @global array $arParams
+ * */
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
-if (!CModule::IncludeModule("sale"))
+use Bitrix\Main\Config\Option;
+use Bitrix\Main\Loader;
+use Bitrix\Sale\DiscountCouponsManager;
+
+if (!Loader::includeModule('sale'))
 {
 	ShowError(GetMessage("SALE_MODULE_NOT_INSTALL"));
 	return;
 }
 
-if($_REQUEST["AJAX_CALL"] == "Y")
-{
+$requestAjax = isset($_REQUEST['AJAX_CALL']) && $_REQUEST['AJAX_CALL'] == 'Y';
+if ($requestAjax)
 	$APPLICATION->RestartBuffer();
-}
 
-if($arParams["SET_TITLE"] == "Y")
+if (isset($arParams["SET_TITLE"]) && $arParams["SET_TITLE"] == "Y")
 	$APPLICATION->SetTitle(GetMessage("SBB_TITLE"));
 
-if (!array_key_exists("COLUMNS_LIST", $arParams) || empty($arParams["COLUMNS_LIST"]) || !is_array($arParams["COLUMNS_LIST"]))
+if (empty($arParams["COLUMNS_LIST"]) || !is_array($arParams["COLUMNS_LIST"]))
 	$arParams["COLUMNS_LIST"] = array("NAME", "PRICE", "TYPE", "QUANTITY", "DELETE", "DELAY", "WEIGHT");
 
-$arParams["HIDE_COUPON"] = (($arParams["HIDE_COUPON"] == "Y") ? "Y" : "N");
+$arParams["HIDE_COUPON"] = (isset($arParams["HIDE_COUPON"]) && $arParams["HIDE_COUPON"] == "Y" ? "Y" : "N");
 
-if (!isset($arParams['QUANTITY_FLOAT']))
-	$arParams['QUANTITY_FLOAT'] = 'N';
+$arParams['QUANTITY_FLOAT'] = (isset($arParams['QUANTITY_FLOAT']) && $arParams['QUANTITY_FLOAT'] == 'Y' ? 'Y' : 'N');
 
-$arParams['PRICE_VAT_SHOW_VALUE'] = $arParams['PRICE_VAT_SHOW_VALUE'] == 'N' ? 'N' : 'Y';
+$arParams['PRICE_VAT_SHOW_VALUE'] = (isset($arParams['PRICE_VAT_SHOW_VALUE']) && $arParams['PRICE_VAT_SHOW_VALUE'] == 'N' ? 'N' : 'Y');
 $arParams["SEND_NEW_USER_NOTIFY"] = (($arParams["SEND_NEW_USER_NOTIFY"] == "N") ? "N" : "Y");
 
-$arParams["WEIGHT_UNIT"] = htmlspecialcharsbx(COption::GetOptionString('sale', 'weight_unit', "", SITE_ID));
-$arParams["WEIGHT_KOEF"] = htmlspecialcharsbx(COption::GetOptionString('sale', 'weight_koef', 1, SITE_ID));
+$arParams["WEIGHT_UNIT"] = htmlspecialcharsbx(Option::get('sale', 'weight_unit', '', SITE_ID));
+$arParams["WEIGHT_KOEF"] = htmlspecialcharsbx(Option::get('sale', 'weight_koef', 1, SITE_ID));
 
-if (strlen($arParams["TEMPLATE_LOCATION"]) <= 0)
+if (empty($arParams["TEMPLATE_LOCATION"]))
 	$arParams["TEMPLATE_LOCATION"] = ".default";
 
 $errorMessage = "";
 $arResultProps = array();
 
-$PERSON_TYPE = (isset($_POST["PERSON_TYPE"])) ? intval($_POST["PERSON_TYPE"]) : 0;
-$PROFILE_ID = (isset($_POST["PROFILE_ID"])) ? intval($_POST["PROFILE_ID"]) : '';
-$PROFILE_ID_OLD = (isset($_POST["PROFILE_ID_OLD"])) ? intval($_POST["PROFILE_ID_OLD"]) : '';
+$PERSON_TYPE = (isset($_POST["PERSON_TYPE"]) ? (int)$_POST["PERSON_TYPE"] : 0);
+$PROFILE_ID = (isset($_POST["PROFILE_ID"]) ? (int)$_POST["PROFILE_ID"] : '');
+$PROFILE_ID_OLD = (isset($_POST["PROFILE_ID_OLD"]) ? (int)$_POST["PROFILE_ID_OLD"] : '');
 $PAYSYSTEM_ID = (isset($_POST["PAYSYSTEM_ID"])) ? htmlspecialcharsbx($_POST["PAYSYSTEM_ID"]) : '';
 $DELIVERY_ID = (isset($_POST["DELIVERY_ID"])) ? htmlspecialcharsbx($_POST["DELIVERY_ID"]) : '';
 $ORDER_DESCRIPTION = htmlspecialcharsbx(trim($_POST["ORDER_DESCRIPTION"]));
-$ORDER_ID = (isset($_REQUEST["ORDER_ID"])) ? intval($_REQUEST["ORDER_ID"]) : '';
+$ORDER_ID = (isset($_REQUEST["ORDER_ID"]) ? (int)$_REQUEST["ORDER_ID"] : '');
 
-if(intval($ORDER_ID) <= 0)
+$currentUserId = (int)$USER->GetID();
+
+if ((int)$ORDER_ID <= 0)
 {
+	DiscountCouponsManager::init();
 	/*
 	* person type
 	*/
 	$arPersonTypeList = array();
-	$dbPersonType = CSalePersonType::GetList(array("ID" => "ASC", "NAME" => "ASC"), array("ACTIVE" => "Y"));
+	$dbPersonType = CSalePersonType::GetList(array("ID" => "ASC", "NAME" => "ASC"), array("ACTIVE" => "Y", 'LID' => SITE_ID));
 	while ($arPersonType = $dbPersonType->GetNext())
 	{
-		if (!in_array(SITE_ID, $arPersonType["LIDS"]))
-			continue;
-
-		if (!isset($PERSON_TYPE) || $PERSON_TYPE == "")
+		$arPersonType["CHECKED"] = 'N';
+		if ($PERSON_TYPE <= 0)
 		{
 			$PERSON_TYPE = $arPersonType["ID"];
 			$arPersonType["CHECKED"] = "Y";
 		}
 		else
 		{
-			if ($_POST["PERSON_TYPE"] == $arPersonType["ID"])
+			if (isset($_POST["PERSON_TYPE"]) && $_POST["PERSON_TYPE"] == $arPersonType["ID"])
 				$arPersonType["CHECKED"] = "Y";
 		}
 		$arPersonTypeList[$arPersonType["ID"]] = $arPersonType;
@@ -72,7 +79,7 @@ if(intval($ORDER_ID) <= 0)
 	/*
 	* user profile
 	*/
-	$arResultProps["USER_PROFILES"] = CSaleOrderUserProps::DoLoadProfiles(intval($USER->GetID()), $PERSON_TYPE);
+	$arResultProps["USER_PROFILES"] = CSaleOrderUserProps::DoLoadProfiles($currentUserId, $PERSON_TYPE);
 	$arProfileTmp = array();
 
 	if (!empty($arResultProps["USER_PROFILES"]) && is_array($arResultProps["USER_PROFILES"]))
@@ -91,10 +98,10 @@ if(intval($ORDER_ID) <= 0)
 		}
 	}
 	else
-		$PROFILE_ID = intval($PROFILE_ID);
+		$PROFILE_ID = (int)$PROFILE_ID;
 
 	/*
-	* orde props
+	* order props
 	*/
 	$userProfile = $arResultProps["USER_PROFILES"];
 	$arPropValues = array();
@@ -141,7 +148,7 @@ if(intval($ORDER_ID) <= 0)
 
 	while ($arProperties = $dbProperties->GetNext())
 	{
-		if ((isset($_POST["BasketOrder"]) || $_REQUEST["AJAX_CALL"] == "Y" || $_REQUEST["form"] == "Y") && $PROFILE_ID_OLD == $PROFILE_ID)
+		if ((isset($_POST["BasketOrder"]) || $requestAjax || $_REQUEST["form"] == "Y") && $PROFILE_ID_OLD == $PROFILE_ID)
 		{
 			$curVal = htmlspecialcharsEx($_REQUEST["ORDER_PROP_".$arProperties["ID"]]);
 
@@ -204,6 +211,7 @@ if(intval($ORDER_ID) <= 0)
 		elseif ($arProperties["TYPE"] == "SELECT")
 		{
 			$arProperties["SIZE1"] = ((intval($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 1);
+			$arProperties["VARIANTS"] = array();
 			$dbVariants = CSaleOrderPropsVariant::GetList(
 					array("SORT" => "ASC", "NAME" => "ASC"),
 					array("ORDER_PROPS_ID" => $arProperties["ID"]),
@@ -236,7 +244,7 @@ if(intval($ORDER_ID) <= 0)
 		{
 			$arProperties["FIELD_NAME"] = "ORDER_PROP_".$arProperties["ID"].'[]';
 			$arProperties["SIZE1"] = ((intval($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 5);
-
+			$arProperties["VARIANTS"] = array();
 			if (!is_array($curVal) && strlen($curVal) > 0)
 				$curVal = explode(",", $curVal);
 
@@ -274,6 +282,7 @@ if(intval($ORDER_ID) <= 0)
 		}
 		elseif ($arProperties["TYPE"] == "LOCATION")
 		{
+			$arProperties["VARIANTS"] = array();
 			if (strlen($locationForZip) > 0 && $arProperties["IS_LOCATION"] == "Y")
 				$curVal = $locationForZip;
 
@@ -283,24 +292,41 @@ if(intval($ORDER_ID) <= 0)
 			//enable location text
 			if ($_REQUEST["form"] == "Y" && $arProperties["IS_LOCATION"] == "Y" && intval($arProperties["INPUT_FIELD_LOCATION"]) > 0 && isset($_REQUEST["ORDER_PROP_".$arProperties["ID"]]))
 			{
-				$rsLocationsList = CSaleLocation::GetList(
-					array(),
-					array("ID" => $curVal),
-					false,
-					false,
-					array("ID", "CITY_ID")
-				);
-				$arCity = $rsLocationsList->GetNext();
-
-				if (intval($arCity["CITY_ID"]) <= 0)
-					$bDeleteFieldLocation = "";
+				if(CSaleLocation::isLocationProMigrated())
+				{
+					// now we have no had-coded type-table for locations, so turn this logic on only when there is "CITY" type
+					// note: support only one town property? what if there are several location props with the corresponding town props?
+					if(!CSaleLocation::checkLocationIsAboveCity($curVal))
+					{
+						$bDeleteFieldLocation = intval($arProperties["INPUT_FIELD_LOCATION"]); // remove by default
+					}
+					else
+					{
+						$bDeleteFieldLocation = '';
+					}
+				}
 				else
-					$bDeleteFieldLocation = intval($arProperties["INPUT_FIELD_LOCATION"]);
+				{
+					$rsLocationsList = CSaleLocation::GetList(
+						array(),
+						array("ID" => $curVal),
+						false,
+						false,
+						array("ID", "CITY_ID")
+					);
+					$arCity = $rsLocationsList->GetNext();
+
+					if (intval($arCity["CITY_ID"]) <= 0)
+						$bDeleteFieldLocation = "";
+					else
+						$bDeleteFieldLocation = intval($arProperties["INPUT_FIELD_LOCATION"]);
+				}
 			}
 			elseif ($arProperties["IS_LOCATION"] == "Y" && intval($arProperties["INPUT_FIELD_LOCATION"]) > 0)
 				$bDeleteFieldLocation = intval($arProperties["INPUT_FIELD_LOCATION"]);
 
 			$arProperties["SIZE1"] = ((intval($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 1);
+			$locationFound = false;
 			$dbVariants = CSaleLocation::GetList(
 					array("SORT" => "ASC", "COUNTRY_NAME_LANG" => "ASC", "CITY_NAME_LANG" => "ASC"),
 					array("LID" => LANGUAGE_ID),
@@ -312,6 +338,7 @@ if(intval($ORDER_ID) <= 0)
 			{
 				if (intval($arVariants["ID"]) == intval($curVal) || (!isset($curVal) && intval($arVariants["ID"]) == intval($arProperties["DEFAULT_VALUE"])))
 				{
+					$locationFound = true;
 					$arVariants["SELECTED"] = "Y";
 					$arProperties["VALUE_FORMATED"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 					$arProperties["VALUE"] = $arVariants["ID"];
@@ -319,11 +346,26 @@ if(intval($ORDER_ID) <= 0)
 				$arVariants["NAME"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 				$arProperties["VARIANTS"][] = $arVariants;
 			}
+
+			// this is not a COUNTRY, REGION or CITY, but must appear in $arProperties["VARIANTS"]
+			if(CSaleLocation::isLocationProMigrated() && !$locationFound && IntVal($curVal))
+			{
+				// CSaleLocation::GetById() is enought intelligent to accept modern (not-country-or-region-or-city) ID or CODE
+				$item = CSaleLocation::GetById($curVal);
+				if($item)
+				{
+					$item['NAME'] = $item["COUNTRY_NAME"].((strlen($item["CITY_NAME"]) > 0) ? " - " : "").$item["CITY_NAME"];
+					$item['SELECTED'] = 'Y';
+					$arProperties["VARIANTS"][] = $item;
+				}
+			}
+
 			if(count($arProperties["VARIANTS"]) == 1)
 				$arProperties["VALUE"] = $arProperties["VARIANTS"][0]["ID"];
 		}
 		elseif ($arProperties["TYPE"] == "RADIO")
 		{
+			$arProperties["VARIANTS"] = array();
 			$dbVariants = CSaleOrderPropsVariant::GetList(
 					array("SORT" => "ASC"),
 					array("ORDER_PROPS_ID" => $arProperties["ID"]),
@@ -412,13 +454,29 @@ if(intval($ORDER_ID) <= 0)
 	$COUPON = "";
 	if ($arParams["HIDE_COUPON"] != "Y" AND isset($_REQUEST["COUPON"]))
 	{
-		$COUPON = trim($_REQUEST["COUPON"]);
-		$arCupon = array();
-		$cupons = explode(",", $COUPON);
-		foreach($cupons as $val)
+		if (isset($_REQUEST["COUPON"]))
 		{
-			if (strlen(trim($val)) > 0)
-				$arCupon[] = trim($val);
+			$COUPON = (string)$_REQUEST['COUPON'];
+			if ($COUPON === '')
+			{
+				DiscountCouponsManager::clear(true);
+			}
+			else
+			{
+				$arCoupons = array();
+				$cupons = explode(",", $COUPON);
+				foreach($cupons as $val)
+				{
+					$val = trim($val);
+					if ($val != '')
+						$arCoupons[] = $val;
+				}
+				if (!empty($arCoupons))
+				{
+					foreach ($arCoupons as $oneCoupon)
+						DiscountCouponsManager::add($oneCoupon);
+				}
+			}
 		}
 	}
 
@@ -449,7 +507,7 @@ if(intval($ORDER_ID) <= 0)
 			if ($user_id > 0 && empty($arErrors))
 			{
 				$USER->Authorize($user_id);
-
+				$currentUserId = (int)$USER->GetID();
 				//send mail register user
 				if ($arParams["SEND_NEW_USER_NOTIFY"] == "Y")
 				{
@@ -470,7 +528,7 @@ if(intval($ORDER_ID) <= 0)
 	*/
 	$arErrors = array();
 	$arWarnings = array();
-	$arShoppingCart = CSaleBasket::DoGetUserShoppingCart(SITE_ID, intval($USER->GetID()), intval(CSaleBasket::GetBasketUserID()), $arErrors, $arCupon);
+	$arShoppingCart = CSaleBasket::DoGetUserShoppingCart(SITE_ID, $currentUserId, intval(CSaleBasket::GetBasketUserID()), $arErrors);
 	$productLimit = "";
 
 	if (strlen($_REQUEST["BasketRefresh"]) > 0 || strlen($_REQUEST["BasketOrder"]) > 0 || strlen($_REQUEST["AJAX_CALL"]) > 0)
@@ -510,7 +568,7 @@ if(intval($ORDER_ID) <= 0)
 				}
 			}
 
-			if (!empty($arProductIDs) && CModule::IncludeModule('catalog'))
+			if (!empty($arProductIDs) && Loader::includeModule('catalog'))
 			{
 				$rsProducts = CCatalogProduct::GetList(
 					array(),
@@ -534,7 +592,9 @@ if(intval($ORDER_ID) <= 0)
 						{
 							$arShoppingCart[$key]['QUANTITY'] = $arNewQuantity[$arProduct['ID']];
 							$arFields = array(
-								"QUANTITY" => $arNewQuantity[$arProduct['ID']]
+								"QUANTITY" => $arNewQuantity[$arProduct['ID']],
+								'TYPE' => $arShoppingCart[$key]['TYPE'],
+								'SET_PARENT_ID' => $arShoppingCart[$key]['SET_PARENT_ID']
 							);
 							CSaleBasket::Update($arShoppingCart[$key]["ID"], $arFields);
 						}
@@ -546,7 +606,7 @@ if(intval($ORDER_ID) <= 0)
 
 	$arBasketItems = CSaleOrder::DoCalculateOrder(
 		SITE_ID,
-		$USER->GetID(),
+		$currentUserId,
 		$arShoppingCart,
 		$PERSON_TYPE,
 		$arPropValues,
@@ -571,7 +631,7 @@ if(intval($ORDER_ID) <= 0)
 		$PAYSYSTEM_ID = "";
 		$arBasketItems = CSaleOrder::DoCalculateOrder(
 			SITE_ID,
-			$USER->GetID(),
+			$currentUserId,
 			$arShoppingCart,
 			$PERSON_TYPE,
 			$arPropValues,
@@ -625,77 +685,11 @@ if(intval($ORDER_ID) <= 0)
 			else
 				$arAdditionalFields["AFFILIATE_ID"] = false;
 
-			foreach($arBasketItems["BASKET_ITEMS"] as $key => $val)
-			{
-				unset($arBasketItems["BASKET_ITEMS"][$key]["ID"]);
-			}
-
-			$ORDER_ID = CSaleOrder::DoSaveOrder($arBasketItems, $arAdditionalFields, 0, $arErrors, $arCupon);
+			$ORDER_ID = CSaleOrder::DoSaveOrder($arBasketItems, $arAdditionalFields, 0, $arErrors);
 
 			if ($ORDER_ID > 0 && empty($arErrors))
 			{
 				CSaleBasket::OrderBasket($ORDER_ID, CSaleBasket::GetBasketUserID(), SITE_ID, false);
-
-				$dbBasketItems = CSaleBasket::GetList(
-					array("ID" => "ASC"),
-					array(
-						"FUSER_ID" => CSaleBasket::GetBasketUserID(),
-						"LID" => SITE_ID,
-						"ORDER_ID" => $ORDER_ID
-					),
-					false,
-					false,
-					array("ID", "CALLBACK_FUNC", "MODULE", "PRODUCT_ID", "QUANTITY", "DELAY", "CAN_BUY", "PRICE", "WEIGHT", "NAME", "DISCOUNT_PRICE", "CURRENCY", "PRODUCT_PROVIDER_CLASS", "DIMENSIONS")
-				);
-				$arResult["ORDER_PRICE"] = 0;
-
-				$arOrderForDiscount = array(
-					'SITE_ID' => SITE_ID,
-					'USER_ID' => $USER->GetID(),
-					'ORDER_PRICE' => $arResult["ORDER_PRICE"],
-					'ORDER_WEIGHT' => 0,
-					'PRICE_DELIVERY' => $arResult["DELIVERY_PRICE"],
-					'BASKET_ITEMS' => array(),
-					"PERSON_TYPE_ID" => $arUserResult['PERSON_TYPE_ID'],
-					"PAY_SYSTEM_ID" => $arUserResult["PAY_SYSTEM_ID"],
-					"DELIVERY_ID" => $arUserResult["DELIVERY_ID"],
-				);
-
-				while ($arOneItem = $dbBasketItems->GetNext())
-				{
-					$arOrderForDiscount['BASKET_ITEMS'][] = $arOneItem;
-					$arOrderForDiscount['ORDER_WEIGHT'] += doubleval($arOneItem['WEIGHT']);
-				}
-
-				$arDiscountOptions = array();
-
-				$arDiscountErrors = array();
-
-				CSaleDiscount::DoProcessOrder($arOrderForDiscount, $arDiscountOptions, $arDiscountErrors);
-
-				$arResult["ORDER_PRICE"] = 0;
-
-				foreach ($arOrderForDiscount['BASKET_ITEMS'] as &$arOneItem)
-				{
-					$arResult["ORDER_PRICE"] += doubleval($arOneItem['PRICE'])*doubleval($arOneItem['QUANTITY']);
-					$arBasketInfo = array(
-						'IGNORE_CALLBACK_FUNC' => 'Y',
-						'PRICE' => $arOneItem['PRICE'],
-					);
-					if (array_key_exists('DISCOUNT_PRICE', $arOneItem))
-					{
-						$arBasketInfo['DISCOUNT_PRICE'] = $arOneItem['DISCOUNT_PRICE'];
-					}
-					CSaleBasket::Update(
-						$arOneItem['ID'],
-						$arBasketInfo
-					);
-				}
-				if (isset($arOneItem))
-					unset($arOneItem);
-				$arBasketItems["BASKET_ITEMS"] = $arOrderForDiscount['BASKET_ITEMS'];
-				$totalOrderPrice = $arResult["ORDER_PRICE"] + $arResult["DELIVERY_PRICE"] + $arResult["TAX_PRICE"] - $arResult["DISCOUNT_PRICE"];
-				CSaleOrder::Update($arResult["ORDER_ID"], array("PRICE" => $totalOrderPrice));
 
 				/*send mail order*/
 				$strOrderList = "";
@@ -737,7 +731,7 @@ if(intval($ORDER_ID) <= 0)
 
 				CSaleMobileOrderPush::send("ORDER_CREATED", array("ORDER_ID" => $arFields["ORDER_ID"]));
 
-				if(CModule::IncludeModule("statistic"))
+				if (Loader::includeModule("statistic"))
 				{
 					$event1 = "eStore";
 					$event2 = "order_confirm";
@@ -755,12 +749,12 @@ if(intval($ORDER_ID) <= 0)
 				$urlError = "";
 				if ($PAYSYSTEM_ID == "account")
 				{
-					if (!CSaleUserAccount::DoPayOrderFromAccount($USER->GetID(), $arBasketItems["CURRENCY"], $ORDER_ID, $arBasketItems["PRICE"], array(), $arErrors))
+					if (!CSaleUserAccount::DoPayOrderFromAccount($currentUserId, $arBasketItems["CURRENCY"], $ORDER_ID, $arBasketItems["PRICE"], array(), $arErrors))
 					{
 						$urlError = "&erraccount=y";
 					}
 				}
-				CSaleOrderUserProps::DoSaveUserProfile($USER->GetID(), $PROFILE_ID, $profileName, $PERSON_TYPE, $arPropValues, $arErrors);
+				CSaleOrderUserProps::DoSaveUserProfile($currentUserId, $PROFILE_ID, $profileName, $PERSON_TYPE, $arPropValues, $arErrors);
 
 				LocalRedirect($APPLICATION->GetCurPageParam("ORDER_ID=".$ORDER_ID.$urlError, Array("ORDER_ID", "action", "id")));
 			}
@@ -796,12 +790,6 @@ if(intval($ORDER_ID) <= 0)
 	$arSetParentWeight = array();
 	while ($arItems = $dbDelayBasketItems->GetNext())
 	{
-		/*if (strlen($arItems["CALLBACK_FUNC"]) > 0)
-		{
-			CSaleBasket::UpdatePrice($arItems["ID"], $arItems["CALLBACK_FUNC"], $arItems["MODULE"], $arItems["PRODUCT_ID"], $arItems["QUANTITY"]);
-			$arItems = CSaleBasket::GetByID($arItems["ID"]);
-		}*/
-
 		$arItems['QUANTITY'] = $arParams['QUANTITY_FLOAT'] == 'Y' ? number_format(DoubleVal($arItems['QUANTITY']), 2, '.', '') : intval($arItems['QUANTITY']);
 		$arBasketItems["BASKET_ITEMS"][] = $arItems;
 
@@ -849,7 +837,7 @@ if(intval($ORDER_ID) <= 0)
 	$arResult["ITEMS"]["AnSubscribe"] = Array();
 	$DISCOUNT_PRICE_ALL = 0;
 
-	$boolIBlock = CModule::IncludeModule('iblock');
+	$boolIBlock = Loader::includeModule('iblock');
 
 	if (is_array($arBasketItems["BASKET_ITEMS"]))
 	{
@@ -987,7 +975,7 @@ if(intval($ORDER_ID) <= 0)
 		$dbUserAccount = CSaleUserAccount::GetList(
 			array(),
 			array(
-				"USER_ID" => intval($USER->GetID()),
+				"USER_ID" => $currentUserId,
 				"CURRENCY" => $arResult["CURRENCY"],
 				"LOCKED" => "N"
 			)
@@ -1047,7 +1035,7 @@ if(intval($ORDER_ID) <= 0)
 
 		$arOrderForDiscount = array(
 			'SITE_ID' => SITE_ID,
-			'USER_ID' => $USER->GetID(),
+			'USER_ID' => $currentUserId,
 			'ORDER_PRICE' => $arResult['ORDER_PRICE'],
 			'ORDER_WEIGHT' => $arResult["ORDER_WEIGHT"],
 			'PRICE_DELIVERY' => $arResult["DELIVERY_PRICE"],
@@ -1118,7 +1106,7 @@ else
 		array("DATE_UPDATE" => "DESC"),
 		array(
 				"LID" => SITE_ID,
-				"USER_ID" => intval($USER->GetID()),
+				"USER_ID" => $currentUserId,
 				"ID" => $arResult["ORDER_BASKET"]["ORDER_ID"]
 		)
 	);
@@ -1186,9 +1174,5 @@ else
 
 $this->IncludeComponentTemplate();
 
-if($_REQUEST["AJAX_CALL"] == "Y")
-{
+if ($requestAjax)
 	die();
-}
-
-?>

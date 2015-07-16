@@ -29,4 +29,5 @@ $MESS["SONET_U_INVITE_CONFIRM_TITLE"] = "Friendship request from #USER#";
 $MESS["SONET_UR_IM_UNFRIEND"] = "is no longer your friend";
 $MESS["SONET_UR_IM_UNFRIEND_M"] = "is no longer your friend";
 $MESS["SONET_UR_IM_UNFRIEND_F"] = "is no longer your friend";
+$MESS["SONET_UR_ERROR_RELATION_FRIENDS2"] = "Friendship relations are no longer supported";
 ?>

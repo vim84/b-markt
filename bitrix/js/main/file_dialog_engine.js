@@ -259,7 +259,7 @@ BXDialogTree.prototype =
 
 			for (i = 0; i < l; i++)
 			{
-				dir = BX.util.trim(arPath[i]);
+				dir = arPath[i];
 				if (dir != '')
 				{
 					basePath += '/' + dir;
@@ -2417,7 +2417,7 @@ function __ViewSelector()
 			window.fd_view_list.PopupShow(pos);
 			// Temp hack for old popupmenus
 			if (BX('fd_view_list'))
-				BX('fd_view_list').style.zIndex = 3500;
+				BX('fd_view_list').style.zIndex = 3510;
 		}, 5);
 	};
 
@@ -3294,4 +3294,5 @@ function getSite()
 		return window.oBXDialogControls.currentSite;
 	return BXSite;
 }
+
 

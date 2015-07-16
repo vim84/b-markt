@@ -61,13 +61,13 @@ function stemming_init($sLang="ru")
 			"stop" => $stemming_stop_function,
 			"upper" => $stemming_upper_function,
 			"letters" => $letters,
-			"pcre_letters" => str_replace(
+			"pcre_letters" => "\\w\\d".str_replace(
 				array("\\"  , "-"  , "^"  , "]"  , "/"),
 				array("\\\\", "\\-", "\\^", "\\]", "\\/"),
 				$letters
 			),
 			"abc" => $abc,
-			"pcre_abc" => str_replace(
+			"pcre_abc" => "\\w\\d".str_replace(
 				array("\\"  , "-"  , "^"  , "]"  , "/"),
 				array("\\\\", "\\-", "\\^", "\\]", "\\/"),
 				$abc

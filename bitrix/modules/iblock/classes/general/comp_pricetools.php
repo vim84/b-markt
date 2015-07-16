@@ -3,6 +3,7 @@ use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Highloadblock\HighloadBlockTable;
 use Bitrix\Iblock\PropertyTable;
+use Bitrix\Main;
 
 Loc::loadMessages(__FILE__);
 
@@ -102,14 +103,12 @@ class CIBlockPriceTools
 			self::$catalogIncluded = Loader::includeModule('catalog');
 		if (self::$catalogIncluded)
 		{
-			if (!is_array($arCatalogGroups))
+			if (!is_array($arCatalogGroups) || !is_array($arUserGroups))
 				return false;
-			if (!is_array($arUserGroups))
-				return false;
-			CatalogClearArray($arCatalogGroups);
+			Main\Type\Collection::normalizeArrayValuesByInt($arCatalogGroups, true);
 			if (empty($arCatalogGroups))
 				return false;
-			CatalogClearArray($arUserGroups);
+			Main\Type\Collection::normalizeArrayValuesByInt($arUserGroups, true);
 			if (empty($arUserGroups))
 				return false;
 
@@ -127,45 +126,40 @@ class CIBlockPriceTools
 					$strCacheKey = CCatalogDiscount::GetDiscountFilterCacheKey(array($intOneGroupID), $arUserGroups, false);
 					$arDiscountFilter[$strCacheKey] = array();
 				}
-				if (isset($intOneGroupID))
-					unset($intOneGroupID);
+				unset($intOneGroupID);
 			}
 			else
 			{
-				$arSelect = array(
-					"ID", "TYPE", "SITE_ID", "ACTIVE", "ACTIVE_FROM", "ACTIVE_TO",
-					"RENEWAL", "NAME", "SORT", "MAX_DISCOUNT", "VALUE_TYPE", "VALUE", "CURRENCY",
-					"PRIORITY", "LAST_DISCOUNT",
-					"COUPON", "COUPON_ONE_TIME", "COUPON_ACTIVE", 'UNPACK'
-				);
-				$strDate = date($DB->DateFormatToPHP(CSite::GetDateFormat("FULL")));
-				$arFilter = array(
-					"ID" => $arRest['DISCOUNTS'],
-					"SITE_ID" => SITE_ID,
-					"TYPE" => DISCOUNT_TYPE_STANDART,
-					"ACTIVE" => "Y",
-					"RENEWAL" => 'N',
-					"+<=ACTIVE_FROM" => $strDate,
-					"+>=ACTIVE_TO" => $strDate,
-					'+COUPON' => array(),
-				);
-
 				$arResultDiscountList = array();
 
-				$rsPriceDiscounts = CCatalogDiscount::GetList(
-					array(),
-					$arFilter,
-					false,
-					false,
-					$arSelect
+				$arSelect = array(
+					'ID', 'TYPE', 'SITE_ID', 'ACTIVE', 'ACTIVE_FROM', 'ACTIVE_TO',
+					'RENEWAL', 'NAME', 'SORT', 'MAX_DISCOUNT', 'VALUE_TYPE', 'VALUE', 'CURRENCY',
+					'PRIORITY', 'LAST_DISCOUNT',
+					'COUPON', 'COUPON_ONE_TIME', 'COUPON_ACTIVE', 'UNPACK', 'CONDITIONS'
 				);
-
-				while ($arPriceDiscount = $rsPriceDiscounts->Fetch())
+				$strDate = date($DB->DateFormatToPHP(CSite::GetDateFormat('FULL')));
+				$discountRows = array_chunk($arRest['DISCOUNTS'], 500);
+				foreach ($discountRows as &$row)
 				{
-					$arPriceDiscount['ID'] = (int)$arPriceDiscount['ID'];
-					$arResultDiscountList[$arPriceDiscount['ID']] = $arPriceDiscount;
+					$arFilter = array(
+						'@ID' => $row,
+						'SITE_ID' => SITE_ID,
+						'TYPE' => DISCOUNT_TYPE_STANDART,
+						'RENEWAL' => 'N',
+						'+<=ACTIVE_FROM' => $strDate,
+						'+>=ACTIVE_TO' => $strDate,
+						'+COUPON' => array()
+					);
+					$rsPriceDiscounts = CCatalogDiscount::GetList(array(), $arFilter, false, false, $arSelect);
+					while ($arPriceDiscount = $rsPriceDiscounts->Fetch())
+					{
+						$arPriceDiscount['ID'] = (int)$arPriceDiscount['ID'];
+						$arResultDiscountList[$arPriceDiscount['ID']] = $arPriceDiscount;
+					}
+					unset($arPriceDiscount, $rsPriceDiscounts, $arFilter);
 				}
-
+				unset($row, $discountRows);
 				foreach ($arCatalogGroups as &$intOneGroupID)
 				{
 					$strCacheKey = CCatalogDiscount::GetDiscountFilterCacheKey(array($intOneGroupID), $arUserGroups, false);
@@ -1570,7 +1564,7 @@ class CIBlockPriceTools
 			return false;
 
 		$highBlock = HighloadBlockTable::getList(array(
-			'filter' => array('TABLE_NAME' => $property['USER_TYPE_SETTINGS']['TABLE_NAME'])
+			'filter' => array('=TABLE_NAME' => $property['USER_TYPE_SETTINGS']['TABLE_NAME'])
 		))->fetch();
 		if (!isset($highBlock['ID']))
 			return false;
@@ -1635,12 +1629,12 @@ class CIBlockPriceTools
 			),
 			'filter' => array(
 				'IBLOCK_ID' => $skuInfo['IBLOCK_ID'],
-				'PROPERTY_TYPE' => array(
+				'=PROPERTY_TYPE' => array(
 					PropertyTable::TYPE_LIST,
 					PropertyTable::TYPE_ELEMENT,
 					PropertyTable::TYPE_STRING
 				),
-				'ACTIVE' => 'Y', 'MULTIPLE' => 'N'
+				'=ACTIVE' => 'Y', '=MULTIPLE' => 'N'
 			),
 			'order' => array(
 				'SORT' => 'ASC', 'ID' => 'ASC'
@@ -1674,7 +1668,7 @@ class CIBlockPriceTools
 					continue;
 
 				$highBlock = HighloadBlockTable::getList(array(
-					'filter' => array('TABLE_NAME' => $propInfo['USER_TYPE_SETTINGS']['TABLE_NAME'])
+					'filter' => array('=TABLE_NAME' => $propInfo['USER_TYPE_SETTINGS']['TABLE_NAME'])
 				))->fetch();
 				if (!isset($highBlock['ID']))
 					continue;
@@ -1754,8 +1748,11 @@ class CIBlockPriceTools
 				$values = array();
 				$valuesExist = false;
 				$pictMode = ('PICT' == $oneProperty['SHOW_MODE']);
-				$needValuesExist = isset($propNeedValues[$oneProperty['ID']]) && !empty($propNeedValues[$oneProperty['ID']]);
-				$filterValuesExist = ($needValuesExist && count($propNeedValues[$oneProperty['ID']]) <= 100);
+				$needValuesExist = !empty($propNeedValues[$oneProperty['ID']]) && is_array($propNeedValues[$oneProperty['ID']]);
+				$filterValuesExist = ($needValuesExist && count($propNeedValues[$oneProperty['ID']]) <= 500);
+				$needValues = array();
+				if ($needValuesExist)
+					$needValues = array_fill_keys($propNeedValues[$oneProperty['ID']], true);
 				switch($oneProperty['PROPERTY_TYPE'])
 				{
 					case PropertyTable::TYPE_LIST:
@@ -1766,7 +1763,7 @@ class CIBlockPriceTools
 						while ($oneEnum = $propEnums->Fetch())
 						{
 							$oneEnum['ID'] = (int)$oneEnum['ID'];
-							if ($needValuesExist && !isset($propNeedValues[$oneProperty['ID']][$oneEnum['ID']]))
+							if ($needValuesExist && !isset($needValues[$oneEnum['ID']]))
 								continue;
 							$values[$oneEnum['ID']] = array(
 								'ID' => $oneEnum['ID'],
@@ -1790,7 +1787,7 @@ class CIBlockPriceTools
 							$selectFields[] = 'PREVIEW_PICTURE';
 						$filterValues = (
 							$filterValuesExist
-							? array('ID' => $propNeedValues[$oneProperty['ID']], 'IBLOCK_ID' => $oneProperty['LINK_IBLOCK_ID'], 'ACTIVE' => 'Y')
+							? array('ID' => array_values($propNeedValues[$oneProperty['ID']]), 'IBLOCK_ID' => $oneProperty['LINK_IBLOCK_ID'], 'ACTIVE' => 'Y')
 							: array('IBLOCK_ID' => $oneProperty['LINK_IBLOCK_ID'], 'ACTIVE' => 'Y')
 						);
 						$propEnums = CIBlockElement::GetList(
@@ -1804,7 +1801,7 @@ class CIBlockPriceTools
 						{
 							if ($needValuesExist && !$filterValuesExist)
 							{
-								if (!isset($propNeedValues[$oneProperty['ID']][$oneEnum['ID']]))
+								if (!isset($needValues[$oneEnum['ID']]))
 									continue;
 							}
 							if ($pictMode)
@@ -1872,10 +1869,15 @@ class CIBlockPriceTools
 							'order' => $directoryOrder
 						);
 						if ($filterValuesExist)
-							$entityGetList['filter'] = array('=UF_XML_ID' => $propNeedValues[$oneProperty['ID']]);
+							$entityGetList['filter'] = array('=UF_XML_ID' => array_values($propNeedValues[$oneProperty['ID']]));
 						$propEnums = $entityDataClass::getList($entityGetList);
 						while ($oneEnum = $propEnums->fetch())
 						{
+							if ($needValuesExist && !$filterValuesExist)
+							{
+								if (!isset($needValues[$oneEnum['UF_XML_ID']]))
+									continue;
+							}
 							$oneEnum['ID'] = (int)$oneEnum['ID'];
 							$oneEnum['UF_SORT'] = ($sortExist ? (int)$oneEnum['UF_SORT'] : $sortValue);
 							$sortValue += 100;

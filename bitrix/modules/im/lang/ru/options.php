@@ -38,5 +38,5 @@ $MESS["IM_OPTIONS_TURN_SERVER_FIREFOX"] = "Адрес сервера для Fire
 $MESS["IM_OPTIONS_TURN_SERVER_LOGIN"] = "Логин";
 $MESS["IM_OPTIONS_TURN_SERVER_PASSWORD"] = "Пароль";
 $MESS["IM_OPTIONS_TURN_SERVER_PASSWORD_HINT"] = "публикуется в открытом доступе";
-
+$MESS["IM_OPTIONS_PATH_TO_USER_PROFILE"] = "Шаблон пути к странице пользователя";
 ?>

@@ -1,14 +1,10 @@
 <?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();?><?
+/** @var array $arCurrentValues */
+use Bitrix\Main\Loader;
+use Bitrix\Currency;
 
-if (!CModule::IncludeModule("currency"))
+if (!Loader::includeModule('currency'))
 	return;
-
-$arCurrency = array();
-$rsCurrency = CCurrency::GetList(($by="SORT"), ($order="ASC"));
-while ($arr = $rsCurrency->Fetch())
-{
-	$arCurrency[$arr["CURRENCY"]] = "[".$arr["CURRENCY"]."]".('' != $arr['FULL_NAME'] ? ' '.$arr['FULL_NAME'] : '');
-}
 
 $arComponentParameters = array(
 	"PARAMETERS" => array(
@@ -17,7 +13,7 @@ $arComponentParameters = array(
 			"TYPE" => "LIST",
 			"MULTIPLE" => "Y",
 			"ADDITIONAL_VALUES" => "N",
-			"VALUES" => $arCurrency,
+			"VALUES" => Currency\CurrencyManager::getCurrencyList(),
 			"GROUP" => "BASE",
 		),
 		"CURRENCY_BASE" => array(
@@ -25,7 +21,8 @@ $arComponentParameters = array(
 			"TYPE" => "LIST",
 			"MULTIPLE" => "N",
 			"ADDITIONAL_VALUES" => "N",
-			"VALUES" => $arCurrency,
+			"VALUES" => Currency\CurrencyManager::getCurrencyList(),
+			"DEFAULT" => Currency\CurrencyManager::getBaseCurrency(),
 			"GROUP" => "BASE",
 		),
 		"RATE_DAY" => array(
@@ -44,4 +41,3 @@ $arComponentParameters = array(
 		"CACHE_TIME" => array("DEFAULT" => "86400"),
 	),
 );
-?>

@@ -15,8 +15,10 @@ Loc::loadMessages(__FILE__);
 class SenderEventHandler
 {
 	/**
-	 * @param $data
-	 * @return mixed
+	 * Return connector class description.
+	 *
+	 * @param array $data		Connector data.
+	 * @return array
 	 */
 	public static function onConnectorListIblock($data)
 	{
@@ -43,6 +45,14 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 	public function getCode()
 	{
 		return "iblock";
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function requireConfigure()
+	{
+		return true;
 	}
 
 	/** @return \CDBResult */
@@ -86,6 +96,7 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 		else
 		{
 			$iblockElementDb = new \CDBResult();
+			$iblockElementDb->InitFromArray(array());
 		}
 
 
@@ -129,7 +140,7 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 		$propertyList['EMPTY'][] = array('ID' => '', 'NAME' => Loc::getMessage('sender_connector_iblock_prop_empty'));
 		$iblockFieldsDb = PropertyTable::getList(array(
 			'select' => array('ID', 'NAME', 'IBLOCK_ID'),
-			'filter' => array('PROPERTY_TYPE' => PropertyTable::TYPE_STRING)
+			'filter' => array('=PROPERTY_TYPE' => PropertyTable::TYPE_STRING)
 		));
 		while($iblockFields = $iblockFieldsDb->fetch())
 		{
@@ -284,18 +295,25 @@ class CDBResultSenderConnector extends \CDBResult
 		$fields = parent::Fetch();
 		if($fields)
 		{
-			if ($this->senderConnectorFieldName)
+			$keysForUnset = array();
+			if ($this->senderConnectorFieldName && isset($fields[$this->senderConnectorFieldName."_VALUE"]))
 			{
 				$fields['NAME'] = $fields[$this->senderConnectorFieldName."_VALUE"];
-				unset($fields[$this->senderConnectorFieldName."_VALUE"]);
-				unset($fields[$this->senderConnectorFieldName."_VALUE"."_ID"]);
+				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE";
+				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE"."_ID";
 			}
 
-			if ($this->senderConnectorFieldName)
+			if ($this->senderConnectorFieldEmail && isset($fields[$this->senderConnectorFieldEmail."_VALUE"]))
 			{
 				$fields['EMAIL'] = $fields[$this->senderConnectorFieldEmail."_VALUE"];
-				unset($fields[$this->senderConnectorFieldEmail."_VALUE"]);
-				unset($fields[$this->senderConnectorFieldEmail."_VALUE"."_ID"]);
+				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE";
+				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE"."_ID";
+			}
+
+			if (count($keysForUnset)>0)
+			{
+				$keysForUnset = array_unique($keysForUnset);
+				foreach($keysForUnset as $key) unset($fields[$key]);
 			}
 		}
 

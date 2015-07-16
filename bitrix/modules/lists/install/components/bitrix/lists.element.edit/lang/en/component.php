@@ -10,4 +10,8 @@ $MESS["CC_BLEE_ACCESS_DENIED_STATUS"] = "You do not have enough permissions to e
 $MESS["CC_BLEE_UPPER_LEVEL"] = "Upper level";
 $MESS["CC_BLEE_SONET_LOG_TITLE_TEMPLATE"] = "Added or updated list item \"#TITLE#\"";
 $MESS["CC_BLEE_SONET_DEL_LOG_TITLE_TEMPLATE"] = "Deleted list item \"#TITLE#\"";
+$MESS["CC_BLEE_DELETE_ERROR"] = "Error when deleting.";
+$MESS["CC_BLEE_IS_CONSTANTS_TUNED"] = "Workflow constants need to be configured.";
+$MESS["CC_BLEE_IS_CONSTANTS_TUNED_NEW"] = "Workflow parameters must be configured.";
+$MESS["CC_BLEE_VALIDATE_FIELD_ERROR"] = "Value of the '#NAME#' field is not correct";
 ?>

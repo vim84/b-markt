@@ -17,5 +17,6 @@ $subscribe_default_option = array(
 	"max_bcc_count"=>"0",
 	"mail_additional_parameters"=>"",
 	"max_file_size"=>"0",
+	"max_files_size"=>"0",
 );
 ?>

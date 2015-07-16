@@ -21,7 +21,26 @@ if ($arParams["TASK_ID"] <= 0)
 if ($arParams["TASK_ID"] <= 0)
 	$arParams["TASK_ID"] = intval($_REQUEST["task_id"]);
 
+if (empty($arParams["USER_ID"]) && !empty($_REQUEST['USER_ID']))
+{
+	$arParams["USER_ID"] = (int)$_REQUEST['USER_ID'];
+}
+
 $arParams["USER_ID"] = intval(empty($arParams["USER_ID"]) ? $GLOBALS["USER"]->GetID() : $arParams["USER_ID"]);
+
+$arResult["ShowMode"] = "Form";
+$arResult['ReadOnly'] = false;
+if ($arParams["USER_ID"] != $GLOBALS["USER"]->GetID())
+{
+	if (!CBPHelper::checkUserSubordination($GLOBALS["USER"]->GetID(), $arParams["USER_ID"]))
+	{
+		ShowError(GetMessage("BPAT_NO_ACCESS"));
+		return false;
+	}
+	$arResult["ShowMode"] = "Success";
+	$arResult['ReadOnly'] = true;
+}
+
 $arParams["WORKFLOW_ID"] = (empty($arParams["WORKFLOW_ID"]) ? $_REQUEST["WORKFLOW_ID"] : $arParams["WORKFLOW_ID"]);
 
 $arParams['NAME_TEMPLATE'] = empty($arParams['NAME_TEMPLATE']) ? COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID) : str_replace(array("#NOBR#","#/NOBR#"), array("",""), $arParams["NAME_TEMPLATE"]);
@@ -39,13 +58,12 @@ $arParams["TASK_EDIT_URL"] = htmlspecialcharsbx($arParams["~TASK_EDIT_URL"]);
 
 $arParams["SET_TITLE"] = ($arParams["SET_TITLE"] == "N" ? "N" : "Y"); //Turn on by default
 $arParams["SET_NAV_CHAIN"] = ($arParams["SET_NAV_CHAIN"] == "N" ? "N" : "Y"); //Turn on by default
-
+$arParams['POPUP'] = (isset($arParams["POPUP"]) && $arParams["POPUP"] == 'Y');
 
 $arResult["ERROR_MESSAGE"] = "";
 
 $arResult["TaskFormButtons"] = "";
 $arResult["TaskForm"] = "";
-$arResult["ShowMode"] = "Form";
 
 $arResult["TASK"] = false;
 
@@ -56,19 +74,19 @@ if ($arParams["TASK_ID"] > 0)
 		array("ID" => $arParams["TASK_ID"], "USER_ID" => $arParams["USER_ID"]),
 		false,
 		false,
-		array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS")
+		array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS", 'IS_INLINE', 'STATUS', 'USER_STATUS', 'DOCUMENT_NAME')
 	);
 	$arResult["TASK"] = $dbTask->GetNext();
 }
 
-if (!$arTask && strlen($arParams["WORKFLOW_ID"]) > 0)
+if (!$arResult["TASK"] && strlen($arParams["WORKFLOW_ID"]) > 0)
 {
 	$dbTask = CBPTaskService::GetList(
 		array(),
 		array("WORKFLOW_ID" => $arParams["WORKFLOW_ID"], "USER_ID" => $arParams["USER_ID"]),
 		false,
 		false,
-		array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS")
+		array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS", 'IS_INLINE', 'STATUS', 'USER_STATUS', 'DOCUMENT_NAME')
 	);
 	$arResult["TASK"] = $dbTask->GetNext();
 }
@@ -79,6 +97,20 @@ if (!$arResult["TASK"])
 	return false;
 }
 
+if ($arResult["TASK"]['STATUS'] > CBPTaskStatus::Running || $arResult["TASK"]['USER_STATUS'] > CBPTaskUserStatus::Waiting)
+{
+	$arResult["ShowMode"] = "Success";
+}
+if ($arResult['ReadOnly']
+	&& isset($arResult['TASK']['PARAMETERS']['AccessControl'])
+	&& $arResult['TASK']['PARAMETERS']['AccessControl'] == 'Y')
+{
+	$arResult['TASK']['DESCRIPTION'] = '';
+}
+
+$arState = CBPStateService::GetWorkflowState($arResult['TASK']['WORKFLOW_ID']);
+
+$arResult['TASK']['PARAMETERS']['DOCUMENT_ID'] = $arState['DOCUMENT_ID'];
 $arResult["TASK"]["MODULE_ID"] = $arResult["TASK"]["PARAMETERS"]["DOCUMENT_ID"][0];
 $arResult["TASK"]["ENTITY"] = $arResult["TASK"]["PARAMETERS"]["DOCUMENT_ID"][1];
 $arResult["TASK"]["DOCUMENT_ID"] = $arResult["TASK"]["PARAMETERS"]["DOCUMENT_ID"][2];
@@ -103,7 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $_POST["action"] == "doTask" && chec
 
 		$d = CBPTaskService::GetList(
 			array(),
-			array("WORKFLOW_ID" => $arResult["TASK"]["WORKFLOW_ID"], "USER_ID" => $arParams["USER_ID"]),
+			array('WORKFLOW_ID' => $arResult['TASK']['WORKFLOW_ID'], 'USER_ID' => $arParams['USER_ID'], 'USER_STATUS' => CBPTaskUserStatus::Waiting),
 			false,
 			false,
 			array("ID")
@@ -131,24 +163,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $_POST["action"] == "doTask" && chec
 	}
 }
 
+if (intval($arState["STARTED_BY"]) > 0)
+{
+	$arResult["TASK"]['STARTED_BY'] = $arState["STARTED_BY"];
+	$iterator = CUser::GetList($by="id", $order="asc",
+		array('ID' =>$arResult["TASK"]['STARTED_BY']),
+		array('FIELDS' => array('PERSONAL_PHOTO'))
+	);
+	$startedUser = $iterator->fetch();
+	if ($startedUser)
+	{
+		$arFileTmp = \CFile::ResizeImageGet(
+			$startedUser["PERSONAL_PHOTO"],
+			array('width' => 58, 'height' => 58),
+			\BX_RESIZE_IMAGE_EXACT,
+			false
+		);
+		$arResult["TASK"]['STARTED_BY_PHOTO_SRC'] = $arFileTmp['src'];
+	}
+}
+$arResult['WORKFLOW_TEMPLATE_NAME'] = $arState["TEMPLATE_NAME"];
+
+$runtime = CBPRuntime::GetRuntime();
+$runtime->StartRuntime();
+$documentService = $runtime->GetService("DocumentService");
+
+$arResult['DOCUMENT_ICON'] = $documentService->getDocumentIcon($arResult['TASK']['PARAMETERS']['DOCUMENT_ID']);
+if (empty($arResult['TASK']['DOCUMENT_NAME']))
+{
+	$arResult['TASK']['DOCUMENT_NAME'] = htmlspecialcharsbx($documentService->getDocumentName($arResult['TASK']['PARAMETERS']['DOCUMENT_ID']));
+}
+
 if ($arResult["ShowMode"] != "Success")
 {
-	$runtime = CBPRuntime::GetRuntime();
-	$runtime->StartRuntime();
-	$documentService = $runtime->GetService("DocumentService");
-	$documentType = $documentService->GetDocumentType($arResult["TASK"]["PARAMETERS"]["DOCUMENT_ID"]);
-	if (!array_key_exists("BP_AddShowParameterInit_".$documentType[0]."_".$documentType[1]."_".$documentType[2], $GLOBALS))
+	try
 	{
-		$GLOBALS["BP_AddShowParameterInit_".$documentType[0]."_".$documentType[1]."_".$documentType[2]] = 1;
-		CBPDocument::AddShowParameterInit($documentType[0], "only_users", $documentType[2], $documentType[1]);
-	}
+		$documentType = $documentService->GetDocumentType($arResult["TASK"]["PARAMETERS"]["DOCUMENT_ID"]);
+		if (!array_key_exists("BP_AddShowParameterInit_".$documentType[0]."_".$documentType[1]."_".$documentType[2], $GLOBALS))
+		{
+			$GLOBALS["BP_AddShowParameterInit_".$documentType[0]."_".$documentType[1]."_".$documentType[2]] = 1;
+			CBPDocument::AddShowParameterInit($documentType[0], "only_users", $documentType[2], $documentType[1]);
+		}
 
-	list($arResult["TaskForm"], $arResult["TaskFormButtons"]) = CBPDocument::ShowTaskForm(
-		$arResult["TASK"],
-		$arParams["USER_ID"],
-		"",
-		($_SERVER["REQUEST_METHOD"] == "POST" && $_POST["action"] == "doTask") ? $_REQUEST : null
-	);
+		// deprecated old style
+		list($arResult["TaskForm"], $arResult["TaskFormButtons"]) = CBPDocument::ShowTaskForm(
+			$arResult["TASK"],
+			$arParams["USER_ID"],
+			"",
+			($_SERVER["REQUEST_METHOD"] == "POST" && $_POST["action"] == "doTask") ? $_REQUEST : null
+		);
+
+		// new style
+		$arResult['TaskControls'] = CBPDocument::getTaskControls($arResult["TASK"]);
+	}
+	catch (Exception $e)
+	{
+		ShowError(GetMessage("BPAT_NO_ACCESS"));
+		return false;
+	}
 }
 
 $this->IncludeComponentTemplate();

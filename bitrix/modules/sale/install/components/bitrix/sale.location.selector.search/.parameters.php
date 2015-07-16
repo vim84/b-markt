@@ -90,19 +90,17 @@ $arComponentParameters["PARAMETERS"]["SHOW_DEFAULT_LOCATIONS"] = Array(
 
 if($arCurrentValues['FILTER_BY_SITE'] == 'Y' || $arCurrentValues['SHOW_DEFAULT_LOCATIONS'] == 'Y')
 {
-	$by = '';
-	$order = '';
-	$res = CSite::GetList($by, $order);
+	$res = \Bitrix\Main\SiteTable::getList(array('filter' => array('=ACTIVE' => 'Y')));
 	$sites = array();
 	while($item = $res->Fetch())
-		$sites[$item['ID']] = '['.$item['ID'].'] '.$item['NAME'];
+		$sites[$item['LID']] = '['.$item['LID'].'] '.$item['NAME'];
 
 	$arComponentParameters["PARAMETERS"]["FILTER_SITE_ID"] = Array(
 		"NAME" => Loc::getMessage("SALE_SLS_FILTER_SITE_ID_PARAMETER"),
 		"PARENT" => "DATA_SOURCE",
 		"TYPE" => "LIST",
 		"VALUES" => array_merge(array(
-			'current' => Loc::getMessage("SALE_SLS_FILTER_BY_SITE_SITE_ID_CURRENT")
+			'current' => Loc::getMessage("SALE_SLS_FILTER_SITE_ID_CURRENT")
 		), $sites)
 	);
 }

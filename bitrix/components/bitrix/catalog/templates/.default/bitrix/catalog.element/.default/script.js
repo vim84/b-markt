@@ -1705,7 +1705,7 @@ window.JCCatalogElement.prototype.QuantityChange = function()
 				}
 				else
 				{
-					count = curValue/this.stepQuantity;
+					count = Math.round((curValue*this.precisionFactor)/this.stepQuantity)/this.precisionFactor;
 					intCount = parseInt(count, 10);
 					if (isNaN(intCount))
 					{

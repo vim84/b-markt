@@ -167,7 +167,7 @@ var jsGoogleCE = {
 			});
 		}
 		
-		obPlacemark.infowin.setContent('<textarea onblur="jsGoogleCE.__updatePointView(this, \'blur\')" onkeyup="jsGoogleCE.__updatePointView(this, \'keyup\')" id="BX_PLACEMARK_TEXT_' + obPlacemark.BX_PLACEMARK_INDEX + '">' + BX.util.htmlspecialchars(jsGoogleCE.arData.PLACEMARKS[obPlacemark.BX_PLACEMARK_INDEX].TEXT) + '</textarea>');
+		obPlacemark.infowin.setContent('<textarea onblur="jsGoogleCE.__updatePointView(this, \'blur\')" onkeyup="jsGoogleCE.__updatePointView(this, \'keyup\')" id="BX_PLACEMARK_TEXT_' + obPlacemark.BX_PLACEMARK_INDEX + '" rows="4" style="resize:none;">' + BX.util.htmlspecialchars(jsGoogleCE.arData.PLACEMARKS[obPlacemark.BX_PLACEMARK_INDEX].TEXT) + '</textarea>');
 		
 		obPlacemark.infowin.open(jsGoogleCE.map, obPlacemark);
 		
@@ -260,7 +260,7 @@ var jsGoogleCE = {
 	},
 	
 	__point_link_hover: function() {this.style.backgroundColor = "#E3E8F7"; this.firstChild.style.display = 'block';},
-	__point_link_hout: function() {this.style.backgroundColor = "#FFFFFF"; this.firstChild.style.display = 'none';},
+	__point_link_hout: function() {this.style.backgroundColor = "transparent"; this.firstChild.style.display = 'none';},
 	
 	__createPointView: function()
 	{
@@ -316,6 +316,7 @@ var jsGoogleCE = {
 	__updatePointViewText: function(obPointView, str)
 	{
 		obPointView.firstChild.nextSibling.innerHTML = str;
+        obPointView.firstChild.nextSibling.style.margin = '0 18px 0 0';
 	},
 	
 	__openPointBalloonFromView: function(e)
@@ -501,13 +502,9 @@ var jsGoogleCESearch = {
 	
 	__generateOutput: function()
 	{
-		var obPos = jsUtils.GetRealPos(jsGoogleCESearch.obInput);
-		
 		jsGoogleCESearch.obOut = document.body.appendChild(document.createElement('UL'));
 		jsGoogleCESearch.obOut.className = 'bx-google-address-search-results';
-		jsGoogleCESearch.obOut.style.top = (obPos.bottom + 2) + 'px';
-		jsGoogleCESearch.obOut.style.left = obPos.left + 'px';
-		jsGoogleCESearch.obOut.style.zIndex = parseInt(BX.WindowManager.Get().zIndex) + 200;
+		jsGoogleCESearch.obOut.style.display = 'none';
 	},
 
 	__searchResultsLoad: function(obResult, status)
@@ -586,12 +583,20 @@ var jsGoogleCESearch = {
 		
 		return BX.PreventDefault(e);
 	},
-	
-	showResults: function()
-	{
-		if (null != jsGoogleCESearch.obOut)
-			jsGoogleCESearch.obOut.style.display = 'block';
-	},
+
+    showResults: function()
+    {
+        var obPos = jsUtils.GetRealPos(jsGoogleCESearch.obInput);
+        jsGoogleCESearch.obOut.style.top = (obPos.bottom + 2) + 'px';
+        jsGoogleCESearch.obOut.style.left = obPos.left + 'px';
+        jsGoogleCESearch.obOut.style.zIndex = parseInt(BX.WindowManager.Get().zIndex) + 200;
+
+        if (BX.findParent(jsGoogleCESearch.obInput, {"tag" : "div", "className" : "bx-core-window bx-core-adm-dialog"}).style.display == 'block')
+        {
+            if (null != jsGoogleCESearch.obOut)
+                jsGoogleCESearch.obOut.style.display = 'block';
+        }
+    },
 
 	hideResults: function()
 	{

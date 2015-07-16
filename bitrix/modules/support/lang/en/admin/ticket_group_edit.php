@@ -19,4 +19,6 @@ $MESS["SUP_GE_CAN_VIEW"] = "Can edit group tickets";
 $MESS["SUP_GE_CAN_MAIL"] = "Can receive group notifications";
 $MESS["MAIN_USER_PROFILE"] = "Edit Profile";
 $MESS["SUP_GE_CAN_MAIL_UPDATE"] = "Receives ticket update notifications";
+$MESS["MAIN_WAIT"] = "wait...";
+$MESS["REQUIRED_FIELDS"] = "Required fields.";
 ?>

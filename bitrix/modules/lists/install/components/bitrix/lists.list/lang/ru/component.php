@@ -17,4 +17,6 @@ $MESS["CC_BLL_UPPER_LEVEL"] = "Верхний уровень";
 $MESS["CC_BLL_COLUMN_SECTION"] = "Разделы";
 $MESS["CC_BLL_COLUMN_BIZPROC"] = "Бизнес-процессы";
 $MESS["CC_BLL_ELEMENT_ACTION_MENU_COPY"] = "Копировать";
-?>
+$MESS["CC_BLL_DELETE_ERROR"] = "Ошибка удаления.";
+$MESS["CC_BLL_TITLE_PROCESS"] = "Процесс: #NAME#";
+$MESS["CC_BLL_COMMENTS"] = "Комментарии";

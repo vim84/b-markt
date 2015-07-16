@@ -212,7 +212,7 @@ class Calculator
 	}
 
 	protected function createCalcParams()
-	{	
+	{
 		if(!isset($this->arOrder["WEIGHT"]))
 			throw new \Exception(GetMessage("SALE_DH_PECOM_EXCPT_WEIGHT"));
 
@@ -269,12 +269,12 @@ class Calculator
 				$loadingRange = false;
 
 			$itemsStr .= 'places['.$i.'][]='.strval($width).
-				'places['.$i.'][]='.strval($lenght).
-				'places['.$i.'][]='.strval($height).
-				'places['.$i.'][]='.strval($volume).
-				'places['.$i.'][]='.$item["WEIGHT"].
-				'places['.$i.'][]='.($loadingRange ? '1' : '0').
-				'places['.$i.'][]='.($rigidPacking && \CDeliveryPecom::getConfValue($this->arConfig, 'SERVICE_OTHER_RIGID_PAYER') == \CDeliveryPecom::$PAYER_BUYER ? '1' : '0');
+				'&places['.$i.'][]='.strval($lenght).
+				'&places['.$i.'][]='.strval($height).
+				'&places['.$i.'][]='.strval($volume).
+				'&places['.$i.'][]='.strval($item["WEIGHT"]/1000).
+				'&places['.$i.'][]='.($loadingRange ? '1' : '0').
+				'&places['.$i.'][]='.($rigidPacking && \CDeliveryPecom::getConfValue($this->arConfig, 'SERVICE_OTHER_RIGID_PAYER') == \CDeliveryPecom::$PAYER_BUYER ? '1' : '0');
 		}
 
 		if(\CDeliveryPecom::isConfCheckedVal($this->arConfig, 'SERVICE_OTHER_PLOMBIR_ENABLE') && \CDeliveryPecom::getConfValue($this->arConfig, 'SERVICE_OTHER_PLOMBIR_PAYER') == \CDeliveryPecom::$PAYER_BUYER)

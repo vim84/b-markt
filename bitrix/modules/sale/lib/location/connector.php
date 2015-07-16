@@ -14,6 +14,9 @@ use Bitrix\Main\Config;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location\Util\Assert;
+use Bitrix\Sale\Location\DB\BlockInserter;
+
 Loc::loadMessages(__FILE__);
 
 abstract class Connector extends Entity\DataManager
@@ -143,6 +146,7 @@ abstract class Connector extends Entity\DataManager
 			static::setLinkUsage($data[static::getLinkField()], $data[static::getTypeField()], true);
 
 		$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+		static::onAfterModifiy();
 
 		return $res;
 	}
@@ -170,6 +174,7 @@ abstract class Connector extends Entity\DataManager
 		}
 
 		$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+		static::onAfterModifiy();
 
 		return $res;
 	}
@@ -191,8 +196,13 @@ abstract class Connector extends Entity\DataManager
 			static::resetLinkUsage($link[static::getLinkField()]);
 
 		$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+		static::onAfterModifiy();
 
 		return $res;
+	}
+
+	public static function onAfterModifiy()
+	{
 	}
 
 	/**
@@ -213,7 +223,7 @@ abstract class Connector extends Entity\DataManager
 	*/
 	public static function updateMultipleForOwner($entityPrimary, $links = array(), $behaviour = array('REMOVE_ABSENT' => true))
 	{
-		$entityPrimary = 	Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = 	Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 		$links = 			static::checkUpdateLinks($links);
 
 		$updateLocations = 	is_array($links[self::DB_LOCATION_FLAG]);
@@ -231,6 +241,7 @@ abstract class Connector extends Entity\DataManager
 		static::resetLinkUsage($entityPrimary);
 
 		$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+		static::onAfterModifiy();
 
 		return true;
 	}
@@ -238,7 +249,7 @@ abstract class Connector extends Entity\DataManager
 	// removes all links with a given entity
 	public static function deleteAllForOwner($entityPrimary, $behaviour = array('BATCH_MODE' => false))
 	{
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 
 		if($behaviour['BATCH_MODE'])
 		{
@@ -261,6 +272,7 @@ abstract class Connector extends Entity\DataManager
 		static::setLinkUsage($entityPrimary, self::DB_GROUP_FLAG, false);
 
 		$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+		static::onAfterModifiy();
 	}
 
 	public static function deleteAll()
@@ -271,6 +283,7 @@ abstract class Connector extends Entity\DataManager
 		static::deleteLinkUsageOption();
 
 		$GLOBALS['CACHE_MANAGER']->ClearByTag('sale-location-data');
+		static::onAfterModifiy();
 	}
 
 	/**
@@ -279,7 +292,7 @@ abstract class Connector extends Entity\DataManager
 	 */
 	public static function resetMultipleForOwner($entityPrimary, $links = array())
 	{
-		$entityPrimary = 	Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = 	Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 		$links = 			static::checkUpdateLinks($links);
 
 		static::deleteAllForOwner($entityPrimary, array('BATCH_MODE' => true));
@@ -296,7 +309,7 @@ abstract class Connector extends Entity\DataManager
 		if($useGroups = static::getUseGroups())
 			$fields[$typeFld] = $map[$typeFld]; // LOCATION_TYPE: L or G
 
-		$inserter = new DBBlockInserter(array(
+		$inserter = new BlockInserter(array(
 			'tableName' => static::getTableName(),
 			'exactFields' => $fields
 		));
@@ -407,7 +420,7 @@ abstract class Connector extends Entity\DataManager
 	*/
 	public static function getConnectedLocationsQuery($entityPrimary, $parameters = array(), $behaviour = array('GET_LINKED_THROUGH_GROUPS' => false))
 	{
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 
 		$useGroups = GroupTable::checkGroupUsage() && static::getUseGroups(); // check if we have groups in project and entity uses groups
 		$getLinkedThroughGroups = $behaviour['GET_LINKED_THROUGH_GROUPS'];
@@ -430,7 +443,14 @@ abstract class Connector extends Entity\DataManager
 				if($v == '*')
 					$select[''] = 'LOCATION';
 				else
-					$select[is_numeric($k) ? $v : $k] = 'LOCATION.'.$v;
+				{
+					if(is_numeric($k) && strpos((string) $v, '.') === false) // is NOT a reference
+					{
+						$k = $v;
+					}
+
+					$select[$k] = 'LOCATION.'.$v;
+				}
 			}
 		}
 
@@ -439,7 +459,9 @@ abstract class Connector extends Entity\DataManager
 		if(is_array($parameters['filter']))
 		{
 			foreach($parameters['filter'] as $k => $v)
+			{
 				$filter['LOCATION.'.$k] = $v;
+			}
 		}
 
 		// proxy order
@@ -499,7 +521,7 @@ abstract class Connector extends Entity\DataManager
 						array(
 							'data_type' => '\Bitrix\Sale\Location\GroupLocation',
 							'reference' => array(
-								'=this.G.ID' => 'ref.'.GroupLocation::getLinkField(),
+								'=this.G.ID' => 'ref.'.GroupLocationTable::getLinkField(),
 							),
 							'join_type' => 'inner'
 						)
@@ -605,7 +627,7 @@ abstract class Connector extends Entity\DataManager
 	*/
 	public static function getConnectedGroups($entityPrimary, $parameters = array())
 	{
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 
 		if(!static::getUseGroups())
 			Assert::announceNotSupported(Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_DOESNT_SUPPORT_GROUPS'));
@@ -643,9 +665,9 @@ abstract class Connector extends Entity\DataManager
 	public static function getConnectedEntitiesQuery($locationPrimary, $linkType = 'id', $parameters = array()) // // getConnectedEntitiesSql
 	{
 		if($linkType == 'id')
-			$locationPrimary = Assert::expectIntegerPositive($locationPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_LOCATION_PRIMARY_FLD_NAME'));
+			$locationPrimary = Assert::expectIntegerPositive($locationPrimary, '$locationPrimary');
 		else
-			$locationPrimary = Assert::expectStringNotNull($locationPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_LOCATION_PRIMARY_FLD_NAME'));
+			$locationPrimary = Assert::expectStringNotNull($locationPrimary, '$locationPrimary');
 
 		$useGroups = 			GroupTable::checkGroupUsage() && static::getUseGroups(); // check if we have groups in project and entity uses groups
 		$useCodes = 			static::getUseCodes(); // this entity uses codes
@@ -839,7 +861,7 @@ abstract class Connector extends Entity\DataManager
 
 	protected static function getLinkedLocations($entityPrimary)
 	{
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 
 		$existed = array();
 		$linkFld = static::getLocationLinkField();
@@ -863,10 +885,8 @@ abstract class Connector extends Entity\DataManager
 	 */
 	public static function getLinkStatusForMultipleNodes($nodeInfo = array(), $entityPrimary, $connectors = false) // rename to: getConnectionStatusForMultipleNodes
 	{
-		if(!is_array($nodeInfo) || empty($nodeInfo))
-			throw new Main\ArgumentNullException(Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_BAD_ARGUMENT_NODEINFO_UNSET_EXCEPTION'));
-
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$nodeInfo = Assert::expectArray($nodeInfo, '$nodeInfo');
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 
 		$result = array();
 
@@ -885,9 +905,10 @@ abstract class Connector extends Entity\DataManager
 
 		foreach($nodeInfo as $node)
 		{
-			$node['ID'] = Assert::expectIntegerPositive($node['ID'], 'ID');
-			$node['LEFT_MARGIN'] = Assert::expectIntegerPositive($node['LEFT_MARGIN'], 'LEFT_MARGIN');
-			$node['RIGHT_MARGIN'] = Assert::expectIntegerPositive($node['RIGHT_MARGIN'], 'RIGHT_MARGIN');
+			$node = Assert::expectNotEmptyArray($node, '$nodeInfo[]');
+			$node['ID'] = Assert::expectIntegerPositive($node['ID'], '$nodeInfo[][ID]');
+			$node['LEFT_MARGIN'] = Assert::expectIntegerNonNegative($node['LEFT_MARGIN'], '$nodeInfo[][LEFT_MARGIN]');
+			$node['RIGHT_MARGIN'] = Assert::expectIntegerPositive($node['RIGHT_MARGIN'], '$nodeInfo[][RIGHT_MARGIN]');
 
 			$result[$node['ID']] = false;
 			foreach($connectors as $connector)
@@ -918,12 +939,13 @@ abstract class Connector extends Entity\DataManager
 
 	public static function checkConnectionExists($entityPrimary, $locationPrimary)
 	{
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
-		$locationPrimary = Assert::expectIntegerPositive($locationPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_LOCATION_PRIMARY_FLD_NAME'));
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
+		$locationPrimary = Assert::expectIntegerPositive($locationPrimary, '$locationPrimary');
 
 		if(!static::checkLinkUsageAny($entityPrimary)) // if there are no links at all, connection virtually exists
 			return true;
 
+		// todo: here we can rewrite this to make it to do just one query
 		$node = LocationTable::getById($locationPrimary)->fetch();
 		$result = static::getLinkStatusForMultipleNodes(array($node), $entityPrimary);
 
@@ -956,7 +978,7 @@ abstract class Connector extends Entity\DataManager
 
 	public static function checkLinkUsageAny($entityPrimary)
 	{
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 
 		return static::checkLinkUsage($entityPrimary, self::DB_LOCATION_FLAG) || static::checkLinkUsage($entityPrimary, self::DB_GROUP_FLAG);
 	}
@@ -973,11 +995,11 @@ abstract class Connector extends Entity\DataManager
 	*/
 	public static function checkLinkUsage($entityPrimary, $linkType = self::DB_LOCATION_FLAG)
 	{
-		$entityPrimary = Assert::expectStringNotNull($entityPrimary, Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME'));
+		$entityPrimary = Assert::expectStringNotNull($entityPrimary, '$entityPrimary');
 		$linkType = Assert::expectEnumerationMember(
 			$linkType,
 			array(self::DB_LOCATION_FLAG, self::DB_GROUP_FLAG),
-			Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_PRIMARY_FLD_NAME')
+			'$linkType'
 		);
 
 		if(!static::getUseLinkTracking())
@@ -1115,12 +1137,15 @@ abstract class Connector extends Entity\DataManager
 		$useCodes = static::getUseCodes();
 		$useGroups = static::getUseGroups();
 
+		$locationArgName = 	'$links['.self::DB_LOCATION_FLAG.']';
+		$groupArgName = 	'$links['.self::DB_GROUP_FLAG.']';
+
 		if(is_array($links[self::DB_LOCATION_FLAG]))
 		{
 			if($useCodes)
-				$links[self::DB_LOCATION_FLAG] = Assert::expectArrayOfUniqueStringNotNull($links[self::DB_LOCATION_FLAG], Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_LINKS_FLD_NAME'));
+				$links[self::DB_LOCATION_FLAG] = Assert::expectArrayOfUniqueStringNotNull($links[self::DB_LOCATION_FLAG], $locationArgName);
 			else
-				$links[self::DB_LOCATION_FLAG] = Assert::expectArrayOfUniqueIntegerNotNull($links[self::DB_LOCATION_FLAG], Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_LINKS_FLD_NAME'));
+				$links[self::DB_LOCATION_FLAG] = Assert::expectArrayOfUniqueIntegerNotNull($links[self::DB_LOCATION_FLAG], $locationArgName);
 		}
 
 		if(is_array($links[self::DB_GROUP_FLAG]))
@@ -1129,9 +1154,9 @@ abstract class Connector extends Entity\DataManager
 				Assert::announceNotSupported(Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_DOESNT_SUPPORT_GROUPS'));
 
 			if($useCodes)
-				$links[self::DB_GROUP_FLAG] = Assert::expectArrayOfUniqueStringNotNull($links[self::DB_GROUP_FLAG], Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_LINKS_FLD_NAME'));
+				$links[self::DB_GROUP_FLAG] = Assert::expectArrayOfUniqueStringNotNull($links[self::DB_GROUP_FLAG], $groupArgName);
 			else
-				$links[self::DB_GROUP_FLAG] = Assert::expectArrayOfUniqueIntegerNotNull($links[self::DB_GROUP_FLAG], Loc::getMessage('SALE_LOCATION_CONNECTOR_ENTITY_LINKS_FLD_NAME'));
+				$links[self::DB_GROUP_FLAG] = Assert::expectArrayOfUniqueIntegerNotNull($links[self::DB_GROUP_FLAG], $groupArgName);
 		}
 
 		return $links;
@@ -1274,7 +1299,7 @@ abstract class Connector extends Entity\DataManager
 			}
 		}
 		
-		// now make up list of nodes which we`ll remove
+		// now make up list of nodes to remove
 		$removeItems = array();
 		$removeChildrenOf = array();
 		foreach($relations as $id => $rel)

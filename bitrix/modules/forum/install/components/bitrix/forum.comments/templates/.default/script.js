@@ -50,25 +50,29 @@ function fToggleCommentsForm(link, forceOpen)
 {
 	if (forceOpen === null) forceOpen = false;
 	forceOpen = !!forceOpen;
-	var form = BX.findChild(link.parentNode.parentNode, {'class':'comments-reply-form'}, true);
-	var bHidden = (form.style.display != 'block') || forceOpen;
+	var form = BX.findChild(link.parentNode.parentNode, {'class':'comments-reply-form'}, true),
+		bHidden = (form.style.display != 'block') || forceOpen,
+		classAdd = (bHidden ? 'comments-expanded' : 'comments-minimized'),
+		classRemove = (bHidden ? 'comments-minimized' : 'comments-expanded');
+
 	form.style.display = (bHidden ? 'block' : 'none');
-	if (bHidden)
-		BX.removeClass(form, 'comments-reply-form-hidden');
-	else
-		BX.addClass(form, 'comments-reply-form-hidden');
+	BX[(bHidden ? "removeClass" : "addClass")](form, 'comments-reply-form-hidden');
 	link.innerHTML = (bHidden ? BX.message('MINIMIZED_MINIMIZE_TEXT') : BX.message('MINIMIZED_EXPAND_TEXT'));
-	var classAdd = (bHidden ? 'comments-expanded' : 'comments-minimized');
-	var classRemove = (bHidden ? 'comments-minimized' : 'comments-expanded');
 	BX.removeClass(BX.addClass(link.parentNode, classAdd), classRemove);
-	BX.scrollToNode(BX.findChild(form, {'attribute': { 'name' : 'send_button' }}, true));
-	if (window.oLHE)
+	if (window.oLHE || bHidden)
+	{
+		if (forceOpen)
+		{
+			BX.scrollToNode(form);
+		}
 		setTimeout(function() {
-				if (!BX.browser.IsIE())
-					window.oLHE.SetFocusToEnd();
-				else
-					window.oLHE.SetFocus();
-			}, 100);
+			if (!BX.browser.IsIE())
+				window.oLHE.SetFocusToEnd();
+			else
+				window.oLHE.SetFocus();
+		}, 100);
+	}
+	return false;
 }
 
 function AttachFile(iNumber, iCount, sIndex, oObj)
@@ -144,7 +148,7 @@ function quoteMessageEx(author, mid, link)
 		message_id = parseInt(mid.replace(/message_text_/gi, ""));
 		if (message_id > 0)
 		{
-			var message = document.getElementById(mid);
+ 			var message = document.getElementById(mid);
 			if (typeof(message) == "object" && message)
 			{
 				selection = message.innerHTML;

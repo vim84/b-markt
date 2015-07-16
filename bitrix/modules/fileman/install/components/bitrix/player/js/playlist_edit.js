@@ -37,7 +37,7 @@ function menuCheckIcons()
 	for (i = 0; i < n; i++)
 	{
 		el = obLayout.childNodes[i];
-		if (el.nodeName && el.nodeName.toLowerCase() == 'DIV' && el.className == 'bx-menu-placement')
+		if (el.nodeName && el.nodeName.toLowerCase() == 'div' && el.className == 'bx-menu-placement')
 			arRows.push(el);
 	}
 

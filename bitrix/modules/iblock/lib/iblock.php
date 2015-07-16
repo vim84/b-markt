@@ -20,6 +20,7 @@ Loc::loadMessages(__FILE__);
  * <li> LIST_PAGE_URL string(255) optional
  * <li> DETAIL_PAGE_URL string(255) optional
  * <li> SECTION_PAGE_URL string(255) optional
+ * <li> CANONICAL_PAGE_URL string(255) optional
  * <li> PICTURE int optional
  * <li> DESCRIPTION text optional
  * <li> DESCRIPTION_TYPE enum ('text', 'html') optional default 'text'
@@ -133,6 +134,11 @@ class IblockTable extends Entity\DataManager
 				'data_type' => 'string',
 				'title' => Loc::getMessage('IBLOCK_ENTITY_SECTION_PAGE_URL_FIELD'),
 				'validation' => array(__CLASS__, 'validateSectionPageUrl'),
+			),
+			'CANONICAL_PAGE_URL' => array(
+				'data_type' => 'string',
+				'title' => Loc::getMessage('IBLOCK_ENTITY_CANONICAL_PAGE_URL_FIELD'),
+				'validation' => array(__CLASS__, 'validateCanonicalPageUrl'),
 			),
 			'PICTURE' => array(
 				'data_type' => 'integer',
@@ -298,6 +304,18 @@ class IblockTable extends Entity\DataManager
 	 * @return array
 	 */
 	public static function validateSectionPageUrl()
+	{
+		return array(
+			new Entity\Validator\Length(null, 255),
+		);
+	}
+
+	/**
+	 * Returns validators for CANONICAL_PAGE_URL field.
+	 *
+	 * @return array
+	 */
+	public static function validateCanonicalPageUrl()
 	{
 		return array(
 			new Entity\Validator\Length(null, 255),

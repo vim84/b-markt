@@ -168,7 +168,7 @@ $MESS["SUP_SUBA_UI_EXIST"] = "I already have a user account and want to use it t
 $MESS["SUP_SUBA_UI_LOGIN_EXIST"] = "Existing user login";
 $MESS["SUP_SUBA_CONFIRM_ERROR"] = "Required fields not entered!";
 $MESS["SUP_MYSQL_L4111"] = "You are using MySql version #VERS#, but the system requires version 5.0.0 or higher. Please update your MySql installation or contact the technical support.";
-$MESS["SUP_MSSQL_L4111"] = "You are using MS SQL #VERS#, but the system requires version 9.0 or higher (Microsoft SQL Server 2005 or higher). Please update your MS SQL installation or contact the techsupport.";
+$MESS["SUP_MSSQL_L4111"] = "You are using MS SQL #VERS#, but the system requires version 10.0 or higher (Microsoft SQL Server 2008 or higher). Please update your MS SQL installation or contact the techsupport.";
 $MESS["SUP_MSSQL_LNATIVE"] = "You are using an ODBC driver to connect with the MSSQL server. Please switch to the SQLSRV expansion or refer to technical support.";
 $MESS["SUP_PHP_L439"] = "You are using PHP version #VERS#, but the system requires version 5.3.0 or higher. Please update your PHP installation or contact the technical support.";
 $MESS["SUP_MYSQL_LCP_ERROR"] = "Your MySQL database has '#CP1#' encoding while the Site Update system requires '#CP#' encoding. Please contact your MySQL administrator to run the following database query: alter database #DB# default character set #CP#";
@@ -185,4 +185,6 @@ $MESS["SUP_HTTP_BX_MASTER"] = "The web cluster may only be updated using a maste
 $MESS["SUP_CHECK_LIC"] = "<a href=\"http://www.bitrixsoft.com/support/key_info.php?license_key=#LICENSE_KEY#\" target=\"_blank\">Verify key</a>";
 $MESS["SUP_SUA_DOMAIN"] = "www.bitrixsoft.com";
 $MESS["SUP_CHECK_LIC_MESSAGE"] = "Verify key";
+$MESS["SUP_CANT_REPARE"] = "Error initializing the update system. Please contact helpdesk.";
+$MESS["SUP_CANT_EACCELERATOR"] = "As of current version, eAccelerator is no longer supported. Please contact your administrator or Helpdesk for more information.";
 ?>

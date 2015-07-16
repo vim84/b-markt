@@ -7,4 +7,5 @@ $MESS["SP_DISPLAY_TYPE_H"] = "Флажки с названиями и карти
 $MESS["SP_DISPLAY_TYPE_K"] = "Радиокнопки";
 $MESS["SP_DISPLAY_TYPE_P"] = "Выпадающий список";
 $MESS["SP_DISPLAY_TYPE_R"] = "Выпадающий список с названиями и картинками";
+$MESS["SP_DISPLAY_TYPE_U"] = "Календарь";
 ?>

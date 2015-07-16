@@ -226,7 +226,10 @@ class OrderTable extends Entity\DataManager
 			'DEDUCTED' => array(
 				'data_type' => 'boolean',
 				'values' => array('N','Y')
-			)
+			),
+			'BX_USER_ID' => array(
+				'data_type' => 'string'
+			),
 		);
 	}
 }

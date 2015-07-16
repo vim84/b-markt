@@ -646,9 +646,13 @@ echo '<table class="adm-list-table" id="'.$this->table_id.'">
 		echo '
 <script type="text/javascript">
 var '.$this->table_id.'= new BX.adminSubList("'.$tbl.'", {context_ctrl: '.($aUserOpt["context_ctrl"] == "Y"? "true":"false").'}, "'.$this->GetListUrl(true).'");
-function ReloadOffers()
+function ReloadSubList()
 {
 	'.$this->ActionAjaxReload($this->GetListUrl(true)).'
+}
+function ReloadOffers()
+{
+	ReloadSubList();
 }
 </script>
 ';

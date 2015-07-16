@@ -34,3 +34,5 @@ $MESS["SPS_EXPAND"] = "Expand";
 $MESS["SPS_COLLAPSE"] = "Hide";
 $MESS["SPS_CHOOSE_CATALOG"] = "Select catalog";
 $MESS["SPS_OFFER"] = "SKU";
+$MESS["SPS_QUANTITY"] = "Quantity";
+$MESS["SPS_FIELD_ACTION"] = "Action";

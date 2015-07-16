@@ -350,6 +350,7 @@ class main extends CModule
 		RegisterModuleDependences("main", "OnEventLogGetAuditTypes", "main", "CEventMain", "GetAuditTypes");
 		RegisterModuleDependences("main", "OnEventLogGetAuditHandlers", "main", "CEventMain", "MakeMainObject");
 		RegisterModuleDependences("perfmon", "OnGetTableSchema", "main", "CTableSchema", "OnGetTableSchema");
+		RegisterModuleDependences("sender", "OnConnectorList", "main", "\\Bitrix\\Main\\SenderEventHandler", "onConnectorListUser");
 
 		RegisterModuleDependences("main", "OnUserTypeBuildList", "main", "CUserTypeString", "GetUserTypeDescription", 110);
 		RegisterModuleDependences("main", "OnUserTypeBuildList", "main", "CUserTypeInteger", "GetUserTypeDescription", 120);
@@ -389,6 +390,12 @@ class main extends CModule
 		CAgent::AddAgent("CUndo::CleanUpOld();", "main", "Y", 86400);
 		if (!file_exists($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/bitrix24'))
 			CAgent::AddAgent("CSiteCheckerTest::CommonTest();", "main", "N", 86400, "", "Y", ConvertTimeStamp(strtotime(date('Y-m-d 03:00:00', time() + 86400)), 'FULL'));
+
+		CAgent::AddAgent('\\Bitrix\\Main\\Analytics\\CounterDataTable::submitData();', "main", "N", 60);
+
+		RegisterModuleDependences("sale", "OnBasketAdd", "main", "\\Bitrix\\Main\\Analytics\\Catalog", "catchCatalogBasket");
+		RegisterModuleDependences("sale", "OnOrderSave", "main", "\\Bitrix\\Main\\Analytics\\Catalog", "catchCatalogOrder");
+		RegisterModuleDependences("sale", "OnSalePayOrder", "main", "\\Bitrix\\Main\\Analytics\\Catalog", "catchCatalogOrderPayment");
 
 		self::InstallDesktop();
 
@@ -1438,6 +1445,7 @@ class main extends CModule
 		CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/install/image_uploader", $_SERVER["DOCUMENT_ROOT"]."/bitrix/image_uploader", true, true);
 		CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/install/panel", $_SERVER["DOCUMENT_ROOT"]."/bitrix/panel", true, true);
 		CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/install/fonts", $_SERVER["DOCUMENT_ROOT"]."/bitrix/fonts", true, true);
+		CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/install/css", $_SERVER["DOCUMENT_ROOT"]."/bitrix/css", true, true);
 
 		return true;
 	}

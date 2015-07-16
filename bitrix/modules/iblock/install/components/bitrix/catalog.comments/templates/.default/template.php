@@ -66,7 +66,8 @@ if (!$templateData['BLOG']['BLOG_FROM_AJAX'])
 			'CACHE_TYPE' => 'N',
 			'CACHE_TIME' => '0',
 			'CACHE_GROUPS' => $arParams['CACHE_GROUPS'],
-			'TEMPLATE_THEME' => $arParams['~TEMPLATE_THEME']
+			'TEMPLATE_THEME' => $arParams['~TEMPLATE_THEME'],
+			'SHOW_DEACTIVATED' => $arParams['SHOW_DEACTIVATED'],
 		);
 
 		$arJSParams['serviceList']['blog'] = true;

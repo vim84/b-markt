@@ -14,6 +14,8 @@ if (is_array($arParams["UPLOAD_FILE"]) && !empty($arParams["UPLOAD_FILE"]))
 			(is_array($arParams["UPLOAD_FILE"]["INPUT_VALUE"]) ? $arParams["UPLOAD_FILE"]["INPUT_VALUE"] : array()),
 			(is_array($arParams["UPLOAD_FILE"]["VALUE"]) ? $arParams["UPLOAD_FILE"]["VALUE"] : array())
 		);
+		if (array_key_exists("FILES", $arParams) && is_array($arParams["FILES"]) && array_key_exists("POSTFIX", $arParams["FILES"]))
+			$arParams["UPLOAD_FILE"]["POSTFIX"] = $arParams["FILES"]["POSTFIX"];
 		$arParams["PROPERTIES"][] = $arParams["UPLOAD_FILE"];
 	}
 	else if (array_key_exists("INPUT_NAME", $arParams["UPLOAD_FILE"]))

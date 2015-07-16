@@ -16,6 +16,7 @@ Loc::loadMessages(__FILE__);
  * <li> SMART_FILTER bool optional default 'N'
  * <li> DISPLAY_TYPE enum ('A', 'B', 'F', 'G', 'H', 'K', 'P', 'R') optional
  * <li> DISPLAY_EXPANDED bool optional default 'N'
+ * <li> FILTER_HINT string(255) optional
  * <li> IBLOCK reference to {@link \Bitrix\Iblock\IblockTable}
  * <li> PROPERTY reference to {@link \Bitrix\Iblock\PropertyTable}
  * <li> SECTION reference to {@link \Bitrix\Iblock\SectionTable}
@@ -39,6 +40,7 @@ class SectionPropertyTable extends Entity\DataManager
 	const DROPDOWN = 'P';
 	const DROPDOWN_WITH_PICTURES_AND_LABELS = 'R';
 	//UWXYZ - reserved
+	const CALENDAR = 'U';
 
 	/**
 	 * Returns path to the file which contains definition of the class.
@@ -98,6 +100,11 @@ class SectionPropertyTable extends Entity\DataManager
 				'values' => array('N', 'Y'),
 				'title' => Loc::getMessage('IBLOCK_SECTION_PROPERTY_ENTITY_DISPLAY_EXPANDED_FIELD'),
 			),
+			'FILTER_HINT' => array(
+				'data_type' => 'string',
+				'title' => Loc::getMessage('IBLOCK_SECTION_PROPERTY_ENTITY_FILTER_HINT_FIELD'),
+				'validation' => array(__CLASS__, 'validateFilterHint'),
+			),
 			'IBLOCK' => array(
 				'data_type' => 'Bitrix\Iblock\Iblock',
 				'reference' => array('=this.IBLOCK_ID' => 'ref.ID'),
@@ -110,6 +117,18 @@ class SectionPropertyTable extends Entity\DataManager
 				'data_type' => 'Bitrix\Iblock\Section',
 				'reference' => array('=this.SECTION_ID' => 'ref.ID'),
 			),
+		);
+	}
+
+	/**
+	 * Returns validators for FILTER_HINT field.
+	 *
+	 * @return array
+	 */
+	public static function validateFilterHint()
+	{
+		return array(
+			new Entity\Validator\Length(null, 255),
 		);
 	}
 }

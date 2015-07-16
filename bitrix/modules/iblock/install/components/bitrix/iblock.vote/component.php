@@ -101,7 +101,6 @@ if($arParams["ELEMENT_ID"] <= 0)
 			"IBLOCK_LID" => SITE_ID,
 			"IBLOCK_ACTIVE" => "Y",
 			"ACTIVE_DATE" => "Y",
-			"ACTIVE" => "Y",
 			"CHECK_PERMISSIONS" => "Y",
 		)
 	);
@@ -238,7 +237,6 @@ if($this->StartResultCache(false, array($USER->GetGroups(), $bVoted)))
 			"ID" => $arParams["ELEMENT_ID"],
 			"IBLOCK_ACTIVE" => "Y",
 			"IBLOCK_ID" => $arParams["IBLOCK_ID"],
-			"ACTIVE" => "Y",
 			"CHECK_PERMISSIONS" => "Y",
 		);
 		//ORDER BY

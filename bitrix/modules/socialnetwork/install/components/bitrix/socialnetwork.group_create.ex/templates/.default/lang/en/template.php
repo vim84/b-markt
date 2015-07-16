@@ -54,4 +54,5 @@ $MESS["SONET_GCE_T_DEST_EXTRANET_ADD_NAME_TITLE"] = "First name";
 $MESS["SONET_GCE_T_DEST_EXTRANET_ADD_LAST_NAME_TITLE"] = "Last name";
 $MESS["SONET_GCE_T_DEST_EXTRANET_ADD_SEND_PASSWORD_TITLE"] = "Send log on data to specified e-mail";
 $MESS["SONET_GCE_T_DEST_EXTRANET_SELECTOR"] = "and/or #ACTION# a new";
+$MESS["SONET_GCE_T_EMAILS_DESCR"] = "E-mail addresses, comma separated";
 ?>

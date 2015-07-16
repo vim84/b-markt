@@ -133,13 +133,16 @@ else
 				{
 					foreach ($arResult["Groups"]["List"] as $group)
 					{
-						?><span class="sonet-groups-group-block">
-							<span class="sonet-groups-group-img" <?=($group["GROUP_PHOTO_RESIZED"] ? "style=\"background:url('".$group["GROUP_PHOTO_RESIZED"]["src"]."') no-repeat;\"" : "")?>></span>
-							<span class="sonet-groups-group-text">
-								<span class="sonet-groups-group-title<?=($group["IS_EXTRANET"] == "Y" ? " sonet-groups-group-title-extranet" : "")?>"><a href="<?=$group["GROUP_URL"]?>" class="sonet-groups-group-link"><?=$group["GROUP_NAME"]?></a><?=($group["IS_EXTRANET"] == "Y" && SITE_TEMPLATE_ID != "bitrix24" ? '<span class="sonet-groups-group-signature">'.GetMessage("SONET_C33_T_IS_EXTRANET").'</span>' : '')?></span><?
+						?><span class="sonet-groups-group-block"><?
+							?><span class="sonet-groups-group-img" <?=($group["GROUP_PHOTO_RESIZED"] ? "style=\"background:url('".$group["GROUP_PHOTO_RESIZED"]["src"]."') no-repeat;\"" : "")?>></span><?
+							?><span class="sonet-groups-group-text"><?
+								?><span class="sonet-groups-group-title<?=($group["IS_EXTRANET"] == "Y" ? " sonet-groups-group-title-extranet" : "")?>"><?
+									?><a href="<?=$group["GROUP_URL"]?>" class="sonet-groups-group-link"><?=$group["GROUP_NAME"]?></a><?
+									?><?=($group["IS_EXTRANET"] == "Y" && SITE_TEMPLATE_ID != "bitrix24" ? '<span class="sonet-groups-group-signature">'.GetMessage("SONET_C33_T_IS_EXTRANET").'</span>' : '')?><?
+								?></span><?
 								?><?=(strlen($group["GROUP_DESCRIPTION"]) > 0 ? '<span class="sonet-groups-group-description">'.$group["GROUP_DESCRIPTION"].'</span>' : "")?><?
-							?></span>
-						</span><?
+							?></span><?
+						?></span><?
 					}
 
 					if (StrLen($arResult["NAV_STRING"]) > 0)

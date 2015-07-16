@@ -35,7 +35,7 @@ $APPLICATION->includeComponent(
 	array('HIDE_ICONS' => 'Y')
 );
 ?>
-<div class="bx-disk-filepage-section">
+<div class="bx-disk-bizproc-section">
 <?
 $APPLICATION->IncludeComponent("bitrix:bizproc.task.list", "", Array(
 	"USER_ID" => "", 

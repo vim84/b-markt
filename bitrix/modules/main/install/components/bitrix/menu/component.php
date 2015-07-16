@@ -4,8 +4,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /**
 * Bitrix vars
 *
+* @var array $arResult
 * @var array $arParams
-* @var CBitrixComponent $this
 * @var CMain $APPLICATION
 * @var CUser $USER
 * @var CBitrixMenuComponent $this

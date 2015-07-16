@@ -159,14 +159,11 @@ while ($arRes = $rsData->NavNext(true, "f_"))
 
 	$page_time = doubleval($arTotal["SUM_PAGE_TIME"]);
 	if ($page_time > 0)
-		$row->AddViewField("PERCENT", str_replace(" ", "&nbsp;", number_format(($arRes["SUM_PAGE_TIME"] / $page_time) * 100, 2, ".", " "))."%");
+		$row->AddViewField("PERCENT", perfmon_NumberFormat(($arRes["SUM_PAGE_TIME"] / $page_time) * 100, 2)."%");
 	else
 		$row->AddViewField("PERCENT", "&nbsp;");
 
-	if ($_REQUEST["mode"] == "excel")
-		$row->AddViewField("COUNT", number_format($f_COUNT, 0, ".", ""));
-	else
-		$row->AddViewField("COUNT", str_replace(" ", "&nbsp;", number_format($f_COUNT, 0, ".", " ")));
+	$row->AddViewField("COUNT", perfmon_NumberFormat($f_COUNT, 0));
 
 	foreach ($arGrpFuncs as $func)
 	{
@@ -174,10 +171,7 @@ while ($arRes = $rsData->NavNext(true, "f_"))
 		{
 			if (strlen($arRes[$func."_".$col]))
 			{
-				if ($_REQUEST["mode"] == "excel")
-					$row->AddViewField($func."_".$col, number_format($arRes[$func."_".$col], $prec, ".", ""));
-				else
-					$row->AddViewField($func."_".$col, str_replace(" ", "&nbsp;", number_format($arRes[$func."_".$col], $prec, ".", " ")));
+				$row->AddViewField($func."_".$col, perfmon_NumberFormat($arRes[$func."_".$col], $prec));
 			}
 		}
 	}

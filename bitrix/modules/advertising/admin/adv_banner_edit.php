@@ -1079,7 +1079,7 @@ $tabControl->BeginNextTab();
 		<td><?=GetMessage("AD_SHOW_PAGES");?></td>
 		<td><?
 		if ($isEditMode) :
-			?><textarea name="SHOW_PAGE" cols="45" rows="6" wrap="OFF"><?=$str_SHOW_PAGE?></textarea><br><?=GetMessage("AD_PAGES_ALT")?><?
+			?><textarea name="SHOW_PAGE" cols="45" rows="6" wrap="OFF"><?=$str_SHOW_PAGE?></textarea><br><?=GetMessage("AD_PAGES_ALT1")?><?
 		else :
 			$arr = $arrSHOW_PAGE;
 			if (is_array($arr) && count($arr)>0)
@@ -1098,7 +1098,7 @@ $tabControl->BeginNextTab();
 		<td><?=GetMessage("AD_NOT_SHOW_PAGES");?></td>
 		<td><?
 		if ($isEditMode) :
-			?><textarea name="NOT_SHOW_PAGE" cols="45" rows="6" wrap="OFF"><?=$str_NOT_SHOW_PAGE?></textarea><br><?=GetMessage("AD_PAGES_ALT")?><?
+			?><textarea name="NOT_SHOW_PAGE" cols="45" rows="6" wrap="OFF"><?=$str_NOT_SHOW_PAGE?></textarea><br><?=GetMessage("AD_PAGES_ALT1")?><?
 		else :
 			$arr = $arrNOT_SHOW_PAGE;
 			if (is_array($arr) && count($arr)>0)

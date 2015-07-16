@@ -13,7 +13,11 @@ use Bitrix\Security\Mfa\RecoveryCodesTable;
 header('Content-Type: application/json', true);
 
 $request = Bitrix\Main\Context::getCurrent()->getRequest();
-$userId = (int) ($request['user']?: $USER->getId());
+
+if (isset($request['user']))
+	$userId = (int) $request['user'];
+else
+	$userId = (int) $USER->getId();
 
 if (!CModule::IncludeModule('security'))
 {

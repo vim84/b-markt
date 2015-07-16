@@ -26,4 +26,17 @@ $MESS["CT_BLLE_TAB_ACCESS"] = "Access";
 $MESS["CT_BLLE_TAB_ACCESS_TITLE"] = "Manage access permissions of list sections and elements";
 $MESS["CT_BLLE_ACCESS_RIGHTS"] = "User Groups Allowed To Access The List";
 $MESS["CT_BLLE_FIELD_BIZPROC"] = "Enable Business Processes";
+$MESS["CT_BLLE_FIELD_DESCRIPTION"] = "List description";
+$MESS["CT_BLLE_TOOLBAR_FIELDS_PROCESS"] = "Workflow fields";
+$MESS["CT_BLLE_TOOLBAR_FIELDS_TITLE_PROCESS"] = "Configure workflow fields";
+$MESS["CT_BLLE_TOOLBAR_DELETE_PROCESS"] = "Delete workflow";
+$MESS["CT_BLLE_TOOLBAR_DELETE_TITLE_PROCESS"] = "Deletes the workflow and all related information";
+$MESS["CT_BLLE_TOOLBAR_DELETE_WARNING_PROCESS"] = "Are you sure you want to delete this workflow?";
+$MESS["CT_BLLE_TAB_EDIT_TITLE_PROCESS"] = "Main workflow parameters";
+$MESS["CT_BLLE_TAB_MESSAGES_TITLE_PROCESS"] = "Captions for workflow items and sections";
+$MESS["CT_BLLE_TAB_ACCESS_TITLE_PROCESS"] = "Manage access permissions for workflow items and sections";
+$MESS["CT_BLLE_FIELD_NAME_PROCESS"] = "Workflow name";
+$MESS["CT_BLLE_FIELD_DESCRIPTION_PROCESS"] = "Workflow description";
+$MESS["CT_BLLE_TOOLBAR_MIGRATE_PROCESSES"] = "Move to workflows";
+$MESS["CT_BLLE_TOOLBAR_MIGRATE_WARNING_PROCESS"] = "Are you sure you want to move this list?";
 ?>

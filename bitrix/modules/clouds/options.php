@@ -68,7 +68,7 @@ $tabControl->BeginNextTab();
 	?>
 	<tr>
 		<td width="40%" nowrap <?if($type[0]=="textarea") echo 'class="adm-detail-valign-top"'?>>
-			<label for="<?echo htmlspecialcharsbx($arOption[0])?>"><?echo $arOption[1]?>:</label>
+			<label for="<?echo htmlspecialcharsbx($arOption[0])?>"><?echo $arOption[1]?></label>
 		<td width="60%">
 			<?if($type[0]=="checkbox"):?>
 				<input type="checkbox" name="<?echo htmlspecialcharsbx($arOption[0])?>" id="<?echo htmlspecialcharsbx($arOption[0])?>" value="Y"<?if($val=="Y")echo" checked";?>>

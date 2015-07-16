@@ -52,6 +52,13 @@ class CAllSocNetUserPerms
 			$GLOBALS["APPLICATION"]->ThrowException(str_replace("#ID#", $arFields["RELATION_TYPE"], GetMessage("SONET_GG_ERROR_NO_RELATION_TYPE")), "ERROR_NO_RELATION_TYPE");
 			return false;
 		}
+		elseif (
+			is_set($arFields, "RELATION_TYPE")
+			&& $arFields["RELATION_TYPE"] == SONET_RELATIONS_TYPE_FRIENDS2
+		)
+		{
+			$arFields["RELATION_TYPE"] = SONET_RELATIONS_TYPE_FRIENDS;
+		}
 
 		return True;
 	}
@@ -213,10 +220,16 @@ class CAllSocNetUserPerms
 
 		if (!is_array($userID))
 		{
-			if (!array_key_exists($operation, $arUserPerms))
-				$toUserOperationPerms = $arSocNetUserOperations[$operation];
-			else
-				$toUserOperationPerms = $arUserPerms[$operation];
+			$toUserOperationPerms = (
+				array_key_exists($operation, $arUserPerms)
+					? $arUserPerms[$operation]
+					: $arSocNetUserOperations[$operation]
+			);
+
+			if ($toUserOperationPerms == SONET_RELATIONS_TYPE_FRIENDS2)
+			{
+				$toUserOperationPerms = SONET_RELATIONS_TYPE_FRIENDS;
+			}
 
 			return $toUserOperationPerms;
 		}
@@ -265,28 +278,15 @@ class CAllSocNetUserPerms
 
 		if ($toUserOperationPerms == SONET_RELATIONS_TYPE_AUTHORIZED)
 		{
-			if ($fromUserID > 0)
-				return true;
-			else
-				return false;
+			return ($fromUserID > 0);
 		}
 
-		if ($toUserOperationPerms == SONET_RELATIONS_TYPE_FRIENDS)
+		if (
+			$toUserOperationPerms == SONET_RELATIONS_TYPE_FRIENDS
+			|| $toUserOperationPerms == SONET_RELATIONS_TYPE_FRIENDS2
+		)
 		{
-			if (CSocNetUserRelations::IsFriends($fromUserID, $toUserID))
-				return true;
-			else
-				return false;
-		}
-
-		if ($toUserOperationPerms == SONET_RELATIONS_TYPE_FRIENDS2)
-		{
-			if (CSocNetUserRelations::IsFriends2($fromUserID, $toUserID))
-				return true;
-			elseif (CSocNetUserRelations::IsFriends($fromUserID, $toUserID))
-				return true;
-			else
-				return false;
+			return CSocNetUserRelations::IsFriends($fromUserID, $toUserID);
 		}
 
 		return false;

@@ -41,10 +41,10 @@ BX.ImMobile = function(params)
 	this.keyboardShow = false;
 
 	this.sendAjaxTry = 0;
-	this.pathToAjax = '/mobile/ajax.php?mobile_action=im&';
+	this.pathToRoot = BX.message('MobileSiteDir') ? BX.message('MobileSiteDir') : '/';
+	this.pathToAjax = this.pathToRoot+'mobile/ajax.php?mobile_action=im&';
 	this.pathToFileAjax = this.pathToAjax+'upload&';
 	this.pathToBlankImage = '/bitrix/js/im/images/blank.gif';
-	this.pathToRoot = BX.message('MobileSiteDir') ? BX.message('MobileSiteDir') : '/';
 
 	this.notifyCount = params.notifyCount || 0;
 	this.messageCount = params.messageCount || 0;
@@ -327,16 +327,6 @@ BX.ImMobile.prototype.mobileActionReady = function()
 
 BX.ImMobile.prototype.initPageAction = function (params)
 {
-	BX.addCustomEvent("onPullError", BX.delegate(function (error){
-		if (error == 'AUTHORIZE_ERROR')
-		{
-			app.BasicAuth({success: BX.delegate(function ()
-			{
-				setTimeout(BX.delegate(this.updateStateLight, this), 1000);
-			}, this)});
-		}
-	}, this));
-
 	BX.addCustomEvent("UIApplicationDidBecomeActiveNotification", BX.delegate(function (params){
 		setTimeout(BX.delegate(this.updateStateLight, this), 1000);
 	}, this));
@@ -344,7 +334,10 @@ BX.ImMobile.prototype.initPageAction = function (params)
 	BX.addCustomEvent("onImError", BX.delegate(function (params){
 		if (params.error == 'AUTHORIZE_ERROR')
 		{
-			app.BasicAuth();
+			app.BasicAuth({success: BX.delegate(function ()
+			{
+				setTimeout(BX.delegate(this.updateStateLight, this), 1000);
+			}, this)});
 		}
 		else if (params.error == 'RECENT_RELOAD')
 		{
@@ -503,6 +496,7 @@ BX.ImMobile.prototype.updateStateLight = function ()
 			url: this.pathToAjax,
 			method: 'POST',
 			dataType: 'json',
+			skipAuthCheck: true,
 			timeout: 20,
 			data: {'IM_UPDATE_STATE_LIGHT': 'Y', 'MOBILE': 'Y', 'SITE_ID': BX.message('SITE_ID'), 'NOTIFY': 'Y', 'MESSAGE': 'Y', 'IM_AJAX_CALL': 'Y', 'sessid': BX.bitrix_sessid()},
 			onsuccess: BX.delegate(function (data)
@@ -767,6 +761,7 @@ BX.ImMessengerMobile = function(BXIM, params)
 	this.contactListTab = null;
 	this.contactListLoad = false;
 	this.redrawContactListTimeout = {};
+	this.redrawRecentListTimeout = null;
 
 	this.enableGroupChat = this.BXIM.ppStatus? true: false;
 
@@ -1610,6 +1605,7 @@ BX.ImNotifyMobile.prototype.notifyViewed = function ()
 		url: this.BXIM.pathToAjax,
 		method: 'POST',
 		dataType: 'json',
+		skipAuthCheck: true,
 		data: {'IM_NOTIFY_VIEWED': 'Y', 'MAX_ID': parseInt(this.notifyLastId), 'IM_AJAX_CALL': 'Y', 'sessid': BX.bitrix_sessid()},
 		onsuccess: BX.delegate(function (data)
 		{

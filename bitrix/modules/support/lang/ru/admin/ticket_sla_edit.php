@@ -37,4 +37,7 @@ $MESS["SUP_RESPONSIBLE"] = "Ответственный по умолчанию";
 $MESS["SUP_DEADLINE_SOURCE_BY_CLIENT_REPLY"] = "Дата ответа клиента";
 $MESS["SUP_DEADLINE_SOURCE_BY_CREATE_DATE"] = "Дата создания обращения";
 $MESS["SUP_DEADLINE_SOURCE_BY"] = "Считать крайний срок от:";
+$MESS["SUP_CREATED"] = "Создано";
+$MESS["MAIN_ADMIN_MENU_EDIT"] = "Изменить";
+$MESS["SUP_MODIFIED"] = "Изменено";
 ?>

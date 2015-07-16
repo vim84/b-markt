@@ -53,6 +53,8 @@ $arDefaultUrlTemplates404 = array(
 	"bizproc_task" => "user/#user_id#/bizproc/#task_id#/",
 	"video_call" => "video/#user_id#/",
 
+	"processes" => "processes/",
+
 	"user_photo" => "user/#user_id#/photo/",
 	"user_photo_gallery" => "user/#user_id#/photo/gallery/",
 	"user_photo_gallery_edit" => "user/#user_id#/photo/gallery/action/#action#/",
@@ -129,9 +131,51 @@ $arDefaultUrlTemplates404 = array(
 	"user_passwords" => "user/#user_id#/passwords/",
 );
 
-$diskEnabled =
-	\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false) &&
-	CModule::includeModule('disk');
+$diskEnabled = (
+	\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false)
+	&& CModule::includeModule('disk')
+);
+
+$bExtranetEnabled = IsModuleInstalled('extranet');
+if ($bExtranetEnabled)
+{
+	$extranetSiteId = COption::GetOptionString("extranet", "extranet_site");
+	if (strlen($extranetSiteId) <= 0)
+	{
+		$bExtranetEnabled = false;
+	}
+}
+
+if (
+	$bExtranetEnabled
+	&& $arParams["SEF_MODE"] == "Y"
+	&& SITE_ID == $extranetSiteId
+	&& !CSocNetUser::IsCurrentUserModuleAdmin()
+	&& CModule::IncludeModule('intranet')
+)
+{
+	if ($USER->IsAuthorized())
+	{
+		$rsCurrentUser = CUser::GetById($USER->GetId());
+		if (
+			($arCurrentUser = $rsCurrentUser->Fetch())
+			&& !empty($arCurrentUser["UF_DEPARTMENT"])
+			&& is_array($arCurrentUser["UF_DEPARTMENT"])
+			&& intval($arCurrentUser["UF_DEPARTMENT"][0]) > 0
+		)
+		{
+			$arRedirectSite = CSocNetLogComponent::GetSiteByDepartmentId($arCurrentUser["UF_DEPARTMENT"]);
+			if (!$arRedirectSite)
+			{
+				$arRedirectSite = array(
+					"LID" => SITE_ID,
+					"SERVER_NAME" => SITE_SERVER_NAME
+				);
+			}
+		}
+	}
+}
+
 if($diskEnabled)
 {
 	$arDefaultUrlTemplates404["user_disk"] = "user/#user_id#/disk/path/#PATH#";
@@ -139,10 +183,13 @@ if($diskEnabled)
 	$arDefaultUrlTemplates404["user_trashcan_list"] = "user/#user_id#/disk/trashcan/#TRASH_PATH#";
 	$arDefaultUrlTemplates404["user_trashcan_file_view"] = "user/#user_id#/disk/trash/file/#TRASH_FILE_PATH#";
 	$arDefaultUrlTemplates404["user_external_link_list"] = "user/#user_id#/disk/external";
+	$arDefaultUrlTemplates404["user_disk_help"] = "user/#user_id#/disk/help";
 }
 
-if (IsModuleInstalled('extranet'))
+if ($bExtranetEnabled)
+{
 	unset($arDefaultUrlTemplates404["search"]);
+}
 
 $arDefaultUrlTemplatesN404 = array(
 	"index" => "",
@@ -190,6 +237,8 @@ $arDefaultUrlTemplatesN404 = array(
 	"bizproc_task_list" => "page=bizproc_task_list&user_id=#user_id#",
 	"bizproc_task" => "page=bizproc_task&user_id=#user_id#&task_id=#task_id#",
 	"video_call" => "page=video_call&user_id=#user_id#",
+
+	"processes" => "processes/",
 
 	"user_photo" => "page=user_photo&user_id=#user_id#",
 	"user_photo_gallery" => "page=user_photo_gallery&user_id=#user_id#",
@@ -300,18 +349,23 @@ if (
 }
 
 if (strlen(trim($arParams["NAME_TEMPLATE"])) <= 0)
+{
 	$arParams["NAME_TEMPLATE"] = CSite::GetNameFormat();
+}
 $arParams["SHOW_LOGIN"] = $arParams['SHOW_LOGIN'] != "N" ? "Y" : "N";
 
 if ($arParams["GROUP_USE_KEYWORDS"] != "N") $arParams["GROUP_USE_KEYWORDS"] = "Y";
 
 if (!is_array($arParams["VARIABLE_ALIASES"]))
+{
 	$arParams["VARIABLE_ALIASES"] = array();
+}
 
-if (IsModuleInstalled("intranet"))
-	$arParams['CAN_OWNER_EDIT_DESKTOP'] = $arParams['CAN_OWNER_EDIT_DESKTOP'] != "Y" ? "N" : "Y";
-else
-	$arParams['CAN_OWNER_EDIT_DESKTOP'] = $arParams['CAN_OWNER_EDIT_DESKTOP'] != "N" ? "Y" : "N";
+$arParams['CAN_OWNER_EDIT_DESKTOP'] = (
+	IsModuleInstalled("intranet")
+		? ($arParams['CAN_OWNER_EDIT_DESKTOP'] != "Y" ? "N" : "Y")
+		: ($arParams['CAN_OWNER_EDIT_DESKTOP'] != "N" ? "Y" : "N")
+);
 
 // for bitrix:main.user.link
 if (IsModuleInstalled('intranet'))
@@ -345,53 +399,83 @@ else
 }
 
 if (!array_key_exists("SHOW_FIELDS_TOOLTIP", $arParams))
+{
 	$arParams["SHOW_FIELDS_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_fields", $arTooltipFieldsDefault));
+}
+
 if (!array_key_exists("USER_PROPERTY_TOOLTIP", $arParams))
+{
 	$arParams["USER_PROPERTY_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_properties", $arTooltipPropertiesDefault));
+}
 
 if (!array_key_exists("PATH_TO_CONPANY_DEPARTMENT", $arParams))
+{
 	$arParams["PATH_TO_CONPANY_DEPARTMENT"] = "/company/structure.php?set_filter_structure=Y&structure_UF_DEPARTMENT=#ID#";
+}
 
-if (IsModuleInstalled("search") && !array_key_exists("PATH_TO_SEARCH_TAG", $arParams))
+if (
+	IsModuleInstalled("search")
+	&& !array_key_exists("PATH_TO_SEARCH_TAG", $arParams)
+)
+{
 	$arParams["PATH_TO_SEARCH_TAG"] = SITE_DIR."search/?tags=#tag#";
+}
 
 if (IsModuleInstalled("blog"))
 {
 	if (!array_key_exists("PATH_TO_GROUP_POST", $arParams))
+	{
 		$arParams["PATH_TO_GROUP_POST"] = "/workgroups/group/#group_id#/blog/#post_id#/";
+	}
+
 	if (!array_key_exists("BLOG_ALLOW_POST_CODE", $arParams))
+	{
 		$arParams["BLOG_ALLOW_POST_CODE"] = "Y";
+	}
 }
 
-$arParams["USE_MAIN_MENU"] = (isset($arParams["USE_MAIN_MENU"]) && $arParams["USE_MAIN_MENU"] == "Y" ? $arParams["USE_MAIN_MENU"] : false);
+$arParams["USE_MAIN_MENU"] = (
+	isset($arParams["USE_MAIN_MENU"])
+	&& $arParams["USE_MAIN_MENU"] == "Y"
+		? $arParams["USE_MAIN_MENU"]
+		: false
+);
 
-if ($arParams["USE_MAIN_MENU"] == "Y" && !array_key_exists("MAIN_MENU_TYPE", $arParams))
+if (
+	$arParams["USE_MAIN_MENU"] == "Y"
+	&& !array_key_exists("MAIN_MENU_TYPE", $arParams)
+)
+{
 	$arParams["MAIN_MENU_TYPE"] = "left";
+}
 
-
-
-
-$arParams["ALLOW_RATING_SORT"] = $arParams["ALLOW_RATING_SORT"] != "Y" ? "N" : "Y";
+$arParams["ALLOW_RATING_SORT"] = ($arParams["ALLOW_RATING_SORT"] != "Y" ? "N" : "Y");
 
 // activation rating
 CRatingsComponentsMain::GetShowRating($arParams);
 
 if (
 	!array_key_exists("RATING_ID", $arParams)
-	||
-	(
+	|| (
 		!is_array($arParams["RATING_ID"])
 		&& intval($arParams["RATING_ID"]) <= 0
 	)
 )
+{
 	$arParams["RATING_ID"] = 0;
+}
 
 if (IsModuleInstalled("search"))
 {
 	if (!array_key_exists("SEARCH_FILTER_NAME", $arParams))
+	{
 		$arParams["SEARCH_FILTER_NAME"] = "sonet_search_filter";
+	}
+
 	if (!array_key_exists("SEARCH_FILTER_DATE_NAME", $arParams))
+	{
 		$arParams["SEARCH_FILTER_DATE_NAME"] = "sonet_search_filter_date";
+	}
 }
 
 $arCustomPagesPath = array();
@@ -402,7 +486,9 @@ if ($arParams["SEF_MODE"] == "Y")
 
 	$events = GetModuleEvents("socialnetwork", "OnParseSocNetComponentPath");
 	while ($arEvent = $events->Fetch())
+	{
 		ExecuteModuleEventEx($arEvent, array(&$arDefaultUrlTemplates404, &$arCustomPagesPath, $arParams));
+	}
 
 	$engine = new CComponentEngine($this);
 	if($diskEnabled)
@@ -446,14 +532,17 @@ if ($arParams["SEF_MODE"] == "Y")
 
 	foreach ($arUrlTemplates as $url => $value)
 	{
-		if (substr($value, 0, 1) == "/")
-			$arResult["PATH_TO_".strToUpper($url)] = $value;
-		else
-			$arResult["PATH_TO_".strToUpper($url)] = $arParams["SEF_FOLDER"].$value;
+		$arResult["PATH_TO_".strToUpper($url)] = (
+			(substr($value, 0, 1) == "/")
+				? $value
+				: $arParams["SEF_FOLDER"].$value
+		);
 	}
 
 	if ($_REQUEST["auth"] == "Y")
+	{
 		$componentPage = "auth";
+	}
 
 	$tmpVal = COption::GetOptionString("socialnetwork", "user_page", false, SITE_ID);
 	if (
@@ -463,24 +552,34 @@ if ($arParams["SEF_MODE"] == "Y")
 			|| substr($tmpVal, 0, strlen($arParams["SEF_FOLDER"])) !== $arParams["SEF_FOLDER"]
 		)
 	)
+	{
 		COption::SetOptionString("socialnetwork", "user_page", $arParams["SEF_FOLDER"], false, SITE_ID);
+	}
 }
 else
 {
-	if(is_array($arParams["VARIABLE_ALIASES"]))
+	if (is_array($arParams["VARIABLE_ALIASES"]))
+	{
 		foreach ($arParams["VARIABLE_ALIASES"] as $key => $val)
+		{
 			$arParams["VARIABLE_ALIASES"][$key] = (!empty($val) ? $val : $key);
+		}
+	}
 
 	$events = GetModuleEvents("socialnetwork", "OnParseSocNetComponentPath");
 	while ($arEvent = $events->Fetch())
+	{
 		ExecuteModuleEventEx($arEvent, array(&$arDefaultUrlTemplatesN404, &$arCustomPagesPath, $arParams));
+	}
 
 	$arVariables = array();
 	$arVariableAliases = CComponentEngine::MakeComponentVariableAliases($arDefaultVariableAliases, $arParams["VARIABLE_ALIASES"]);
 
 	$events = GetModuleEvents("socialnetwork", "OnInitSocNetComponentVariables");
 	while ($arEvent = $events->Fetch())
+	{
 		ExecuteModuleEventEx($arEvent, array(&$arVariableAliases, &$arCustomPagesPath));
+	}
 
 	CComponentEngine::InitComponentVariables(false, $arComponentVariables, $arVariableAliases, $arVariables);
 	if (!empty($arDefaultUrlTemplatesN404) && !empty($arParams["VARIABLE_ALIASES"]))
@@ -504,6 +603,7 @@ else
 			}
 		}
 	}
+
 	foreach ($arDefaultUrlTemplatesN404 as $url => $value)
 	{
 		$arParamsKill = array("page", "path",
@@ -514,15 +614,43 @@ else
 		$arResult["PATH_TO_".strToUpper($url)] = $GLOBALS["APPLICATION"]->GetCurPageParam($value, $arParamsKill);
 	}
 	if (array_key_exists($arVariables["page"], $arDefaultUrlTemplatesN404))
-		$componentPage = $arVariables["page"];
-
-	if (empty($componentPage) || (!array_key_exists($componentPage, $arDefaultUrlTemplatesN404)))
 	{
-		//if (strlen($componentPage) <= 0)
+		$componentPage = $arVariables["page"];
+	}
+
+	if (
+		empty($componentPage)
+		|| (!array_key_exists($componentPage, $arDefaultUrlTemplatesN404))
+	)
+	{
 		$componentPage = "index";
 	}
+
 	if ($_REQUEST["auth"] == "Y")
+	{
 		$componentPage = "auth";
+	}
+}
+
+if ($arRedirectSite)
+{
+	if ($arParams["SEF_MODE"] == "Y")
+	{
+		$url =
+			(
+				strlen(trim($arRedirectSite["SERVER_NAME"])) > 0
+				&& $arRedirectSite["SERVER_NAME"] != SITE_SERVER_NAME
+					? (CMain::IsHTTPS() ? "https" : "http")."://".$arRedirectSite["SERVER_NAME"]
+					: ''
+			).
+			COption::GetOptionString("socialnetwork", "user_page", false, $arRedirectSite["LID"]).
+			CComponentEngine::MakePathFromTemplate(
+				$arDefaultUrlTemplates404[$componentPage],
+				$arVariables
+			);
+
+		LocalRedirect($url);
+	}
 }
 
 if (COption::GetOptionString("socialnetwork", "allow_frields", "Y") == "Y")
@@ -535,7 +663,9 @@ if (COption::GetOptionString("socialnetwork", "allow_frields", "Y") == "Y")
 			|| substr($tmpVal, 0, strlen($arParams["SEF_FOLDER"])) !== $arParams["SEF_FOLDER"]
 		)
 	)
+	{
 		COption::SetOptionString("socialnetwork", "friends_page", $arResult["PATH_TO_USER_FRIENDS"], false, SITE_ID);
+	}
 }
 
 $tmpVal = COption::GetOptionString("socialnetwork", "userblogpost_page", false, SITE_ID);
@@ -551,7 +681,9 @@ if (
 }
 
 if (!COption::GetOptionString("socialnetwork", "userbloggroup_id", false, SITE_ID))
+{
 	COption::SetOptionString("socialnetwork", "userbloggroup_id", $arParams["BLOG_GROUP_ID"], false, SITE_ID);
+}
 
 if (!COption::GetOptionString("socialnetwork", "smile_page", false, SITE_ID))
 {
@@ -624,7 +756,9 @@ if (!$tooltipPathToUser)
 	$tooltipPathToUser = $arResult["PATH_TO_USER"];
 }
 if (substr($tooltipPathToUser, 0, strlen($arParams["SEF_FOLDER"])) !== $arParams["SEF_FOLDER"])
+{
 	COption::SetOptionString("main", "TOOLTIP_PATH_TO_USER", $arParams["SEF_FOLDER"]."user/#user_id#/", false, SITE_ID);
+}
 
 $tmpVal = COption::GetOptionString("main", "TOOLTIP_PATH_TO_MESSAGES_CHAT", false, SITE_ID);
 if (
@@ -634,7 +768,9 @@ if (
 		|| substr($tmpVal, 0, strlen($arParams["SEF_FOLDER"])) !== $arParams["SEF_FOLDER"]
 	)
 )
+{
 	COption::SetOptionString("main", "TOOLTIP_PATH_TO_MESSAGES_CHAT", $arResult["PATH_TO_MESSAGES_CHAT"], false, SITE_ID);
+}
 
 $tmpVal = COption::GetOptionString("main", "TOOLTIP_PATH_TO_VIDEO_CALL", false, SITE_ID);
 if (
@@ -644,23 +780,41 @@ if (
 		|| substr($tmpVal, 0, strlen($arParams["SEF_FOLDER"])) !== $arParams["SEF_FOLDER"]
 	)
 )
+{
 	COption::SetOptionString("main", "TOOLTIP_PATH_TO_VIDEO_CALL", $arResult["PATH_TO_VIDEO_CALL"], false, SITE_ID);
+}
 
 if (!COption::GetOptionString("main", "TOOLTIP_DATE_TIME_FORMAT", false, SITE_ID))
+{
 	COption::SetOptionString("main", "TOOLTIP_DATE_TIME_FORMAT", $arResult["DATE_TIME_FORMAT"], false, SITE_ID);
+}
+
 if (!COption::GetOptionString("main", "TOOLTIP_SHOW_YEAR", false, SITE_ID))
+{
 	COption::SetOptionString("main", "TOOLTIP_SHOW_YEAR", $arParams["DATE_TIME_FORMAT"], false, SITE_ID);
+}
+
 if (!COption::GetOptionString("main", "TOOLTIP_NAME_TEMPLATE", false, SITE_ID))
+{
 	COption::SetOptionString("main", "TOOLTIP_NAME_TEMPLATE", $arParams["NAME_TEMPLATE"], false, SITE_ID);
+}
+
 if (!COption::GetOptionString("main", "TOOLTIP_SHOW_LOGIN", false, SITE_ID))
+{
 	COption::SetOptionString("main", "TOOLTIP_SHOW_LOGIN", $arParams["SHOW_LOGIN"], false, SITE_ID);
+}
+
 if (!COption::GetOptionString("main", "TOOLTIP_PATH_TO_CONPANY_DEPARTMENT", false, SITE_ID))
+{
 	COption::SetOptionString("main", "TOOLTIP_PATH_TO_CONPANY_DEPARTMENT", $arParams["PATH_TO_CONPANY_DEPARTMENT"], false, SITE_ID);
+}
 
 $arResult["PATH_TO_SEARCH_INNER"] = (IsModuleInstalled("intranet") ? SITE_DIR."company/structure.php" : $arResult["PATH_TO_SEARCH"]);
 $arParams["PATH_TO_SEARCH_EXTERNAL"] = Trim($arParams["PATH_TO_SEARCH_EXTERNAL"]);
 if (StrLen($arParams["PATH_TO_SEARCH_EXTERNAL"]) > 0)
+{
 	$arResult["PATH_TO_SEARCH"] = $arParams["PATH_TO_SEARCH_EXTERNAL"];
+}
 
 $arParams["ERROR_MESSAGE"] = "";
 $arParams["NOTE_MESSAGE"] = "";
@@ -670,7 +824,7 @@ $arParams["NOTE_MESSAGE"] = "";
 if(check_bitrix_sessid() || $_SERVER['REQUEST_METHOD'] == "PUT")
 {
 	global $bxSocNetSearch;
-	if(
+	if (
 		!is_object($bxSocNetSearch)
 		&& CModule::IncludeModule("socialnetwork")
 	)
@@ -711,6 +865,7 @@ if(check_bitrix_sessid() || $_SERVER['REQUEST_METHOD'] == "PUT")
 				"FILES_USER_IBLOCK_ID" => $arParams["FILES_USER_IBLOCK_ID"],
 				"PATH_TO_USER_FILES_ELEMENT" => $arResult["PATH_TO_USER_FILES_ELEMENT"],
 				"PATH_TO_USER_FILES" => $arResult["PATH_TO_USER_FILES"],
+				"PATH_TO_WORKFLOW" => SITE_DIR."services/processes/#list_id#/bp_log/#workflow_id#/"
 		));
 		AddEventHandler("search", "BeforeIndex", Array($bxSocNetSearch, "BeforeIndex"));
 		AddEventHandler("iblock", "OnAfterIBlockElementUpdate", Array($bxSocNetSearch, "IBlockElementUpdate"));
@@ -721,6 +876,26 @@ if(check_bitrix_sessid() || $_SERVER['REQUEST_METHOD'] == "PUT")
 		AddEventHandler("iblock", "OnAfterIBlockSectionDelete", Array($bxSocNetSearch, "IBlockSectionDelete"));
 	}
 }
+/********************************************************************
+				Disk
+********************************************************************/
+if(
+	$componentPage === 'user_disk' ||
+	$componentPage === 'user_disk_file' ||
+	$componentPage === 'user_trashcan_list' ||
+	$componentPage === 'user_trashcan_file_view' ||
+	$componentPage === 'user_external_link_list'
+)
+{
+	if(!CSocNetFeatures::isActiveFeature(SONET_ENTITY_USER, $arResult["VARIABLES"]["user_id"], "files"))
+	{
+		ShowError(GetMessage("SONET_FILES_IS_NOT_ACTIVE"));
+		return 0;
+	}
+}
+/********************************************************************
+				Disk
+********************************************************************/
 /********************************************************************
 				WebDav
 ********************************************************************/
@@ -761,7 +936,7 @@ if (strPos($componentPage, "user_files") === false && strPos($componentPage, "gr
 if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "group_files")!== false)
 {
 	if (
-		IsModuleInstalled("extranet")
+		$bExtranetEnabled
 		&& strPos($componentPage, "user_files") !== false
 		&& CModule::IncludeModule("iblock")
 	)
@@ -780,8 +955,6 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 				$GLOBALS["CACHE_MANAGER"]->RegisterTag("USER_CARD_".intval($arResult["VARIABLES"]["user_id"] / TAGGED_user_card_size));
 			}
 
-			$extranet_site_id = COption::GetOptionString("extranet", "extranet_site");
-
 			$rsIBlock = CIBlock::GetList(array(), array("ACTIVE" => "Y", "CHECK_PERMISSIONS"=>"N", "CODE"=>"user_files%"));
 
 			while($arIBlock = $rsIBlock->Fetch())
@@ -790,22 +963,28 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 				while($arSite = $rsSite->Fetch())
 				{
 					if (
-						$arSite["SITE_ID"] == $extranet_site_id 
+						$arSite["SITE_ID"] == $extranetSiteId
 						&& intval($extranet_iblock_id) <= 0
 					)
+					{
 						$extranet_iblock_id = $arIBlock["ID"];
+					}
 					elseif (
-						$arSite["SITE_ID"] != $extranet_site_id
+						$arSite["SITE_ID"] != $extranetSiteId
 						&& intval($intranet_iblock_id) <= 0
 					)
+					{
 						$intranet_iblock_id = $arIBlock["ID"];
+					}
 				}
 
 				if (
 					intval($intranet_iblock_id) > 0
 					&& intval($extranet_iblock_id) > 0
 				)
+				{
 					break;
+				}
 			}
 
 			if (
@@ -814,11 +993,14 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 			)
 			{
 				if (CSocNetUser::IsUserModuleAdmin($arResult["VARIABLES"]["user_id"]))
+				{
 					$bIsUserExtranet = false;
+				}
 				else
 				{
 					$rsUser = CUser::GetList(($by="id"), ($order="asc"), array("ID" => $arResult["VARIABLES"]["user_id"]), array("SELECT" => array("UF_DEPARTMENT"), "FIELDS" => array("ID")));
 					if ($arUser = $rsUser->Fetch())
+					{
 						$bIsUserExtranet = (
 							(
 								is_array($arUser["UF_DEPARTMENT"])
@@ -829,6 +1011,7 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 								&& intval($arUser["UF_DEPARTMENT"]) <= 0
 							)
 						);
+					}
 				}
 
 				$arCachedResult["FILES_USER_IBLOCK_ID"] = ($bIsUserExtranet ? $extranet_iblock_id : $intranet_iblock_id);
@@ -845,14 +1028,24 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 			}
 
 			$obCache->EndDataCache($arCachedResult);
-			if(defined("BX_COMP_MANAGED_CACHE"))
+			if (defined("BX_COMP_MANAGED_CACHE"))
+			{
 				$GLOBALS["CACHE_MANAGER"]->EndTagCache();
+			}
 		}
 		else
+		{
 			$arCachedResult = $obCache->GetVars();
+		}
 
-		if (is_array($arCachedResult) && array_key_exists("FILES_USER_IBLOCK_ID", $arCachedResult) && intval($arCachedResult["FILES_USER_IBLOCK_ID"]) > 0)
+		if (
+			is_array($arCachedResult)
+			&& array_key_exists("FILES_USER_IBLOCK_ID", $arCachedResult)
+			&& intval($arCachedResult["FILES_USER_IBLOCK_ID"]) > 0
+		)
+		{
 			$arParams["FILES_USER_IBLOCK_ID"]= $arCachedResult["FILES_USER_IBLOCK_ID"];
+		}
 
 		$arCachedResult = false;
 		$obCache = new CPHPCache;
@@ -898,13 +1091,23 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 
 			$obCache->EndDataCache($arCachedResult);
 			if(defined("BX_COMP_MANAGED_CACHE"))
+			{
 				$GLOBALS["CACHE_MANAGER"]->EndTagCache();
+			}
 		}
 		else
+		{
 			$arCachedResult = $obCache->GetVars();
+		}
 
-		if (is_array($arCachedResult) && array_key_exists("FILES_FORUM_ID", $arCachedResult) && intval($arCachedResult["FILES_FORUM_ID"]) > 0)
+		if (
+			is_array($arCachedResult)
+			&& array_key_exists("FILES_FORUM_ID", $arCachedResult)
+			&& intval($arCachedResult["FILES_FORUM_ID"]) > 0
+		)
+		{
 			$arParams["FILES_FORUM_ID"]= $arCachedResult["FILES_FORUM_ID"];
+		}
 	}
 }
 
@@ -921,15 +1124,23 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 		$res = 0;
 	}
 	else
+	{
 		$res = include_once($path);
+	}
 
 	$arParams["FATAL_ERROR"] = ($res <= 0 ? "Y" : "N");
 	if ($arParams["FATAL_ERROR"] === "Y")
 	{
 		if (strlen($arParams["NOTE_MESSAGE"]) > 0)
+		{
 			ShowNote($arParams["NOTE_MESSAGE"]);
+		}
+
 		if (strlen($arParams["ERROR_MESSAGE"]) > 0)
+		{
 			ShowError($arParams["ERROR_MESSAGE"]);
+		}
+
 		return 0;
 	}
 }
@@ -940,10 +1151,18 @@ if (strPos($componentPage, "user_files")!== false || strPos($componentPage, "gro
 /********************************************************************
 				Photogalley
 ********************************************************************/
-elseif (strPos($componentPage, "user_photo")!== false || strPos($componentPage, "group_photo")!== false)
+elseif (
+	strPos($componentPage, "user_photo") !== false
+	|| strPos($componentPage, "group_photo") !== false
+)
 {
-	if (strPos($componentPage, "user_photofull") !== false || strPos($componentPage, "group_photofull") !== false)
+	if (
+		strPos($componentPage, "user_photofull") !== false
+		|| strPos($componentPage, "group_photofull") !== false
+	)
+	{
 		$componentPage = str_replace("_photofull", "_photo", $componentPage);
+	}
 
 	$path = str_replace(array("\\", "//"), "/", dirname(__FILE__)."/include/photogallery.php");
 	if (!file_exists($path))
@@ -952,7 +1171,9 @@ elseif (strPos($componentPage, "user_photo")!== false || strPos($componentPage, 
 		$res = 0;
 	}
 	else
+	{
 		$res = include_once($path);
+	}
 
 	$arParams["FATAL_ERROR"] = ($res <= 0 ? "Y" : "N");
 }
@@ -962,8 +1183,13 @@ elseif (strPos($componentPage, "user_photo")!== false || strPos($componentPage, 
 /********************************************************************
 				Forum
 ********************************************************************/
-elseif (strPos($componentPage, "user_forum")!== false || strPos($componentPage, "group_forum")!== false ||
-	$componentPage == "user" || $componentPage == "group" || $componentPage == "index")
+elseif (
+	strPos($componentPage, "user_forum") !== false
+	|| strPos($componentPage, "group_forum") !== false
+	|| $componentPage == "user"
+	|| $componentPage == "group"
+	|| $componentPage == "index"
+)
 {
 	$path = str_replace(array("\\", "//"), "/", dirname(__FILE__)."/include/forum.php");
 	if (!file_exists($path))
@@ -972,7 +1198,9 @@ elseif (strPos($componentPage, "user_forum")!== false || strPos($componentPage, 
 		$res = 0;
 	}
 	else
+	{
 		$res = include_once($path);
+	}
 
 	$arParams["FATAL_ERROR"] = ($res <= 0 ? "Y" : "N");
 }
@@ -982,7 +1210,10 @@ elseif (strPos($componentPage, "user_forum")!== false || strPos($componentPage, 
 /********************************************************************
 				Content Search
 ********************************************************************/
-elseif (strPos($componentPage, "user_content_search")!== false || strPos($componentPage, "group_content_search")!== false)
+elseif (
+	strPos($componentPage, "user_content_search") !== false
+	|| strPos($componentPage, "group_content_search") !== false
+)
 {
 	$path = str_replace(array("\\", "//"), "/", dirname(__FILE__)."/include/search.php");
 	if (!file_exists($path))
@@ -1005,10 +1236,13 @@ elseif (strPos($componentPage, "user_content_search")!== false || strPos($compon
 				Buziness-process
 ********************************************************************/
 if ($componentPage == "bizproc_task")
+{
 	$componentPage = "bizproc_edit";
+}
 elseif ($componentPage == "bizproc_task_list")
+{
 	$componentPage = "bizproc";
-
+}
 /********************************************************************
 				/Buziness-process
 ********************************************************************/
@@ -1016,6 +1250,7 @@ if (
 	!in_array($componentPage, array("message_form_mess", "messages_chat", "messages_users_messages"))
 	&& IntVal($arResult["VARIABLES"]["user_id"]) > 0 
 	&& $arResult["VARIABLES"]["user_id"] != $USER->GetID()
+	&& $bExtranetEnabled
 	&& CModule::IncludeModule('extranet') 
 	&& !CExtranet::IsProfileViewableByID($arResult["VARIABLES"]["user_id"]) 
 )

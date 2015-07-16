@@ -28,7 +28,7 @@ $arRatingVote = array();
 if ($arParams["SHOW_RATING"] == 'Y')
 {
 	$tmp = (!empty($arResult["MESSAGE_FIRST"]) ?
-		($arResult["MESSAGE_FIRST"] + $arResult["MESSAGE_LIST"]) : $arResult["MESSAGE_LIST"]);
+		(array($arResult["MESSAGE_FIRST"]["ID"] => $arResult["MESSAGE_FIRST"]) + $arResult["MESSAGE_LIST"]) : $arResult["MESSAGE_LIST"]);
 	foreach ($tmp as $res)
 	{
 		$arAuthorId[] = $res['AUTHOR_ID'];
@@ -68,7 +68,8 @@ if (!empty($arResult["OK_MESSAGE"])):
 <?
 endif;
 
-if ($arParams["SHOW_FIRST_POST"] == "Y" && $arResult["NAV_RESULT"] && $arResult["NAV_RESULT"]->NavPageNomer > 1)
+if ($arParams["SHOW_FIRST_POST"] == "Y" && $arResult["NAV_RESULT"] && $arResult["NAV_RESULT"]->NavPageNomer > 1 &&
+	!($arParams['AJAX_POST'] == 'Y' && $arParams['ACTION'] == 'REPLY'))
 {
 	$bShowedHeader = true;
 ?>

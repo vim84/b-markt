@@ -9,8 +9,10 @@ class CBPReviewActivity
 	private $subscriptionId = 0;
 
 	private $isInEventActivityMode = false;
+	private $taskStatus = false;
 
 	private $arReviewResults = array();
+	private $arReviewOriginalResults = array();
 
 	public function __construct($name)
 	{
@@ -34,6 +36,8 @@ class CBPReviewActivity
 			"Comments" => "",
 			"CommentLabelMessage" => "",
 			"ShowComment" => "Y",
+			'AccessControl' => 'N',
+			"LastReviewer" => null
 		);
 	}
 
@@ -42,6 +46,7 @@ class CBPReviewActivity
 		parent::ReInitialize();
 
 		$this->arReviewResults = array();
+		$this->arReviewOriginalResults = array();
 		$this->ReviewedCount = 0;
 		$this->Comments = '';
 		$this->IsTimeout = 0;
@@ -93,6 +98,7 @@ class CBPReviewActivity
 		$arParameters["ShowComment"] = $this->IsPropertyExists("ShowComment") ? $this->ShowComment : "Y";
 		if ($arParameters["ShowComment"] != "Y" && $arParameters["ShowComment"] != "N")
 			$arParameters["ShowComment"] = "Y";
+		$arParameters["AccessControl"] = $this->IsPropertyExists("AccessControl") && $this->AccessControl == 'Y' ? 'Y' : 'N';
 
 		$taskService = $this->workflow->GetService("TaskService");
 		$this->taskId = $taskService->CreateTask(
@@ -105,6 +111,8 @@ class CBPReviewActivity
 				"NAME" => $this->Name,
 				"DESCRIPTION" => $this->Description,
 				"PARAMETERS" => $arParameters,
+				'IS_INLINE' => $arParameters["ShowComment"] == "Y" ? 'N' : 'Y',
+				'DOCUMENT_NAME' => $documentService->GetDocumentName($documentId)
 			)
 		);
 
@@ -151,7 +159,16 @@ class CBPReviewActivity
 			throw new Exception("eventHandler");
 
 		$taskService = $this->workflow->GetService("TaskService");
-		$taskService->DeleteTask($this->taskId);
+		if ($this->taskStatus === false)
+		{
+			$taskService->DeleteTask($this->taskId);
+		}
+		else
+		{
+			$taskService->Update($this->taskId, array(
+				'STATUS' => $this->taskStatus
+			));
+		}
 
 		$timeoutDuration = $this->CalculateTimeoutDuration();
 		if ($timeoutDuration > 0)
@@ -163,6 +180,7 @@ class CBPReviewActivity
 		$this->workflow->RemoveEventHandler($this->name, $eventHandler);
 
 		$this->taskId = 0;
+		$this->taskStatus = false;
 		$this->subscriptionId = 0;
 	}
 
@@ -197,6 +215,7 @@ class CBPReviewActivity
 			if (array_key_exists("SchedulerService", $arEventParameters) && $arEventParameters["SchedulerService"] == "OnAgent")
 			{
 				$this->IsTimeout = 1;
+				$this->taskStatus = CBPTaskStatus::Timeout;
 				$this->Unsubscribe($this);
 				$this->workflow->CloseActivity($this);
 				return;
@@ -206,36 +225,44 @@ class CBPReviewActivity
 		if (!array_key_exists("USER_ID", $arEventParameters) || intval($arEventParameters["USER_ID"]) <= 0)
 			return;
 
+		if (empty($arEventParameters["REAL_USER_ID"]))
+			$arEventParameters["REAL_USER_ID"] = $arEventParameters["USER_ID"];
+
 		$rootActivity = $this->GetRootActivity();
 		$documentId = $rootActivity->GetDocumentId();
 
 		$arUsers = CBPHelper::ExtractUsers($this->Users, $documentId, false);
 
 		$arEventParameters["USER_ID"] = intval($arEventParameters["USER_ID"]);
+		$arEventParameters["REAL_USER_ID"] = intval($arEventParameters["REAL_USER_ID"]);
 		if (!in_array($arEventParameters["USER_ID"], $arUsers))
 			return;
 
-		$taskService = $this->workflow->GetService("TaskService");
-		$taskService->MarkCompleted($this->taskId, $arEventParameters["USER_ID"]);
+		if ($this->IsPropertyExists("LastReviewer"))
+			$this->LastReviewer = "user_".$arEventParameters["REAL_USER_ID"];
 
-		$dbUser = CUser::GetById($arEventParameters["USER_ID"]);
+		$taskService = $this->workflow->GetService("TaskService");
+		$taskService->MarkCompleted($this->taskId, $arEventParameters["REAL_USER_ID"], CBPTaskUserStatus::Ok);
+
+		$dbUser = CUser::GetById($arEventParameters["REAL_USER_ID"]);
 		if ($arUser = $dbUser->Fetch())
 			$this->Comments = $this->Comments.
 				CUser::FormatName(COption::GetOptionString("bizproc", "name_template", CSite::GetNameFormat(false), SITE_ID), $arUser)." (".$arUser["LOGIN"].")".
-			    ((strlen($arEventParameters["COMMENT"]) > 0) ? ": " : "").$arEventParameters["COMMENT"]."\n";
+				((strlen($arEventParameters["COMMENT"]) > 0) ? ": " : "").$arEventParameters["COMMENT"]."\n";
 
 		$this->WriteToTrackingService(
 				str_replace(
 					array("#PERSON#", "#COMMENT#"),
-					array("{=user:user_".$arEventParameters["USER_ID"]."}", (strlen($arEventParameters["COMMENT"]) > 0 ? ": ".$arEventParameters["COMMENT"] : "")),
+					array("{=user:user_".$arEventParameters["REAL_USER_ID"]."}", (strlen($arEventParameters["COMMENT"]) > 0 ? ": ".$arEventParameters["COMMENT"] : "")),
 					GetMessage("BPAR_ACT_REVIEW_TRACK")
 				),
-				$arEventParameters["USER_ID"]
+				$arEventParameters["REAL_USER_ID"]
 			);
 
 		$result = "Continue";
 
-		$this->arReviewResults[] = $arEventParameters["USER_ID"];
+		$this->arReviewOriginalResults[] = $arEventParameters["USER_ID"];
+		$this->arReviewResults[] = $arEventParameters["REAL_USER_ID"];
 		$this->ReviewedCount = count($this->arReviewResults);
 
 		if ($this->IsPropertyExists("ApproveType") && $this->ApproveType == "any")
@@ -247,7 +274,7 @@ class CBPReviewActivity
 			$allAproved = true;
 			foreach ($arUsers as $userId)
 			{
-				if (!in_array($userId, $this->arReviewResults))
+				if (!in_array($userId, $this->arReviewOriginalResults))
 					$allAproved = false;
 			}
 
@@ -279,7 +306,8 @@ class CBPReviewActivity
 		{
 			$this->WriteToTrackingService(GetMessage("BPAR_ACT_REVIEWED"));
 
- 			$this->Unsubscribe($this);
+			$this->taskStatus = CBPTaskStatus::CompleteOk;
+			$this->Unsubscribe($this);
 			$this->workflow->CloseActivity($this);
 		}
 	}
@@ -326,7 +354,22 @@ class CBPReviewActivity
 		return array($form, $buttons);
 	}
 
-	public static function PostTaskForm($arTask, $userId, $arRequest, &$arErrors, $userName = "")
+	public static function getTaskControls($arTask)
+	{
+		return array(
+			'BUTTONS' => array(
+				array(
+					'TYPE'  => 'submit',
+					'TARGET_USER_STATUS' => CBPTaskUserStatus::Ok,
+					'NAME'  => 'review',
+					'VALUE' => 'Y',
+					'TEXT'  => strlen($arTask["PARAMETERS"]["TaskButtonMessage"]) > 0 ? $arTask["PARAMETERS"]["TaskButtonMessage"] : GetMessage("BPAR_ACT_BUTTON2")
+				)
+			)
+		);
+	}
+
+	public static function PostTaskForm($arTask, $userId, $arRequest, &$arErrors, $userName = "", $realUserId = null)
 	{
 		$arErrors = array();
 
@@ -338,9 +381,13 @@ class CBPReviewActivity
 
 			$arEventParameters = array(
 				"USER_ID" => $userId,
+				"REAL_USER_ID" => $realUserId,
 				"USER_NAME" => $userName,
-				"COMMENT" => $arRequest["task_comment"],
+				"COMMENT" => isset($arRequest["task_comment"]) ? $arRequest["task_comment"] : '',
 			);
+
+			if (isset($arRequest['INLINE_USER_STATUS']) && $arRequest['INLINE_USER_STATUS'] != CBPTaskUserStatus::Ok)
+				throw new CBPNotSupportedException(GetMessage("BPAA_ACT_NO_ACTION"));
 
 			CBPRuntime::SendExternalEvent($arTask["WORKFLOW_ID"], $arTask["ACTIVITY_NAME"], $arEventParameters);
 
@@ -439,6 +486,7 @@ class CBPReviewActivity
 			"ShowComment" => "show_comment",
 			"TimeoutDuration" => "timeout_duration",
 			"TimeoutDurationType" => "timeout_duration_type",
+			"AccessControl" => "access_control",
 		);
 
 		if (!is_array($arWorkflowParameters))
@@ -510,7 +558,7 @@ class CBPReviewActivity
 		if (strlen($arCurrentValues['task_button_message']) <= 0)
 			$arCurrentValues['task_button_message'] = GetMessage("BPAR_ACT_BUTTON2");
 		if (strlen($arCurrentValues["timeout_duration_type"]) <= 0)
-			 $arCurrentValues["timeout_duration_type"] = "s";
+			$arCurrentValues["timeout_duration_type"] = "s";
 
 		$documentService = $runtime->GetService("DocumentService");
 		$arDocumentFields = $documentService->GetDocumentFields($documentType);
@@ -546,6 +594,7 @@ class CBPReviewActivity
 			"show_comment" => "ShowComment",
 			"timeout_duration" => "TimeoutDuration",
 			"timeout_duration_type" => "TimeoutDurationType",
+			"access_control" => "AccessControl",
 		);
 
 		$arProperties = array();

@@ -11,8 +11,6 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
  * @global CUser $USER
  */
 
-$arResult["GROUP_POLICY"] = CUser::GetGroupPolicy($arResult["ID"]);
-
 $arParamsToDelete = array(
 	"login",
 	"logout",
@@ -55,11 +53,24 @@ foreach ($arRequestParams as $param)
 }
 
 if(isset($_GET["USER_LOGIN"]))
-	$arResult["LAST_LOGIN"] = htmlspecialcharsbx(CUtil::ConvertToLangCharset($_GET["USER_LOGIN"]));
+	$arResult["~LAST_LOGIN"] = CUtil::ConvertToLangCharset($_GET["USER_LOGIN"]);
 elseif(isset($_POST["USER_LOGIN"]))
-	$arResult["LAST_LOGIN"] = htmlspecialcharsbx($_POST["USER_LOGIN"]);
+	$arResult["~LAST_LOGIN"] = $_POST["USER_LOGIN"];
 else
-	$arResult["LAST_LOGIN"] = htmlspecialcharsbx($_COOKIE[COption::GetOptionString("main", "cookie_name", "BITRIX_SM")."_LOGIN"]);
+	$arResult["~LAST_LOGIN"] = $_COOKIE[COption::GetOptionString("main", "cookie_name", "BITRIX_SM")."_LOGIN"];
+
+$arResult["LAST_LOGIN"] = htmlspecialcharsbx($arResult["~LAST_LOGIN"]);
+
+$userId = 0;
+if($arResult["~LAST_LOGIN"] <> '')
+{
+	$res = CUser::GetByLogin($arResult["~LAST_LOGIN"]);
+	if($profile = $res->Fetch())
+	{
+		$userId = $profile["ID"];
+	}
+}
+$arResult["GROUP_POLICY"] = CUser::GetGroupPolicy($userId);
 
 $arResult["SECURE_AUTH"] = false;
 if(!CMain::IsHTTPS() && COption::GetOptionString('main', 'use_encrypted_auth', 'N') == 'Y')

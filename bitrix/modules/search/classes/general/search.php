@@ -396,7 +396,7 @@ class CAllSearch extends CDBResult
 		if($this->Query->bStemming)
 		{
 			$arStemInfo = stemming_init($this->Query->m_lang);
-			$letters = $arStemInfo["letters"];
+			$pcreLettersClass = "[".$arStemInfo["pcre_letters"]."]";
 			$strWhUpp = stemming_upper($strWh, $this->Query->m_lang);
 		}
 		else
@@ -428,13 +428,13 @@ class CAllSearch extends CDBResult
 				$lw = strlen($strWhUpp);
 				for ($s = $pos; $s >= 0; $s--)
 				{
-					if (strpos($letters, substr($strWhUpp, $s, 1)) === false)
+					if (!preg_match("/$pcreLettersClass/".BX_UTF_PCRE_MODIFIER, substr($strWhUpp, $s, 1)))
 						break;
 				}
 				$s++;
 				for ($e = $pos; $e < $lw; $e++)
 				{
-					if (strpos($letters, substr($strWhUpp, $e, 1)) === false)
+					if (!preg_match("/$pcreLettersClass/".BX_UTF_PCRE_MODIFIER, substr($strWhUpp, $e, 1)))
 						break;
 				}
 				$e--;
@@ -1224,7 +1224,7 @@ class CAllSearch extends CDBResult
 			if(!$bOverWrite && $DATE_CHANGE == $arResult["DATE_CHANGE"])
 			{
 				if(strlen($SEARCH_SESS_ID)>0)
-					$DB->Query("UPDATE b_search_content SET UPD='".$SEARCH_SESS_ID."' WHERE ID = ".$ID, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+					$DB->Query("UPDATE b_search_content SET UPD='".$DB->ForSql($SEARCH_SESS_ID)."' WHERE ID = ".$ID, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 				//$DB->Commit();
 				return $ID;
 			}
@@ -1456,6 +1456,10 @@ class CAllSearch extends CDBResult
 		if($file_site == "")
 			return 0;
 
+		$item_id = $file_site."|".$file_rel_path;
+		if (strlen($item_id) > 255)
+			return 0;
+
 		if(strlen($SEARCH_SESS_ID) > 0)
 		{
 			$DATE_CHANGE = $DB->CharToDateFunction(
@@ -1467,7 +1471,7 @@ class CAllSearch extends CDBResult
 				SELECT ID
 				FROM b_search_content
 				WHERE MODULE_ID = 'main'
-					AND ITEM_ID = '".$DB->ForSQL($file_site."|".$file_rel_path)."'
+					AND ITEM_ID = '".$DB->ForSQL($item_id)."'
 					AND DATE_CHANGE = ".$DATE_CHANGE."
 			";
 
@@ -1532,7 +1536,7 @@ class CAllSearch extends CDBResult
 		$tags = COption::GetOptionString("search", "page_tag_property");
 
 		//save to database
-		$ID = CSearch::Index("main", $file_site."|".$file_rel_path,
+		$ID = CSearch::Index("main", $item_id,
 			Array(
 				"SITE_ID" => $file_site,
 				"DATE_CHANGE" => date("d.m.Y H:i:s", $f->GetModificationTime()+1),
@@ -1687,7 +1691,7 @@ class CAllSearch extends CDBResult
 				//single line comment
 				while((++$i) < $c)
 				{
-					if($a[$i] === "\n")
+					if($a[$i] === "\n" || $a[$i] === '?>')
 						break;
 				}
 				continue;
@@ -2376,6 +2380,9 @@ class CAllSearch extends CDBResult
 		if(!is_array($SESS_ID))
 			$SESS_ID = array($SESS_ID);
 
+		foreach ($SESS_ID as $key => $value)
+			$SESS_ID[$key] = $DB->ForSql($value);
+
 		$strSql = "
 			SELECT ID
 			FROM b_search_content sc
@@ -3052,7 +3059,7 @@ class CAllSearchQuery
 	function StemQuery($q, $lang="en")
 	{
 		$arStemInfo = stemming_init($lang);
-		return preg_replace_callback("/([".$arStemInfo["pcre_letters"]."]+)/".BX_UTF_PCRE_MODIFIER, array("CAllSearchQuery", "StemWord"), $q);
+		return preg_replace_callback("/([".$arStemInfo["pcre_letters"]."]+)/".BX_UTF_PCRE_MODIFIER, array($this, "StemWord"), $q);
 	}
 
 	function PrepareQuery($q)

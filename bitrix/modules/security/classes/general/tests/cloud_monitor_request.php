@@ -186,7 +186,7 @@ class CSecurityCloudMonitorRequest
 	 */
 	protected static function getCheckerUrl()
 	{
-		$result = "http://";
+		$result = "https://";
 		$result .= COption::GetOptionString("main", "update_site", "www.bitrixsoft.com");
 		$result .= self::BITRIX_CHECKER_URL_PATH;
 		return $result;

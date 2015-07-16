@@ -97,6 +97,9 @@ if(
 
 	if($strWarning === "")
 	{
+		$TextParser = new CBXSanitizer();
+		$TextParser->SetLevel(CBXSanitizer::SECURE_LEVEL_LOW);
+		$TextParser->ApplyHtmlSpecChars(false);
 		$props = CIBlockProperty::GetList(array(), array("IBLOCK_ID" => $IBLOCK_ID, "CHECK_PERMISSIONS" => "N"));
 		while($p = $props->Fetch())
 		{
@@ -107,10 +110,17 @@ if(
 				&& $_POST["SECTION_PROPERTY"][$p["ID"]]["SHOW"] === "Y"
 			)
 			{
+				$filterHint = trim($_POST["SECTION_PROPERTY"][$p["ID"]]["FILTER_HINT"]);
+				if ($filterHint)
+				{
+					$filterHint = $TextParser->SanitizeHtml($filterHint);
+				}
+
 				CIBlockSectionPropertyLink::Set(0, $p["ID"], array(
 					"SMART_FILTER" => $_POST["SECTION_PROPERTY"][$p["ID"]]["SMART_FILTER"],
 					"DISPLAY_TYPE" => $_POST["SECTION_PROPERTY"][$p["ID"]]["DISPLAY_TYPE"],
 					"DISPLAY_EXPANDED" => $_POST["SECTION_PROPERTY"][$p["ID"]]["DISPLAY_EXPANDED"],
+					"FILTER_HINT" => $filterHint,
 				));
 			}
 			else
@@ -176,8 +186,12 @@ $tabControl->AddEditField("NAME", GetMessage("IBLOCK_FIELD_NAME").":", true, arr
 
 $tabControl->BeginNextFormTab();
 $tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("CAT_CEDIT_SECTION_PROPERTY_FIELD"));
+	require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/iblock/admin_tools.php");
+	$editor = new CEditorPopupControl();
 	?>
 		<tr colspan="2"><td align="center">
+			<?
+			?>
 			<table class="internal" id="table_SECTION_PROPERTY">
 			<tr class="heading">
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_NAME");?></td>
@@ -185,6 +199,7 @@ $tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("CAT_CEDIT_SECTION_
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_SMART_FILTER");?></td>
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_DISPLAY_TYPE");?></td>
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_DISPLAY_EXPANDED");?></td>
+				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_FILTER_HINT");?></td>
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_ACTION");?></td></tr>
 			<?
 			if(CIBlockRights::UserHasRightTo($IBLOCK_ID, $IBLOCK_ID, "iblock_edit"))
@@ -261,6 +276,21 @@ $tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("CAT_CEDIT_SECTION_
 				</td>
 				<td style="text-align:center"><?
 					echo '<input type="checkbox" value="Y" '.((is_array($arLink) && $arLink["INHERITED"] == "Y")? 'disabled="disabled"': '').' name="SECTION_PROPERTY['.$arProp['ID'].'][DISPLAY_EXPANDED]" '.($arLink["DISPLAY_EXPANDED"] == "Y"? 'checked="checked"': '').'>';
+				?></td>
+				<td>
+				<?
+					if (!is_array($arLink) || $arLink["INHERITED"] == "N")
+					{
+						echo $editor->getControlHtml('SECTION_PROPERTY['.$arProp['ID'].'][FILTER_HINT]', $arLink['FILTER_HINT'], 255);
+					}
+					elseif ($arLink['FILTER_HINT'] <> '')
+					{
+						echo CTextParser::closeTags($arLink['FILTER_HINT']);
+					}
+					else
+					{
+						echo '&nbsp;';
+					}
 				?></td>
 				<td align="left"><?
 					if(!is_array($arLink) || $arLink["INHERITED"] == "N")
@@ -365,6 +395,7 @@ $tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("CAT_CEDIT_SECTION_
 					row.insertCell(-1);
 					row.insertCell(-1);
 					row.insertCell(-1);
+					row.insertCell(-1);
 					row.cells[0].align = 'left';
 					row.cells[0].innerHTML = '<input type="hidden" name="SECTION_PROPERTY['+id+'][SHOW]" id="hidden_SECTION_PROPERTY_'+id+'" value="Y">'+name;
 					row.cells[1].align = 'left';
@@ -396,8 +427,9 @@ $tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("CAT_CEDIT_SECTION_
 					row.cells[4].style.textAlign = 'center';
 					row.cells[4].align = 'center';
 					row.cells[4].innerHTML = '<input type="checkbox" value="Y" name="SECTION_PROPERTY['+id+'][DISPLAY_EXPANDED]">';
-					row.cells[5].align = 'left';
-					row.cells[5].innerHTML = '<a href="javascript:deleteSectionProperty('+id+', \''+target_select_id+'\', \''+target_shadow_id+'\', \''+target_id+'\')"><?echo GetMessageJS("CAT_CEDIT_PROP_TABLE_ACTION_HIDE")?></a>';
+					row.cells[5].innerHTML = '<?echo CUtil::JSEscape($editor->getControlHtml('SECTION_PROPERTY[#ID#][FILTER_HINT]', '', 255))?>'.replace('#ID#', id);
+					row.cells[6].align = 'left';
+					row.cells[6].innerHTML = '<a href="javascript:deleteSectionProperty('+id+', \''+target_select_id+'\', \''+target_shadow_id+'\', \''+target_id+'\')"><?echo GetMessageJS("CAT_CEDIT_PROP_TABLE_ACTION_HIDE")?></a>';
 					var shadow = BX(target_shadow_id);
 					if(shadow)
 						jsSelectUtils.addNewOption(shadow, id, name);
@@ -444,6 +476,7 @@ $tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("CAT_CEDIT_SECTION_
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_SMART_FILTER");?></td>
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_DISPLAY_TYPE");?></td>
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_DISPLAY_EXPANDED");?></td>
+				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_FILTER_HINT");?></td>
 				<td><?echo GetMessage("CAT_CEDIT_PROP_TABLE_ACTION");?></td></tr>
 			<?
 			if(CIBlockRights::UserHasRightTo($arCatalog["IBLOCK_ID"], $arCatalog["IBLOCK_ID"], "iblock_edit"))
@@ -530,6 +563,21 @@ $tabControl->BeginCustomField("SECTION_PROPERTY", GetMessage("CAT_CEDIT_SECTION_
 				</td>
 				<td style="text-align:center"><?
 					echo '<input type="checkbox" value="Y" '.((is_array($arLink) && $arLink["INHERITED"] == "Y")? 'disabled="disabled"': '').' name="SECTION_PROPERTY['.$arProp['ID'].'][DISPLAY_EXPANDED]" '.($arLink["DISPLAY_EXPANDED"] == "Y"? 'checked="checked"': '').'>';
+				?></td>
+				<td>
+				<?
+					if (!is_array($arLink) || $arLink["INHERITED"] == "N")
+					{
+						echo $editor->getControlHtml('SECTION_PROPERTY['.$arProp['ID'].'][FILTER_HINT]', $arLink['FILTER_HINT'], 255);
+					}
+					elseif ($arLink['FILTER_HINT'] <> '')
+					{
+						echo CTextParser::closeTags($arLink['FILTER_HINT']);
+					}
+					else
+					{
+						echo '&nbsp;';
+					}
 				?></td>
 				<td align="left"><?
 					if(!is_array($arLink) || $arLink["INHERITED"] == "N")

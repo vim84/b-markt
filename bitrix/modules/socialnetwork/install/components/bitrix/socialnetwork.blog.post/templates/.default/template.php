@@ -349,9 +349,15 @@ else
 									"bitrix:system.field.view",
 									$arPostField["USER_TYPE"]["USER_TYPE_ID"],
 									array(
+										"LAZYLOAD" => $arParams["LAZYLOAD"],
 										"arUserField" => $arPostField,
-										"arAddField" => array("NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"], "PATH_TO_USER" => $arParams["~PATH_TO_USER"])
-									), null, array("HIDE_ICONS"=>"Y")
+										"arAddField" => array(
+											"NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"], 
+											"PATH_TO_USER" => $arParams["~PATH_TO_USER"]
+										)
+									), 
+									null, 
+									array("HIDE_ICONS"=>"Y")
 								);?><?
 							}
 							unset($arResult["POST_PROPERTIES"]["DATA"]["UF_BLOG_POST_VOTE"]);
@@ -455,8 +461,12 @@ else
 								"bitrix:system.field.view",
 								$arPostField["USER_TYPE"]["USER_TYPE_ID"],
 								array(
+									"LAZYLOAD" => $arParams["LAZYLOAD"],
 									"arUserField" => $arPostField,
-									"arAddField" => array("NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"], "PATH_TO_USER" => $arParams["~PATH_TO_USER"])
+									"arAddField" => array(
+										"NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"], 
+										"PATH_TO_USER" => $arParams["~PATH_TO_USER"]
+									)
 								), null, array("HIDE_ICONS"=>"Y")
 							);?><?
 						}
@@ -553,7 +563,9 @@ else
 								$arPostField["USER_TYPE"]["USER_TYPE_ID"],
 								array(
 									"arUserField" => $arPostField,
-								), null, array("HIDE_ICONS"=>"Y")
+								), 
+								null, 
+								array("HIDE_ICONS"=>"Y")
 							);?><?
 							echo "</div>";
 						}
@@ -826,6 +838,7 @@ else
 						"LOG_ID" => intval($arParams["LOG_ID"]),
 						"CREATED_BY_ID" => $arParams["CREATED_BY_ID"],
 						"MOBILE" => $arParams["MOBILE"],
+						"LAZYLOAD" => $arParams["LAZYLOAD"]
 					),
 				$component
 			);

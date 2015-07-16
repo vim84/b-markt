@@ -59,7 +59,7 @@ if ($taskId > 0)
 {
 	$dbTask = CBPTaskService::GetList(
 		array(),
-		array("ID" => $taskId, "USER_ID" => $USER->GetID()),
+		array("ID" => $taskId, "USER_ID" => $USER->GetID(), 'STATUS' => CBPTaskStatus::Running),
 		false,
 		false,
 		array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS")
@@ -67,7 +67,7 @@ if ($taskId > 0)
 	$arResult["Task"] = $dbTask->GetNext();
 }
 
-if (!$arTask)
+if (!$arResult["Task"] && !empty($_REQUEST["workflow_id"]))
 {
 	$workflowId = trim($_REQUEST["workflow_id"]);
 
@@ -75,7 +75,7 @@ if (!$arTask)
 	{
 		$dbTask = CBPTaskService::GetList(
 			array(),
-			array("WORKFLOW_ID" => $workflowId, "USER_ID" => $USER->GetID()),
+			array("WORKFLOW_ID" => $workflowId, "USER_ID" => $USER->GetID(), 'STATUS' => CBPTaskStatus::Running),
 			false,
 			false,
 			array("ID", "WORKFLOW_ID", "ACTIVITY", "ACTIVITY_NAME", "MODIFIED", "OVERDUE_DATE", "NAME", "DESCRIPTION", "PARAMETERS")
@@ -120,7 +120,7 @@ if (strlen($arResult["FatalErrorMessage"]) <= 0)
 
 			$d = CBPTaskService::GetList(
 				array(),
-				array("WORKFLOW_ID" => $workflowId, "USER_ID" => intval($GLOBALS["USER"]->GetID())),
+				array("WORKFLOW_ID" => $arResult["Task"]['WORKFLOW_ID'], "USER_ID" => (int)$GLOBALS["USER"]->GetID(), 'STATUS' => CBPTaskStatus::Running),
 				false,
 				false,
 				array("ID")

@@ -38,4 +38,5 @@ $MESS["IM_OPTIONS_TURN_SERVER_PASSWORD_HINT"] = "publicly visible";
 $MESS["IM_PRIVACY_PROFILE"] = "Display profile for ";
 $MESS["IM_SELECT_2_3"] = "no one";
 $MESS["IM_CORRECT_TEXT"] = "Enable autocorrect";
+$MESS["IM_OPTIONS_PATH_TO_USER_PROFILE"] = "User profile path template";
 ?>

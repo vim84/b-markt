@@ -11,6 +11,8 @@ use Bitrix\Main;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
 
+use Bitrix\Sale\Location\Util\Assert;
+
 Loc::loadMessages(__FILE__);
 
 class DefaultSiteTable extends Entity\DataManager
@@ -126,7 +128,7 @@ class DefaultSiteTable extends Entity\DataManager
 
 	private static function checkSiteId($siteId)
 	{
-		$siteId = Assert::expectStringNotNull($siteId, Loc::getMessage('SALE_LOCATION_DEFAULTSITE_ENTITY_SITE_ID_NOT_SET_EXCEPTION'));
+		$siteId = Assert::expectStringNotNull($siteId, '$siteId');
 
 		$res = Main\SiteTable::getList(array('filter' => array('LID' => $siteId)))->fetch();
 		if(!$res)

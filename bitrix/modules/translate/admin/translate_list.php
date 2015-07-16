@@ -1,10 +1,10 @@
 <?
 /*
 ##############################################
-# Bitrix Site Manager                        #
-# Copyright (c) 2002-2007 Bitrix             #
-# http://www.bitrixsoft.com                  #
-# mailto:admin@bitrixsoft.com                #
+# Bitrix Site Manager						#
+# Copyright (c) 2002-2007 Bitrix			 #
+# http://www.bitrixsoft.com				  #
+# mailto:admin@bitrixsoft.com				#
 ##############################################
 */
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_before.php");
@@ -135,7 +135,8 @@ function GetPhraseCounters($arCommon, $path, $key)
 
 $arCSVMessage = false;
 $arSearchParam = false;
-if (check_bitrix_sessid()) {
+if (check_bitrix_sessid())
+{
 	if (array_key_exists('upload_csv', $_POST))
 	{
 		if (SaveTCSVFile())
@@ -147,9 +148,11 @@ if (check_bitrix_sessid()) {
 			$ex = $APPLICATION->GetException();
 			$arCSVMessage = array('TYPE' => 'ERROR', 'MESSAGE' => $ex->GetString());
 		}
-	} else if (array_key_exists('tr_search', $_REQUEST))
+	}
+	elseif (array_key_exists('tr_search', $_REQUEST))
 	{
-		if (isset($_REQUEST['replace_oper']) && $_REQUEST['replace_oper'] == 'Y') {
+		if (isset($_REQUEST['replace_oper']) && $_REQUEST['replace_oper'] == 'Y')
+		{
 			$arSearchParam['is_replace'] = true;
 			$arSearchParam['search'] = trim($_REQUEST['search_phrase2']);
 			$arSearchParam['replace'] = trim($_REQUEST['replace_phrase2']);
@@ -157,7 +160,9 @@ if (check_bitrix_sessid()) {
 			$arSearchParam['bSearchMessage'] = isset($_REQUEST['search_message2']) && $_REQUEST['search_message2'] == 'Y';
 			$arSearchParam['bSearchMnemonic'] = isset($_REQUEST['search_mnemonic2']) && $_REQUEST['search_mnemonic2'] == 'Y';
 			$arSearchParam['bCaseSens'] = isset($_REQUEST['search_case_sens2']) && $_REQUEST['search_case_sens2'] == 'Y';
-		} else {
+		}
+		else
+		{
 			$arSearchParam['is_replace'] = false;
 			$arSearchParam['search'] = trim($_REQUEST['search_phrase']);
 			$arSearchParam['replace'] = '';
@@ -166,9 +171,8 @@ if (check_bitrix_sessid()) {
 			$arSearchParam['bSearchMnemonic'] = isset($_REQUEST['search_mnemonic']) && $_REQUEST['search_mnemonic'] == 'Y';
 			$arSearchParam['bCaseSens'] = isset($_REQUEST['search_case_sens']) && $_REQUEST['search_case_sens'] == 'Y';
 		}
-		if (empty($arSearchParam['search'])) {
+		if (empty($arSearchParam['search']))
 			$arSearchParam = false;
-		}
 	}
 }
 
@@ -182,7 +186,8 @@ if(!$AUTO_CALCULATE && array_key_exists('SHOW_DIFF', $_GET))
 
 $SHOW_LANG_DIFF = $AUTO_CALCULATE || $SHOW_DIFF_GET || (array_key_exists('BX_SHOW_LANG_DIFF', $_SESSION) && $_SESSION['BX_SHOW_LANG_DIFF']);
 $GET_SUBFOLRERS = $SHOW_LANG_DIFF || ($arSearchParam && $arSearchParam['bSubFolders']);
-if ($arSearchParam) {
+if ($arSearchParam)
+{
 	$AUTO_CALCULATE = false;
 	$SHOW_LANG_DIFF = false;
 }
@@ -193,6 +198,9 @@ $arTLangs = array();
 $ln = CLanguage::GetList($o, $b, Array("ACTIVE"=>"Y"));
 while($lnr = $ln->Fetch())
 	$arTLangs[$lnr["LID"]] = $lnr["LID"];
+
+$path = $_REQUEST["path"];
+$go_path = $_REQUEST["go_path"];
 
 //button going
 if(strlen($go_path)>0 && !preg_match("#\.\.[\\/]#".BX_UTF_PCRE_MODIFIER, $path))
@@ -211,6 +219,7 @@ $arLangDirFiles = array();
 $arFiles = array();
 $arDirs = array();
 $arLangDirs = array();
+$IS_LANG_DIR = false;
 
 if(!$SHOW_LANG_DIFF || ($SHOW_LANG_DIFF && check_bitrix_sessid()))
 {
@@ -255,16 +264,16 @@ if(!$SHOW_LANG_DIFF || ($SHOW_LANG_DIFF && check_bitrix_sessid()))
 	$arLangDirFiles = array_merge($arLangDirs, $arFiles);
 
 	// find
-	if ($arSearchParam) {
+	if ($arSearchParam)
+	{
 		$_arLangDirFiles = $arLangDirFiles;
 		$arLangDirFiles = array();
-		foreach ($_arLangDirFiles as $_k => $_v) {
-			if ($_v['IS_DIR'] == 'Y') {
+		foreach ($_arLangDirFiles as $_k => $_v)
+		{
+			if ($_v['IS_DIR'] == 'Y')
 				continue ;
-			}
-			if ($_v['LANG'] != LANGUAGE_ID) {
+			if ($_v['LANG'] != LANGUAGE_ID)
 				continue ;
-			}
 
 			$_coincidence = 0;
 			if (!TSEARCH(CSite::GetSiteDocRoot(false).$_v['PATH'], $_coincidence))
@@ -272,15 +281,14 @@ if(!$SHOW_LANG_DIFF || ($SHOW_LANG_DIFF && check_bitrix_sessid()))
 
 			$_v['COINCIDENCE'] = $_coincidence;
 			$arLangDirFiles[$_k] = $_v;
-
 		}
-
 	}
 
 	$lAdmin->BeginPrologContent();
 	?>
 	<p><?
-	if (!$arSearchParam) {
+	if (!$arSearchParam)
+	{
 		$last_path = "";
 		for ($i=0; $i<=sizeof($arrChain)-1; $i++) :
 			echo " / ";
@@ -299,7 +307,8 @@ if(!$SHOW_LANG_DIFF || ($SHOW_LANG_DIFF && check_bitrix_sessid()))
 
 $header = array();
 $header[] = array("id"=>"TRANS_FILE_NAME", "content"=>GetMessage("TRANS_FILE_NAME"),	"default"=>true, "align"=>"left");
-if ($AUTO_CALCULATE || $SHOW_LANG_DIFF) {
+if ($AUTO_CALCULATE || $SHOW_LANG_DIFF)
+{
 	$header[] = array("id"=>"TRANS_TOTAL_MESSAGES", "content"=>GetMessage("TRANS_TOTAL_MESSAGES"), "default"=>true, "align"=>"right");
 
 	foreach($arTLangs as $vlang)
@@ -314,7 +323,8 @@ if (strlen($path)>0 && !$arSearchParam)
 	$row->AddViewField("TRANS_FILE_NAME", '<a href="?lang='.LANGUAGE_ID.'&path='.urlencode($last_path)."&".bitrix_sessid_get().'" title="'.GetMessage("TR_UP_TITLE").'">
 			<img src="/bitrix/images/translate/up.gif" width="11" height="13" border=0 alt=""></a>'.
 			'&nbsp;<a href="?lang='.LANGUAGE_ID.'&path='.urlencode($last_path)."&".bitrix_sessid_get().'" title="'.GetMessage("TR_UP_TITLE").'">..</a>');
-	if ($AUTO_CALCULATE || $SHOW_LANG_DIFF) {
+	if ($AUTO_CALCULATE || $SHOW_LANG_DIFF)
+	{
 		$row->AddViewField("TRANS_TOTAL_MESSAGES", "&nbsp;");
 		foreach($arTLangs as $vlang)
 			$row->AddViewField($vlang, "&nbsp;");
@@ -343,9 +353,8 @@ if (is_array($arLangDirFiles)) :
 	foreach($arLangDirFiles as $key => $ar) :
 		$i++;
 		if (in_array($ar["PARENT"],$arPath) || $arSearchParam) :
-			if ($arSearchParam && $ar['IS_DIR'] == 'Y') {
+			if ($arSearchParam && $ar['IS_DIR'] == 'Y')
 				continue ;
-			}
 
 			$is_dir = $ar["IS_DIR"];
 			$fpath = $ar["PATH"];
@@ -354,7 +363,6 @@ if (is_array($arLangDirFiles)) :
 
 			if ($IS_LANG_DIR)
 			{
-
 				if (in_array($ftitle, $arShown))
 					continue;
 				$arShown[] = $ftitle;
@@ -378,7 +386,8 @@ if (is_array($arLangDirFiles)) :
 					array('TEXT'=>GetMessage("TR_FILE_SHOW"), 'ACTION' => $lAdmin->ActionRedirect('translate_show_php.php?lang='.LANGUAGE_ID.'&file='.$fpath),
 					'DEFAULT'=>false, 'ICON'=>'view')
 					);
-				if ($arSearchParam) {
+				if ($arSearchParam)
+				{
 					$arAction[] = array('SEPARATOR' => true);
 					$arAction[] = array('TEXT'=>GetMessage("TR_PATH_GO"), 'ACTION' => $lAdmin->ActionRedirect('translate_list.php?lang='.LANGUAGE_ID.'&path='.$fparent."&".bitrix_sessid_get()),
 					'DEFAULT'=>false, 'ICON'=>'go');
@@ -387,7 +396,8 @@ if (is_array($arLangDirFiles)) :
 				$row->AddViewField("TRANS_FILE_NAME", '<a href="translate_edit.php?lang='.LANGUAGE_ID.'&file='.$fpath.'&show_error='.$show_error.'" title="'.GetMessage("TR_FILE_TITLE").'"><img src="/bitrix/images/translate/file.gif" width="16" height="16" border=0 alt=""></a>'.
 					'&nbsp;<a href="translate_edit.php?lang='.LANGUAGE_ID.'&file='.$fpath.'&show_error='.$show_error.'" title="'.GetMessage("TR_FILE_TITLE").'">'.$ftitle.'</a>'.($arSearchParam ? ' ('.$ar["COINCIDENCE"].')' : ''));
 			endif;
-			if ($AUTO_CALCULATE || $SHOW_LANG_DIFF) {
+			if ($AUTO_CALCULATE || $SHOW_LANG_DIFF)
+			{
 			$arr = array();
 			foreach($arTLangs as $vlang)
 			{
@@ -446,8 +456,10 @@ if (is_array($arLangDirFiles)) :
 	endforeach;
 endif;
 
+$i = 0;
 $MESS = $ORIGINAL_MESS;
-if ($AUTO_CALCULATE || $SHOW_LANG_DIFF) {
+if ($AUTO_CALCULATE || $SHOW_LANG_DIFF)
+{
 	$row =& $lAdmin->AddRow($i++, Array());
 	$row->AddViewField("TRANS_FILE_NAME", "<b>".GetMessage("TRANS_TOTAL").":</b>");
 	$row->AddViewField("TRANS_TOTAL_MESSAGES", "<b>".$TOTAL_MESS."</b>");
@@ -470,8 +482,8 @@ $lAdmin->EndEpilogContent();
 $aContext = array();
 ob_start();
 ?>
-<table cellspacing="0">
 <form action="<?=$APPLICATION->GetCurPage()?>" name="form1">
+<table cellspacing="0">
 <input type="hidden" name="lang" value="<?=LANGUAGE_ID?>">
 <?=bitrix_sessid_post()?>
 <tr>
@@ -479,8 +491,8 @@ ob_start();
 	<td style="padding-left:5px;"><input class="form-text" type="text" name="path" id="path_to" size="50" value="<?=htmlspecialcharsbx($path)?>"></td>
 	<td style="padding-left:3px; padding-right:3px;"><input type="submit" value="<?=GetMessage("TRANS_GO")?>" class="form-button"></td>
 </tr>
-</form>
 </table>
+</form>
 <?
 $s = ob_get_contents();
 ob_end_clean();
@@ -497,15 +509,16 @@ $url = $APPLICATION->GetPopupLink(
 								)
 					)
 				);
-$aContext[] = Array(
+$aContext[] = array(
 	"TEXT" => $arSearchParam ? GetMessage("TR_NEW_SEARCH") : GetMessage("TR_SEARCH"),
 	"ICON" => "btn_fileman_search",
 	"LINK" => 'javascript:'.$url,
 	"TITLE" => GetMessage("TR_SEARCH_TITLE")
 );
 
-if (!$AUTO_CALCULATE || $IS_LANG_DIR) {
-$aContext[] = array('NEWBAR' => true);
+if (!$AUTO_CALCULATE || $IS_LANG_DIR)
+{
+	$aContext[] = array('NEWBAR' => true);
 }
 if (!$AUTO_CALCULATE)
 {
@@ -528,7 +541,8 @@ if (!$AUTO_CALCULATE)
 	}
 }
 
-if ($IS_LANG_DIR) {
+if ($IS_LANG_DIR)
+{
 	$aContext[] = array(
 			"TEXT"	=> GetMessage('TR_CHECK_FILES_TEXT'),
 			"LINK"	=> "translate_check_files.php?lang=".LANGUAGE_ID . '&' . bitrix_sessid_get() . "&path=" . htmlspecialcharsbx($path),
@@ -555,10 +569,11 @@ if ($arCSVMessage)
 {
 	CAdminMessage::ShowMessage($arCSVMessage);
 }
-?>
-<?$lAdmin->DisplayList();?>
-<?
-if ($TRANS_RIGHT == 'W'){
+
+$lAdmin->DisplayList();
+
+if ($TRANS_RIGHT == 'W')
+{
 	?>
 	<br>
 	<?$tabControl->Begin();?>
@@ -582,24 +597,41 @@ if ($TRANS_RIGHT == 'W'){
 <?$tabControl->EndTab();?>
 </form>
 	<?$tabControl->BeginNextTab();?>
-
 	<form action="translate_csv_download.php" name="form4" method="POST">
-	<tr>
-		<td width="10%" valign="top" nowrap><?=GetMessage('TR_FILE_ACTIONS')?></td>
-		<td valign="top" width="90%">
-		<input type="hidden" name="lang" value="<?=LANGUAGE_ID;?>" >
-		<input type="hidden" name="path" value="<?=htmlspecialcharsbx($path);?>" >
-		<?=bitrix_sessid_post()?>
-		<input id="F_ACTION_2_1" type="radio" name="download_translate_lang" value="A" checked><label for="F_ACTION_2_1"><?=GetMessage('TR_DOWNLOAD_LANG')?></label><br>
-		<input id="F_ACTION_2_2" type="radio" name="download_translate_lang" value="N"><label for="F_ACTION_2_2"><?=GetMessage('TR_DOWNLOAD_NO_TRANSLATE')?></label>
-		</td>
-	</tr>
+		<tr>
+			<td width="10%" valign="top" nowrap><?=GetMessage('TR_FILE_ACTIONS')?></td>
+			<td valign="top" width="90%">
+				<input type="hidden" name="lang" value="<?=LANGUAGE_ID;?>" >
+				<input type="hidden" name="path" value="<?=htmlspecialcharsbx($path);?>" >
+				<?=bitrix_sessid_post()?>
+				<input id="F_ACTION_2_1" type="radio" name="download_translate_lang" value="A" checked><label for="F_ACTION_2_1"><?=GetMessage('TR_DOWNLOAD_LANG')?></label><br>
+				<input id="F_ACTION_2_2" type="radio" name="download_translate_lang" value="N"><label for="F_ACTION_2_2"><?=GetMessage('TR_DOWNLOAD_NO_TRANSLATE')?></label>
+			</td>
+		</tr>
+		<?
+		$customScriptsFile = $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/langs.txt";
+		if(file_exists($customScriptsFile)):
+		?>
+		<tr>
+			<td width="10%" valign="top" nowrap>Only /bitrix/modules/langs.txt files:</td>
+			<td valign="top" width="90%">
+				<input type="checkbox" name="use_custom_list" value="Y">
+			</td>
+		</tr>
+		<?endif?>
 	</form>
 <?
 	$tabControl->Buttons();
 ?>
 	<input type="submit" id="tr_submit" value="<?=GetMessage("TR_UPLOAD_SUBMIT_BUTTON")?>" class="adm-btn-save">
 	<script type="text/javascript">
+	BX.bind(BX('F_ACTION_2'), 'click', function(){
+		if (!confirm('<? echo GetMessageJS('CONFRIM_REWRITE_LANG_FILES'); ?>'))
+		{
+			BX('F_ACTION_2').checked = false;
+			BX('F_ACTION_1').checked = true;
+		}
+	});
 	BX.bind(BX('tr_submit'), 'click', function ()
 	{
 		if (BX('tabControl_active_tab').value == 'fileupl1') {

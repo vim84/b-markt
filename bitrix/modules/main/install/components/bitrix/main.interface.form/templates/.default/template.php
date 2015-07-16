@@ -109,6 +109,15 @@ $i = 0;
 $cnt = count($tab["fields"]);
 $prevType = '';
 foreach($tab["fields"] as $field):
+	$style = '';
+	if(isset($field["show"]))
+	{
+		if($field["show"] == "N")
+		{
+			$style = "display:none;";
+		}
+	}
+
 	$i++;
 	if(!is_array($field))
 		continue;
@@ -124,7 +133,7 @@ foreach($tab["fields"] as $field):
 	if(strlen($field['class']))
 		$className[] = $field['class'];
 ?>
-	<tr<?if(!empty($className)):?> class="<?=implode(' ', $className)?>"<?endif?>>
+	<tr<?if(!empty($className)):?> class="<?=implode(' ', $className)?>"<?endif?><?if(!empty($style)):?> style="<?= $style ?>"<?endif?>>
 <?
 if($field["type"] == 'section'):
 ?>

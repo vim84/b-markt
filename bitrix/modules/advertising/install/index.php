@@ -45,7 +45,7 @@ class advertising extends CModule
 		if ($ADV_RIGHT=="W")
 		{
 			$errors = false;
-			
+
 			$this->InstallFiles();
 			$this->InstallDB();
 			$this->InstallEvents();
@@ -96,18 +96,18 @@ class advertising extends CModule
 
 		CAgent::AddAgent("CAdvContract::SendInfo();","advertising", "N", 7200);
 		CAgent::AddAgent("CAdvBanner::CleanUpDynamics();","advertising", "N", 86400);
-		
+
 		if ($EMPTY=="Y")
 		{
 			CModule::IncludeModule('advertising');
-			
+
 			$arSites = array();
 			$rs = CSite::GetList($b="sort", $o="asc");
 			while($ar = $rs->Fetch())
 			{
 				$arSites[] = $ar['ID'];
 			}
-			
+
 			$ac = new CAdvContract();
 			$arFields = array(
 				'ACTIVE' => 'Y',
@@ -228,7 +228,7 @@ class advertising extends CModule
 		CAgent::RemoveModuleAgents("advertising");
 
 		// module events
-		UnRegisterModuleDependences("main", "OnEndBufferContent", "advertising", "CAdvBanner", "BeforeRestartBuffer");
+		UnRegisterModuleDependences("main", "OnBeforeRestartBuffer", "advertising", "CAdvBanner", "BeforeRestartBuffer");
 		UnRegisterModuleDependences("main", "OnEndBufferContent", "advertising", "CAdvBanner", "FixShowAll");
 		UnRegisterModuleDependences("main", "OnBeforeProlog", "advertising");
 

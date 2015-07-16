@@ -25,7 +25,7 @@ $MESS ['BPT_ST_BP_NAME'] = "State-Driven Business Process";
 $MESS ['BPT_ST_INS'] = "Status initialization";
 $MESS ['BPT_ST_TEXT'] = "You have to approve or reject the document \"{=Document:NAME}\".
 
-Proceed by opening the link: http://#HTTP_HOST##TASK_URL#
+Proceed by opening the link: #BASE_HREF##TASK_URL#
 
 Document contents:
 {=Document:DETAIL_TEXT}

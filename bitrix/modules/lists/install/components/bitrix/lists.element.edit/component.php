@@ -1,6 +1,5 @@
 <?
-if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
-	die();
+if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /** @global CMain $APPLICATION */
 /** @global CUser $USER */
 /** @global CDatabase $DB */
@@ -15,18 +14,17 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
 /** @var string $parentComponentTemplate */
 $this->setFrameMode(false);
 
-if (!CModule::IncludeModule('lists'))
+if(!CModule::IncludeModule('lists'))
 {
 	ShowError(GetMessage("CC_BLEE_MODULE_NOT_INSTALLED"));
-
 	return;
 }
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/iblock/admin_tools.php");
 $APPLICATION->AddHeadScript('/bitrix/js/iblock/iblock_edit.js');
 
-$IBLOCK_ID = is_array($arParams["~IBLOCK_ID"]) ? 0 : intval($arParams["~IBLOCK_ID"]);
-$ELEMENT_ID = is_array($arParams["~ELEMENT_ID"]) ? 0 : intval($arParams["~ELEMENT_ID"]);
-$SECTION_ID = is_array($arParams["~SECTION_ID"]) ? 0 : intval($arParams["~SECTION_ID"]);
+$IBLOCK_ID = is_array($arParams["~IBLOCK_ID"])? 0: intval($arParams["~IBLOCK_ID"]);
+$ELEMENT_ID = is_array($arParams["~ELEMENT_ID"])? 0: intval($arParams["~ELEMENT_ID"]);
+$SECTION_ID = is_array($arParams["~SECTION_ID"])? 0: intval($arParams["~SECTION_ID"]);
 
 if (
 	intval($arParams["~SOCNET_GROUP_ID"]) > 0
@@ -54,29 +52,25 @@ $lists_perm = CListPermissions::CheckAccess(
 	$IBLOCK_ID,
 	$arParams["~SOCNET_GROUP_ID"]
 );
-if ($lists_perm < 0)
+if($lists_perm < 0)
 {
-	switch ($lists_perm)
+	switch($lists_perm)
 	{
 		case CListPermissions::WRONG_IBLOCK_TYPE:
 			ShowError(GetMessage("CC_BLEE_WRONG_IBLOCK_TYPE"));
-
 			return;
 		case CListPermissions::WRONG_IBLOCK:
 			ShowError(GetMessage("CC_BLEE_WRONG_IBLOCK"));
-
 			return;
 		case CListPermissions::LISTS_FOR_SONET_GROUP_DISABLED:
 			ShowError(GetMessage("CC_BLEE_LISTS_FOR_SONET_GROUP_DISABLED"));
-
 			return;
 		default:
 			ShowError(GetMessage("CC_BLEE_UNKNOWN_ERROR"));
-
 			return;
 	}
 }
-elseif (
+elseif(
 	(
 		$ELEMENT_ID > 0
 		&& $lists_perm < CListPermissions::CAN_READ
@@ -89,11 +83,10 @@ elseif (
 )
 {
 	ShowError(GetMessage("CC_BLEE_ACCESS_DENIED"));
-
 	return;
 }
 
-$arParams["CAN_EDIT"] = (
+$arParams["CAN_EDIT"] =	(
 	!$arResult["IS_SOCNET_GROUP_CLOSED"]
 	&& (
 		(
@@ -138,8 +131,9 @@ $arResult["CAN_DELETE_ELEMENT"] =
 	&& $ELEMENT_ID > 0
 	&& (
 		$lists_perm >= CListPermissions::CAN_WRITE
-		|| CIBlockElementRights::UserHasRightTo($arIBlock["ID"], $ELEMENT_ID, "element_delete")
-	);
+		|| CIBlockElementRights::UserHasRightTo($IBLOCK_ID, $ELEMENT_ID, "element_delete")
+	)
+;
 $arResult["IBLOCK_PERM"] = $lists_perm;
 $arResult["USER_GROUPS"] = $USER->GetUserGroupArray();
 $arIBlock = CIBlock::GetArrayByID(intval($arParams["~IBLOCK_ID"]));
@@ -147,20 +141,18 @@ $arResult["~IBLOCK"] = $arIBlock;
 $arResult["IBLOCK"] = htmlspecialcharsex($arIBlock);
 $arResult["IBLOCK_ID"] = $arIBlock["ID"];
 
-if (isset($arParams["SOCNET_GROUP_ID"]) && $arParams["SOCNET_GROUP_ID"] > 0)
+if(isset($arParams["SOCNET_GROUP_ID"]) && $arParams["SOCNET_GROUP_ID"] > 0)
 	$arParams["SOCNET_GROUP_ID"] = intval($arParams["SOCNET_GROUP_ID"]);
 else
 	$arParams["SOCNET_GROUP_ID"] = "";
 
 $arResult["GRID_ID"] = "lists_list_elements_".$arResult["IBLOCK_ID"];
 if ($ELEMENT_ID)
-	$arResult["FORM_ID"] = "lists_element_edit";
+	$arResult["FORM_ID"] = "lists_element_edit_".$arResult["IBLOCK_ID"];
 else
-	$arResult["FORM_ID"] = "lists_element_add";
+	$arResult["FORM_ID"] = "lists_element_add_".$arResult["IBLOCK_ID"];
 
-$bBizproc =
-	CModule::IncludeModule("bizproc")
-	&& ($arIBlock["BIZPROC"] != "N");
+$bBizproc = CModule::IncludeModule("bizproc") && ($arIBlock["BIZPROC"] != "N");
 
 $arResult["~LISTS_URL"] = str_replace(
 	array("#group_id#"),
@@ -181,7 +173,7 @@ $arResult["~LIST_SECTION_URL"] = str_replace(
 	array($arResult["IBLOCK_ID"], intval($arParams["~SECTION_ID"]), $arParams["SOCNET_GROUP_ID"]),
 	$arParams["~LIST_URL"]
 );
-if (isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
+if(isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
 	$arResult["~LIST_SECTION_URL"] = CHTTP::urlAddParams($arResult["~LIST_SECTION_URL"], array("list_section_id" => ""));
 
 $arResult["LIST_SECTION_URL"] = htmlspecialcharsbx($arResult["~LIST_SECTION_URL"]);
@@ -197,7 +189,7 @@ if ($ELEMENT_ID > 0)
 		array("copy_id" => $ELEMENT_ID),
 		array("skip_empty" => true, "encode" => true)
 	);
-	if (isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
+	if(isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
 		$arResult["LIST_COPY_ELEMENT_URL"] = CHTTP::urlAddParams($arResult["LIST_COPY_ELEMENT_URL"], array("list_section_id" => ""));
 }
 else
@@ -211,26 +203,26 @@ $arResult["COPY_ID"] = $copy_id;
 $obList = new CList($arIBlock["ID"]);
 
 $arResult["FIELDS"] = $obList->GetFields();
-if ($bBizproc)
+if($bBizproc)
 	$arSelect = array("ID", "IBLOCK_ID", "NAME", "IBLOCK_SECTION_ID", "CREATED_BY", "BP_PUBLISHED");
 else
 	$arSelect = array("ID", "IBLOCK_ID", "NAME", "IBLOCK_SECTION_ID");
 
 $arProps = array();
-foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
+foreach($arResult["FIELDS"] as $FIELD_ID => $arField)
 {
 	$arResult["FIELDS"][$FIELD_ID]["~NAME"] = $arResult["FIELDS"][$FIELD_ID]["NAME"];
 	$arResult["FIELDS"][$FIELD_ID]["NAME"] = htmlspecialcharsbx($arResult["FIELDS"][$FIELD_ID]["NAME"]);
 
-	if ($obList->is_field($FIELD_ID))
+	if($obList->is_field($FIELD_ID))
 		$arSelect[] = $FIELD_ID;
 	else
 		$arProps[] = $FIELD_ID;
 
-	if ($FIELD_ID == "CREATED_BY")
+	if($FIELD_ID == "CREATED_BY")
 		$arSelect[] = "CREATED_USER_NAME";
 
-	if ($FIELD_ID == "MODIFIED_BY")
+	if($FIELD_ID == "MODIFIED_BY")
 		$arSelect[] = "USER_NAME";
 }
 
@@ -238,7 +230,7 @@ $rsElement = CIBlockElement::GetList(
 	array(),
 	array(
 		"IBLOCK_ID" => $arResult["IBLOCK_ID"],
-		"=ID"       => ($copy_id ? $copy_id : $arParams["ELEMENT_ID"]),
+		"=ID" => ($copy_id? $copy_id: $arParams["ELEMENT_ID"]),
 	),
 	false,
 	false,
@@ -246,37 +238,37 @@ $rsElement = CIBlockElement::GetList(
 );
 $arResult["ELEMENT"] = $rsElement->GetNextElement();
 
-if (is_object($arResult["ELEMENT"]))
+if(is_object($arResult["ELEMENT"]))
 	$arResult["ELEMENT_FIELDS"] = $arResult["ELEMENT"]->GetFields();
 else
 	$arResult["ELEMENT_FIELDS"] = array();
 
-if (is_object($arResult["ELEMENT"]) && !$copy_id)
+if(is_object($arResult["ELEMENT"]) && !$copy_id)
 	$arResult["ELEMENT_ID"] = intval($arResult["ELEMENT_FIELDS"]["ID"]);
 else
 	$arResult["ELEMENT_ID"] = 0;
 
 $arResult["ELEMENT_PROPS"] = array();
-if (is_object($arResult["ELEMENT"]) && count($arProps))
+if(is_object($arResult["ELEMENT"]) && count($arProps))
 {
 	$rsProperties = CIBlockElement::GetProperty(
 		$arResult["IBLOCK_ID"],
-		$copy_id ? $copy_id : $arParams["ELEMENT_ID"],
+		$copy_id? $copy_id: $arParams["ELEMENT_ID"],
 		array(
-			"sort"      => "asc",
-			"id"        => "asc",
-			"enum_sort" => "asc",
-			"value_id"  => "asc",
+			"sort"=>"asc",
+			"id"=>"asc",
+			"enum_sort"=>"asc",
+			"value_id"=>"asc",
 		),
 		array(
-			"ACTIVE" => "Y",
-			"EMPTY"  => "N",
+			"ACTIVE"=>"Y",
+			"EMPTY"=>"N",
 		)
 	);
-	while ($arProperty = $rsProperties->Fetch())
+	while($arProperty = $rsProperties->Fetch())
 	{
 		$prop_id = $arProperty["ID"];
-		if (!array_key_exists($prop_id, $arResult["ELEMENT_PROPS"]))
+		if(!array_key_exists($prop_id, $arResult["ELEMENT_PROPS"]))
 		{
 			$arResult["ELEMENT_PROPS"][$prop_id] = $arProperty;
 			unset($arResult["ELEMENT_PROPS"][$prop_id]["DESCRIPTION"]);
@@ -288,7 +280,7 @@ if (is_object($arResult["ELEMENT"]) && count($arProps))
 		}
 
 		$arResult["ELEMENT_PROPS"][$prop_id]["FULL_VALUES"][$arProperty["PROPERTY_VALUE_ID"]] = array(
-			"VALUE"       => $arProperty["VALUE"],
+			"VALUE" => $arProperty["VALUE"],
 			"DESCRIPTION" => $arProperty["DESCRIPTION"],
 		);
 		$arResult["ELEMENT_PROPS"][$prop_id]["VALUES_LIST"][$arProperty["PROPERTY_VALUE_ID"]] = $arProperty["VALUE"];
@@ -297,30 +289,30 @@ if (is_object($arResult["ELEMENT"]) && count($arProps))
 
 $section_id = intval($arParams["~SECTION_ID"]);
 $arSection = false;
-if ($section_id)
+if($section_id)
 {
 	$rsSection = CIBlockSection::GetList(array(), array(
-		"IBLOCK_ID"         => $arIBlock["ID"],
-		"ID"                => $section_id,
-		"GLOBAL_ACTIVE"     => "Y",
+		"IBLOCK_ID" => $arIBlock["ID"],
+		"ID" => $section_id,
+		"GLOBAL_ACTIVE" => "Y",
 		"CHECK_PERMISSIONS" => "N",
 	));
 	$arSection = $rsSection->GetNext();
 }
 $arResult["SECTION"] = $arSection;
-if ($arResult["SECTION"])
+if($arResult["SECTION"])
 {
 	$arResult["SECTION_ID"] = $arResult["SECTION"]["ID"];
 	$arResult["SECTION_PATH"] = array();
 	$rsPath = CIBlockSection::GetNavChain($arResult["IBLOCK_ID"], $arResult["SECTION_ID"]);
-	while ($arPath = $rsPath->Fetch())
+	while($arPath = $rsPath->Fetch())
 	{
 		$arResult["SECTION_PATH"][] = array(
 			"NAME" => htmlspecialcharsex($arPath["NAME"]),
-			"URL"  => str_replace(
-				array("#list_id#", "#section_id#", "#group_id#"),
-				array($arIBlock["ID"], intval($arPath["ID"]), $arParams["SOCNET_GROUP_ID"]),
-				$arParams["LIST_URL"]
+			"URL" => str_replace(
+					array("#list_id#", "#section_id#", "#group_id#"),
+					array($arIBlock["ID"], intval($arPath["ID"]), $arParams["SOCNET_GROUP_ID"]),
+					$arParams["LIST_URL"]
 			),
 		);
 	}
@@ -330,13 +322,14 @@ else
 	$arResult["SECTION_ID"] = false;
 }
 
+
 $tab_name = $arResult["FORM_ID"]."_active_tab";
 
 //Assume there was no error
 $bVarsFromForm = false;
 
 //Form submitted
-if (
+if(
 	$_SERVER["REQUEST_METHOD"] == "POST"
 	&& check_bitrix_sessid()
 	&& !$arResult["IS_SOCNET_GROUP_CLOSED"]
@@ -359,16 +352,9 @@ if (
 	));
 
 	//When Save or Apply buttons was pressed
-	if (
-		isset($_POST["action"])
-		&& $_POST["action"] == "stop_bizproc"
-	)
+	if(isset($_POST["action"]) && $_POST["action"] == "stop_bizproc")
 	{
-		if (
-			isset($_POST["stop_bizproc"])
-			&& strlen($_POST["stop_bizproc"])
-			&& $bBizproc
-		)
+		if(isset($_POST["stop_bizproc"]) && strlen($_POST["stop_bizproc"]) && $bBizproc)
 		{
 			$strError = "";
 
@@ -378,11 +364,11 @@ if (
 
 				CBPDocument::TerminateWorkflow(
 					$_POST["stop_bizproc"],
-					array("iblock", "CIBlockDocument", $arResult["ELEMENT_ID"]),
+					BizprocDocument::getDocumentComplexId($arParams["IBLOCK_TYPE_ID"], $arResult["ELEMENT_ID"]),
 					$arErrorsTmp
 				);
 
-				foreach ($arErrorsTmp as $a)
+				foreach($arErrorsTmp as $a)
 					$strError .= $a["message"]."<br />";
 			}
 			else
@@ -390,7 +376,7 @@ if (
 				$strError .= GetMessage("CC_BLEE_ACCESS_DENIED")."<br />";
 			}
 
-			if ($strError)
+			if($strError)
 			{
 				ShowError($strError);
 				$bVarsFromForm = true;
@@ -405,7 +391,7 @@ if (
 					array($tab_name => $_POST[$tab_name]),
 					array("skip_empty" => true, "encode" => true)
 				);
-				if (isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
+				if(isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
 					$url = CHTTP::urlAddParams($url, array("list_section_id" => ""));
 
 				LocalRedirect($url);
@@ -417,61 +403,43 @@ if (
 			LocalRedirect($arResult["~LIST_SECTION_URL"]);
 		}
 	}
-	elseif (
+	elseif(
 		$arResult["ELEMENT_ID"]
 		&& isset($_POST["action"])
-		&& $_POST["action"] === "delete"
+		&& $_POST["action"]==="delete"
 	)
 	{
-		/*
-		waiting for integration lists into events_user_view
-
-				if(!empty($arParams['SOCNET_GROUP_ID']))
-				{
-					$dbResTmp = CIBlockElement::GetByID($arResult['ELEMENT_ID']);
-					if($arResTmp = $dbResTmp->GetNext())
-						$strTitleTmp = $arResTmp["NAME"];
-				}
-		*/
-		if (
+		if(
 			$lists_perm >= CListPermissions::CAN_WRITE
 			|| CIBlockElementRights::UserHasRightTo($IBLOCK_ID, $ELEMENT_ID, "element_delete")
 		)
 		{
+			$DB->StartTransaction();
+			$APPLICATION->ResetException();
 			$obElement = new CIBlockElement;
-			$obElement->Delete($arResult["ELEMENT_ID"]);
+			if(!$obElement->Delete($arResult["ELEMENT_ID"]))
+			{
+				$DB->Rollback();
+				if($ex = $APPLICATION->GetException())
+					ShowError(GetMessage("CC_BLEE_DELETE_ERROR")." ".$ex->GetString());
+				else
+					ShowError(GetMessage("CC_BLEE_DELETE_ERROR")." ".GetMessage("CC_BLEE_UNKNOWN_ERROR"));
+				$bVarsFromForm = true;
+			}
+			else
+			{
+				$DB->Commit();
+				LocalRedirect($arResult["~LIST_SECTION_URL"]);
+			}
 		}
-		/*
-		waiting for integration lists into events_user_view
-
-				if(!empty($arParams['SOCNET_GROUP_ID']))
-				{
-					$arSoFields = Array(
-						"ENTITY_TYPE" 		=> SONET_SUBSCRIBE_ENTITY_GROUP,
-						"ENTITY_ID" 		=> intval($arParams["SOCNET_GROUP_ID"]),
-						"EVENT_ID" 			=> "lists_del",
-						"USER_ID" 			=> $GLOBALS["USER"]->GetID(),
-						"=LOG_DATE" 		=> $GLOBALS["DB"]->CurrentTimeFunction(),
-						"TITLE_TEMPLATE" 	=> GetMessage("CC_BLEE_SONET_DEL_LOG_TITLE_TEMPLATE"),
-						"TITLE" 			=> $strTitleTmp,
-						"MESSAGE" 			=> "",
-						"TEXT_MESSAGE" 		=> "",
-						"MODULE_ID" 		=> "lists",
-						"URL"				=> "",
-						"CALLBACK_FUNC" 	=> false
-					);
-
-					$logID = CSocNetLog::Add($arSoFields, false);
-
-					if (intval($logID) > 0)
-						CSocNetLog::Update($logID, array("TMP_ID" => $logID));
-
-					CSocNetLog::SendEvent($logID, "SONET_NEW_EVENT", $logID);
-				}
-		*/
-		LocalRedirect($arResult["~LIST_SECTION_URL"]);
+		else
+		{
+			ShowError(GetMessage("CC_BLEE_DELETE_ERROR")." ".GetMessage("CC_BLEE_UNKNOWN_ERROR"));
+			$bVarsFromForm = true;
+			LocalRedirect($arResult["~LIST_SECTION_URL"]);
+		}
 	}
-	elseif (
+	elseif(
 		(isset($_POST["save"]) || isset($_POST["apply"]))
 		&& $arParams["CAN_EDIT"]
 	)
@@ -480,23 +448,23 @@ if (
 
 		//Gather fields for update
 		$arElement = array(
-			"IBLOCK_ID"         => $arResult["IBLOCK_ID"],
+			"IBLOCK_ID" => $arResult["IBLOCK_ID"],
 			"IBLOCK_SECTION_ID" => $_POST["IBLOCK_SECTION_ID"],
-			"NAME"              => $_POST["NAME"],
+			"NAME" => $_POST["NAME"],
 		);
 		$arProps = array();
 
-		foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
+		foreach($arResult["FIELDS"] as $FIELD_ID => $arField)
 		{
-			if ($FIELD_ID == "PREVIEW_PICTURE" || $FIELD_ID == "DETAIL_PICTURE")
+			if($FIELD_ID == "PREVIEW_PICTURE" || $FIELD_ID == "DETAIL_PICTURE")
 			{
 				$arElement[$FIELD_ID] = $_FILES[$FIELD_ID];
-				if (isset($_POST[$FIELD_ID."_del"]) && $_POST[$FIELD_ID."_del"] == "Y")
+				if(isset($_POST[$FIELD_ID."_del"]) && $_POST[$FIELD_ID."_del"]=="Y")
 					$arElement[$FIELD_ID]["del"] = "Y";
 			}
-			elseif ($FIELD_ID == "PREVIEW_TEXT" || $FIELD_ID == "DETAIL_TEXT")
+			elseif($FIELD_ID == "PREVIEW_TEXT" || $FIELD_ID == "DETAIL_TEXT")
 			{
-				if (
+				if(
 					isset($arField["SETTINGS"])
 					&& is_array($arField["SETTINGS"])
 					&& $arField["SETTINGS"]["USE_EDITOR"] == "Y"
@@ -507,65 +475,94 @@ if (
 
 				$arElement[$FIELD_ID] = $_POST[$FIELD_ID];
 			}
-			elseif ($obList->is_field($FIELD_ID))
+			elseif($obList->is_field($FIELD_ID))
 			{
 				$arElement[$FIELD_ID] = $_POST[$FIELD_ID];
 			}
-			elseif ($arField["PROPERTY_TYPE"] == "F")
+			elseif($arField["PROPERTY_TYPE"] == "F")
 			{
-				if (isset($_POST[$FIELD_ID."_del"]))
+				if(isset($_POST[$FIELD_ID."_del"]))
 					$arDel = $_POST[$FIELD_ID."_del"];
 				else
 					$arDel = array();
 				$arProps[$arField["ID"]] = array();
 				CFile::ConvertFilesToPost($_FILES[$FIELD_ID], $arProps[$arField["ID"]]);
-				foreach ($arProps[$arField["ID"]] as $file_id => $arFile)
+				foreach($arProps[$arField["ID"]] as $file_id => $arFile)
 				{
-					if (
+					if(
 						isset($arDel[$file_id])
 						&& (
-							(!is_array($arDel[$file_id]) && $arDel[$file_id] == "Y")
-							|| (is_array($arDel[$file_id]) && $arDel[$file_id]["VALUE"] == "Y")
+							(!is_array($arDel[$file_id]) && $arDel[$file_id]=="Y")
+							|| (is_array($arDel[$file_id]) && $arDel[$file_id]["VALUE"]=="Y")
 						)
 					)
 					{
-						if (isset($arProps[$arField["ID"]][$file_id]["VALUE"]))
+						if(isset($arProps[$arField["ID"]][$file_id]["VALUE"]))
 							$arProps[$arField["ID"]][$file_id]["VALUE"]["del"] = "Y";
 						else
 							$arProps[$arField["ID"]][$file_id]["del"] = "Y";
 					}
 				}
 			}
-			elseif ($arField["PROPERTY_TYPE"] == "N")
+			elseif($arField["PROPERTY_TYPE"] == "N")
 			{
-				if (is_array($_POST[$FIELD_ID]) && !array_key_exists("VALUE", $_POST[$FIELD_ID]))
+				if(is_array($_POST[$FIELD_ID]) && !array_key_exists("VALUE", $_POST[$FIELD_ID]))
 				{
 					$arProps[$arField["ID"]] = array();
-					foreach ($_POST[$FIELD_ID] as $key => $value)
+					foreach($_POST[$FIELD_ID] as $key=>$value)
 					{
-						if (is_array($value))
+						if(is_array($value))
 						{
-							if (strlen($value["VALUE"]))
-								$arProps[$arField["ID"]][$key] = doubleval($value["VALUE"]);
+							if(strlen($value["VALUE"]))
+							{
+								$value = str_replace(" ", "", str_replace(",", ".", $value["VALUE"]));
+								if (!is_numeric($value))
+								{
+									$strError .= GetMessage('CC_BLEE_VALIDATE_FIELD_ERROR', array('#NAME#'=>$arField['NAME']))."<br />";
+								}
+								$arProps[$arField["ID"]][$key] = doubleval($value);
+							}
+
 						}
 						else
 						{
-							if (strlen($value))
+							if(strlen($value))
+							{
+								$value = str_replace(" ", "", str_replace(",", ".", $value));
+								if (!is_numeric($value))
+								{
+									$strError .= GetMessage('CC_BLEE_VALIDATE_FIELD_ERROR', array('#NAME#'=>$arField['NAME']))."<br />";
+								}
 								$arProps[$arField["ID"]][$key] = doubleval($value);
+							}
 						}
 					}
 				}
 				else
 				{
-					if (is_array($_POST[$FIELD_ID]))
+					if(is_array($_POST[$FIELD_ID]))
 					{
-						if (strlen($_POST[$FIELD_ID]["VALUE"]))
+						if(strlen($_POST[$FIELD_ID]["VALUE"]))
+						{
+							$value = str_replace(" ", "", str_replace(",", ".", $_POST[$FIELD_ID]["VALUE"]));
+							if (!is_numeric($value))
+							{
+								$strError .= GetMessage('CC_BLEE_VALIDATE_FIELD_ERROR', array('#NAME#'=>$arField['NAME']))."<br />";
+							}
 							$arProps[$arField["ID"]] = doubleval($_POST[$FIELD_ID]["VALUE"]);
+						}
 					}
 					else
 					{
-						if (strlen($_POST[$FIELD_ID]))
+						if(strlen($_POST[$FIELD_ID]))
+						{
+							$value = str_replace(" ", "", str_replace(",", ".", $_POST[$FIELD_ID]));
+							if (!is_numeric($value))
+							{
+								$strError .= GetMessage('CC_BLEE_VALIDATE_FIELD_ERROR', array('#NAME#'=>$arField['NAME']))."<br />";
+							}
 							$arProps[$arField["ID"]] = doubleval($_POST[$FIELD_ID]);
+						}
 					}
 				}
 			}
@@ -578,27 +575,27 @@ if (
 		$arElement["MODIFIED_BY"] = $USER->GetID();
 		unset($arElement["TIMESTAMP_X"]);
 
-		if (count($arProps))
+		if(count($arProps))
 		{
 			$arElement["PROPERTY_VALUES"] = $arProps;
-			if ($arResult["ELEMENT_ID"] > 0)
+			if($arResult["ELEMENT_ID"] > 0)
 			{
 				//We have to read properties from database in order not to delete its values
 				$dbPropV = CIBlockElement::GetProperty(
 					$arResult["IBLOCK_ID"],
 					$arResult["ELEMENT_ID"],
 					"sort", "asc",
-					array("ACTIVE" => "Y")
+					array("ACTIVE"=>"Y")
 				);
-				while ($arPropV = $dbPropV->Fetch())
+				while($arPropV = $dbPropV->Fetch())
 				{
-					if ($arPropV["PROPERTY_TYPE"] != "F" && empty($arProps[$arPropV["ID"]]))
+					if($arPropV["PROPERTY_TYPE"] != "F" && empty($arProps[$arPropV["ID"]]))
 					{
-						if (!array_key_exists($arPropV["ID"], $arElement["PROPERTY_VALUES"]))
+						if(!array_key_exists($arPropV["ID"], $arElement["PROPERTY_VALUES"]))
 							$arElement["PROPERTY_VALUES"][$arPropV["ID"]] = array();
 
 						$arElement["PROPERTY_VALUES"][$arPropV["ID"]][$arPropV["PROPERTY_VALUE_ID"]] = array(
-							"VALUE"       => $arPropV["VALUE"],
+							"VALUE" => $arPropV["VALUE"],
 							"DESCRIPTION" => $arPropV["DESCRIPTION"],
 						);
 					}
@@ -606,17 +603,17 @@ if (
 			}
 		}
 
-		if (
+		if(
 			$arResult["IBLOCK"]["RIGHTS_MODE"] === 'E'
 			&& $arResult["CAN_EDIT_RIGHTS"]
 		)
 		{
-			if (is_array($_POST["RIGHTS"]))
+			if(is_array($_POST["RIGHTS"]))
 				$arPOSTRights = CIBlockRights::Post2Array($_POST["RIGHTS"]);
 			else
 				$arPOSTRights = array();
 
-			if ($ELEMENT_ID)
+			if($ELEMENT_ID)
 				$obRights = new CIBlockElementRights($arResult["IBLOCK_ID"], $ELEMENT_ID);
 			else
 				$obRights = new CIBlockSectionRights($arResult["IBLOCK_ID"], $SECTION_ID);
@@ -628,31 +625,31 @@ if (
 				$arPOSTRights
 			);
 
-		}//if($arResult["CAN_EDIT_RIGHTS"])
+		}
 
 		//---BP---
-		if ($bBizproc)
+		if($bBizproc)
 		{
-			$DOCUMENT_TYPE = "iblock_".$arResult["IBLOCK_ID"];
-
+			$documentType = BizprocDocument::generateDocumentComplexType($arParams["IBLOCK_TYPE_ID"], $arResult["IBLOCK_ID"]);
 			$arDocumentStates = CBPDocument::GetDocumentStates(
-				array("iblock", "CIBlockDocument", $DOCUMENT_TYPE),
-				($arResult["ELEMENT_ID"] > 0) ? array("iblock", "CIBlockDocument", $arResult["ELEMENT_ID"]) : null,
+				$documentType,
+				($arResult["ELEMENT_ID"] > 0) ? BizprocDocument::getDocumentComplexId(
+					$arParams["IBLOCK_TYPE_ID"], $arResult["ELEMENT_ID"]) : null,
 				"Y"
 			);
 
 			$arCurrentUserGroups = $USER->GetUserGroupArray();
-			if (!$arResult["ELEMENT_FIELDS"] || $arResult["ELEMENT_FIELDS"]["CREATED_BY"] == $USER->GetID())
+			if(!$arResult["ELEMENT_FIELDS"] || $arResult["ELEMENT_FIELDS"]["CREATED_BY"] == $USER->GetID())
 			{
 				$arCurrentUserGroups[] = "Author";
 			}
 
-			if ($arResult["ELEMENT_ID"])
+			if($arResult["ELEMENT_ID"])
 			{
 				$canWrite = CBPDocument::CanUserOperateDocument(
 					CBPCanUserOperateOperation::WriteDocument,
 					$USER->GetID(),
-					array("iblock", "CIBlockDocument", $arResult["ELEMENT_ID"]),
+					BizprocDocument::getDocumentComplexId($arParams["IBLOCK_TYPE_ID"], $arResult["ELEMENT_ID"]),
 					array("AllUserGroups" => $arCurrentUserGroups, "DocumentStates" => $arDocumentStates)
 				);
 			}
@@ -661,102 +658,114 @@ if (
 				$canWrite = CBPDocument::CanUserOperateDocumentType(
 					CBPCanUserOperateOperation::WriteDocument,
 					$USER->GetID(),
-					array("iblock", "CIBlockDocument", $DOCUMENT_TYPE),
+					$documentType,
 					array("AllUserGroups" => $arCurrentUserGroups, "DocumentStates" => $arDocumentStates)
 				);
 			}
 
-			if (!$canWrite)
+			if(!$canWrite)
 				$strError = GetMessage("CC_BLEE_ACCESS_DENIED_STATUS");
 
-			if (!$strError)
+			if(!$strError)
 			{
 				$arBizProcParametersValues = array();
 				foreach ($arDocumentStates as $arDocumentState)
 				{
-					if (strlen($arDocumentState["ID"]) <= 0)
+					if(strlen($arDocumentState["ID"]) <= 0)
 					{
 						$arErrorsTmp = array();
 
 						$arBizProcParametersValues[$arDocumentState["TEMPLATE_ID"]] = CBPDocument::StartWorkflowParametersValidate(
 							$arDocumentState["TEMPLATE_ID"],
 							$arDocumentState["TEMPLATE_PARAMETERS"],
-							array("iblock", "CIBlockDocument", $DOCUMENT_TYPE),
+							$documentType,
 							$arErrorsTmp
 						);
 
-						foreach ($arErrorsTmp as $e)
+						foreach($arErrorsTmp as $e)
 							$strError .= $e["message"]."<br />";
 					}
+				}
+				$templateObject = CBPWorkflowTemplateLoader::getTemplatesList(
+					array('ID' => 'DESC'),
+					array('DOCUMENT_TYPE' => $documentType, 'AUTO_EXECUTE' => CBPDocumentEventType::Create),
+					false,
+					false,
+					array('ID')
+				);
+				while($template = $templateObject->fetch())
+				{
+					if(!CBPWorkflowTemplateLoader::isConstantsTuned($template["ID"]))
+						$strError .= GetMessage('CC_BLEE_IS_CONSTANTS_TUNED_NEW')."<br />";
 				}
 			}
 		}
 
-		if (!$strError)
+		if(!$strError)
 		{
 			$obElement = new CIBlockElement;
 
-			if ($arResult["ELEMENT_ID"])
+			if($arResult["ELEMENT_ID"])
 			{
 				$res = $obElement->Update($arResult["ELEMENT_ID"], $arElement, false, true, true);
-				if (!$res)
+				if(!$res)
 					$strError = $obElement->LAST_ERROR;
 			}
 			else
 			{
 				$res = $obElement->Add($arElement, false, true, true);
-				if ($res)
+				if($res)
 					$arResult["ELEMENT_ID"] = $res;
 				else
 					$strError = $obElement->LAST_ERROR;
 			}
 		}
 
-		if ($bBizproc)
+		if($bBizproc)
 		{
-			if (!$strError)
+			if(!$strError)
 			{
 				$arBizProcWorkflowId = array();
-				foreach ($arDocumentStates as $arDocumentState)
+				foreach($arDocumentStates as $arDocumentState)
 				{
-					if (strlen($arDocumentState["ID"]) <= 0)
+					if(strlen($arDocumentState["ID"]) <= 0)
 					{
 						$arErrorsTmp = array();
 
 						$arBizProcWorkflowId[$arDocumentState["TEMPLATE_ID"]] = CBPDocument::StartWorkflow(
 							$arDocumentState["TEMPLATE_ID"],
-							array("iblock", "CIBlockDocument", $arResult["ELEMENT_ID"]),
+							BizprocDocument::getDocumentComplexId($arParams["IBLOCK_TYPE_ID"], $arResult["ELEMENT_ID"]),
 							array_merge($arBizProcParametersValues[$arDocumentState["TEMPLATE_ID"]], array("TargetUser" => "user_".intval($GLOBALS["USER"]->GetID()))),
 							$arErrorsTmp
 						);
 
-						foreach ($arErrorsTmp as $e)
+						foreach($arErrorsTmp as $e)
 							$strError .= $e["message"]."<br />";
 					}
 				}
 			}
 
-			if (!$strError)
+			if(!$strError)
 			{
 				$bizprocIndex = intval($_REQUEST["bizproc_index"]);
-				if ($bizprocIndex > 0)
+				if($bizprocIndex > 0)
 				{
-					for ($i = 1; $i <= $bizprocIndex; $i++)
+					for($i = 1; $i <= $bizprocIndex; $i++)
 					{
 						$bpId = trim($_REQUEST["bizproc_id_".$i]);
 						$bpTemplateId = intval($_REQUEST["bizproc_template_id_".$i]);
 						$bpEvent = trim($_REQUEST["bizproc_event_".$i]);
 
-						if (strlen($bpEvent) > 0)
+						if(strlen($bpEvent) > 0)
 						{
-							if (strlen($bpId) > 0)
+							if(strlen($bpId) > 0)
 							{
-								if (!array_key_exists($bpId, $arDocumentStates))
+								if(!array_key_exists($bpId, $arDocumentStates))
 									continue;
 							}
 							else
 							{
-								if (!array_key_exists($bpTemplateId, $arDocumentStates))
+								if(!array_key_exists($bpTemplateId, $arDocumentStates))
 									continue;
 								$bpId = $arBizProcWorkflowId[$bpTemplateId];
 							}
@@ -776,20 +785,23 @@ if (
 				}
 
 				$arDocumentStates = null;
-				CBPDocument::AddDocumentToHistory(array("iblock", "CIBlockDocument", $arResult["ELEMENT_ID"]), $arElement["NAME"], $GLOBALS["USER"]->GetID());
+				CBPDocument::AddDocumentToHistory(
+					BizprocDocument::getDocumentComplexId($arParams["IBLOCK_TYPE_ID"], $arResult["ELEMENT_ID"]),
+					$arElement["NAME"],
+					$GLOBALS["USER"]->GetID());
 			}
 		}
 
-		if (!$strError)
+		if(!$strError)
 		{
 			//Successfull update
 
 			//And go to proper page
-			if (isset($_POST["save"]))
+			if(isset($_POST["save"]))
 			{
 				LocalRedirect($arResult["~LIST_SECTION_URL"]);
 			}
-			elseif (
+			elseif(
 				$lists_perm < CListPermissions::CAN_READ
 				&& !CIBlockElementRights::UserHasRightTo($arResult["IBLOCK_ID"], $arResult["ELEMENT_ID"], "element_read")
 			)
@@ -806,7 +818,7 @@ if (
 					array($tab_name => $_POST[$tab_name]),
 					array("skip_empty" => true, "encode" => true)
 				);
-				if (isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
+				if(isset($_GET["list_section_id"]) && strlen($_GET["list_section_id"]) == 0)
 					$url = CHTTP::urlAddParams($url, array("list_section_id" => ""));
 
 				LocalRedirect($url);
@@ -826,12 +838,12 @@ if (
 }
 
 $data = array();
-if ($bVarsFromForm)
+if($bVarsFromForm)
 {//There was an error so display form values
 	$data["NAME"] = $_POST["NAME"];
 	$data["IBLOCK_SECTION_ID"] = $_POST["IBLOCK_SECTION_ID"];
 }
-elseif ($arResult["ELEMENT_ID"] || $copy_id)
+elseif($arResult["ELEMENT_ID"] || $copy_id)
 {//Edit existing field
 	$data["NAME"] = $arResult["ELEMENT_FIELDS"]["NAME"];
 	$data["IBLOCK_SECTION_ID"] = $arResult["ELEMENT_FIELDS"]["IBLOCK_SECTION_ID"];
@@ -839,55 +851,55 @@ elseif ($arResult["ELEMENT_ID"] || $copy_id)
 else
 {//New one
 	$data["NAME"] = GetMessage("CC_BLEE_FIELD_NAME_DEFAULT");
-	$data["IBLOCK_SECTION_ID"] = $arResult["SECTION_ID"] ? $arResult["SECTION_ID"] : "";
+	$data["IBLOCK_SECTION_ID"] = $arResult["SECTION_ID"]? $arResult["SECTION_ID"]: "";
 }
 
-foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
+foreach($arResult["FIELDS"] as $FIELD_ID => $arField)
 {
-	if ($obList->is_field($FIELD_ID))
+	if($obList->is_field($FIELD_ID))
 	{
-		if ($FIELD_ID == "ACTIVE_FROM")
+		if($FIELD_ID == "ACTIVE_FROM")
 		{
-			if ($bVarsFromForm)
+			if($bVarsFromForm)
 				$data[$FIELD_ID] = $_POST[$FIELD_ID];
-			elseif ($arResult["ELEMENT_ID"])
+			elseif($arResult["ELEMENT_ID"])
 				$data[$FIELD_ID] = $arResult["ELEMENT_FIELDS"]["~".$FIELD_ID];
-			elseif ($arField["DEFAULT_VALUE"] === "=now")
-				$data[$FIELD_ID] = ConvertTimeStamp(time() + CTimeZone::GetOffset(), "FULL");
-			elseif ($arField["DEFAULT_VALUE"] === "=today")
-				$data[$FIELD_ID] = ConvertTimeStamp(time() + CTimeZone::GetOffset(), "SHORT");
+			elseif($arField["DEFAULT_VALUE"] === "=now")
+				$data[$FIELD_ID] = ConvertTimeStamp(time()+CTimeZone::GetOffset(), "FULL");
+			elseif($arField["DEFAULT_VALUE"] === "=today")
+				$data[$FIELD_ID] = ConvertTimeStamp(time()+CTimeZone::GetOffset(), "SHORT");
 			else
 				$data[$FIELD_ID] = "";
 		}
-		elseif ($FIELD_ID == "PREVIEW_PICTURE" || $FIELD_ID == "DETAIL_PICTURE")
+		elseif($FIELD_ID == "PREVIEW_PICTURE" || $FIELD_ID == "DETAIL_PICTURE")
 		{
-			if ($arResult["ELEMENT_ID"])
+			if($arResult["ELEMENT_ID"])
 				$data[$FIELD_ID] = $arResult["ELEMENT_FIELDS"]["~".$FIELD_ID];
 			else
 				$data[$FIELD_ID] = "";
 		}
 		else
 		{
-			if ($bVarsFromForm)
+			if($bVarsFromForm)
 				$data[$FIELD_ID] = $_POST[$FIELD_ID];
-			elseif ($arResult["ELEMENT_ID"] || $copy_id)
+			elseif($arResult["ELEMENT_ID"] || $copy_id)
 				$data[$FIELD_ID] = $arResult["ELEMENT_FIELDS"]["~".$FIELD_ID];
 			else
 				$data[$FIELD_ID] = $arField["DEFAULT_VALUE"];
 		}
 	}
-	elseif (is_array($arField["PROPERTY_USER_TYPE"]) && array_key_exists("GetPublicEditHTML", $arField["PROPERTY_USER_TYPE"]))
+	elseif(is_array($arField["PROPERTY_USER_TYPE"]) && array_key_exists("GetPublicEditHTML", $arField["PROPERTY_USER_TYPE"]))
 	{
-		if ($bVarsFromForm)
+		if($bVarsFromForm)
 		{
 			$data[$FIELD_ID] = $_POST[$FIELD_ID];
 		}
-		elseif ($arResult["ELEMENT_ID"] || $copy_id)
+		elseif($arResult["ELEMENT_ID"] || $copy_id)
 		{
-			if (isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
+			if(isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
 			{
 				$data[$FIELD_ID] = $arResult["ELEMENT_PROPS"][$arField["ID"]]["FULL_VALUES"];
-				if ($arField["MULTIPLE"] == "Y")
+				if($arField["MULTIPLE"] == "Y")
 					$data[$FIELD_ID]["n0"] = array("VALUE" => "", "DESCRIPTION" => "");
 			}
 			else
@@ -899,26 +911,21 @@ foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
 		{
 			$data[$FIELD_ID] = array(
 				"n0" => array(
-					"VALUE"       => $arField["DEFAULT_VALUE"],
+					"VALUE" => $arField["DEFAULT_VALUE"],
 					"DESCRIPTION" => "",
 				)
 			);
-			if ($arField["MULTIPLE"] == "Y")
-			{
-				if (is_array($arField["DEFAULT_VALUE"]) || strlen($arField["DEFAULT_VALUE"]))
-					$data[$FIELD_ID]["n1"] = array("VALUE" => "", "DESCRIPTION" => "");
-			}
 		}
 	}
-	elseif ($arField["PROPERTY_TYPE"] == "L")
+	elseif($arField["PROPERTY_TYPE"] == "L")
 	{
-		if ($bVarsFromForm)
+		if($bVarsFromForm)
 		{
 			$data[$FIELD_ID] = $_POST[$FIELD_ID];
 		}
-		elseif ($arResult["ELEMENT_ID"] || $copy_id)
+		elseif($arResult["ELEMENT_ID"] || $copy_id)
 		{
-			if (isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
+			if(isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
 				$data[$FIELD_ID] = $arResult["ELEMENT_PROPS"][$arField["ID"]]["VALUES_LIST"];
 			else
 				$data[$FIELD_ID] = array();
@@ -927,19 +934,19 @@ foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
 		{
 			$data[$FIELD_ID] = array();
 			$prop_enums = CIBlockProperty::GetPropertyEnum($arField["ID"]);
-			while ($ar_enum = $prop_enums->Fetch())
-				if ($ar_enum["DEF"] == "Y")
-					$data[$FIELD_ID][] = $ar_enum["ID"];
+			while($ar_enum = $prop_enums->Fetch())
+				if($ar_enum["DEF"] == "Y")
+					$data[$FIELD_ID][] =$ar_enum["ID"];
 		}
 	}
-	elseif ($arField["PROPERTY_TYPE"] == "F")
+	elseif($arField["PROPERTY_TYPE"] == "F")
 	{
-		if ($arResult["ELEMENT_ID"])
+		if($arResult["ELEMENT_ID"])
 		{
-			if (isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
+			if(isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
 			{
 				$data[$FIELD_ID] = $arResult["ELEMENT_PROPS"][$arField["ID"]]["FULL_VALUES"];
-				if ($arField["MULTIPLE"] == "Y")
+				if($arField["MULTIPLE"] == "Y")
 					$data[$FIELD_ID]["n0"] = array("VALUE" => $arField["DEFAULT_VALUE"], "DESCRIPTION" => "");
 			}
 			else
@@ -954,15 +961,15 @@ foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
 			);
 		}
 	}
-	elseif ($arField["PROPERTY_TYPE"] == "G" || $arField["PROPERTY_TYPE"] == "E")
+	elseif($arField["PROPERTY_TYPE"] == "G" || $arField["PROPERTY_TYPE"] == "E")
 	{
-		if ($bVarsFromForm)
+		if($bVarsFromForm)
 		{
 			$data[$FIELD_ID] = $_POST[$FIELD_ID];
 		}
-		elseif ($arResult["ELEMENT_ID"] || $copy_id)
+		elseif($arResult["ELEMENT_ID"] || $copy_id)
 		{
-			if (isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
+			if(isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
 				$data[$FIELD_ID] = $arResult["ELEMENT_PROPS"][$arField["ID"]]["VALUES_LIST"];
 			else
 				$data[$FIELD_ID] = array();
@@ -974,16 +981,16 @@ foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
 	}
 	else//if($arField["PROPERTY_TYPE"] == "S" || $arField["PROPERTY_TYPE"] == "N")
 	{
-		if ($bVarsFromForm)
+		if($bVarsFromForm)
 		{
 			$data[$FIELD_ID] = $_POST[$FIELD_ID];
 		}
-		elseif ($arResult["ELEMENT_ID"] || $copy_id)
+		elseif($arResult["ELEMENT_ID"] || $copy_id)
 		{
-			if (isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
+			if(isset($arResult["ELEMENT_PROPS"][$arField["ID"]]))
 			{
 				$data[$FIELD_ID] = $arResult["ELEMENT_PROPS"][$arField["ID"]]["FULL_VALUES"];
-				if ($arField["MULTIPLE"] == "Y")
+				if($arField["MULTIPLE"] == "Y")
 					$data[$FIELD_ID]["n0"] = array("VALUE" => "", "DESCRIPTION" => "");
 			}
 			else
@@ -996,9 +1003,9 @@ foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
 			$data[$FIELD_ID] = array(
 				"n0" => array("VALUE" => $arField["DEFAULT_VALUE"], "DESCRIPTION" => ""),
 			);
-			if ($arField["MULTIPLE"] == "Y")
+			if($arField["MULTIPLE"] == "Y")
 			{
-				if (is_array($arField["DEFAULT_VALUE"]) || strlen($arField["DEFAULT_VALUE"]))
+				if(is_array($arField["DEFAULT_VALUE"]) || strlen($arField["DEFAULT_VALUE"]))
 					$data[$FIELD_ID]["n1"] = array("VALUE" => "", "DESCRIPTION" => "");
 			}
 		}
@@ -1008,11 +1015,11 @@ foreach ($arResult["FIELDS"] as $FIELD_ID => $arField)
 $arResult["LIST_SECTIONS"] = array(
 	"" => GetMessage("CC_BLEE_UPPER_LEVEL"),
 );
-$rsSections = CIBlockSection::GetTreeList(array("IBLOCK_ID" => $arResult["IBLOCK_ID"], "CHECK_PERMISSIONS" => "N"));
-while ($arSection = $rsSections->Fetch())
+$rsSections = CIBlockSection::GetTreeList(array("IBLOCK_ID"=>$arResult["IBLOCK_ID"], "CHECK_PERMISSIONS"=>"N"));
+while($arSection = $rsSections->Fetch())
 	$arResult["LIST_SECTIONS"][$arSection["ID"]] = str_repeat(" . ", $arSection["DEPTH_LEVEL"]).$arSection["NAME"];
 
-if (
+if(
 	$arResult["IBLOCK"]["RIGHTS_MODE"] == 'E'
 	&& $arResult["CAN_EDIT_RIGHTS"]
 )
@@ -1024,7 +1031,7 @@ if (
 		if ($arParams["SOCNET_GROUP_ID"])
 			$arResult["HIGHLIGHT"] = array(
 				"socnetgroup" => array("group_id" => $arParams["SOCNET_GROUP_ID"]),
-				"groups"      => array("disabled" => true),
+				"groups" => array("disabled" => true),
 			);
 		else
 			$arResult["HIGHLIGHT"] = array(
@@ -1041,19 +1048,18 @@ if (
 			$arResult["HIGHLIGHT"] = null;
 	}
 
-	if ($arResult["ELEMENT_ID"])
+	if($arResult["ELEMENT_ID"])
 		$obRights = new CIBlockElementRights($arResult["IBLOCK_ID"], $arResult["ELEMENT_ID"]);
 	else
 		$obRights = new CIBlockSectionRights($arResult["IBLOCK_ID"], intval($data["IBLOCK_SECTION_ID"]));
 
 	$arResult["RIGHTS"] = $obRights->GetRights(array("parents" => array($data["IBLOCK_SECTION_ID"])));
 	$arListsPerm = CLists::GetPermission($arParams["~IBLOCK_TYPE_ID"]);
-	foreach ($arResult["RIGHTS"] as $RIGHT_ID => $arRight)
+	foreach($arResult["RIGHTS"] as $RIGHT_ID => $arRight)
 	{
 		//1) protect groups from module settings
 		$match = array();
-
-		if (
+		if(
 			preg_match("/^G(\\d)\$/", $arRight["GROUP_CODE"], $match)
 			&& is_array($arListsPerm) && in_array($match[1], $arListsPerm)
 		)
@@ -1065,9 +1071,9 @@ if (
 		{
 			//2) protect groups with iblock_% operations
 			$arOperations = CTask::GetOperations($arRight['TASK_ID'], true);
-			foreach ($arOperations as $operation)
+			foreach($arOperations as $operation)
 			{
-				if (preg_match("/^iblock_(?!admin)/", $operation))
+				if(preg_match("/^iblock_(?!admin)/", $operation))
 				{
 					unset($arResult["RIGHTS"][$RIGHT_ID]);
 					$arResult["SELECTED"][$arRight["GROUP_CODE"]] = true;
@@ -1078,12 +1084,12 @@ if (
 	}
 
 	$arResult["TASKS"] = CIBlockRights::GetRightsList();
-	foreach ($arResult["TASKS"] as $TASK_ID => $label)
+	foreach($arResult["TASKS"] as $TASK_ID => $label)
 	{
 		//2) protect tasks with iblock_% operations
 		$arOperations = CTask::GetOperations($TASK_ID, true);
-		foreach ($arOperations as $operation)
-			if (preg_match("/^iblock_(?!admin)/", $operation))
+		foreach($arOperations as $operation)
+			if(preg_match("/^iblock_(?!admin)/", $operation))
 			{
 				unset($arResult["TASKS"][$TASK_ID]);
 				break;
@@ -1093,17 +1099,17 @@ if (
 
 $arResult["VARS_FROM_FORM"] = $bVarsFromForm;
 $arResult["FORM_DATA"] = array();
-foreach ($data as $key => $value)
+foreach($data as $key => $value)
 {
 	$arResult["FORM_DATA"]["~".$key] = $value;
-	if (is_array($value))
+	if(is_array($value))
 	{
-		foreach ($value as $key1 => $value1)
+		foreach($value as $key1 => $value1)
 		{
-			if (is_array($value1))
+			if(is_array($value1))
 			{
-				foreach ($value1 as $key2 => $value2)
-					if (!is_array($value2))
+				foreach($value1 as $key2 => $value2)
+					if(!is_array($value2))
 						$value[$key1][$key2] = htmlspecialcharsbx($value2);
 			}
 			else
@@ -1121,15 +1127,15 @@ foreach ($data as $key => $value)
 
 $this->IncludeComponentTemplate();
 
-if ($arResult["ELEMENT_ID"])
+if($arResult["ELEMENT_ID"])
 	$APPLICATION->SetTitle($arResult["IBLOCK"]["ELEMENT_NAME"].": ".$arResult["ELEMENT_FIELDS"]["NAME"]);
 else
 	$APPLICATION->SetTitle($arResult["IBLOCK"]["ELEMENT_NAME"]);
 
 $APPLICATION->AddChainItem($arResult["IBLOCK"]["NAME"], $arResult["~LIST_URL"]);
-if ($arResult["SECTION"])
+if($arResult["SECTION"])
 {
-	foreach ($arResult["SECTION_PATH"] as $arPath)
+	foreach($arResult["SECTION_PATH"] as $arPath)
 	{
 		$APPLICATION->AddChainItem($arPath["NAME"], $arPath["URL"]);
 	}

@@ -113,6 +113,20 @@ $arComponentParameters = array(
 				"DEFAULT" => "#list_id#/bp_vars/#ID#/",
 				"VARIABLES" => array("list_id", "ID"),
 			),
+			"bizproc_workflow_constants" => array(
+				"NAME" => GetMessage("CP_BL_PAGE_BIZPROC_WORKFLOW_CONSTANTS"),
+				"DEFAULT" => "#list_id#/bp_constants/#ID#/",
+				"VARIABLES" => array("list_id", "ID"),
+			),
+			"list_export_excel" => array(
+				"NAME" => GetMessage("CP_BL_PAGE_EXPORT_EXCEL"),
+				"DEFAULT" => "#list_id#/excel/",
+				"VARIABLES" => array("list_id"),
+			),
+			"catalog_processes" => array(
+				"NAME" => GetMessage("CP_BL_PAGE_CATALOG_PROCESSES"),
+				"DEFAULT" => "catalog_processes/",
+			),
 		),
 		"IBLOCK_TYPE_ID" => Array(
 			"PARENT" => "DATA_SOURCE",

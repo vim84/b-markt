@@ -65,4 +65,11 @@ $MESS["template_edit_structure"] = "Site Explorer";
 $MESS["templ_edit_error_wa"] = "Add the separator (#WORK_AREA#) to the template.";
 $MESS["MAIN_T_EDIT_INSERT_WORK_AREA"] = "Insert template separator (in non-visual mode)";
 $MESS["SITE_TEMPL_EDIT_SORT"] = "Sort order:";
+$MESS["MAIN_T_EDIT_TITLE_EDIT_THEME"] = "Edit theme";
+$MESS["MAIN_T_EDIT_TITLE_NEW_THEME"] = "New theme";
+$MESS["MAIN_T_EDIT_TEMPL_LIST_THEME"] = "Themes";
+$MESS["MAIN_TAB1_TITLE_THEME"] = "Visual theme parameters";
+$MESS["MAIN_TEMPLATE_TYPE"] = "Type:";
+$MESS["MAIN_TEMPLATE_TYPE_SITE"] = "Site template";
+$MESS["MAIN_TEMPLATE_TYPE_MAIL"] = "E-mail template";
 ?>

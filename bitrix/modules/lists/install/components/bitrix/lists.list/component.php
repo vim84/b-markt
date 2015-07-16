@@ -19,6 +19,7 @@ if(!CModule::IncludeModule('lists'))
 	ShowError(GetMessage("CC_BLL_MODULE_NOT_INSTALLED"));
 	return;
 }
+
 $IBLOCK_ID = intval($arParams["~IBLOCK_ID"]);
 if(isset($_GET["list_section_id"]))
 	$section_id = intval($_GET["list_section_id"]);
@@ -109,6 +110,13 @@ $arIBlock = CIBlock::GetArrayByID(intval($arParams["~IBLOCK_ID"]));
 $arResult["~IBLOCK"] = $arIBlock;
 $arResult["IBLOCK"] = htmlspecialcharsex($arIBlock);
 $arResult["IBLOCK_ID"] = $arIBlock["ID"];
+$arResult["PROCESSES"] = false;
+$arResult["USE_COMMENTS"] = false;
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+{
+	$arResult["USE_COMMENTS"] = (bool)CModule::includeModule("forum");
+	$arResult["PROCESSES"] = true;
+}
 
 if ($arResult["IBLOCK"]["BIZPROC"] == "Y" && CModule::IncludeModule('bizproc'))
 {
@@ -117,7 +125,7 @@ if ($arResult["IBLOCK"]["BIZPROC"] == "Y" && CModule::IncludeModule('bizproc'))
 		&& CBPDocument::CanUserOperateDocumentType(
 			CBPCanUserOperateOperation::CreateWorkflow,
 			$USER->GetID(),
-			array("iblock", "CIBlockDocument", "iblock_".$IBLOCK_ID),
+			BizprocDocument::generateDocumentComplexType($arParams["IBLOCK_TYPE_ID"], $IBLOCK_ID),
 			array("UserGroups" => $USER->GetUserGroupArray())
 		)
 	);
@@ -238,7 +246,17 @@ $arResult["~BIZPROC_WORKFLOW_ADMIN_URL"] = str_replace(
 );
 $arResult["BIZPROC_WORKFLOW_ADMIN_URL"] = htmlspecialcharsbx($arResult["~BIZPROC_WORKFLOW_ADMIN_URL"]);
 
+$arResult["~EXPORT_EXCEL_URL"] = str_replace(
+	array("#list_id#", "#group_id#"),
+	array($arResult["IBLOCK_ID"], $arParams["SOCNET_GROUP_ID"]),
+	$arParams["~EXPORT_EXCEL_URL"]
+);
+$arResult["EXPORT_EXCEL_URL"] = htmlspecialcharsbx($arResult["~EXPORT_EXCEL_URL"]);
+
 $obList = new CList($arIBlock["ID"]);
+
+$strError = "";
+$errorID = $arResult["GRID_ID"]."_error";
 
 //Form submitted
 if(
@@ -302,13 +320,56 @@ if(
 				)
 			)
 			{
-				$obElement->Delete($arElement["ID"]);
+				$DB->StartTransaction();
+				$APPLICATION->ResetException();
+				if(!$obElement->Delete($arElement["ID"]))
+				{
+					$DB->Rollback();
+					if($ex = $APPLICATION->GetException())
+						$strError = GetMessage("CC_BLL_DELETE_ERROR")." ".$ex->GetString();
+					else
+						$strError = GetMessage("CC_BLL_DELETE_ERROR")." ".GetMessage("CC_BLL_UNKNOWN_ERROR");
+					break;
+				}
+				else
+				{
+					$DB->Commit();
+				}
 			}
 		}
 	}
 
 	if(!isset($_POST["AJAX_CALL"]))
-		LocalRedirect($arResult["~LIST_URL"]);
+	{
+		if ($strError)
+		{
+			$_SESSION[$errorID] = $strError;
+			LocalRedirect(CHTTP::urlAddParams($arResult["~LIST_URL"], array("error" => $errorID)));
+		}
+		else
+		{
+			LocalRedirect($arResult["~LIST_URL"]);
+		}
+	}
+}
+
+//Show error message if required
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['error']))
+{
+	if ($_GET['error'] === $errorID)
+	{
+		if (!isset($_SESSION[$errorID]))
+		{
+			LocalRedirect(CHTTP::urlDeleteParams($APPLICATION->GetCurPage(), array('error')));
+		}
+
+		$strError = strval($_SESSION[$errorID]);
+		unset($_SESSION[$errorID]);
+		if ($strError !== '')
+		{
+			ShowError(htmlspecialcharsbx($strError));
+		}
+	}
 }
 
 $grid_options = new CGridOptions($arResult["GRID_ID"]);
@@ -317,7 +378,9 @@ $grid_sort = $grid_options->GetSorting(array("sort"=>array("name"=>"asc")));
 
 if($arResult["IBLOCK"]["BIZPROC"]=="Y" && CModule::IncludeModule('bizproc'))
 {
-	$arDocumentTemplates = CBPDocument::GetWorkflowTemplatesForDocumentType(array("iblock", "CIBlockDocument", "iblock_".$arResult["IBLOCK_ID"]));
+	$arDocumentTemplates = CBPDocument::GetWorkflowTemplatesForDocumentType(
+		BizprocDocument::generateDocumentComplexType($arParams["IBLOCK_TYPE_ID"], $arResult["IBLOCK_ID"])
+	);
 	$arResult["BIZPROC"] = "Y";
 }
 else
@@ -376,6 +439,28 @@ if(count($arDocumentTemplates) > 0)
 		"default" => true,
 		"sort" => false,
 	);
+}
+
+if($arResult["PROCESSES"] && $arResult["USE_COMMENTS"])
+{
+	$arResult["ELEMENTS_HEADERS"][] = array(
+		"id" => "COMMENTS",
+		"name" => GetMessage("CC_BLL_COMMENTS"),
+		"default" => true,
+		"sort" => false,
+		'hideName' => true,
+		'iconCls' => 'bp-comments-icon'
+	);
+}
+
+if(empty($grid_columns))
+{
+	foreach($arResult["ELEMENTS_HEADERS"] as $elementHeader)
+		$columnGrid[] = $elementHeader["id"];
+
+	$columns = implode(',', $columnGrid);
+	$grid_options->SetColumns($columns);
+	$grid_options->Save();
 }
 
 /* FILTER */
@@ -591,7 +676,9 @@ $rsElements = CIBlockElement::GetList(
 if ($arResult["BIZPROC"] == "Y")
 {
 	$arUserGroupsForBP = CUser::GetUserGroup($USER->GetID());
-	$arDocumentStatesForBP = CBPWorkflowTemplateLoader::GetDocumentTypeStates(array("iblock", "CIBlockDocument", "iblock_".$arIBlock["ID"]));
+	$arDocumentStatesForBP = CBPWorkflowTemplateLoader::GetDocumentTypeStates(
+		BizprocDocument::generateDocumentComplexType($arParams["IBLOCK_TYPE_ID"], $arIBlock["ID"])
+	);
 }
 else
 {
@@ -605,7 +692,6 @@ $arResult["ELEMENTS_ROWS"] = array();
 while($obElement = $rsElements->GetNextElement())
 {
 	$data = $obElement->GetFields();
-
 	$aCols = array();
 
 	if(!empty($arProperties))
@@ -656,6 +742,22 @@ while($obElement = $rsElements->GetNextElement())
 	if(isset($data["TIMESTAMP_X"]))
 		$data['TIMESTAMP_X'] = FormatDateFromDB($data['TIMESTAMP_X']);
 
+	if($arResult["PROCESSES"] && $arResult["USE_COMMENTS"])
+	{
+		$documentState = CBPDocument::GetDocumentStates(
+			BizprocDocument::generateDocumentComplexType($arIBlock["IBLOCK_TYPE_ID"], $arIBlock["ID"]),
+			BizprocDocument::getDocumentComplexId($arIBlock["IBLOCK_TYPE_ID"], $data["ID"])
+		);
+		if(!empty($documentState))
+		{
+			$documentState = current($documentState);
+			$data["WORKFLOW_ID"] = $documentState["ID"];
+		}
+		else
+		{
+			$data["WORKFLOW_ID"] = '';
+		}
+	}
 
 	$arUserGroupsForBPTmp = $arUserGroupsForBP;
 	if ($USER->GetID() == $data["CREATED_BY"])
@@ -667,15 +769,16 @@ while($obElement = $rsElements->GetNextElement())
 		if (CBPDocument::CanUserOperateDocument(
 				CBPCanUserOperateOperation::StartWorkflow,
 				$USER->GetID(),
-				array("iblock", "CIBlockDocument", intval($data["~ID"])),
+				BizprocDocument::getDocumentComplexId($arParams["IBLOCK_TYPE_ID"], intval($data["~ID"])),
 				array("IBlockId" => $arIBlock["ID"], "AllUserGroups" => $arUserGroupsForBPTmp, "DocumentStates" => $arDocumentStatesForBP, "WorkflowId" => $arWorkflowTemplate["ID"])
 			))
 		{
+			$backUrl = $APPLICATION->GetCurPageParam();
 			$url = CHTTP::urlAddParams(str_replace(
 				array("#list_id#", "#section_id#", "#element_id#", "#workflow_template_id#", "#group_id#"),
 				array($arIBlock["ID"], intval($arResult["SECTION_ID"]), intval($data["~ID"]), $arWorkflowTemplate["ID"], $arParams["SOCNET_GROUP_ID"]),
 				$arParams["BIZPROC_WORKFLOW_START_URL"]
-			), array("workflow_template_id" => $arWorkflowTemplate["ID"]));
+			), array("workflow_template_id" => $arWorkflowTemplate["ID"], "back_url" => $backUrl));
 			$url .= ((strpos($url, "?") === false) ? "?" : "&").bitrix_sessid_get();
 			$arBPStart[] = array(
 				"TEXT" => $arWorkflowTemplate["NAME"],
@@ -795,7 +898,10 @@ $arResult["LIST_NEW_ELEMENT_URL"] = str_replace(
 if($arResult["ANY_SECTION"])
 	$arResult["LIST_NEW_ELEMENT_URL"] = CHTTP::urlAddParams($arResult["LIST_NEW_ELEMENT_URL"], array("list_section_id" => ""));
 
-$APPLICATION->SetTitle(GetMessage("CC_BLL_TITLE", array("#NAME#" => $arResult["IBLOCK"]["NAME"])));
+if($arParams["IBLOCK_TYPE_ID"] == COption::GetOptionString("lists", "livefeed_iblock_type_id"))
+	$APPLICATION->SetTitle(GetMessage("CC_BLL_TITLE_PROCESS", array("#NAME#" => $arResult["IBLOCK"]["NAME"])));
+else
+	$APPLICATION->SetTitle(GetMessage("CC_BLL_TITLE", array("#NAME#" => $arResult["IBLOCK"]["NAME"])));
 
 $APPLICATION->AddChainItem($arResult["IBLOCK"]["NAME"], CHTTP::urlAddParams(str_replace(
 	array("#list_id#", "#section_id#", "#group_id#"),

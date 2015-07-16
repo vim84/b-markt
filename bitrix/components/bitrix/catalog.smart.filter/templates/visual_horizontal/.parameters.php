@@ -35,4 +35,10 @@ $arTemplateParameters['TEMPLATE_THEME'] = array(
 	'ADDITIONAL_VALUES' => 'Y'
 );
 
+$arTemplateParameters['DISPLAY_ELEMENT_COUNT'] = array(
+	'PARENT' => 'VISUAL',
+	'NAME' => GetMessage('TP_BCSF_DISPLAY_ELEMENT_COUNT'),
+	'TYPE' => 'CHECKBOX',
+	'DEFAULT' => 'Y',
+);
 ?>

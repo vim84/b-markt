@@ -173,11 +173,7 @@ if($this->StartResultCache(false, array($elementID, ($arParams["CACHE_GROUPS"]==
 	$arResult["SET_ITEMS"]["OLD_PRICE"] = 0;
 	$arResult["SET_ITEMS"]["PRICE_DISCOUNT_DIFFERENCE"] = 0;
 
-	$arSetItemsRatio = array();
-	foreach ($arSetItemsID as $key=>$itemID)
-	{
-		$arSetItemsRatio[$itemID] = 1;
-	}
+	$arSetItemsRatio = array_fill_keys($arSetItemsID, 1);
 	$rsRatios = CCatalogMeasureRatio::getList(
 		array(),
 		array('PRODUCT_ID' => $arSetItemsID),
@@ -187,7 +183,7 @@ if($this->StartResultCache(false, array($elementID, ($arParams["CACHE_GROUPS"]==
 	);
 	while ($arRatio = $rsRatios->Fetch())
 	{
-		if (in_array($arRatio['PRODUCT_ID'], $arSetItemsID))
+		if (isset($arSetItemsRatio[$arRatio['PRODUCT_ID']]))
 		{
 			$intRatio = (int)$arRatio['RATIO'];
 			$dblRatio = (float)($arRatio['RATIO']);

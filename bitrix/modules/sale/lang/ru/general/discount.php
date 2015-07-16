@@ -15,4 +15,7 @@ $MESS["BT_MOD_SALE_ERR_DSC_TYPE_BAD"] = "Неверный тип скидки";
 $MESS["BT_MOD_SALE_ERR_DSC_VALUE_ABSENT"] = "Не указана величина скидки";
 $MESS["BT_MOD_SALE_ERR_DSC_VALUE_BAD"] = "Неверная величина скидки";
 $MESS["BT_MOD_SALE_ERR_DSC_ABSENT"] = "Неверный ID скидки";
+$MESS["BX_SALE_DISCOUNT_APPLY_MODE_ADD"] = "дополнять уже примененные скидки";
+$MESS["BX_SALE_DISCOUNT_APPLY_MODE_LAST"] = "не действовать, если есть флаг \"Прекратить дальнейшее применение скидок\"";
+$MESS["BX_SALE_DISCOUNT_APPLY_MODE_DISABLE"] = "не действовать, если уже были применены любые скидки";
 ?>

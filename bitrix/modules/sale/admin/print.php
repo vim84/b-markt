@@ -4,7 +4,7 @@ $SALE_RIGHT = $APPLICATION->GetGroupRight("sale");
 if ($SALE_RIGHT=="D") $APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 //require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 
-$ORDER_ID = intval($ORDER_ID);
+$ORDER_ID = (isset($_REQUEST['ORDER_ID']) ? (int)$_REQUEST['ORDER_ID'] : 0);
 
 function GetRealPath2Report($rep_name)
 {
@@ -35,19 +35,16 @@ function GetRealPath2Report($rep_name)
  */
 function GetUniformDestribution($arBasket, $discount, $priceTotal)
 {
-    foreach ($arBasket as $key => $val)
-    {
-        $val["PRICE_DEFAULT"] = $val["PRICE"];
-        $val["DISCOUNT_RATION_PERCENT"] = round(($val["PRICE"] * 100) / $priceTotal, 5);
-        $val["DISCOUNT_RATION_VALUE"] = round(($discount * $val["DISCOUNT_RATION_PERCENT"] / 100), 5);
-        $val["PRICE"] -= $val["DISCOUNT_RATION_VALUE"];
-        
-        $arBasket[$key] = $val;
-    }
-    
-    return $arBasket;
+	foreach ($arBasket as $key => $val)
+	{
+		$val["PRICE_DEFAULT"] = $val["PRICE"];
+		$val["DISCOUNT_RATION_PERCENT"] = round(($val["PRICE"] * 100) / $priceTotal, 5);
+		$val["DISCOUNT_RATION_VALUE"] = round(($discount * $val["DISCOUNT_RATION_PERCENT"] / 100), 5);
+		$val["PRICE"] -= $val["DISCOUNT_RATION_VALUE"];
+		$arBasket[$key] = $val;
+	}
+	return $arBasket;
 }
-
 
 if (CModule::IncludeModule("sale"))
 {
@@ -83,6 +80,16 @@ if (CModule::IncludeModule("sale"))
 			}
 		}
 
+		if(CSaleLocation::isLocationProMigrated())
+		{
+			if(strlen($arOrderProps['LOCATION_VILLAGE']) && !strlen($arOrderProps['LOCATION_CITY']))
+				$arOrderProps['LOCATION_CITY'] = $arOrderProps['LOCATION_VILLAGE'];
+
+			// street added to the beginning of address, as it used to be before
+			if(strlen($arOrderProps['LOCATION_STREET']) && isset($arOrderProps['ADDRESS']))
+				$arOrderProps['ADDRESS'] = $arOrderProps['LOCATION_STREET'].(strlen($arOrderProps['ADDRESS']) ? ', '.$arOrderProps['ADDRESS'] : '');
+		}
+
 		$arBasketIDs = array();
 		$arQuantities = array();
 
@@ -92,7 +99,7 @@ if (CModule::IncludeModule("sale"))
 			$arQuantities_tmp = explode(",", $QUANTITIES);
 
 			if (count($arBasketIDs_tmp)!=count($arQuantities_tmp)) die("INVALID PARAMS");
-			for ($i = 0; $i < count($arBasketIDs_tmp); $i++)
+			for ($i = 0, $countBasket = count($arBasketIDs_tmp); $i < $countBasket; $i++)
 			{
 				if (IntVal($arBasketIDs_tmp[$i])>0 && doubleVal($arQuantities_tmp[$i])>0)
 				{
@@ -100,11 +107,12 @@ if (CModule::IncludeModule("sale"))
 					$arQuantities[] = doubleVal($arQuantities_tmp[$i]);
 				}
 			}
+			unset($countBasket);
 		}
 		else
 		{
 			$db_basket = CSaleBasket::GetList(array("NAME" => "ASC"), array("ORDER_ID"=>$ORDER_ID), false, false, array("ID", "QUANTITY"));
-			while ($arBasket = $db_basket->GetNext())
+			while ($arBasket = $db_basket->Fetch())
 			{
 				$arBasketIDs[] = $arBasket["ID"];
 				$arQuantities[] = $arBasket["QUANTITY"];

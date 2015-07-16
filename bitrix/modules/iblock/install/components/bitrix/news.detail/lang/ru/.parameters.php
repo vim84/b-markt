@@ -22,4 +22,5 @@ $MESS["CP_BND_CACHE_GROUPS"] = "Учитывать права доступа";
 $MESS["CP_BND_SET_BROWSER_TITLE"] = "Устанавливать заголовок окна браузера";
 $MESS["CP_BND_SET_META_KEYWORDS"] = "Устанавливать ключевые слова страницы";
 $MESS["CP_BND_SET_META_DESCRIPTION"] = "Устанавливать описание страницы";
+$MESS["CP_BND_SET_CANONICAL_URL"] = "Устанавливать канонический URL";
 ?>

@@ -11,7 +11,8 @@ else if (!CMedialib::CanDoOperation('medialib_view_collection', 0))
 * @var CMain $APPLICATION
 * @var CUser $USER
 */
-class filemanMedialibUpload {
+class filemanMedialibUpload
+{
 	var $post = array();
 	var $collectionId = 0;
 	var $ext = array();
@@ -40,7 +41,10 @@ class filemanMedialibUpload {
 	{
 		global $APPLICATION;
 		$name = $file["name"];
-		$name = trim(preg_replace("/[^a-zA-Z0-9!\$&\(\)\[\]\{\}\-\.;=@\^_\~]/is", "", $name));
+		$pattern = defined('BX_UTF')
+			? "/[^\p{L}L0-9!\p{Z}\$&\(\)\[\]\{\}\-\.;=@\^_\~]/uis"
+			: "/[^A-Za-zÀ-ß¨à-ÿ¸0-9!\s\$&\(\)\[\]\{\}\-\.;=@\^_\~]/is";
+		$name = trim(preg_replace($pattern, "", $name));
 		if (strlen(trim(substr($name, 0, strpos($name, '.')))) <= 0)
 			$name = substr(md5(uniqid(rand(), true)), 0, 8).trim($name);
 		$res = CMedialibItem::Edit(array(
@@ -416,7 +420,7 @@ $options = CUserOptions::GetOption("fileman", "uploader_html5", array());
 $options = (is_array($options) ? $options : array());
 ?>
 <div class="upl-main-wrap">
-<form id="<?=$uploaderID?>_form" name="<?=$uploaderID?>_form" action="<?=$APPLICATION->GetCurPageParam("type_ml=".$_GET["type"]."&".bitrix_sessid_get(), array("type_ml", "sessid"))?>" method="POST" enctype="multipart/form-data" class="bxiu-photo-form">
+<form id="<?=$uploaderID?>_form" name="<?=$uploaderID?>_form" action="<?=$APPLICATION->GetCurPageParam("type_ml=".urlencode($_GET["type"])."&".bitrix_sessid_get(), array("type_ml", "sessid"))?>" method="POST" enctype="multipart/form-data" class="bxiu-photo-form">
 	<input type="hidden" name="action" id="id" value="uploadhtml5" />
 	<input type="hidden" name="sessid" id="sessid" value="<?= bitrix_sessid()?>" />
 <div class="bxu-thumbnails bxu-thumbnails-start<?=($options["template"]=="full" ? "" : " bxu-main-block-reduced-size")?>" id="bxuMain<?=$uploaderID?>"> <!-- bxu-thumbnails-loading bxu-thumbnails-start-->
@@ -473,7 +477,7 @@ $options = (is_array($options) ? $options : array());
 					</span><span class="webform-button-right"></span>
 				</a>
 			</div>
-			<div class="bxu-bottom-block-text"><?=GetMessage("MEDIALIB_UPLOADER_COUNT")?>: <span id="bxuImagesCount<?=$uploaderID?>">0</span></div>
+			<div class="bxu-bottom-block-text"><?=GetMessage("MEDIALIB_UPLOADER_COUNT2")?>: <span id="bxuImagesCount<?=$uploaderID?>">0</span></div>
 		</div>
 	</div>
 </div>
@@ -522,7 +526,7 @@ HTML;
 
 $params = array_merge($uploader->params, array(
 	"id" => $uploaderID,
-	"streams" => 3,
+	"streams" => 1,
 	"allowUpload" => "A",
 	"uploadFormData" => "Y",
 	"uploadMethod" => "deferred",
@@ -556,6 +560,12 @@ $params = array_merge($uploader->params, array(
 else
 {
 	$APPLICATION->AddHeadScript('/bitrix/image_uploader/iuembed.js');
+?>
+<?
+	CAdminMessage::ShowMessage(array(
+	"DETAILS" => GetMessage("FM_ML_UPL_NOTICE_CYR"),
+	"TYPE" => "ERROR",
+	));
 ?>
 <form name="ml_upload">
 <div  style="margin: 10px; font-size: 13px;">

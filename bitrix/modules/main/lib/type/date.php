@@ -39,7 +39,7 @@ class Date
 	}
 
 	/**
-	 * Formats date value to string
+	 * Formats date value to string.
 	 *
 	 * @param string $format PHP date format
 	 * @return string
@@ -55,7 +55,7 @@ class Date
 	}
 
 	/**
-	 * Performs dates arithmetic
+	 * Performs dates arithmetic.
 	 *
 	 * @param string $interval
 	 *    Each duration period is represented by an integer value followed by a period
@@ -113,7 +113,7 @@ class Date
 	}
 
 	/**
-	 * Returns Unix timestamp from date
+	 * Returns Unix timestamp from date.
 	 *
 	 * @return int
 	 */
@@ -123,7 +123,7 @@ class Date
 	}
 
 	/**
-	 * Converts date to string
+	 * Converts a date to the string.
 	 *
 	 * @param Context\Culture $culture Culture contains date format
 	 * @return string
@@ -139,6 +139,12 @@ class Date
 		return $this->toString();
 	}
 
+	/**
+	 * Returns a date format from the culture in the php format.
+	 *
+	 * @param Context\Culture $culture
+	 * @return string
+	 */
 	public static function getFormat(Context\Culture $culture = null)
 	{
 		static $defaultCulture = null;
@@ -164,7 +170,7 @@ class Date
 	}
 
 	/**
-	 * Converts date format from culture to php format
+	 * Converts date format from culture to php format.
 	 *
 	 * @param $format
 	 * @return mixed
@@ -212,7 +218,7 @@ class Date
 	}
 
 	/**
-	 * Checks the string for correct date (by trying to create Date object)
+	 * Checks the string for correct date (by trying to create Date object).
 	 *
 	 * @param string $time String representation of date
 	 * @param string $format PHP date format. If not specified, the format is got from the current culture.
@@ -240,7 +246,7 @@ class Date
 	}
 
 	/**
-	 * Creates Date object from PHP \DateTime object
+	 * Creates Date object from PHP \DateTime object.
 	 *
 	 * @param \DateTime $datetime
 	 * @return static
@@ -250,11 +256,12 @@ class Date
 		/** @var Date $d */
 		$d = new static();
 		$d->value = $datetime;
+		$d->value->setTime(0, 0, 0);
 		return $d;
 	}
 
 	/**
-	 * Creates Date object from Unix timestamp
+	 * Creates Date object from Unix timestamp.
 	 *
 	 * @param int $timestamp
 	 * @return static
@@ -264,6 +271,7 @@ class Date
 		/** @var Date $d */
 		$d = new static();
 		$d->value->setTimestamp($timestamp);
+		$d->value->setTime(0, 0, 0);
 		return $d;
 	}
 }

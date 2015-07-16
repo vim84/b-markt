@@ -20,5 +20,6 @@ $im_default_option = array(
 	'privacy_profile' => 'all',
 	'disk_storage_id' => 0,
 	'disk_folder_avatar_id' => 0,
+	'path_to_user_profile' => (!IsModuleInstalled("intranet") ? '/club/user/#user_id#/' : ''),
 );
 ?>

@@ -46,19 +46,19 @@ class SitemapFile
 	protected $urlToSearch = '';
 	protected $urlFound = false;
 
-	public function __construct($fileName, $arSettings)
+	public function __construct($fileName, $settings)
 	{
 		$this->settings = array(
-			'SITE_ID' => $arSettings['SITE_ID'],
-			'PROTOCOL' => $arSettings['PROTOCOL'] == 'https' ? 'https' : 'http',
-			'DOMAIN' => $arSettings['DOMAIN'],
+			'SITE_ID' => $settings['SITE_ID'],
+			'PROTOCOL' => $settings['PROTOCOL'] == 'https' ? 'https' : 'http',
+			'DOMAIN' => $settings['DOMAIN'],
 		);
 
-		$arSite = SiteTable::getRow(array("filter" => array("LID" => $this->settings['SITE_ID'])));
+		$site = SiteTable::getRow(array("filter" => array("LID" => $this->settings['SITE_ID'])));
 
 		$this->siteRoot = Path::combine(
 			SiteTable::getDocumentRoot($this->settings['SITE_ID']),
-			$arSite['DIR']
+			$site['DIR']
 		);
 
 		if(substr($fileName, -strlen(self::FILE_EXT)) != self::FILE_EXT)
@@ -78,22 +78,49 @@ class SitemapFile
 		$this->partChanged = $this->isExists() && !$this->isSplitNeeded();
 	}
 
+	/**
+	 * Reinitializes current object with new file name.
+	 *
+	 * @param string $fileName New file name.
+	 */
 	protected function reInit($fileName)
 	{
 		$this->__construct($fileName, $this->settings);
 	}
 
+	/**
+	 * Adds header to the current sitemap file.
+	 *
+	 * @return void
+	 */
 	public function addHeader()
 	{
 		$this->partChanged = true;
 		$this->putContents(self::XML_HEADER.self::FILE_HEADER);
 	}
 
+	/**
+	 * Checks is it needed to create new part of sitemap file
+	 *
+	 * @return bool
+	 * @throws \Bitrix\Main\IO\FileNotFoundException
+	 */
 	protected function isSplitNeeded()
 	{
 		return $this->isExists() && $this->getSize() >= self::MAX_SIZE;
 	}
 
+	/**
+	 * Adds new entry to the current sitemap file
+	 *
+	 * Entry array keys
+	 * XML_LOC - loc field value
+	 * XML_LASTMOD - lastmod field value
+	 *
+	 * @param array $entry Entry array.
+	 *
+	 * @return void
+	 */
 	public function addEntry($entry)
 	{
 		if($this->isSplitNeeded())
@@ -118,6 +145,11 @@ class SitemapFile
 		}
 	}
 
+	/**
+	 * Creates next sitemap file part. Returns new part file name.
+	 *
+	 * @return string
+	 */
 	public function split()
 	{
 		if($this->partChanged)
@@ -138,16 +170,31 @@ class SitemapFile
 		return $fileName;
 	}
 
+	/**
+	 * Returns list of file parts.
+	 *
+	 * @return array
+	 */
 	public function getNameList()
 	{
 		return $this->isCurrentPartNotEmpty() ? array_merge($this->partList, array($this->getName())) : $this->partList;
 	}
 
+	/**
+	 * Returns if the whole sitemap is empty (not only current part).
+	 *
+	 * @return bool
+	 */
 	public function isNotEmpty()
 	{
 		return (count($this->partList) > 0) || $this->isCurrentPartNotEmpty();
 	}
 
+	/**
+	 * Returns if current sitemap part contains something besides header.
+	 *
+	 * @return bool
+	 */
 	public function isCurrentPartNotEmpty()
 	{
 		if($this->isExists())
@@ -159,6 +206,17 @@ class SitemapFile
 		return false;
 	}
 
+	/**
+	 * Appends new entry to the existing and finished sitemap file
+	 *
+	 * Entry array keys
+	 * XML_LOC - loc field value
+	 * XML_LASTMOD - lastmod field value
+	 *
+	 * @param array $entry Entry array.
+	 *
+	 * @return void
+	 */
 	public function appendEntry($entry)
 	{
 		if($this->isSplitNeeded())
@@ -171,11 +229,16 @@ class SitemapFile
 			if(!$this->partChanged)
 			{
 				$this->addHeader();
+				$offset = $this->getSize();
+			}
+			else
+			{
+				$offset = $this->getSize()-strlen(self::FILE_FOOTER);
 			}
 
 			$fd = $this->open('r+');
 
-			fseek($fd, $this->getSize()-strlen(self::FILE_FOOTER));
+			fseek($fd, $offset);
 			fwrite($fd, sprintf(
 				self::ENTRY_TPL,
 				Converter::getXmlConverter()->encode($entry['XML_LOC']),
@@ -185,6 +248,17 @@ class SitemapFile
 		}
 	}
 
+	/**
+	 * Searches and removes entry to the existing and finished sitemap file
+	 *
+	 * Entry array keys
+	 * XML_LOC - loc field value
+	 * XML_LASTMOD - lastmod field value
+	 *
+	 * @param string $url Entry URL.
+	 *
+	 * @return void
+	 */
 	public function removeEntry($url)
 	{
 		$url = $this->settings['PROTOCOL'].'://'.\CBXPunycode::toASCII($this->settings['DOMAIN'], $e = null).$url;
@@ -194,6 +268,7 @@ class SitemapFile
 		{
 			$c = $this->getContents();
 			$p = strpos($c, $pattern);
+			unset($c);
 
 			if($p !== false)
 			{
@@ -225,6 +300,14 @@ class SitemapFile
 		}
 	}
 
+	/**
+	 * Adds new file entry to the current sitemap
+	 *
+	 * @param File $f File to add.
+	 *
+	 * @return void
+	 * @throws \Bitrix\Main\IO\FileNotFoundException
+	 */
 	public function addFileEntry(File $f)
 	{
 		if($f->isExists() && !$f->isSystem())
@@ -236,6 +319,14 @@ class SitemapFile
 		}
 	}
 
+	/**
+	 * Adds new IBlock entry to the current sitemap
+	 *
+	 * @param string $url IBlock entry URL.
+	 * @param string $modifiedDate IBlock entry modify timestamp.
+	 *
+	 * @return void
+	 */
 	public function addIBlockEntry($url, $modifiedDate)
 	{
 		$this->addEntry(array(
@@ -244,6 +335,14 @@ class SitemapFile
 		));
 	}
 
+	/**
+	 * Appends new IBlock entry to the existing finished sitemap
+	 *
+	 * @param string $url IBlock entry URL.
+	 * @param string $modifiedDate IBlock entry modify timestamp.
+	 *
+	 * @return void
+	 */
 	public function appendIBlockEntry($url, $modifiedDate)
 	{
 		if($this->isExists())
@@ -261,21 +360,42 @@ class SitemapFile
 		}
 	}
 
+	/**
+	 * Adds footer to the current sitemap part
+	 *
+	 * @return void
+	 */
 	public function addFooter()
 	{
 		$this->putContents(self::FILE_FOOTER, self::APPEND);
 	}
 
+	/**
+	 * Returns sitemap site root
+	 *
+	 * @return mixed|string
+	 */
 	public function getSiteRoot()
 	{
 		return $this->siteRoot;
 	}
 
+	/**
+	 * Returns sitemap file URL
+	 *
+	 * @return string
+	 */
 	public function getUrl()
 	{
 		return $this->settings['PROTOCOL'].'://'.\CBXPunycode::toASCII($this->settings['DOMAIN'], $e = null).$this->getFileUrl($this);
 	}
 
+	/**
+	 * Parses sitemap file
+	 *
+	 * @return bool|\CDataXML
+	 * @throws \Bitrix\Main\IO\FileNotFoundException
+	 */
 	public function parse()
 	{
 		if(!$this->parser)
@@ -290,14 +410,22 @@ class SitemapFile
 		return $this->parser;
 	}
 
+	/**
+	 * Returns file relative path for URL.
+	 *
+	 * @param File $f File object.
+	 *
+	 * @return string
+	 */
 	protected function getFileUrl(File $f)
 	{
-		static $arIndexNames;
-		if(!is_array($arIndexNames))
+		static $indexNames;
+		if(!is_array($indexNames))
 		{
-			$arIndexNames = GetDirIndexArray();
+			$indexNames = GetDirIndexArray();
 		}
 
+		$path = '/';
 		if (substr($this->path, 0, strlen($this->documentRoot)) === $this->documentRoot)
 		{
 			$path = '/'.substr($f->getPath(), strlen($this->documentRoot));
@@ -305,7 +433,7 @@ class SitemapFile
 
 		$path = Path::convertLogicalToUri($path);
 
-		$path = in_array($f->getName(), $arIndexNames)
+		$path = in_array($f->getName(), $indexNames)
 			? str_replace('/'.$f->getName(), '/', $path)
 			: $path;
 

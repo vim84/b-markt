@@ -26,4 +26,7 @@ $MESS["SUP_OPEN_TIME_WORKDAY_4"] = "Working day instead of Friday";
 $MESS["SUP_OPEN_TIME_WORKDAY_5"] = "Working day instead of Saturday";
 $MESS["SUP_OPEN_TIME_WORKDAY_6"] = "Working day instead of Sunday";
 $MESS["SUP_TITLE"] = "Exceptions";
+$MESS["MAIN_ADMIN_LIST_SELECTED"] = "Selected:";
+$MESS["MAIN_ADMIN_LIST_CHECKED"] = "Checked:";
+$MESS["MAIN_ADMIN_LIST_DELETE"] = "delete";
 ?>

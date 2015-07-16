@@ -3,20 +3,20 @@ div.wd-info-banner {
 	margin-bottom:1.5em;
 	background-color: #f6f6f6;}
 div.wd-info-banner div.wd-info-banner-head {
-	background-color: #dddddd; 
+	background-color: #dddddd;
 	height: 21px;}
 div.wd-info-banner div.wd-info-banner-head .btn-close {
-	display: block; 
+	display: block;
 	height: 21px;
-	width: 21px; 
+	width: 21px;
 	float: right;
-	background-image: url('images/close.gif'); 
+	background-image: url('images/close.gif');
 	background-repeat: no-repeat;}
 div.wd-info-banner div.wd-info-banner-body {
 	margin:1em 1em 0 1.5em;}
 div.wd-info-banner div.wd-info-banner-icon {
-	display: block; 
-	float: left; 
+	display: block;
+	float: left;
 	padding-right: 1em;}
 table.wd-info-banner-body, table.wd-info-banner-body td, table.wd-info-banner-body th{
 	border:none;
@@ -31,24 +31,24 @@ table.wd-info-banner-body td {
 	border-left: 1px solid #E5E5E5;
 	width:100%;}
 div.wd-info-banner a.wd-info-banner-icon {
-	display: block; 
-	height: 39px; 
-	width: 39px; 
-	background-image: url('images/icon.gif'); 
-	background-position: left top; 
+	display: block;
+	height: 39px;
+	width: 39px;
+	background-image: url('images/icon.gif');
+	background-position: left top;
 	background-repeat: no-repeat;}
 div.wd-infobox-inner{
 	padding-bottom:1em;}
 td.wd-info-banner-buttons{
 	text-align:right;}
 a.bx-bnr-button  {
-	display: block; 
-	float: right; 
-	border: 1px solid #E5E5E5; 
-	font-weight: bold; 
-	padding: 5px 9px; 
-	color: black; 
-	text-decoration: none; 
+	display: block;
+	float: right;
+	border: 1px solid #E5E5E5;
+	font-weight: bold;
+	padding: 5px 9px;
+	color: black;
+	text-decoration: none;
 	margin-left:1em;
 	white-space: nowrap;}
 a.bx-bnr-button:hover {
@@ -58,3 +58,4 @@ div.wd-info-banner-content{
 	overflow-y:auto;}
 td.wd-cell-bp_published{
 	text-align:center;}
+

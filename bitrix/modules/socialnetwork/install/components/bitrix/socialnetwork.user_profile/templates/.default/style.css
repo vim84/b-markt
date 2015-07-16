@@ -58,7 +58,7 @@ div.bx-user-control li.bx-icon-action {
 	display: block;
 	padding-left: 22px;
 	clear: both;
-	background-image: url(images/icons_all5.gif);
+	background-image: url(images/icons_all5.gif?1);
 	background-repeat: no-repeat;
 	white-space:nowrap;
 }
@@ -75,6 +75,7 @@ div.bx-user-control li.bx-icon-video-call{background-position: 0 -160px;}
 
 div.bx-user-control li.bx-icon-passwords{background-position: 0 -200px;}
 div.bx-user-control li.bx-icon-security{background-position: 0 -180px;}
+div.bx-user-control li.bx-icon-codes{background-position: 0 -220px;}
 
 div.bx-user-control li.bx-icon-subscribe{background-image: url(images/subscribe.gif);}
 div.bx-user-control li.bx-icon-requests{background-image: url(images/request.gif);}

@@ -330,7 +330,7 @@ function BPRIAParamSaveForm()
 		document.getElementById("id_fri_name").focus();
 		return;
 	}
-	if (!document.getElementById("id_fri_name").value.match(/^[A-Za-z_][A-Za-z0-9\s._-]*$/g))
+	if (!document.getElementById("id_fri_name").value.match(/^[A-Za-z_][A-Za-z0-9_]*$/g))
 	{
 		alert('<?= GetMessage("BPSFA_PD_WRONG_NAME") ?>');
 		document.getElementById("id_fri_name").focus();
@@ -471,6 +471,15 @@ setTimeout(BPRIAStart, 0);
 			<tr>
 				<td align="right" class="adm-detail-content-cell-l"><?= GetMessage("BPSFA_PD_STATUS_MESSAGE") ?>:</td>
 				<td class="adm-detail-content-cell-r"><?=CBPDocument::ShowParameterField("string", 'status_message', $arCurrentValues['status_message'], Array('size'=>'50'))?></td>
+			</tr>
+			<tr>
+				<td align="right" class="adm-detail-content-cell-l"><?= GetMessage("BPRIA_PD_ACCESS_CONTROL") ?>:</td>
+				<td class="adm-detail-content-cell-r">
+					<select name="access_control">
+						<option value="Y"<?= $arCurrentValues["access_control"] == "Y" ? " selected" : "" ?>><?= GetMessage("BPSFA_PD_YES") ?></option>
+						<option value="N"<?= $arCurrentValues["access_control"] != "Y" ? " selected" : "" ?>><?= GetMessage("BPSFA_PD_NO") ?></option>
+					</select>
+				</td>
 			</tr>
 			<tr>
 				<td colspan="2"><br><b><?= GetMessage("BPSFA_PD_FIELDS") ?></b><br><br></td>

@@ -130,9 +130,11 @@ class CBPGetUserActivity
 			elseif (count($ar) == 1)
 				$ar = $ar[0];
 
-			$this->GetUser = $ar;
-
-			return CBPActivityExecutionStatus::Closed;
+			if ($ar !== null)
+			{
+				$this->GetUser = $ar;
+				return CBPActivityExecutionStatus::Closed;
+			}
 		}
 		else
 		{
@@ -140,6 +142,10 @@ class CBPGetUserActivity
 				$this->SkipAbsent = "Y";
 
 			$arUsers = $this->GetUsersList($this->UserParameter, ($this->SkipAbsent == "Y"));
+
+			if ($this->SkipAbsent == "Y")
+				$arUsers = array_values($arUsers);
+
 			if (count($arUsers) > 0)
 			{
 				$rnd = mt_rand(0, count($arUsers) - 1);
@@ -151,7 +157,17 @@ class CBPGetUserActivity
 
 		$arReserveUsers = $this->GetUsersList($this->ReserveUserParameter, ($this->SkipAbsent == "Y"));
 		if (count($arReserveUsers) > 0)
-			$this->GetUser = "user_".$arReserveUsers[0];
+		{
+			if ($this->UserType == 'random')
+				$this->GetUser = 'user_'.$arReserveUsers[0];
+			else
+			{
+				foreach($arReserveUsers as &$user)
+					$user = 'user_'.$user;
+				unset($user);
+				$this->GetUser = $arReserveUsers;
+			}
+		}
 
 		return CBPActivityExecutionStatus::Closed;
 	}

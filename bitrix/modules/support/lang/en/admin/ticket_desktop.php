@@ -38,4 +38,10 @@ $MESS["SUP_GREY_ALT"] = "ticket closed";
 $MESS["SUP_F_SITE"] = "Sites";
 $MESS["SUP_OVERDUE_MESSAGES"] = "Overdue messages";
 $MESS["SUP_PAGE_TITLE"] = "Techsupport Desktop";
+$MESS["SUP_NO"] = "no";
+$MESS["MAIN_ADMIN_MENU_EDIT"] = "Edit";
+$MESS["MAIN_NO"] = "no";
+$MESS["MAIN_YES"] = "yes";
+$MESS["SUP_ALL"] = "(all)";
+$MESS["SUP_EXACT_MATCH"] = "Use exact match";
 ?>

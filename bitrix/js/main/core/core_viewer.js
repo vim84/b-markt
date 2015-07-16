@@ -511,7 +511,7 @@ BX.CViewCoreElement.prototype.getComplexSaveButton = function(selfViewer, params
 					var ele = event.srcElement || event.target;
 					selfViewer.openMenu('bx-viewer-popup-down', BX(ele), [
 						{text: BX.message('JS_CORE_VIEWER_SAVE_TO_OWN_FILES'), className: "bx-viewer-popup-item item-b24", href: '#', onclick: BX.delegate(function(e){
-							var link = this.addToLinkParam(this.src, 'saveToDisk', 1);
+							var link = this.addToLinkParam(BX.CViewer.enableInVersionDisk(2)? downloadUrl : this.src, 'saveToDisk', 1);
 							link = this.addToLinkParam(link, 'toWDController', 1);
 							link = BX.util.remove_url_param(link, 'showInViewer');
 							link = BX.util.remove_url_param(link, 'document_action');
@@ -880,7 +880,6 @@ BX.CViewEditableElement.prototype.runAction = function(action, params){
 				//first run. We have to show setting window.
 				if(!BX.message('disk_document_service'))
 				{
-					//debugger;
 					//params.obElementViewer.openWindowForSelectDocumentService({viewInUf: !!BX.message('disk_render_uf')});
 					return;
 				}
@@ -908,6 +907,20 @@ BX.CViewEditableElement.prototype.runAction = function(action, params){
 			if(!params.obElementViewer)
 			{
 				return false;
+			}
+
+			//BX.is_subclass_of(currentElement, BX.CViewImageElement) doesn't work ^(
+			if(
+				BX.CViewer.enableInVersionDisk(2) &&
+				!this.hasOwnProperty('image')
+			)
+			{
+				//first run. We have to show setting window.
+				if(!BX.message('disk_document_service'))
+				{
+					params.obElementViewer.openWindowForSelectDocumentService({viewInUf: !!BX.message('disk_render_uf')});
+					return;
+				}
 			}
 
 			this.createFile(params.obElementViewer);
@@ -1358,6 +1371,10 @@ BX.CViewBlankElement.prototype.discardFile = function(parameters)
 	else
 	{
 		uriToDoc = parameters.uriToDoc;
+		if(!uriToDoc)
+		{
+			return false;
+		}
 		uriToDoc = this.addToLinkParam(uriToDoc, 'createDoc', 1);
 		uriToDoc = this.addToLinkParam(uriToDoc, 'discard', 1);
 	}
@@ -1380,7 +1397,7 @@ BX.CViewBlankElement.prototype.discardFile = function(parameters)
 		},
 		onsuccess: function(){}
 	});
-}
+};
 
 BX.CViewBlankElement.prototype.submitAction = function(params)
 {

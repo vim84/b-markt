@@ -7,6 +7,12 @@ define("NO_AGENT_CHECK", true);
 define("DisableEventsCheck", true);
 define("STOP_STATISTICS", true);
 
+if(isset($_GET['action']) && $_GET['action'] == 'showFile')
+{
+	define('BX_SECURITY_SESSION_READONLY', true);
+}
+
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 
 if(!\Bitrix\Main\Loader::includeModule('disk'))
@@ -21,6 +27,7 @@ if($_GET['action'] == 'showFile')
 		$_GET['width'] = 204;
 		$_GET['height'] = 119;
 		$_GET['signature'] = \Bitrix\Disk\Security\ParameterSigner::getImageSignature($_GET['fileId'], $_GET['width'], $_GET['height']);
+
 	}
 	else
 	{
@@ -33,6 +40,42 @@ else
 {
 	$_GET['action'] = 'downloadFile';
 }
+
+class ImagePreviewSizeFilter implements Bitrix\Main\Type\IRequestFilter
+{
+	/**
+	 * @param array $values
+	 * @return array
+	 */
+	public function filter(array $values)
+	{
+		if($values['get']['action'] == 'showFile')
+		{
+			if($values['get']['preview'] == 'Y')
+			{
+				$values['get']['width'] = 204;
+				$values['get']['height'] = 119;
+				$values['get']['signature'] = \Bitrix\Disk\Security\ParameterSigner::getImageSignature(
+					$values['get']['fileId'], $values['get']['width'], $values['get']['height']
+				);
+			}
+			else
+			{
+				unset($values['get']['width'], $values['get']['height']);
+			}
+			unset($values['get']['exact']);
+		}
+		else
+		{
+			$values['get']['action'] = 'downloadFile';
+		}
+
+		return array(
+			'get' => $values['get'],
+		);
+	}
+}
+\Bitrix\Main\Application::getInstance()->getContext()->getRequest()->addFilter(new ImagePreviewSizeFilter);
 
 if($_SERVER['REQUEST_METHOD'] == 'POST')
 {

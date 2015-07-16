@@ -25,3 +25,4 @@
 .ilike .bx-ilike-plus-one { display: inline-block; position: absolute; padding: 4px; background-color: #687e96;color: #fff;-webkit-animation: likePlusOne 1.5s 1;-moz-animation: likePlusOne 1.5s 1;font-size: 9px;opacity: 0; margin-left: 2px;  border-radius: 0px 2px 2px 0}
 @-webkit-keyframes likePlusOne { 0% {  opacity: 0;} 40% { opacity: 1; } 60% {  opacity: 1; } 100% {  opacity: 0; }}
 @-moz-keyframes likePlusOne { 0% {  opacity: 0;} 40% { opacity: 1; } 60% {  opacity: 1; } 100% {  opacity: 0; }}
+

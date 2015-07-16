@@ -69,9 +69,7 @@ class CAllPrice
 		{
 			CPrice::ReCountFromBase($arFields, $boolBase);
 			if (!$boolBase && $arFields['EXTRA_ID'] <= 0)
-			{
 				return false;
-			}
 		}
 
 		$strUpdate = $DB->PrepareUpdate("b_catalog_price", $arFields);
@@ -82,9 +80,7 @@ class CAllPrice
 		}
 
 		if ($boolBase)
-		{
 			CPrice::ReCountForBase($arFields);
-		}
 
 		foreach (GetModuleEvents("catalog", "OnPriceUpdate", true) as $arEvent)
 		{
@@ -119,8 +115,8 @@ class CAllPrice
 
 	function GetBasePrice($productID, $quantityFrom = false, $quantityTo = false, $boolExt = true)
 	{
-		$productID = intval($productID);
-		if (0 >= $productID)
+		$productID = (int)$productID;
+		if ($productID <= 0)
 			return false;
 
 		$arBaseType = CCatalogGroup::GetBaseGroup();
@@ -133,11 +129,11 @@ class CAllPrice
 		);
 
 		if ($quantityFrom !== false)
-			$arFilter["QUANTITY_FROM"] = intval($quantityFrom);
+			$arFilter["QUANTITY_FROM"] = (int)$quantityFrom;
 		if ($quantityTo !== false)
-			$arFilter["QUANTITY_TO"] = intval($quantityTo);
+			$arFilter["QUANTITY_TO"] = (int)$quantityTo;
 
-		if (false === $boolExt)
+		if ($boolExt === false)
 		{
 			$arSelect = array('ID', 'PRODUCT_ID', 'EXTRA_ID', 'CATALOG_GROUP_ID', 'PRICE', 'CURRENCY', 'TIMESTAMP_X',
 				'QUANTITY_FROM', 'QUANTITY_TO', 'TMP_ID'
@@ -174,13 +170,12 @@ class CAllPrice
 		$bGetID = ($bGetID == true);
 
 		$arFields = array();
-		$arFields["PRICE"] = doubleval($Price);
+		$arFields["PRICE"] = (float)$Price;
 		$arFields["CURRENCY"] = $Currency;
 		$arFields["QUANTITY_FROM"] = ($quantityFrom == false ? false : (int)$quantityFrom);
 		$arFields["QUANTITY_TO"] = ($quantityTo == false ? false : (int)$quantityTo);
 		$arFields["EXTRA_ID"] = false;
 
-		$ID = false;
 		if ($arBasePrice = CPrice::GetBasePrice($ProductID, $quantityFrom, $quantityTo, false))
 		{
 			$ID = CPrice::Update($arBasePrice["ID"], $arFields);
@@ -194,60 +189,56 @@ class CAllPrice
 			$ID = CPrice::Add($arFields);
 		}
 		if (!$ID)
-		{
 			return false;
-		}
-		else
-		{
-			return ($bGetID ? $ID : true);
-		}
+
+		return ($bGetID ? $ID : true);
 	}
 
 	function ReCalculate($TYPE, $ID, $VAL)
 	{
-		$ID = intval($ID);
-		if (0 < $ID)
+		$ID = (int)$ID;
+		if ($ID <= 0)
+			return;
+
+		if ($TYPE == 'EXTRA')
 		{
-			if ('EXTRA' == $TYPE)
+			$db_res = CPrice::GetList(
+				array(),
+				array('EXTRA_ID' => $ID),
+				false,
+				false,
+				array('ID', 'PRODUCT_ID', 'EXTRA_ID', 'QUANTITY_FROM', 'QUANTITY_TO')
+			);
+			while ($res = $db_res->Fetch())
 			{
-				$db_res = CPrice::GetList(
-					array(),
-					array('EXTRA_ID' => $ID),
-					false,
-					false,
-					array('ID', 'PRODUCT_ID', 'EXTRA_ID', 'QUANTITY_FROM', 'QUANTITY_TO')
-				);
-				while ($res = $db_res->Fetch())
+				$arFields = array();
+				if ($arBasePrice = CPrice::GetBasePrice($res["PRODUCT_ID"], $res["QUANTITY_FROM"], $res["QUANTITY_TO"]))
 				{
-					$arFields = array();
-					if ($arBasePrice = CPrice::GetBasePrice($res["PRODUCT_ID"], $res["QUANTITY_FROM"], $res["QUANTITY_TO"]))
-					{
-						$arFields["PRICE"] = RoundEx($arBasePrice["PRICE"] * (1 + 1 * $VAL / 100), 2);
-						$arFields["CURRENCY"] = $arBasePrice["CURRENCY"];
-						CPrice::Update($res["ID"], $arFields);
-					}
+					$arFields["PRICE"] = RoundEx($arBasePrice["PRICE"] * (1 + 1 * $VAL / 100), 2);
+					$arFields["CURRENCY"] = $arBasePrice["CURRENCY"];
+					CPrice::Update($res["ID"], $arFields);
 				}
 			}
-			else
+		}
+		else
+		{
+			$db_res = CPrice::GetList(
+				array(),
+				array("PRODUCT_ID" => $ID),
+				false,
+				false,
+				array('ID', 'PRODUCT_ID', 'EXTRA_ID')
+			);
+			while ($res = $db_res->Fetch())
 			{
-				$db_res = CPrice::GetList(
-					array(),
-					array("PRODUCT_ID" => $ID),
-					false,
-					false,
-					array('ID', 'PRODUCT_ID', 'EXTRA_ID')
-				);
-				while ($res = $db_res->Fetch())
+				$res["EXTRA_ID"] = intval($res["EXTRA_ID"]);
+				if (0 < $res["EXTRA_ID"])
 				{
-					$res["EXTRA_ID"] = intval($res["EXTRA_ID"]);
-					if (0 < $res["EXTRA_ID"])
-					{
-						$res1 = CExtra::GetByID($res["EXTRA_ID"]);
-						$arFields = array(
-							"PRICE" => $VAL * (1 + 1 * $res1["PERCENTAGE"] / 100),
-						);
-						CPrice::Update($res["ID"], $arFields);
-					}
+					$res1 = CExtra::GetByID($res["EXTRA_ID"]);
+					$arFields = array(
+						"PRICE" => $VAL * (1 + 1 * $res1["PERCENTAGE"] / 100),
+					);
+					CPrice::Update($res["ID"], $arFields);
 				}
 			}
 		}
@@ -266,18 +257,17 @@ class CAllPrice
 	function OnIBlockElementDelete($ProductID)
 	{
 		global $DB;
-		$ProductID = intval($ProductID);
-		if (0 >= $ProductID)
+		$ProductID = (int)$ProductID;
+		if ($ProductID <= 0)
 			return false;
-		$strSql = "DELETE FROM b_catalog_price WHERE PRODUCT_ID = ".$ProductID;
-		return $DB->Query($strSql, true);
+		return $DB->Query("DELETE FROM b_catalog_price WHERE PRODUCT_ID = ".$ProductID, true);
 	}
 
 	function DeleteByProduct($ProductID, $arExceptionIDs = array())
 	{
 		global $DB;
 
-		$ProductID = intval($ProductID);
+		$ProductID = (int)$ProductID;
 		if ($ProductID <= 0)
 			return false;
 		foreach (GetModuleEvents("catalog", "OnBeforeProductPriceDelete", true) as $arEvent)
@@ -328,7 +318,7 @@ class CAllPrice
 		);
 		while ($arPrice = $rsPrices->Fetch())
 		{
-			$arPrice['EXTRA_ID'] = intval($arPrice['EXTRA_ID']);
+			$arPrice['EXTRA_ID'] = (int)$arPrice['EXTRA_ID'];
 			if ($arPrice['EXTRA_ID'] > 0)
 			{
 				$boolSearch = isset($arExtraList[$arPrice['EXTRA_ID']]);
@@ -400,4 +390,3 @@ class CAllPrice
 		}
 	}
 }
-?>

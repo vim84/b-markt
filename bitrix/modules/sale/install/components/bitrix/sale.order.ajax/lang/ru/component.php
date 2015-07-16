@@ -47,4 +47,5 @@ $MESS["SOA_NAME_COLUMN_PREVIEW_TEXT"] = "Краткое описание";
 $MESS["SOA_NAME_COLUMN_PREVIEW_PICTURE"] = "Изображение";
 $MESS["SOA_NAME_COLUMN_DETAIL_PICTURE"] = "Детальное изображение";
 $MESS["SOA_ORDER_CALCULATE_ERROR"] = "Ошибка расчета заказа";
+$MESS['SOA_TEMPL_ORDER_PS_ERROR'] = "Ошибка выбранного способа оплаты. Обратитесь к Администрации сайта, либо выберите другой способ оплаты.";
 ?>

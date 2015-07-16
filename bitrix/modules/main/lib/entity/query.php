@@ -77,7 +77,11 @@ class Query
 	/** @var string Last executed SQL query */
 	protected static $last_query;
 
+	/** @var array Replaced field aliases */
 	protected $replaced_aliases;
+
+	/** @var array Replaced table aliases */
+	protected $replaced_taliases;
 
 	/** @var callable[] */
 	protected $selectFetchModifiers = array();
@@ -287,7 +291,7 @@ class Query
 			throw new Main\ArgumentException(sprintf('Invalid order "%s"', $order));
 		}
 
-		$connection = Main\Application::getConnection();
+		$connection = $this->init_entity->getConnection();
 		$helper = $connection->getSqlHelper();
 
 		if ($order == 'ASC')
@@ -828,12 +832,10 @@ class Query
 
 	protected function buildJoinMap($chains = null)
 	{
-		$connection = Main\Application::getConnection();
+		$connection = $this->init_entity->getConnection();
 		$helper = $connection->getSqlHelper();
 
 		$aliasLength = $helper->getAliasLength();
-
-		$talias_count = 0;
 
 		if (empty($chains))
 		{
@@ -931,7 +933,9 @@ class Query
 
 							if (strlen($table_alias.$this->table_alias_postfix) > $aliasLength)
 							{
-								$table_alias = 'TALIAS_' . (++$talias_count);
+								$old_table_alias = $table_alias;
+								$table_alias = 'TALIAS_' . (count($this->replaced_taliases) + 1);
+								$this->replaced_taliases[$table_alias] = $old_table_alias;
 							}
 						}
 
@@ -952,7 +956,9 @@ class Query
 
 							if (strlen($table_alias.$this->table_alias_postfix) > $aliasLength)
 							{
-								$table_alias = 'TALIAS_' . (++$talias_count);
+								$old_table_alias = $table_alias;
+								$table_alias = 'TALIAS_' . (count($this->replaced_taliases) + 1);
+								$this->replaced_taliases[$table_alias] = $old_table_alias;
 							}
 						}
 
@@ -1025,7 +1031,7 @@ class Query
 		$sql = array();
 		$csw = new \CSQLWhere;
 
-		$connection = Main\Application::getConnection();
+		$connection = $this->init_entity->getConnection();
 		$helper = $connection->getSqlHelper();
 
 		foreach ($this->join_map as $join)
@@ -1158,7 +1164,7 @@ class Query
 
 	protected function buildQuery()
 	{
-		$connection = Main\Application::getConnection();
+		$connection = $this->init_entity->getConnection();
 		$helper = $connection->getSqlHelper();
 
 		if ($this->query_build_parts === null)
@@ -1694,7 +1700,8 @@ class Query
 	protected function query($query)
 	{
 		// check nosql configuration
-		$configuration = $this->init_entity->getConnection()->getConfiguration();
+		$connection = $this->init_entity->getConnection();
+		$configuration = $connection->getConfiguration();
 
 		if (isset($configuration['handlersocket']['read']))
 		{
@@ -1730,8 +1737,6 @@ Vadim: this is for paging but currently is not used
 			$cnt = $connection->queryScalar($cnt_query);
 		}
 */
-		$connection = Main\Application::getConnection();
-
 		$result = $connection->query($query);
 		$result->setReplacedAliases($this->replaced_aliases);
 
@@ -1780,10 +1785,9 @@ Vadim: this is for paging but currently is not used
 		return !empty($this->selectFetchModifiers) || !empty($this->files);
 	}
 
-
 	protected function replaceSelectAliases($query)
 	{
-		$connection = Main\Application::getConnection();
+		$connection = $this->init_entity->getConnection();
 		$helper = $connection->getSqlHelper();
 
 		$length = (int) $helper->getAliasLength();
@@ -1820,7 +1824,7 @@ Vadim: this is for paging but currently is not used
 		// don't quote subqueries
 		if (!preg_match('/\s*\(\s*SELECT.*\)\s*/is', $source))
 		{
-			$source =  Main\Application::getConnection()->getSqlHelper()->quote($source);
+			$source =  $this->init_entity->getConnection()->getSqlHelper()->quote($source);
 		}
 
 		return $source;
@@ -1946,7 +1950,7 @@ Vadim: this is for paging but currently is not used
 			$init_alias .= $this->table_alias_postfix;
 		}
 
-		$connection = Main\Application::getConnection();
+		$connection = $this->init_entity->getConnection();
 		$aliasLength = $connection->getSqlHelper()->getAliasLength();
 
 		if (strlen($init_alias) > $aliasLength)

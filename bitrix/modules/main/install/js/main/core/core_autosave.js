@@ -403,3 +403,4 @@ function _decodeData(data)
 }
 	top.BX.CAutoSave = BX.CAutoSave;
 })(window);
+

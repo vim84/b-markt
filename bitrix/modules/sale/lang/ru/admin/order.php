@@ -10,6 +10,7 @@ $MESS["SALE_F_TRACKING_NUMBER"] = "Идентификатор отправлен
 $MESS["SALE_F_ALL"] = "(все)";
 $MESS["SALE_F_STATUS"] = "Статус заказа";
 $MESS["SALE_F_DATE_STATUS"] = "Дата изменения статуса";
+$MESS["SALE_F_BY_RECOMMENDATION"] = "По рекомендации";
 $MESS["SALE_F_PAYED"] = "Оплачен";
 $MESS["SALE_F_DATE_PAYED"] = "Дата оплаты";
 $MESS["SALE_F_PS_STATUS"] = "Платеж авторизован в ПС";
@@ -189,4 +190,5 @@ $MESS["SALE_BIGDATA_WIDGET_DISABLED"] = "Виджет выключен";
 $MESS["SALE_BIGDATA_IS_ON"] = "Персонализация включена";
 $MESS["SALE_BIGDATA_IS_OFF"] = "Персонализация выключена";
 $MESS["SALE_BIGDATA_ABOUT"] = "Подробнее";
+$MESS["SOA_ERROR_PS"] = "Ошибка настройки выбранного способа оплаты.";
 ?>

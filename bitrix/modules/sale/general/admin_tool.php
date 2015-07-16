@@ -1,4 +1,7 @@
 <?
+use Bitrix\Main\Loader;
+use Bitrix\Iblock;
+use Bitrix\Catalog;
 // some of this functions should probably migrate to CSaleHelper
 
 /*
@@ -16,7 +19,6 @@ function CRMModeOutput($text)
  */
 function fGetUserName($USER_ID)
 {
-	global $lang;
 	$user = GetMessage('NEWO_BUYER_NAME_NULL');
 
 	if (intval($USER_ID) > 0)
@@ -26,7 +28,7 @@ function fGetUserName($USER_ID)
 
 		if (count($arUser) > 1)
 		{
-			$user = "<a href='javascript:void(0);' onClick=\"window.open('/bitrix/admin/user_search.php?lang=".$lang."&FN=order_edit_info_form&FC=user_id', '', 'scrollbars=yes,resizable=yes,width=840,height=500,top='+Math.floor((screen.height - 840)/2-14)+',left='+Math.floor((screen.width - 760)/2-5));\">";
+			$user = "<a href='javascript:void(0);' onClick=\"window.open('/bitrix/admin/user_search.php?lang=".LANGUAGE_ID."&FN=order_edit_info_form&FC=user_id', '', 'scrollbars=yes,resizable=yes,width=840,height=500,top='+Math.floor((screen.height - 840)/2-14)+',left='+Math.floor((screen.width - 760)/2-5));\">";
 			$user .= "(".htmlspecialcharsbx($arUser["LOGIN"]).")";
 
 			if ($arUser["NAME"] != "")
@@ -53,7 +55,7 @@ function fGetFormatedProductData($USER_ID, $LID, $arData, $CNT, $currency, $type
 		return $result;
 
 	$result = '<table width="100%">';
-	if (CModule::IncludeModule('catalog') && CModule::IncludeModule('iblock'))
+	if (CModule::IncludeModule('catalog'))
 	{
 		$arProductId = array();
 		$arDataTab = array();
@@ -82,7 +84,9 @@ function fGetFormatedProductData($USER_ID, $LID, $arData, $CNT, $currency, $type
 			{
 				if (method_exists($productProvider, "GetSetItems"))
 				{
-					$arSets = $productProvider::GetSetItems($item["PRODUCT_ID"], CSaleBasket::TYPE_SET);
+					$itemInfo = (isset($item['ID']) ? array('BASKET_ID' => $item['ID']) : array());
+					$arSets = $productProvider::GetSetItems($item["PRODUCT_ID"], CSaleBasket::TYPE_SET, $itemInfo);
+					unset($itemInfo);
 
 					if (is_array($arSets))
 					{
@@ -611,10 +615,6 @@ function fGetBuyerType($PERSON_TYPE_ID, $LID, $USER_ID = '', $ORDER_ID = 0, $for
 		);
 		while ($arPropValuesList = $dbPropValuesList->Fetch())
 		{
-			// from db
-			if(CSaleLocation::isLocationProMigrated() && $arPropertiesList[$arPropValuesList['ORDER_PROPS_ID']]['TYPE'] == 'LOCATION')
-				$arPropValuesList["VALUE"] = CSaleLocation::getLocationIDbyCODE($arPropValuesList["VALUE"]);
-
 			$arPropValues[intval($arPropValuesList["ORDER_PROPS_ID"])] = htmlspecialcharsbx($arPropValuesList["VALUE"]);
 		}
 	}
@@ -636,25 +636,32 @@ function fGetBuyerType($PERSON_TYPE_ID, $LID, $USER_ID = '', $ORDER_ID = 0, $for
 
 	//show town if location is another
 	$arEnableTownProps = array();
-	$dbOrderProps = CSaleOrderPropsValue::GetOrderProps($ORDER_ID);
-	while ($arOrderProps = $dbOrderProps->Fetch())
+	if ($ORDER_ID > 0)
 	{
-		if($arOrderProps["TYPE"] == "LOCATION" && $arOrderProps["ACTIVE"] == "Y" && $arOrderProps["IS_LOCATION"] == "Y")
+		$dbOrderProps = CSaleOrderPropsValue::GetOrderProps($ORDER_ID);
+		while ($arOrderProps = $dbOrderProps->Fetch())
 		{
-			if (in_array($arOrderProps["INPUT_FIELD_LOCATION"], $arDisableFieldForLocation))
+			if ($arOrderProps["TYPE"] == "LOCATION" && $arOrderProps["ACTIVE"] == "Y" && $arOrderProps["IS_LOCATION"] == "Y")
 			{
-				$arLocation = CSaleLocation::GetByID($arPropValues[$arOrderProps["ORDER_PROPS_ID"]]);
-				if (intval($arLocation["CITY_ID"]) <= 0)
-					unset($arDisableFieldForLocation[$arOrderProps["INPUT_FIELD_LOCATION"]]);
-			}
+				if (in_array($arOrderProps["INPUT_FIELD_LOCATION"], $arDisableFieldForLocation))
+				{
+					if (CSaleLocation::isLocationProMigrated())
+					{
+						//if(CSaleLocation::checkLocationIsAboveCity($arPropValues[$arOrderProps["ORDER_PROPS_ID"]]))
+						unset($arDisableFieldForLocation[$arOrderProps["INPUT_FIELD_LOCATION"]]);
+					}
+					else
+					{
+						$arLocation = CSaleLocation::GetByID($arPropValues[$arOrderProps["ORDER_PROPS_ID"]]);
+						if (intval($arLocation["CITY_ID"]) <= 0)
+							unset($arDisableFieldForLocation[$arOrderProps["INPUT_FIELD_LOCATION"]]);
+					}
+				}
 
-			$location2townFldMap[$arOrderProps['ORDER_PROPS_ID']] = $arOrderProps['INPUT_FIELD_LOCATION'];
+				$location2townFldMap[$arOrderProps['ORDER_PROPS_ID']] = $arOrderProps['INPUT_FIELD_LOCATION'];
+			}
 		}
 	}
-
-	// while location2 enabled, town filed is always present, and its visibiliy is controlled at the js level
-	if(CSaleLocation::isLocationProMigrated())
-		$arDisableFieldForLocation = array();
 
 	$propertyGroupID = -1;
 
@@ -901,11 +908,14 @@ function fGetBuyerType($PERSON_TYPE_ID, $LID, $USER_ID = '', $ORDER_ID = 0, $for
 					"ID" => $curVal,
 					"CODE" => '',
 					"SHOW_DEFAULT_LOCATIONS" => 'Y',
-					"JS_CONTROL_GLOBAL_ID" => intval($arProperties["ID"])
+					"JS_CONTROL_GLOBAL_ID" => intval($arProperties["ID"]),
+
+					"PRECACHE_LAST_LEVEL" => "Y",
+					"PRESELECT_TREE_TRUNK" => "Y"
 				),
 				'',
 				false,
-				'location-selector-wrapper'
+				'location-selector-wrapper prop-'.intval($arProperties["ID"])
 			);
 
 			$tmpLocation = ob_get_contents();
@@ -1519,16 +1529,18 @@ function fGetUserShoppingCart($arProduct, $LID, $recalcOrder)
 	$arOrderProductPrice = array();
 	$i = 0;
 
+	$arSortNum = array();
 	foreach($arProduct as $key => $val)
 	{
 		$arSortNum[] = $val['PRICE_DEFAULT'];
-		$arProduct[$key]["PRODUCT_ID"] = intval($val["PRODUCT_ID"]);
+		$arProduct[$key]["PRODUCT_ID"] = (int)$val["PRODUCT_ID"];
 		$arProduct[$key]["TABLE_ROW_ID"] = $key;
 	}
-	if (count($arProduct) > 0 && count($arSortNum) > 0)
+	if (!empty($arProduct) && !empty($arSortNum))
 		array_multisort($arSortNum, SORT_DESC, $arProduct);
 
 	$arBasketIds = array();
+	$basketMap = array();
 	foreach($arProduct as $key => $val)
 	{
 		$val["QUANTITY"] = abs(str_replace(",", ".", $val["QUANTITY"]));
@@ -1541,7 +1553,7 @@ function fGetUserShoppingCart($arProduct, $LID, $recalcOrder)
 			$val["CALLBACK_FUNC"] = false;
 			$val["CUSTOM_PRICE"] = "Y";
 
-			if (isset($val["BASKET_ID"]) || intval($val["BASKET_ID"]) > 0)
+			if (isset($val["BASKET_ID"]) && (int)$val["BASKET_ID"] > 0)
 			{
 				CSaleBasket::Update($val["BASKET_ID"], array("CUSTOM_PRICE" => "Y"));
 			}
@@ -1551,24 +1563,18 @@ function fGetUserShoppingCart($arProduct, $LID, $recalcOrder)
 
 		$arOrderProductPrice[$i] = $val;
 		$arOrderProductPrice[$i]["TABLE_ROW_ID"] = $val["TABLE_ROW_ID"];
-		$arOrderProductPrice[$i]["PRODUCT_ID"] = intval($val["PRODUCT_ID"]);
 		$arOrderProductPrice[$i]["NAME"] = htmlspecialcharsback($val["NAME"]);
 		$arOrderProductPrice[$i]["LID"] = $LID;
 		$arOrderProductPrice[$i]["CAN_BUY"] = "Y";
+		$arOrderProductPrice[$i]['RESERVED'] = 'N';
 
-		if (!isset($val["BASKET_ID"]) || $val["BASKET_ID"] == "")
+		if (isset($val["BASKET_ID"]) && (int)$val["BASKET_ID"] > 0)
 		{
-			/*if ($val["CALLBACK_FUNC"] == "Y")
-			{
-				$arOrderProductPrice[$i]["CALLBACK_FUNC"] = '';
-				$arOrderProductPrice[$i]["DISCOUNT_PRICE"] = 0;
-			}*/
-		}
-		else
-		{
-			$arOrderProductPrice[$i]["ID"] = intval($val["BASKET_ID"]);
+			$basketId = (int)$val["BASKET_ID"];
+			$arOrderProductPrice[$i]["ID"] = $basketId;
 
-			$arBasketIds[] = intval($val["BASKET_ID"]);
+			$arBasketIds[] = $basketId;
+			$basketMap[$basketId] = &$arOrderProductPrice[$i];
 
 			if ($recalcOrder != "Y" && $arOrderProductPrice[$i]["CALLBACK_FUNC"] != false)
 				unset($arOrderProductPrice[$i]["CALLBACK_FUNC"]);
@@ -1591,7 +1597,7 @@ function fGetUserShoppingCart($arProduct, $LID, $recalcOrder)
 	}//endforeach $arProduct
 
 	// collect status of reservation elements basket
-	if ( is_array($arBasketIds) && sizeof($arBasketIds) > 0)
+	if (!empty($arBasketIds))
 	{
 		$rsBasketItems = CSaleBasket::GetList(
 			array(),
@@ -1605,22 +1611,14 @@ function fGetUserShoppingCart($arProduct, $LID, $recalcOrder)
 		);
 		while ($arBasketItems = $rsBasketItems->Fetch())
 		{
-			foreach ($arOrderProductPrice as &$arOrderProductPriceDat)
-			{
-				if (isset($arOrderProductPriceDat['ID']) && $arOrderProductPriceDat['ID'] == $arBasketItems['ID'] && $arBasketItems['RESERVED'] == "Y")
-				{
-					$arOrderProductPriceDat['RESERVED'] = "Y";
-					break;
-				}
-				else
-				{
-					$arOrderProductPriceDat['RESERVED'] = "N";
-				}
-			}
-			unset($arOrderProductPriceDat);
+			$arBasketItems['ID'] = (int)$arBasketItems['ID'];
+			if (!isset($basketMap[$arBasketItems['ID']]))
+				continue;
+			$basketMap[$arBasketItems['ID']]['RESERVED'] = $arBasketItems['RESERVED'];
 		}
+		unset($arBasketItems, $rsBasketItems);
 	}
-
+	unset($basketMap, $arBasketIds);
 
 	return $arOrderProductPrice;
 }
@@ -1665,7 +1663,9 @@ function fGetFormatedProduct($USER_ID, $LID, $arData, $currency, $type = '')
 			{
 				if (method_exists($productProvider, "GetSetItems"))
 				{
-					$arSets = $productProvider::GetSetItems($item["PRODUCT_ID"], CSaleBasket::TYPE_SET);
+					$itemInfo = (isset($item['ID']) ? array('BASKET_ID' => $item['ID']) : array());
+					$arSets = $productProvider::GetSetItems($item["PRODUCT_ID"], CSaleBasket::TYPE_SET, $itemInfo);
+					unset($itemInfo);
 
 					if (is_array($arSets))
 					{
@@ -1964,95 +1964,100 @@ function fDeleteDoubleProduct($arShoppingCart = array(), $arDelete = array(), $s
 function getNameCount($propName, $propCode, $arProps)
 {
 	$count = 1;
-	foreach ($arProps as $id => $arData)
+	foreach ($arProps as &$arData)
 	{
 		if (isset($arData["NAME"]) && $arData["NAME"] == $propName && $propCode != $arData["CODE"])
 			$count++;
 	}
+	unset($arData);
 	return $count;
 }
 
 function getIblockNames($arIblockIDs, $arIblockNames)
 {
-	$str = "";
-	foreach ($arIblockIDs as $iblockID)
+	$str = '';
+	foreach ($arIblockIDs as &$iblockID)
 	{
-		$str .= "\"".$arIblockNames[$iblockID]."\", ";
+		$str .= '"'.$arIblockNames[$iblockID].'", ';
 	}
-	$str .= "#";
+	unset($iblockID);
+	$str .= '#';
 
-	return str_replace(", #", "", $str);
+	return str_replace(', #', '', $str);
 }
 
 function getAdditionalColumns()
 {
-	static $arIblockIDs = false;
-	static $arProps = false;
+	static $propList = null;
 
-	$res = array();
-
-	if (CModule::IncludeModule("catalog"))
+	if ($propList === null && Loader::includeModule('catalog'))
 	{
-		// get iblock props from all catalog iblocks including sku iblocks
-		if (false === $arIblockIDs)
+		$arIblockIDs = array();
+		$arIblockNames = array();
+		$catalogIterator = Catalog\CatalogIblockTable::getList(array(
+			'select' => array('IBLOCK_ID', 'NAME' => 'IBLOCK.NAME'),
+			'order' => array('IBLOCK_ID' => 'ASC')
+		));
+		while ($catalog = $catalogIterator->fetch())
 		{
-			$arIblockNames = array();
-			$dbCatalog = CCatalog::GetList(
-				array(),
-				array(),
-				false,
-				false,
-				array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID', 'NAME')
-			);
-			while ($arCatalog = $dbCatalog->Fetch())
-			{
-				$arIblockIDs[] = $arCatalog["IBLOCK_ID"];
-				$arIblockNames[$arCatalog["IBLOCK_ID"]] = $arCatalog["NAME"];
-			}
+			$catalog['IBLOCK_ID'] = (int)$catalog['IBLOCK_ID'];
+			$arIblockIDs[] = $catalog['IBLOCK_ID'];
+			$arIblockNames[$catalog['IBLOCK_ID']] = $catalog['NAME'];
 		}
+		unset($catalog, $catalogIterator);
 
-		// iblock props
-		if (false === $arProps)
+		if (!empty($arIblockIDs))
 		{
 			$arProps = array();
-			foreach ($arIblockIDs as $iblockID)
+			$propertyIterator = Iblock\PropertyTable::getList(array(
+				'select' => array('ID', 'CODE', 'NAME', 'IBLOCK_ID'),
+				'filter' => array('@IBLOCK_ID' => $arIblockIDs, '=ACTIVE' => 'Y'),
+				'order' => array('IBLOCK_ID' => 'ASC', 'SORT' => 'ASC', 'ID' => 'ASC')
+			));
+			while ($property = $propertyIterator->fetch())
 			{
-				$dbProps = CIBlockProperty::GetList(
-					array("SORT"=>"ASC", "NAME"=>"ASC"),
-					array(
-						"IBLOCK_ID" => $iblockID,
-						"ACTIVE" => "Y",
-						"CHECK_PERMISSIONS" => "N",
-					)
-				);
-
-				while ($arProp = $dbProps->GetNext())
-					$arProps[] = $arProp;
+				$property['ID'] = (int)$property['ID'];
+				$property['IBLOCK_ID'] = (int)$property['IBLOCK_ID'];
+				$property['CODE'] = (string)$property['CODE'];
+				if ($property['CODE'] == '')
+					$property['CODE'] = $property['ID'];
+				if (!isset($arProps[$property['CODE']]))
+				{
+					$arProps[$property['CODE']] = array(
+						'CODE' => $property['CODE'],
+						'TITLE' => $property['NAME'].' ['.$property['CODE'].']',
+						'ID' => array($property['ID']),
+						'IBLOCK_ID' => array($property['IBLOCK_ID'] => $property['IBLOCK_ID']),
+						'IBLOCK_TITLE' => array($property['IBLOCK_ID'] => $arIblockNames[$property['IBLOCK_ID']]),
+						'COUNT' => 1
+					);
+				}
+				else
+				{
+					$arProps[$property['CODE']]['ID'][] = $property['ID'];
+					$arProps[$property['CODE']]['IBLOCK_ID'][$property['IBLOCK_ID']] = $property['IBLOCK_ID'];
+					if ($arProps[$property['CODE']]['COUNT'] < 2)
+						$arProps[$property['CODE']]['IBLOCK_TITLE'][$property['IBLOCK_ID']] = $arIblockNames[$property['IBLOCK_ID']];
+					$arProps[$property['CODE']]['COUNT']++;
+				}
 			}
-		}
+			unset($property, $propertyIterator, $arIblockNames, $arIblockIDs);
 
-		// create properties array where properties with the same codes are considered the same
-		$arProp2Iblock = array();
-		if (!empty($arProps))
-		{
-			foreach ($arProps as $id => $arProperty)
+			$propList = array();
+			foreach ($arProps as &$property)
 			{
-				$arProp2Iblock["PROPERTY_".$arProperty["CODE"]][] = $arProperty["IBLOCK_ID"];
-
-				if (getNameCount($arProperty["NAME"], $arProperty["CODE"], $arProps) > 1)
-					$name = $arProperty["NAME"]." [".$arProperty["CODE"]."] ";
-				else
-					$name = $arProperty["NAME"];
-
-				if (array_key_exists("PROPERTY_".$arProperty["CODE"], $res))
-					$res["PROPERTY_".$arProperty["CODE"]]	= $name." (".getIblockNames($arProp2Iblock["PROPERTY_".$arProperty["CODE"]], $arIblockNames).")";
-				else
-					$res["PROPERTY_".$arProperty["CODE"]] = $name;
+				$iblockList = '';
+				if ($property['COUNT'] > 1)
+				{
+					$iblockList = ($property['COUNT'] > 2 ? ' ( ... )' : ' ('.implode(', ', $property['IBLOCK_TITLE']).')');
+				}
+				$propList['PROPERTY_'.$property['CODE']] = $property['TITLE'].$iblockList;
 			}
+			unset($property, $arProps);
 		}
 	}
 
-	return $res;
+	return (empty($propList) ? array() : $propList);
 }
 
 /*
@@ -2377,15 +2382,23 @@ function getProductDataToFillBasket($productId, $quantity, $userId, $LID, $userC
 		$arBuyerGroups = CUser::GetUserGroup($userId);
 
 		// price
+		$currentVatMode = CCatalogProduct::getPriceVatIncludeMode();
+		$currentUseDiscount = CCatalogProduct::getUseDiscount();
+		CCatalogProduct::setUseDiscount(true);
+		CCatalogProduct::setPriceVatIncludeMode(true);
+		CCatalogProduct::setUsedCurrency(CSaleLang::GetLangCurrency($LID));
 		$arPrice = CCatalogProduct::GetOptimalPrice($arElementInfo["ID"], 1, $arBuyerGroups, "N", array(), $LID);
-		$currentPrice = $arPrice["DISCOUNT_PRICE"];
-		$arElementInfo["PRICE"] = $currentPrice;
-		$arElementInfo["CURRENCY"] = $arPrice["PRICE"]["CURRENCY"];
-		$arElementInfo["DISCOUNT_PRICE"] = $arPrice["PRICE"]["PRICE"] - $arPrice["DISCOUNT_PRICE"];
-		$currentTotalPrice = ($arElementInfo["PRICE"] + $arElementInfo["DISCOUNT_PRICE"]);
-		$discountPercent = 0;
-		if ($arElementInfo["DISCOUNT_PRICE"] > 0)
-			$discountPercent = intval(($arElementInfo["DISCOUNT_PRICE"] * 100) / $currentTotalPrice);
+		CCatalogProduct::clearUsedCurrency();
+		CCatalogProduct::setPriceVatIncludeMode($currentVatMode);
+		CCatalogProduct::setUseDiscount($currentUseDiscount);
+		unset($currentUseDiscount, $currentVatMode);
+
+		$currentPrice = $arPrice['RESULT_PRICE']['DISCOUNT_PRICE'];
+		$arElementInfo['PRICE'] = $currentPrice;
+		$arElementInfo['CURRENCY'] = $arPrice['RESULT_PRICE']['CURRENCY'];
+		$arElementInfo['DISCOUNT_PRICE'] = $arPrice['RESULT_PRICE']['DISCOUNT'];
+		$currentTotalPrice = $arPrice['RESULT_PRICE']['BASE_PRICE'];
+		$discountPercent = (int)$arPrice['RESULT_PRICE']['PERCENT'];
 
 		$rsProducts = CCatalogProduct::GetList(
 			array(),
@@ -2453,6 +2466,8 @@ function getProductDataToFillBasket($productId, $quantity, $userId, $LID, $userC
 			$arElementInfo["RATIO"] = $arRatio["RATIO"];
 
 		// image
+		$imgCode = '';
+		$imgUrl = '';
 		if ($arElementInfo["PREVIEW_PICTURE"] > 0)
 			$imgCode = $arElementInfo["PREVIEW_PICTURE"];
 		elseif ($arElementInfo["DETAIL_PICTURE"] > 0)
@@ -2532,6 +2547,7 @@ function getProductDataToFillBasket($productId, $quantity, $userId, $LID, $userC
 			}
 		}
 
+		$currentTotalPrice = (float)$currentTotalPrice;
 		// params array
 		$arParams["id"] = $productId;
 		$arParams["name"] = $arElementInfo["~NAME"];
@@ -2539,15 +2555,15 @@ function getProductDataToFillBasket($productId, $quantity, $userId, $LID, $userC
 		$arParams["urlEdit"] = $arElementInfo["EDIT_PAGE_URL"];
 		$arParams["urlImg"] = $imgUrl;
 		$arParams["price"] = floatval($arElementInfo["PRICE"]);
-		$arParams["priceBase"] = floatval($currentTotalPrice);
-		$arParams["priceBaseFormat"] = CurrencyFormatNumber(floatval($currentTotalPrice), $arElementInfo["CURRENCY"]);
-		$arParams["priceFormated"] = CurrencyFormatNumber(floatval($arElementInfo["PRICE"]), $arElementInfo["CURRENCY"]);
+		$arParams["priceBase"] = $currentTotalPrice;
+		$arParams["priceBaseFormat"] = CCurrencyLang::CurrencyFormat($currentTotalPrice, $arElementInfo["CURRENCY"], false);
+		$arParams["priceFormated"] = CCurrencyLang::CurrencyFormat(floatval($arElementInfo["PRICE"]), $arElementInfo["CURRENCY"], false);
 		$arParams["valutaFormat"] = $priceValutaFormat;
 		$arParams["dimensions"] = serialize(array("WIDTH" => $arElementInfo["WIDTH"], "HEIGHT" => $arElementInfo["HEIGHT"], "LENGTH" => $arElementInfo["LENGTH"]));
 		$arParams["priceDiscount"] = floatval($arElementInfo["DISCOUNT_PRICE"]);
-		$arParams["priceTotalFormated"] = SaleFormatCurrency($currentTotalPrice, $arElementInfo["CURRENCY"]);
+		$arParams["priceTotalFormated"] = CCurrencyLang::CurrencyFormat($currentTotalPrice, $arElementInfo["CURRENCY"], true);
 		$arParams["discountPercent"] = $discountPercent;
-		$arParams["summaFormated"] = CurrencyFormatNumber($arElementInfo["PRICE"], $arElementInfo["CURRENCY"]);
+		$arParams["summaFormated"] = CCurrencyLang::CurrencyFormat($arElementInfo["PRICE"], $arElementInfo["CURRENCY"], false);
 		$arParams["quantity"] = $quantity;
 		$arParams["module"] = $arElementInfo["MODULE"];
 		$arParams["currency"] = $arElementInfo["CURRENCY"];
@@ -2555,7 +2571,7 @@ function getProductDataToFillBasket($productId, $quantity, $userId, $LID, $userC
 		$arParams["vatRate"] = $arPrice["PRICE"]["VAT_RATE"];
 		$arParams["priceType"] = $arPrice["PRICE"]["CATALOG_GROUP_NAME"];
 		$arParams["balance"] = $balance;
-		$arParams["notes"] = (is_array($arPrice["PRICE"]) && array_key_exists("CATALOG_GROUP_NAME", $arPrice["PRICE"])) ? $arPrice["PRICE"]["CATALOG_GROUP_NAME"] : "";
+		$arParams["notes"] = (!empty($arPrice["PRICE"]["CATALOG_GROUP_NAME"]) ? $arPrice["PRICE"]["CATALOG_GROUP_NAME"] : "");
 		$arParams["catalogXmlID"] = $arElementInfo["~IBLOCK_XML_ID"];
 		$arParams["productXmlID"] = $arElementInfo["~XML_ID"];
 		$arParams["callback"] = "";

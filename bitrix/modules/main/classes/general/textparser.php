@@ -52,6 +52,7 @@ class CTextParser
 	protected $anchorSchemes = null;
 	protected $userField;
 	public $bMobile = false;
+	public $LAZYLOAD = "N";
 
 	/* @deprecated */ public $allowImgExt = "gif|jpg|jpeg|png";
 
@@ -112,7 +113,7 @@ class CTextParser
 		$this->smilePatterns = array();
 		$this->smileReplaces = array();
 
-		$pre = "[^\\w&]";
+		$pre = "";
 		foreach ($this->smiles as $row)
 		{
 			if(preg_match("/\\w\$/", $row["TYPING"]))
@@ -128,18 +129,22 @@ class CTextParser
 				$code = preg_quote(str_replace(array("\x5C"), array("&#092;"), $code));
 				$image = preg_quote(str_replace("'", "\\'", $row["IMAGE"]));
 				$description = preg_quote(htmlspecialcharsbx(str_replace(array("\x5C"), array("&#092;"), $row["DESCRIPTION"]), ENT_QUOTES), "/");
-				$width = intval($row["IMAGE_WIDTH"]);
-				$height = intval($row["IMAGE_HEIGHT"]);
-				$descriptionDecode = $row["DESCRIPTION_DECODE"] == 'Y'? true: false;
 
-				if(in_array($row["TYPING"], array(":/", "8)")))
-					$this->smilePatterns[] = "/(?<=".$pre.")$patt(?=.\\W|\\W.|\\W$)/ei".BX_UTF_PCRE_MODIFIER;
-				else
-					$this->smilePatterns[] = "/".$patt."/ei".BX_UTF_PCRE_MODIFIER;
+				$patternName = "pattern".count($this->smilePatterns);
 
-				$this->smileReplaces[] = "\$this->convert_emoticon('".$code."', '".$image."', '".$description."', '".$width."', '".$height."', '".$descriptionDecode."')";
+				$this->smilePatterns[] = "/(?<=^|\\>|[".$this->wordSeparator."\\&]".$pre.")(?P<".$patternName.">$patt)(?=$|\\<|[".$this->wordSeparator."\\&])/s".BX_UTF_PCRE_MODIFIER;
+
+				$this->smileReplaces[$patternName] = array(
+					"code" => $code,
+					"image" => $image,
+					"description" => $description,
+					"width" => intval($row["IMAGE_WIDTH"]),
+					"height" => intval($row["IMAGE_HEIGHT"]),
+					"descriptionDecode" => $row["DESCRIPTION_DECODE"] == 'Y'? true: false
+				);
 			}
 		}
+		usort($this->smilePatterns, function($a, $b) { return (strlen($a) > strlen($b) ? -1 : 1); });
 	}
 	protected static function chr($a)
 	{
@@ -371,7 +376,7 @@ class CTextParser
 
 				if (!empty($this->smilePatterns))
 				{
-					$text = preg_replace($this->smilePatterns, $this->smileReplaces, ' '.$text.' ');
+					$text = preg_replace_callback($this->smilePatterns, array($this, "convertEmoticon"), ' '.$text.' ');
 				}
 			}
 		}
@@ -639,7 +644,7 @@ class CTextParser
 		if ($this->allow["HTML"] != "Y" && $this->maxStringLen > 0)
 		{
 			$text = preg_replace("/(\\&\\#\\d{1,3}\\;)/is".BX_UTF_PCRE_MODIFIER, "<\019\\1>", $text);
-			$text = preg_replace_callback("/(?<=^|\\>)([^\\<\\[]+)(?=\\<|\\[|$)/is".BX_UTF_PCRE_MODIFIER, array($this, "partWords"), $text);
+			$text = preg_replace_callback("/(?<=^|\\>)([^\\<\\>\\[]+?)(?=\\<|\\[|$)/is".BX_UTF_PCRE_MODIFIER, array($this, "partWords"), $text);
 			$text = preg_replace("/(\\<\019((\\&\\#\\d{1,3}\\;))\\>)/is".BX_UTF_PCRE_MODIFIER, "\\2", $text);
 		}
 
@@ -817,6 +822,22 @@ class CTextParser
 		return $this->defended_tags($video, 'replace');
 	}
 
+	function convertEmoticon($matches)
+	{
+		$replacement = reset(array_intersect_key($this->smileReplaces, $matches));
+		if (!empty($replacement))
+		{
+			return $this->convert_emoticon(
+				$replacement["code"],
+				$replacement["image"],
+				$replacement["description"],
+				$replacement["width"],
+				$replacement["height"],
+				$replacement["descriptionDecode"]
+			);
+		}
+		return $matches[0];
+	}
 	function convert_emoticon($code = "", $image = "", $description = "", $width = "", $height = "", $descriptionDecode = false)
 	{
 		if ($code == '' || $image == '')
@@ -846,7 +867,7 @@ class CTextParser
 
 		$text = str_replace(
 			array("[nomodify]", "[/nomodify]", "&#91;", "&#93;", "&", "<", ">", "\\r", "\\n", "\\\"", "\\", "[", "]", "  ", "\t"),
-			array("", "", "[", "]", "&#38;", "&#60;", "&#62;", "&#92;r", "&#92;n", "\"", "&#92;", "&#91;", "&#93;", "&nbsp;&nbsp;", "&nbsp;&nbsp;&nbsp;"),
+			array("", "", "[", "]", "&#38;", "&#60;", "&#62;", "&#92;r", "&#92;n", '&#92;"', "&#92;", "&#91;", "&#93;", "&nbsp;&nbsp;", "&nbsp;&nbsp;&nbsp;"),
 			$text
 		);
 
@@ -875,7 +896,15 @@ class CTextParser
 				),
 			$matches[1]
 		);
-		return "<table class=\"data-table\">".$text."</table>";
+
+		if ($this->bMobile)
+		{
+			return "<div style=\"overflow-x: auto;\"><table class=\"data-table\">".$text."</table></div>";
+		}
+		else
+		{
+			return "<table class=\"data-table\">".$text."</table>";
+		}
 	}
 
 	function convert_quote_tag($text = "")
@@ -960,10 +989,10 @@ class CTextParser
 		if($height > 0)
 			$strPar .= " height=\"".$height."\"";
 
+		$image = '<img src="'.$this->serverName.$url.'" border="0"'.$strPar.' data-bx-image="'.$this->serverName.$url.'" />';
 		if(strlen($this->serverName) <= 0 || preg_match("/^(http|https|ftp)\\:\\/\\//i".BX_UTF_PCRE_MODIFIER, $url))
-			return '<img src="'.$url.'" border="0"'.$strPar.' data-bx-image="'.$url.'" />';
-		else
-			return '<img src="'.$this->serverName.$url.'" border="0"'.$strPar.' data-bx-image="'.$this->serverName.$url.'" />';
+			$image = '<img src="'.$url.'" border="0"'.$strPar.' data-bx-image="'.$url.'" />';
+		return $this->defended_tags($image, 'replace');
 	}
 
 	public function convertFont($matches)
@@ -1029,6 +1058,7 @@ class CTextParser
 		}
 
 		$vars["bMobile"] = $this->bMobile;
+		$vars["LAZYLOAD"] = $this->LAZYLOAD;
 
 		$userField = $this->userField;
 		$id = $matches[2];
@@ -1129,9 +1159,6 @@ class CTextParser
 			$text = preg_replace($pattern, "", $text);
 		}
 
-		if (preg_match("/\\[\\/(quote|code|img|imag|video)/i", $url))
-			return $url;
-
 		$url = preg_replace(
 			array(
 				"/&amp;/".BX_UTF_PCRE_MODIFIER,
@@ -1170,8 +1197,7 @@ class CTextParser
 				);
 		}
 
-		$url = htmlspecialcharsbx(htmlspecialcharsback($url));
-
+		$url = $this->defended_tags(htmlspecialcharsbx(htmlspecialcharsback($url)), 'replace');
 		return $pref.($this->parser_nofollow == "Y" ? '<noindex>' : '').'<a href="'.$url.'" target="'.$this->link_target.'"'.($this->parser_nofollow == "Y" ? ' rel="nofollow"' : '').'>'.$text.'</a>'.($this->parser_nofollow == "Y" ? '</noindex>' : '').$end;
 	}
 
@@ -1223,13 +1249,13 @@ class CTextParser
 		global $APPLICATION;
 
 		if(
-			empty($arParams) 
+			empty($arParams)
 			|| strlen($arParams["PATH"]) <= 0
 		)
 		{
 			return false;
 		}
-		
+
 		if (
 			isset($arParams["PARSER_OBJECT"])
 			&& is_object($arParams["PARSER_OBJECT"])
@@ -1242,18 +1268,22 @@ class CTextParser
 
 		if ($arParams["TYPE"] == 'YOUTUBE' || $arParams["TYPE"] == 'RUTUBE' || $arParams["TYPE"] == 'VIMEO')
 		{
-			if (
-				(!defined("BX_MOBILE_LOG") || BX_MOBILE_LOG !== true)
-				&& (!$ob || !$ob->bMobile)
-			)
+			// Replace http://someurl, https://someurl by //someurl
+			$arParams["PATH"] = preg_replace("/https?:\/\//is", '//', $arParams["PATH"]);
+
+			if(preg_match("/^(https?:)?\/\/(www\.)?(youtube\.com|youtu\.be|rutube\.ru|vimeo\.com|player\.vimeo\.com)\//i", $arParams["PATH"]))
 			{
-				// Replace http://someurl, https://someurl by //someurl
-				$arParams["PATH"] = preg_replace("/https?:\/\//is", '//', $arParams["PATH"]);
-				echo '<iframe src="'.$arParams["PATH"].'" allowfullscreen="" frameborder="0" height="'.$arParams["HEIGHT"].'" width="'.$arParams["WIDTH"].'"></iframe>';
-			}
-			else
-			{
-				?><a href="<?=$arParams["PATH"]?>"><?=$arParams["PATH"]?></a><?
+				if (
+					(!defined("BX_MOBILE_LOG") || BX_MOBILE_LOG !== true)
+					&& (!$ob || !$ob->bMobile)
+				)
+				{
+					?><iframe src="<?=$arParams["PATH"]?>" allowfullscreen="" frameborder="0" height="<?=$arParams["HEIGHT"]?>" width="<?=$arParams["WIDTH"]?>"></iframe><?
+				}
+				else
+				{
+					?><a href="<?=$arParams["PATH"]?>"><?=$arParams["PATH"]?></a><?
+				}
 			}
 		}
 		else
@@ -1314,6 +1344,78 @@ class CTextParser
 				?></div><?
 			}
 		}
+		
+/*
+		if (
+			defined("BX_MOBILE_LOG")
+			&& BX_MOBILE_LOG === true
+		)
+		{
+			?><div onclick="return BX.eventCancelBubble(event);"><?
+		}
+
+		if ($arParams["TYPE"] == 'YOUTUBE' || $arParams["TYPE"] == 'RUTUBE' || $arParams["TYPE"] == 'VIMEO')
+		{
+			// Replace http://someurl, https://someurl by //someurl
+			$arParams["PATH"] = preg_replace("/https?:\/\//is", '//', $arParams["PATH"]);
+
+			if(preg_match("/^(https?:)?\/\/(www\.)?(youtube\.com|youtu\.be|rutube\.ru|vimeo\.com|player\.vimeo\.com)\//i", $arParams["PATH"]))
+			{
+				?><iframe src="<?=$arParams["PATH"]?>" allowfullscreen="" frameborder="0" height="<?=$arParams["HEIGHT"]?>" width="<?=$arParams["WIDTH"]?>"></iframe><?
+			}
+		}
+		else
+		{
+			$APPLICATION->IncludeComponent(
+				"bitrix:player", "",
+				array(
+					"PLAYER_TYPE" => "auto",
+					"USE_PLAYLIST" => "N",
+					"PATH" => $arParams["PATH"],
+					"WIDTH" => $arParams["WIDTH"],
+					"HEIGHT" => $arParams["HEIGHT"],
+					"PREVIEW" => $arParams["PREVIEW"],
+					"LOGO" => "",
+					"FULLSCREEN" => "Y",
+					"SKIN_PATH" => "/bitrix/components/bitrix/player/mediaplayer/skins",
+					"SKIN" => "bitrix.swf",
+					"CONTROLBAR" => "bottom",
+					"WMODE" => "transparent",
+					"HIDE_MENU" => "N",
+					"SHOW_CONTROLS" => "Y",
+					"SHOW_STOP" => "N",
+					"SHOW_DIGITS" => "Y",
+					"CONTROLS_BGCOLOR" => "FFFFFF",
+					"CONTROLS_COLOR" => "000000",
+					"CONTROLS_OVER_COLOR" => "000000",
+					"SCREEN_COLOR" => "000000",
+					"AUTOSTART" => "N",
+					"REPEAT" => "N",
+					"VOLUME" => "90",
+					"DISPLAY_CLICK" => "play",
+					"MUTE" => "N",
+					"HIGH_QUALITY" => "Y",
+					"ADVANCED_MODE_SETTINGS" => "N",
+					"BUFFER_LENGTH" => "10",
+					"DOWNLOAD_LINK" => "",
+					"DOWNLOAD_LINK_TARGET" => "_self"
+				),
+				null,
+				array(
+					"HIDE_ICONS" => "Y"
+				)
+			);
+		}
+
+		if (
+			defined("BX_MOBILE_LOG")
+			&& BX_MOBILE_LOG === true
+		)
+		{
+			?></div><?
+		}
+*/
+		
 
 		$video = ob_get_contents();
 		ob_end_clean();
@@ -1365,6 +1467,8 @@ class CTextParser
 
 		for($i = 0; $i < $len_opened; $i++)
 		{
+			if ($openedtags[$i] === 'br')
+				continue;
 			if (!in_array($openedtags[$i], $closedtags))
 				$html .= '</'.$openedtags[$i].'>';
 			else

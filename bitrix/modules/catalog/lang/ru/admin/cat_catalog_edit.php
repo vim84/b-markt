@@ -13,6 +13,7 @@ $MESS["CAT_CEDIT_PROP_TABLE_TYPE"] = "Тип";
 $MESS["CAT_CEDIT_PROP_TABLE_SMART_FILTER"] = "Показать в умном фильтре";
 $MESS["CAT_CEDIT_PROP_TABLE_DISPLAY_TYPE"] = "Вид в умном фильтре";
 $MESS["CAT_CEDIT_PROP_TABLE_DISPLAY_EXPANDED"] = "Показать развёрнутым";
+$MESS["CAT_CEDIT_PROP_TABLE_FILTER_HINT"] = "Подсказка для посетителей";
 $MESS["CAT_CEDIT_PROP_TABLE_ACTION"] = "Действия";
 $MESS["CAT_CEDIT_PROP_SELECT_CHOOSE"] = "<Выбрать>";
 $MESS["CAT_CEDIT_PROP_SELECT_CREATE"] = "[Создать]";

@@ -75,7 +75,7 @@ if($new == '' && strlen($filename) <= 0 && strlen($oldname) <= 0 && !$io->FileEx
 	}
 }
 
-$useEditor3 = COption::GetOptionString('fileman', "use_editor_3", "N") == "Y";
+$useEditor3 = COption::GetOptionString('fileman', "use_editor_3", "Y") == "Y";
 $bFullPHP = ($full_src == "Y") && $USER->CanDoOperation('edit_php');
 $NEW_ROW_CNT = 1;
 
@@ -172,6 +172,7 @@ else
 	$url = "/bitrix/admin/fileman_admin.php?".$addUrl."&site=".Urlencode($site)."&path=".UrlEncode($arParsedPath["PREV"]);
 
 $module_id = "fileman";
+$localRedirectUrl = '';
 if(strlen($strWarning)<=0)
 {
 	if($bEdit)
@@ -365,9 +366,9 @@ if(strlen($strWarning)<=0)
 				}
 
 				if(strlen($strWarning)<=0 && strlen($apply)<=0 && strlen($apply2)<=0)
-					LocalRedirect($url);
+					$localRedirectUrl = $url;
 				else
-					LocalRedirect("/bitrix/admin/fileman_html_edit.php?".$addUrl."&site=".Urlencode($site)."&path=".UrlEncode($path)."&back_url=".UrlEncode($back_url)."&fullscreen=".($bFullScreen?"Y":"N")."&tabControl_active_tab=".urlencode($tabControl_active_tab));
+					$localRedirectUrl = "/bitrix/admin/fileman_html_edit.php?".$addUrl."&site=".Urlencode($site)."&path=".UrlEncode($path)."&back_url=".UrlEncode($back_url)."&fullscreen=".($bFullScreen?"Y":"N")."&tabControl_active_tab=".urlencode($tabControl_active_tab);
 			}
 
 			$filesrc_tmp = $filesrc_for_save;
@@ -457,6 +458,14 @@ if($bEditProps)
 if ($USER->CanDoOperation('fileman_add_element_to_menu') && $USER->CanDoFileOperation('fm_add_to_menu',$arPath))
 	$aTabs[] = array("DIV" => "edit3", "TAB" => GetMessage("FILEMAN_H_EDIT_TAB3"), "ICON"=>"main_user_edit", "TITLE"=>GetMessage("FILEMAN_H_EDIT_TAB3_TITLE"));
 $tabControl = new CAdminTabControl("tabControl", $aTabs);
+
+// We have to redirect after TabControl for normal work of autosave methods
+if ($localRedirectUrl !== '')
+{
+	LocalRedirect($localRedirectUrl);
+}
+
+
 foreach($arParsedPath["AR_PATH"] as $chainLevel)
 {
 	$adminChain->AddItem(
@@ -690,29 +699,53 @@ $tabControl->BeginNextTab();
 				<input type="text" name="filename" id="filename" style="float: left;" size="60" maxlength="255" value="<?= htmlspecialcharsbx($filename)?>" />
 			</td>
 		</tr>
-		<tr><td style="padding: 0!important;"></td><td style="padding: 0!important;">
-			<table id='jserror_name' style="visibility:hidden"><tr><td valign="top">
-			<IMG src="/bitrix/themes/.default/images/icon_warn.gif" title="<?=GetMessage("FILEMAN_NAME_ERROR");?>">
-			</td><td class="jserror"><?=GetMessage("FILEMAN_NAME_ERROR");?></td></tr>	</table>
-			<script>
-			var oInput = BX('filename');
-			var erTable = BX('jserror_name');
-			oInput.onkeypress = function()
-			{
-				var _this = this;
-				setTimeout(function()
+		<tr>
+			<td></td>
+			<td style="padding: 0 0 3px!important;">
+				<table id='jserror_name' style="visibility:hidden"><tr><td valign="top">
+							<IMG src="/bitrix/themes/.default/images/icon_warn.gif" title="<?=GetMessage("FILEMAN_NAME_ERR");?>">
+						</td><td id="jserror" class="jserror"></td></tr></table>
+				<script>
+					var oInput = BX('filename'),
+						erTable = BX('jserror_name'),
+						mess = BX('jserror'),
+						form = document.forms.ffilemanedit,
+						fNameError = '<?=GetMessage("FILEMAN_NAME_ERR");?>',
+						fNameEmpty = '<?=GetMessage("FILEMAN_NAME_EMPTY");?>';
+					oInput.oninput = function()
 					{
-						var val = _this.value;
-						var new_val = val.replace(/[\\\/:*?\"\'<>|]/i, '');
-						if (val !== new_val)
-							erTable.style.visibility = 'visible';
-						else
-							erTable.style.visibility = 'hidden';
-					}, 1
-				);
-			}
-			</script>
-		</td></tr>
+						var _this = this,
+							saveBut = BX.findChild(form, {tag: 'INPUT', attr: {'name': 'save', 'type':'submit'}}, true);
+						setTimeout(function()
+							{
+								var val = _this.value;
+								var new_val = val.replace(/[\\\/:*?\"\'<>|]/i, '');
+								if (val !== new_val)
+								{
+									erTable.style.visibility = 'visible';
+									mess.innerHTML = fNameError;
+									form.apply.disabled = true;
+									saveBut.disabled = true;
+								}
+								else if (val.trim().length <= 0)
+								{
+									erTable.style.visibility = 'visible';
+									mess.innerHTML = fNameEmpty;
+									form.apply.disabled = true;
+									saveBut.disabled = true;
+								}
+								else
+								{
+									erTable.style.visibility = 'hidden';
+									mess.innerHTML = '';
+									form.apply.disabled = false;
+									saveBut.disabled = false;
+								}
+							}, 1
+						);
+					}
+				</script>
+			</td></tr>
 	<?else:?>
 		<tr>
 			<td width="30%"><label for="title"><?= GetMessage("FILEMAN_FILEEDIT_TITLE")?></label></td>
@@ -838,6 +871,23 @@ $tabControl->BeginNextTab();
 		</script>
 		<?if ($useEditor3):?>
 			<?
+			$relPath = isset($path) ? $path : "/";
+			$site = isset($site) ? $site : "";
+			$__path = Rel2Abs("/", $relPath);
+			$site = CFileMan::__CheckSite($site);
+			if($site)
+			{
+				$DOC_ROOT = CSite::GetSiteDocRoot($site);
+				$abs_path = $DOC_ROOT.$__path;
+				$io = CBXVirtualIo::GetInstance();
+				if ($io->FileExists($abs_path))
+				{
+					$relPath = substr($relPath, 0, strrpos($relPath,"/"));
+					if ($relPath=="")
+						$relPath = "/";
+				}
+			}
+
 			$Editor = new CHTMLEditor;
 			$Editor->Show(array(
 				'name' => 'filesrc',
@@ -846,7 +896,8 @@ $tabControl->BeginNextTab();
 				'height' => '650',
 				'content' => $filesrc,
 				'bAllowPhp' => $USER->CanDoOperation('edit_php'),
-				"limitPhpAccess" => $limit_php_access
+				"limitPhpAccess" => $limit_php_access,
+				"relPath" => $relPath
 			));
 			?>
 		<?else:?>
@@ -978,6 +1029,7 @@ $tabControl->BeginNextTab();
 				unset($arPropTypes_tmp);
 				unset($arAllPropFields_tmp);
 				unset($arDefProps);
+				$documentSite = CSite::GetSiteByFullPath($_SERVER["DOCUMENT_ROOT"].$path);
 				$cntProp = count($arAllPropFields);
 				for($i = 0; $i < $cntProp; $i++)
 				{
@@ -998,7 +1050,7 @@ $tabControl->BeginNextTab();
 							<?
 							$value_ = (isset($_POST["VALUE_$i"])) ? $_POST["VALUE_$i"] : $arProp["VALUE"];
 							if($arProp["CODE"] == $tag_prop_name && $search_exist):
-								echo InputTags("VALUE_".$i, $value_, array(), 'size="55"', "VALUE_".$i);
+								echo InputTags("VALUE_".$i, $value_, array($documentSite), 'size="55"', "VALUE_".$i);
 							else:?>
 								<input type="text" name="VALUE_<?=$i?>" id="VALUE_<?=$i?>" value="<?=htmlspecialcharsbx($value_);?>" size="60">
 							<?endif;

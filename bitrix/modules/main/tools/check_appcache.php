@@ -7,7 +7,7 @@ require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_be
  * @var CMain $APPLICATION
  */
 
-if($_REQUEST["manifest_id"])
+if($_REQUEST["manifest_id"] && !\Bitrix\Main\Data\AppCacheManifest::getDebug())
 {
 	$appCache = \Bitrix\Main\Data\AppCacheManifest::getInstance();
 	$data = $appCache->readManifestCache($_REQUEST["manifest_id"]);

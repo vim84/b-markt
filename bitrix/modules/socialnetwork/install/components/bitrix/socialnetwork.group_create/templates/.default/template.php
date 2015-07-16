@@ -109,7 +109,11 @@ else
 							?><input type="hidden" value="N" name="GROUP_CLOSED"><?
 						endif;
 						
-						if (CModule::IncludeModule("extranet") && !CExtranet::IsExtranetSite()):
+						if (
+							CModule::IncludeModule("extranet")
+							&& strlen(COption::GetOptionString("extranet", "extranet_site")) > 0
+							&& !CExtranet::IsExtranetSite()
+						):
 							?><input type="checkbox" value="Y"<?=($arResult["POST"]["IS_EXTRANET_GROUP"] ? " checked" : "")?> name="IS_EXTRANET_GROUP"> <label for="IS_EXTRANET_GROUP"><?= GetMessage("SONET_C8_IS_EXTRANET_GROUP") ?></label><?
 						endif;
 

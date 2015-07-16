@@ -1,4 +1,5 @@
 <?php
+use Bitrix\Disk\Banner;
 use Bitrix\Disk\Desktop;
 use Bitrix\Main\Localization\Loc;
 
@@ -55,6 +56,9 @@ include("util_group_profile.php");
 							'PATH_TO_FOLDER_VIEW' => CComponentEngine::MakePathFromTemplate($arResult['PATH_TO_GROUP_DISK_FILE'], array('group_id' => $arResult['VARIABLES']['group_id'])),
 							'PATH_TO_FILE_VIEW' => CComponentEngine::MakePathFromTemplate($arResult['PATH_TO_GROUP_DISK_FILE'], array('group_id' => $arResult['VARIABLES']['group_id'])),
 							'PATH_TO_TRASHCAN_LIST' => CComponentEngine::makePathFromTemplate($arResult['PATH_TO_GROUP_TRASHCAN_LIST'], array('group_id' => $arResult['VARIABLES']['group_id'])),
+
+							'RELATIVE_PATH' => $arResult['VARIABLES']['RELATIVE_PATH'],
+							'RELATIVE_ITEMS' => $arResult['VARIABLES']['RELATIVE_ITEMS'],
 
 							'TYPE' => 'list'
 						),
@@ -118,9 +122,9 @@ include("util_group_profile.php");
 
 				</div>
 
-				<? if(!Desktop::isDesktopDiskInstall()) {?>
+				<? if(!Desktop::isDesktopDiskInstall() && Banner::isActive('install_disk')) {?>
 				<div class="bx-disk-sidebar-section">
-					<a href="javascript:BX.Disk.getDownloadDesktop();"><img src="/bitrix/images/disk/<?= $bannerName ?>" alt=""></a>
+					<a href="javascript: BX.Disk.deactiveBanner('install_disk'); BX.Disk.getDownloadDesktop();"><img src="/bitrix/images/disk/<?= $bannerName ?>" alt=""></a>
 				</div>
 				<? }
 				if ($folder->canAdd($arResult['VARIABLES']['STORAGE']->getCurrentUserSecurityContext()))

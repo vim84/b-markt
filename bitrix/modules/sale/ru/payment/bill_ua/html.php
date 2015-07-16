@@ -25,16 +25,16 @@ $pageWidth  = 595.28;
 $pageHeight = 841.89;
 
 $background = '#ffffff';
-if (CSalePaySystemAction::GetParamValue('BACKGROUND'))
+if (CSalePaySystemAction::GetParamValue('BACKGROUND', false))
 {
-	$path = CSalePaySystemAction::GetParamValue('BACKGROUND');
+	$path = CSalePaySystemAction::GetParamValue('BACKGROUND', false);
 	if (intval($path) > 0)
 	{
 		if ($arFile = CFile::GetFileArray($path))
 			$path = $arFile['SRC'];
 	}
 
-	$backgroundStyle = CSalePaySystemAction::GetParamValue('BACKGROUND_STYLE');
+	$backgroundStyle = CSalePaySystemAction::GetParamValue('BACKGROUND_STYLE', false);
 	if (!in_array($backgroundStyle, array('none', 'tile', 'stretch')))
 		$backgroundStyle = 'none';
 
@@ -59,10 +59,10 @@ if (CSalePaySystemAction::GetParamValue('BACKGROUND'))
 }
 
 $margin = array(
-	'top' => intval(CSalePaySystemAction::GetParamValue('MARGIN_TOP') ?: 15) * 72/25.4,
-	'right' => intval(CSalePaySystemAction::GetParamValue('MARGIN_RIGHT') ?: 15) * 72/25.4,
-	'bottom' => intval(CSalePaySystemAction::GetParamValue('MARGIN_BOTTOM') ?: 15) * 72/25.4,
-	'left' => intval(CSalePaySystemAction::GetParamValue('MARGIN_LEFT') ?: 20) * 72/25.4
+	'top' => intval(CSalePaySystemAction::GetParamValue('MARGIN_TOP', false) ?: 15) * 72/25.4,
+	'right' => intval(CSalePaySystemAction::GetParamValue('MARGIN_RIGHT', false) ?: 15) * 72/25.4,
+	'bottom' => intval(CSalePaySystemAction::GetParamValue('MARGIN_BOTTOM', false) ?: 15) * 72/25.4,
+	'left' => intval(CSalePaySystemAction::GetParamValue('MARGIN_LEFT', false) ?: 20) * 72/25.4
 );
 
 $width = $pageWidth - $margin['left'] - $margin['right'];
@@ -76,15 +76,15 @@ $width = $pageWidth - $margin['left'] - $margin['right'];
 <b><?=sprintf(
 	"Рахунок на оплату №%s від %s",
 	htmlspecialcharsbx($GLOBALS["SALE_INPUT_PARAMS"]["ORDER"]["ACCOUNT_NUMBER"]),
-	CSalePaySystemAction::GetParamValue("DATE_INSERT")
+	CSalePaySystemAction::GetParamValue("DATE_INSERT", false)
 ); ?></b>
 <br>
 <br>
 
 <?
 
-$buyerPhone = CSalePaySystemAction::GetParamValue("BUYER_PHONE");
-$buyerFax = CSalePaySystemAction::GetParamValue("BUYER_FAX");
+$buyerPhone = CSalePaySystemAction::GetParamValue("BUYER_PHONE", false);
+$buyerFax = CSalePaySystemAction::GetParamValue("BUYER_FAX", false);
 
 ?>
 
@@ -92,21 +92,21 @@ $buyerFax = CSalePaySystemAction::GetParamValue("BUYER_FAX");
 	<tr>
 		<td>Постачальник:</td>
 		<td style="padding-left: 4pt; ">
-			<?=CSalePaySystemAction::GetParamValue("SELLER_NAME"); ?>
+			<?=CSalePaySystemAction::GetParamValue("SELLER_NAME", false); ?>
 			<br>
-			Р/р <?=CSalePaySystemAction::GetParamValue("SELLER_RS"); ?>,
-			Банк <?=CSalePaySystemAction::GetParamValue("SELLER_BANK"); ?>,
-			МФО <?=CSalePaySystemAction::GetParamValue("SELLER_MFO"); ?>
+			Р/р <?=CSalePaySystemAction::GetParamValue("SELLER_RS", false); ?>,
+			Банк <?=CSalePaySystemAction::GetParamValue("SELLER_BANK", false); ?>,
+			МФО <?=CSalePaySystemAction::GetParamValue("SELLER_MFO", false); ?>
 			<br>
-			Юридична адреса: <?=CSalePaySystemAction::GetParamValue("SELLER_ADDRESS"); ?>,
-			тел.: <?=CSalePaySystemAction::GetParamValue("SELLER_PHONE"); ?>
+			Юридична адреса: <?=CSalePaySystemAction::GetParamValue("SELLER_ADDRESS", false); ?>,
+			тел.: <?=CSalePaySystemAction::GetParamValue("SELLER_PHONE", false); ?>
 			<br>
-			ЄДРПОУ: <?=CSalePaySystemAction::GetParamValue("SELLER_EDRPOY"); ?>,
-			ІПН: <?=CSalePaySystemAction::GetParamValue("SELLER_IPN"); ?>,
-			№ свід. ПДВ: <?=CSalePaySystemAction::GetParamValue("SELLER_PDV"); ?>
-			<? if (CSalePaySystemAction::GetParamValue("SELLER_SYS")) { ?>
+			ЄДРПОУ: <?=CSalePaySystemAction::GetParamValue("SELLER_EDRPOY", false); ?>,
+			ІПН: <?=CSalePaySystemAction::GetParamValue("SELLER_IPN", false); ?>,
+			№ свід. ПДВ: <?=CSalePaySystemAction::GetParamValue("SELLER_PDV", false); ?>
+			<? if (CSalePaySystemAction::GetParamValue("SELLER_SYS", false)) { ?>
 			<br>
-			<?=CSalePaySystemAction::GetParamValue("SELLER_SYS"); ?>
+			<?=CSalePaySystemAction::GetParamValue("SELLER_SYS", false); ?>
 			<? } ?>
 		</td>
 	</tr>
@@ -114,23 +114,23 @@ $buyerFax = CSalePaySystemAction::GetParamValue("BUYER_FAX");
 	<tr>
 		<td>Покупець:</td>
 		<td style="padding-left: 4pt; ">
-			<?=CSalePaySystemAction::GetParamValue("BUYER_NAME"); ?>
+			<?=CSalePaySystemAction::GetParamValue("BUYER_NAME", false); ?>
 			<? if ($buyerPhone || $buyerFax) { ?>
 			<br>
 			<? if ($buyerPhone) { ?>тел.: <?=$buyerPhone; ?><? if ($buyerFax) { ?>, <? } ?><? } ?>
 			<? if ($buyerFax) { ?>факс: <?=$buyerFax; ?><? } ?>
 			<? } ?>
-			<? if (CSalePaySystemAction::GetParamValue("BUYER_ADDRESS")) { ?>
+			<? if (CSalePaySystemAction::GetParamValue("BUYER_ADDRESS", false)) { ?>
 			<br>
-			Адреса: <?=CSalePaySystemAction::GetParamValue("BUYER_ADDRESS"); ?>
+			Адреса: <?=CSalePaySystemAction::GetParamValue("BUYER_ADDRESS", false); ?>
 			<? } ?>
 		</td>
 	</tr>
 </table>
 <br>
 
-<? if (CSalePaySystemAction::GetParamValue("BUYER_DOGOVOR")) { ?>
-Договір: <?=CSalePaySystemAction::GetParamValue("BUYER_DOGOVOR"); ?>
+<? if (CSalePaySystemAction::GetParamValue("BUYER_DOGOVOR", false)) { ?>
+Договір: <?=CSalePaySystemAction::GetParamValue("BUYER_DOGOVOR", false); ?>
 <br>
 <? } ?>
 <br>
@@ -423,14 +423,35 @@ for ($n = 1; $n <= $rowsCnt; $n++)
 <b>Без ПДВ</b>
 <? } ?>
 <br>
-
 <br>
+
+<? if (CSalePaySystemAction::GetParamValue("COMMENT1", false) || CSalePaySystemAction::GetParamValue("COMMENT2", false)) { ?>
+<b>Умови та коментарі</b>
+<br>
+	<? if (CSalePaySystemAction::GetParamValue("COMMENT1", false)) { ?>
+	<?=nl2br(HTMLToTxt(preg_replace(
+		array('#</div>\s*<div[^>]*>#i', '#</?div>#i'), array('<br>', '<br>'),
+		htmlspecialcharsback(CSalePaySystemAction::GetParamValue("COMMENT1", false))
+	), '', array(), 0)); ?>
+	<br>
+	<br>
+	<? } ?>
+	<? if (CSalePaySystemAction::GetParamValue("COMMENT2", false)) { ?>
+	<?=nl2br(HTMLToTxt(preg_replace(
+		array('#</div>\s*<div[^>]*>#i', '#</?div>#i'), array('<br>', '<br>'),
+		htmlspecialcharsback(CSalePaySystemAction::GetParamValue("COMMENT2", false))
+	), '', array(), 0)); ?>
+	<br>
+	<br>
+	<? } ?>
+<? } ?>
+
 <div style="border-bottom: 1pt solid #000000; width:100%; ">&nbsp;</div>
 
 <? if (!$blank) { ?>
 <div style="position: relative; "><?=CFile::ShowImage(
-	CSalePaySystemAction::GetParamValue("PATH_TO_STAMP"),
-	0, 0,
+	CSalePaySystemAction::GetParamValue("PATH_TO_STAMP", false),
+	160, 160,
 	'style="position: absolute; left: 40pt; "'
 ); ?></div>
 <? } ?>
@@ -443,14 +464,14 @@ for ($n = 1; $n <= $rowsCnt; $n++)
 			<td>Виписав(ла):&nbsp;</td>
 			<td style="width: 160pt; border: 1pt solid #000000; border-width: 0pt 0pt 1pt 0pt; text-align: center; ">
 				<? if (!$blank) { ?>
-				<?=CFile::ShowImage(CSalePaySystemAction::GetParamValue("SELLER_ACC_SIGN"), 200, 50); ?>
+				<?=CFile::ShowImage(CSalePaySystemAction::GetParamValue("SELLER_ACC_SIGN", false), 200, 50); ?>
 				<? } ?>
 			</td>
 			<td style="width: 160pt; ">
 				<input
 					style="border: none; background: none; width: 100%; "
 					type="text"
-					value="<?=CSalePaySystemAction::GetParamValue("SELLER_ACC"); ?>"
+					value="<?=CSalePaySystemAction::GetParamValue("SELLER_ACC", false); ?>"
 				>
 			</td>
 			<td style="width: 20pt; ">&nbsp;</td>
@@ -459,7 +480,7 @@ for ($n = 1; $n <= $rowsCnt; $n++)
 				<input
 					style="border: none; background: none; width: 100%; text-align: center; "
 					type="text"
-					value="<?=CSalePaySystemAction::GetParamValue("SELLER_ACC_POS"); ?>"
+					value="<?=CSalePaySystemAction::GetParamValue("SELLER_ACC_POS", false); ?>"
 				>
 			</td>
 		</tr>
@@ -469,11 +490,11 @@ for ($n = 1; $n <= $rowsCnt; $n++)
 <br>
 <br>
 
-<? if (CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE")) { ?>
+<? if (CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE", false)) { ?>
 <div style="text-align: right; "><b><?=sprintf(
 	"Рахунок дійсний до сплати до %s",
-	ConvertDateTime(CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE"), FORMAT_DATE)
-		?: CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE")
+	ConvertDateTime(CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE", false), FORMAT_DATE)
+		?: CSalePaySystemAction::GetParamValue("DATE_PAY_BEFORE", false)
 ); ?></b></div>
 <? } ?>
 

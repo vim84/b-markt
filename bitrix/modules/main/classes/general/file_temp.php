@@ -14,20 +14,21 @@ class CTempFile
 	public static function GetFileName($file_name = '')
 	{
 		$dir_name = self::GetAbsoluteRoot();
+		$file_name = rel2abs("/", "/".$file_name);
 		$i = 0;
 
 		while(true)
 		{
 			$i++;
 
-			if($file_name == '')
+			if($file_name == '/')
 				$dir_add = md5(mt_rand());
 			elseif($i < 25)
 				$dir_add = substr(md5(mt_rand()), 0, 3);
 			else
 				$dir_add = md5(mt_rand());
 
-			$temp_path = $dir_name."/".$dir_add."/".$file_name;
+			$temp_path = $dir_name."/".$dir_add.$file_name;
 
 			if(!file_exists($temp_path))
 			{

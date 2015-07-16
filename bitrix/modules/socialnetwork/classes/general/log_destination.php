@@ -249,7 +249,7 @@ class CSocNetLogDestination
 						"!GROUP_CLOSED" => "Y"
 					),
 					false,
-					array("nPageSize" => 500, "bDescPageNumbering" => false),
+					array("nTopCount" => 500),
 					array("ID", "GROUP_ID")
 				);
 				while($arGroup = $rsGroups->Fetch())
@@ -321,6 +321,15 @@ class CSocNetLogDestination
 		$bExtranet = false;
 
 		$arFilter = Array('ACTIVE' => 'Y');
+
+		if (
+			IsModuleInstalled("intranet")
+			|| COption::GetOptionString("main", "new_user_registration_email_confirmation", "N") == "Y"
+		)
+		{
+			$arFilter["CONFIRM_CODE"] = false;
+		}
+
 		$arExtParams = Array("FIELDS" => Array("ID", "LAST_NAME", "NAME", "SECOND_NAME", "LOGIN", "PERSONAL_PHOTO", "WORK_POSITION", "PERSONAL_PROFESSION", "IS_ONLINE"));
 
 		if (isset($arParams['id']))
@@ -578,6 +587,14 @@ class CSocNetLogDestination
 		);
 
 		if (
+			$bIntranetEnable
+			|| COption::GetOptionString("main", "new_user_registration_email_confirmation", "N") == "Y"
+		)
+		{
+			$arFilter["CONFIRM_CODE"] = false;
+		}
+
+		if (
 			$bEmployeesOnly
 			|| ($bBitrix24Enable && !$bExtranetEnable)
 		)
@@ -660,7 +677,7 @@ class CSocNetLogDestination
 				}
 			}
 
-			$sName = CUser::FormatName(empty($nameTemplate) ? CSite::GetNameFormat(false) : $nameTemplate, $arUser, true, false);			
+			$sName = CUser::FormatName(empty($nameTemplate) ? CSite::GetNameFormat(false) : $nameTemplate, $arUser, true, true);
 
 			$arFileTmp = CFile::ResizeImageGet(
 				$arUser["PERSONAL_PHOTO"],
@@ -719,18 +736,25 @@ class CSocNetLogDestination
 			$siteId = SITE_ID;		
 		}
 
+		$arFilter = array(
+			"USER_ID" => $userId,
+			"ID" => $arSelect,
+			"<=ROLE" => SONET_ROLES_USER,
+			"GROUP_SITE_ID" => $siteId,
+			"GROUP_ACTIVE" => "Y"
+		);
+
+		if(isset($arParams['GROUP_CLOSED']))
+		{
+			$arFilter['GROUP_CLOSED'] = $arParams['GROUP_CLOSED'];
+		}
+
 		$arSocnetGroupsTmp = array();
 		$rsGroups = CSocNetUserToGroup::GetList(
 			array("GROUP_NAME" => "ASC"),
-			array(
-				"USER_ID" => $userId,
-				"ID" => $arSelect,
-				"<=ROLE" => SONET_ROLES_USER,
-				"GROUP_SITE_ID" => $siteId,
-				"GROUP_ACTIVE" => "Y"
-			),
+			$arFilter,
 			false,
-			array("nPageSize" => 500, "bDescPageNumbering" => false),
+			array("nTopCount" => 500),
 			array("ID", "GROUP_ID", "GROUP_NAME", "GROUP_DESCRIPTION", "GROUP_IMAGE_ID")
 		);
 		while($arGroup = $rsGroups->Fetch())

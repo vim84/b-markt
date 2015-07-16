@@ -155,6 +155,7 @@ $MESS["IBLOCK_XML2_SECTION_PROPERTIES"] = "ElementProperties";
 $MESS["IBLOCK_XML2_SMART_FILTER"] = "SmartFilter";
 $MESS["IBLOCK_XML2_SMART_FILTER_DISPLAY_TYPE"] = "DisplayType";
 $MESS["IBLOCK_XML2_SMART_FILTER_DISPLAY_EXPANDED"] = "ShowExpanded";
+$MESS["IBLOCK_XML2_SMART_FILTER_HINT"] = "Hint";
 $MESS["IBLOCK_XML2_PRICE_SB_ADD_ERROR"] = "The Small Business edition does not permit more than one price type. Please consider upgrading your license.";
 $MESS["IBLOCK_XML2_PRICE_DUP_ERROR"] = "There are prices with duplicate names. Data exchange will have to abort.";
 $MESS["IBLOCK_XML2_STORE_CONTACT"] = "Contact";

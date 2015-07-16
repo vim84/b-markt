@@ -25,6 +25,8 @@ $arOptions = $oAuthManager->GetSettings();
 $groupDenyAuth = CSocServAuth::getGroupsDenyAuth();
 $groupDenySplit = CSocServAuth::getGroupsDenySplit();
 
+$allowAuthorization = COption::GetOptionString("socialservices", "allow_registration", "Y") == "Y";
+
 $aTabs = array(
 	array("DIV" => "edit1", "TAB" => GetMessage("MAIN_TAB_SET"), "ICON" => "",
 		"TITLE" => GetMessage("MAIN_TAB_TITLE_SET")),
@@ -77,6 +79,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && $_POST["Update"].$_POST["Apply"].$_PO
 
 	CSocServAuth::setGroupsDenyAuth($_REQUEST["group_deny_auth"]);
 	CSocServAuth::setGroupsDenySplit($_REQUEST["group_deny_split"]);
+
+	if(isset($_REQUEST["allow_registration"]))
+	{
+		COption::SetOptionString("socialservices", "allow_registration", $_REQUEST["allow_registration"] == "N" ? "N" : "Y");
+	}
 
 	if(strlen($_REQUEST["back_url_settings"]) > 0)
 	{
@@ -181,7 +188,7 @@ window.networkRegister = (function(){
 						},
 						html: '<div id="b24net_in"><?=GetMessageJS('SOC_OPT_B24NET_SITE')?><br /><br /><input type="text" id="b24net_url" value="' +
 							BX.util.htmlspecialchars(window.location.protocol+'//'+window.location.host) +
-							'" style="width: 250px" /><br /><br />' +
+							'" style="width: 400px" /><br /><br />' +
 							'<input type="button" onclick="networkRegister(BX(\'b24net_url\').value)" value="<?=GetMessageJS('SOC_OPT_B24NET_GET')?>">' +
 							'</div><div id="b24net_out" style="display: none"></div>'
 					})
@@ -312,6 +319,18 @@ foreach($arSiteList as $site):
 endforeach; //foreach($arSiteList as $site)
 
 $tabControl->BeginNextTab();
+
+$groups = array();
+$z = CGroup::GetList(($v1=""), ($v2=""), array("ACTIVE"=>"Y"/*, "ADMIN"=>"N", "ANONYMOUS"=>"N"*/));
+while($zr = $z->Fetch())
+{
+	$ar = array();
+	$ar["ID"] = intval($zr["ID"]);
+	$ar["NAME"] = htmlspecialcharsbx($zr["NAME"]);
+	$arGROUPS[] = $ar;
+
+	$groups[$zr["ID"]] = $zr["NAME"]." [".$zr["ID"]."]";
+}
 ?>
 	<tr>
 		<td><?echo GetMessage("SOC_OPT_MAIN_REG")?>: </td>
@@ -326,20 +345,14 @@ else:
 			<span style="color: red;"><?echo GetMessage("SOC_OPT_MAIN_REG_N")?></span>
 <?
 endif;
-
-$groups = array();
-$z = CGroup::GetList(($v1=""), ($v2=""), array("ACTIVE"=>"Y"/*, "ADMIN"=>"N", "ANONYMOUS"=>"N"*/));
-while($zr = $z->Fetch())
-{
-	$ar = array();
-	$ar["ID"] = intval($zr["ID"]);
-	$ar["NAME"] = htmlspecialcharsbx($zr["NAME"]);
-	$arGROUPS[] = $ar;
-
-	$groups[$zr["ID"]] = $zr["NAME"]." [".$zr["ID"]."]";
-}
-
 ?>
+		</td>
+	</tr>
+	<tr>
+		<td><label for="allow_registration"><?echo GetMessage("SOC_OPT_SOC_REG")?>: </label></td>
+		<td>
+			<input type="hidden" name="allow_registration" value="N" />
+			<input type="checkbox" name="allow_registration" id="allow_registration" value="Y"<?=$allowAuthorization ? ' checked="checked"' : ''?> />
 		</td>
 	</tr>
 	<tr>

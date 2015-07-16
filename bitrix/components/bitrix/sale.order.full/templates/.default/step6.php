@@ -48,7 +48,19 @@
 								{
 									if (strlen($arResult["PAY_SYSTEM"]["PATH_TO_ACTION"])>0)
 									{
-										include($arResult["PAY_SYSTEM"]["PATH_TO_ACTION"]);
+										try
+										{
+											include($arResult["PAY_SYSTEM"]["PATH_TO_ACTION"]);
+										}
+										catch(\Bitrix\Main\SystemException $e)
+										{
+											if($e->getCode() == CSalePaySystemAction::GET_PARAM_VALUE)
+												$message = GetMessage("SOA_TEMPL_ORDER_PS_ERROR");
+											else
+												$message = $e->getMessage();
+
+											echo '<span style="color:red;">'.$message.'</span>';
+										}
 									}
 								}
 								?>

@@ -246,7 +246,10 @@ class CFileMan
 		$this->arFILE_TYPES = Array("SOURCE"=>GetMessage("FILEMAN_FILEMAN_SCRIPT_TEXT"), "IMAGE"=>GetMessage("FILEMAN_FILEMAN_PIC"), "UNKNOWN"=>GetMessage("FILEMAN_FILEMAN_UNK"));
 	}
 
-	function OnGroupDelete($group_id){return "";}
+	function OnGroupDelete($group_id)
+	{
+		return "";
+	}
 
 	function GetVersion()
 	{
@@ -284,7 +287,7 @@ class CFileMan
 
 			if(is_array($arMenuItem[2]))
 			{
-				for($j=0; $j<count($arMenuItem[2]); $j++)
+				for($j = 0, $l = count($arMenuItem[2]); $j < $l; $j++)
 				{
 					if($j>0)
 						$strMenuLinksTmp .= ", ";
@@ -297,7 +300,7 @@ class CFileMan
 			if(is_array($arMenuItem[3]))
 			{
 				$arParams = array_keys($arMenuItem[3]);
-				for($j=0; $j<count($arParams); $j++)
+				for($j = 0, $l = count($arParams); $j < $l; $j++)
 				{
 					if($j>0)
 						$strMenuLinksTmp .= ", ";
@@ -592,7 +595,7 @@ class CFileMan
 			{
 				if ($bOverride)
 				{
-					$strWarn = CFileMan::DeleteEx($path_to);
+					$strWarn = CFileMan::DeleteEx(Array($site_to, $path_to));
 					if ($strWarn != "")
 						return $strWarn;
 				}
@@ -672,7 +675,7 @@ class CFileMan
 					{
 						if ($bOverride)
 						{
-							$strWarn = CFileMan::DeleteEx($path_to."/".$fn);
+							$strWarn = CFileMan::DeleteEx(Array($site_to, $path_to."/".$fn));
 							if ($strWarn != "")
 								$strWarning .=  $strWarn."\n";
 						}
@@ -760,7 +763,9 @@ class CFileMan
 			if(strlen($site)>0)
 			{
 				$res = CSite::GetByID($site);
-				if(!($arSite = $res->Fetch()))
+				if($arSite = $res->Fetch())
+					$site = $arSite['ID'];
+				else
 					$site = false;
 			}
 			else
@@ -1033,13 +1038,15 @@ class CFileMan
 	function ShowTypeSelector($params)
 	{
 		global $USER;
-		$useEditor3 = COption::GetOptionString('fileman', "use_editor_3", "N") == "Y";
+		$useEditor3 = COption::GetOptionString('fileman', "use_editor_3", "Y") == "Y";
 		$name = $params['name'];
 		$key = isset($params['key']) ? $params['key'] : '';
 		$showTextType = isset($params['strTextTypeFieldName']) && $params['strTextTypeFieldName'];
 		$strTextTypeFieldName = $params['strTextTypeFieldName'];
 		$textType = $params['strTextTypeValue'] == 'html' ? 'html' : 'text';
 		$bxid = 'bxed_'.$name;
+
+		$replaceNewLines = COption::GetOptionString('fileman', "replace_new_lines", "Y") == "Y";
 
 		if ($textType == 'html')
 		{
@@ -1105,6 +1112,7 @@ class CFileMan
 				top.changeType_<?= $name?> = window.changeType_<?= $name?> = function(bSave)
 				{
 					var
+						replaceNewLines = <?= $replaceNewLines ? 'true' : 'false'?>,
 						pOptHtml = BX("<?= $bxid?>_html"),
 						pOptEditor = BX("<?= $bxid?>_editor");
 
@@ -1137,13 +1145,49 @@ class CFileMan
 						editor = window.BXHtmlEditor.Get(editorName),
 						textareaValue = textarea.value || '';
 
+					replaceNewLines = replaceNewLines && window.BXHtmlEditor.ReplaceNewLines;
+
+					if (replaceNewLines)
+					{
+						if (curType == 'html')
+						{
+							textareaValue = window.BXHtmlEditor.ReplaceNewLines(textareaValue);
+							textarea.value = textareaValue;
+						}
+						else if (curType == 'editor')
+						{
+							textareaValue = window.BXHtmlEditor.ReplaceNewLines(textareaValue);
+						}
+						else
+						{
+							textareaValue = window.BXHtmlEditor.ReplaceNewLinesBack(textareaValue);
+							textarea.value = textareaValue;
+						}
+					}
+
+					function runEditor(editor, textareaValue)
+					{
+						textarea.style.display = "none";
+
+						editor.Show();
+						if (editor.sandbox.inited)
+						{
+							editor.SetContent(textareaValue, true);
+						}
+						else
+						{
+							BX.addCustomEvent(editor, "OnCreateIframeAfter", function()
+							{
+								editor.SetContent(textareaValue, true);
+							});
+						}
+					}
+
 					if (editor && editor.Check())
 					{
 						if(show)
 						{
-							textarea.style.display = "none";
-							editor.Show();
-							editor.SetContent(textareaValue, true);
+							runEditor(editor, textareaValue);
 						}
 						else
 						{
@@ -1151,6 +1195,10 @@ class CFileMan
 								editor.SaveContent();
 							editor.Hide();
 							textarea.style.display = "";
+							if (replaceNewLines && curType == 'text')
+							{
+								textareaValue = textarea.value = window.BXHtmlEditor.ReplaceNewLinesBack(textarea.value);
+							}
 						}
 					}
 					else if(show)
@@ -1159,17 +1207,7 @@ class CFileMan
 						{
 							if (editor.id == editorName)
 							{
-								if (editor.sandbox.inited)
-								{
-									editor.SetContent(textareaValue, true);
-								}
-								else
-								{
-									BX.addCustomEvent(editor, "OnIframeInit", function()
-									{
-										editor.SetContent(textareaValue, true);
-									});
-								}
+								runEditor(editor, textareaValue);
 							}
 						});
 						window.BXHtmlEditor.Show(false, editorName);
@@ -1213,7 +1251,7 @@ class CFileMan
 								pMainObj.SetContent(pMainObj.PreparseHeaders(el.value));
 								pMainObj.Show(true);
 								pMainObj.LoadContent();
-							}
+							};
 
 							el.style.display = "none";
 							if(!el.pMainObj)
@@ -1298,13 +1336,22 @@ class CFileMan
 		$strTextValue = htmlspecialcharsback($strTextValue);
 		$dontShowTA = isset($arAdditionalParams['dontshowta']) ? $arAdditionalParams['dontshowta'] : false;
 
-		$textType = CFileMan::ShowTypeSelector(array(
-			'name' => $strTextFieldName,
-			'key' => $arAdditionalParams['saveEditorKey'],
-			'strTextTypeFieldName' => $strTextTypeFieldName,
-			'strTextTypeValue' => $strTextTypeValue,
-			'bSave' => $arAdditionalParams['saveEditorState'] !== false
-		));
+		if ($arAdditionalParams['hideTypeSelector'])
+		{
+			$textType = $strTextTypeValue == 'html' ? 'editor' : 'text';
+			?><input type="hidden" name="<?= $strTextTypeFieldName?>" value="<?= $strTextTypeValue?>"/><?
+		}
+		else
+		{
+			$textType = CFileMan::ShowTypeSelector(array(
+				'name' => $strTextFieldName,
+				'key' => $arAdditionalParams['saveEditorKey'],
+				'strTextTypeFieldName' => $strTextTypeFieldName,
+				'strTextTypeValue' => $strTextTypeValue,
+				'bSave' => $arAdditionalParams['saveEditorState'] !== false
+			));
+		}
+
 		$curHTMLEd = $textType == 'editor';
 		setEditorEventHandlers($strTextFieldName);
 		?>
@@ -1340,6 +1387,9 @@ class CFileMan
 
 		if (isset($arAdditionalParams['toolbarConfig']))
 			$arParams['toolbarConfig'] = $arAdditionalParams['toolbarConfig'];
+
+		if (isset($arAdditionalParams['componentFilter']))
+			$arParams['componentFilter'] = $arAdditionalParams['componentFilter'];
 
 		$arParams['setFocusAfterShow'] = isset($arParams['setFocusAfterShow']) ? $arParams['setFocusAfterShow'] : false;
 
@@ -1384,8 +1434,15 @@ class CFileMan
 		static $bFirstUsed;
 		$template = $arParams["templateID"];
 
-		if (!isset($template) && defined(SITE_TEMPLATE_ID))
+		if (!isset($template) && defined('SITE_TEMPLATE_ID'))
+		{
 			$template = SITE_TEMPLATE_ID;
+		}
+
+		if (!isset($template) && isset($_GET['siteTemplateId']))
+		{
+			$template = $_GET['siteTemplateId'];
+		}
 
 		if (!isset($template) && isset($site))
 		{
@@ -1404,7 +1461,7 @@ class CFileMan
 		}
 		else
 		{
-			$useEditor3 = COption::GetOptionString('fileman', "use_editor_3", "N") == "Y";
+			$useEditor3 = COption::GetOptionString('fileman', "use_editor_3", "Y") == "Y";
 		}
 
 		if ($useEditor3)
@@ -1420,7 +1477,10 @@ class CFileMan
 				'bAllowPhp' => !$arParams["bWithoutPHP"] && $USER->CanDoOperation('edit_php'),
 				"limitPhpAccess" => $arParams["limit_php_access"],
 				"display" => $arParams['bDisplay'],
-				"setFocusAfterShow" => isset($arParams['setFocusAfterShow']) ? $arParams['setFocusAfterShow'] : true
+				"componentFilter" => (isset($arParams['componentFilter']) ? $arParams['componentFilter'] : false),
+				"setFocusAfterShow" => isset($arParams['setFocusAfterShow']) ? $arParams['setFocusAfterShow'] : true,
+				"relPath" => $relPath,
+				"templateId" => $template
 			));
 			return;
 		}
@@ -1459,16 +1519,16 @@ class CFileMan
 		$arParams["body_id"] = COption::GetOptionString("fileman", "editor_body_id", "");
 
 		?>
-		<script>
+		<script bxrunfirst="true">
 			var relPath = "<?= CUtil::JSEscape($relPath);?>";
 			var <? echo 'ar_'.$name.'_taskbars';?> = {};
 			<?
-			for ($k = 0; $k < count($arTaskbars); $k++)
+			for ($k = 0, $l = count($arTaskbars); $k < $l; $k++)
 				echo 'ar_'.$name.'_taskbars["'.$arTaskbars[$k].'"] = true;';
 			if ($arToolbars !== false)
 			{
 				echo 'var  ar_'.$name.'_toolbars = {};';
-				for ($k = 0; $k < count($arToolbars); $k++)
+				for ($k = 0, $l = count($arToolbars); $k < $l; $k++)
 					echo 'ar_'.$name.'_toolbars["'.$arToolbars[$k].'"] = true;';
 			}
 			else
@@ -1490,7 +1550,7 @@ class CFileMan
 				$arTemplates[] = Array('value'=>$ar_site_templates['ID'], 'name'=>$ar_site_templates['NAME']);
 
 			?>
-			<script>
+			<script bxrunfirst="true">
 				var
 					arBXTemplates = <?= CUtil::PhpToJSObject($arTemplates)?>,
 					BXSite = "<?= CUtil::JSEscape($site)?>",
@@ -1536,7 +1596,7 @@ class CFileMan
 			<script type="text/javascript" src="/bitrix/admin/fileman_js.php?lang=<?=LANGUAGE_ID?>&v=<?=@filemtime($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/fileman/lang/'.LANGUAGE_ID.'/admin/fileman_js.php')?>"></script>
 			<script type="text/javascript" src="/bitrix/admin/fileman_common_js.php?s=<?=$str_taskbars?>"></script>
 			<?
-			for($i = 0; $i < count($arr); $i++)
+			for($i = 0, $l = count($arr); $i < $l; $i++)
 			{
 				$script_filename = $arr[$i];
 				?><script type="text/javascript" src="/bitrix/admin/htmleditor2/<?=$script_filename?>?v=<?=@filemtime($_SERVER['DOCUMENT_ROOT'].'/bitrix/admin/htmleditor2/'.$script_filename)?>"></script><?
@@ -1544,7 +1604,7 @@ class CFileMan
 			?>
 			<script type="text/javascript" src="/bitrix/js/main/popup_menu.js?v=<?=@filemtime($_SERVER['DOCUMENT_ROOT'].'/bitrix/js/main/popup_menu.js')?>"></script>
 			<?
-			for($i=0; $i< count($arCSS); $i++) // Additional CSS files from event OnBeforeHtmlEditorScriptGet
+			for($i = 0, $l = count($arCSS); $i < $l; $i++) // Additional CSS files from event OnBeforeHtmlEditorScriptGet
 			{
 				$arCSS[$i] = preg_replace("/[^a-zA-Z0-9_:\.]/is", "", $arCSS[$i]);
 				if(!file_exists($_SERVER['DOCUMENT_ROOT'].'/bitrix/admin/htmleditor2/'.$arCSS[$i]))
@@ -1713,7 +1773,7 @@ class CFileMan
 				$matches = array();
 				if (preg_match_all($pattern, $ar_templ["STYLES"], $matches))
 				{
-					for ($j = 0; $j < count($matches[0]); $j++)
+					for ($j = 0, $l = count($matches[0]); $j < $l; $j++)
 					{
 						$str = $matches[0][$j];
 						$url = trim(trim($matches[1][$j]), '"\';');
@@ -1735,6 +1795,7 @@ class CFileMan
 
 				$arResult["STYLES"] = $ar_templ["STYLES"];
 				$arResult["STYLES_TITLE"] = $ar_templ["STYLES_TITLE"];
+				$arResult["EDITOR_STYLES"] = $ar_templ["EDITOR_STYLES"];
 			}
 		}
 		else
@@ -1765,7 +1826,7 @@ class CFileMan
 		if (isset($arAdditionalParams['additionalCSS']))
 		{
 			$additionalCSS = $arAdditionalParams['additionalCSS'];
-			for ($i = 0; $i < count($additionalCSS);$i++)
+			for ($i = 0, $l = count($additionalCSS); $i < $l; $i++)
 			{
 				$css_file_path = $additionalCSS[$i];
 				$arResult["STYLES"] .= "\r\n".$APPLICATION->GetFileContent($css_file_path);
@@ -1893,8 +1954,10 @@ class CFileMan
 
 					//Get taskbar settings
 					$taskbars = CUserOptions::GetOption("fileman", "taskbar_settings_".$edname, false);
-					if ($taskbars !== false)
+					if ($taskbars !== false && CheckSerializedData($taskbars, 10))
 						$taskbars = unserialize($taskbars);
+					else
+						$taskbars = false;
 
 					if (is_array($taskbars))
 					{
@@ -1928,8 +1991,10 @@ class CFileMan
 		//Get taskbarset settings
 		$taskbarset = CUserOptions::GetOption("fileman", "taskbarset_settings_".$edname, false);
 
-		if ($taskbarset !== false)
+		if ($taskbarset !== false && CheckSerializedData($taskbarset, 10))
 			$taskbarset = unserialize($taskbarset);
+		else
+			$taskbarset = false;
 
 		if (is_array($taskbarset))
 		{
@@ -1959,11 +2024,9 @@ class CFileMan
 
 	function CheckFileName($str)
 	{
-		//if (preg_match("/[^a-zA-Z0-9\s!\$\(\)\[\]\{\}\-\.;=@\^_\~]/is", $str))
-		//	return GetMessage("FILEMAN_NAME_ERROR");
 		$io = CBXVirtualIo::GetInstance();
 		if (!$io->ValidateFilenameString($str))
-			return GetMessage("FILEMAN_NAME_ERROR");
+			return GetMessage("FILEMAN_NAME_ERR");
 		return true;
 	}
 
@@ -1974,13 +2037,20 @@ class CFileMan
 			'keywords' => GetMessage("FILEMAN_OPTION_PROPS_KEYW")
 		);
 		$res = COption::GetOptionString('fileman', "propstypes", addslashes(serialize($defRes)), $site);
-		$res = unserialize(stripslashes($res));
+		if (CheckSerializedData($res))
+			$res = unserialize(stripslashes($res));
+		else
+			$res = $defRes;
 		return $res;
 	}
 
 	function SetPropstypes($arPT = Array(), $desc = false, $site = "")
 	{
-		COption::SetOptionString('fileman', "propstypes", addslashes(serialize($arPT)), $desc, $site);
+		$str = addslashes(serialize($arPT));
+		if (strlen($str) > 2000)
+			return false;
+		return COption::SetOptionString('fileman', "propstypes", $str, $desc, $site);
+
 	}
 
 	function OnModuleUpdate($arParams)
@@ -2065,9 +2135,8 @@ class CFileMan
 
 	function GetLastPathes()
 	{
-		//CUserOptions::SetOption("fileman", "last_pathes", false);
 		$arPathes = CUserOptions::GetOption("fileman", "last_pathes", false);
-		$arPathes = $arPathes === false ? CFileMan::GetLastPathesDefault() : unserialize($arPathes);
+		$arPathes = ($arPathes === false || !CheckSerializedData($arPathes)) ? CFileMan::GetLastPathesDefault() : unserialize($arPathes);
 		$arPathes = array_slice($arPathes, 0, 10);
 
 		return $arPathes;
@@ -2089,7 +2158,7 @@ class CFileMan
 	function GetEditorToolbarConfig($editorType)
 	{
 		$res = COption::GetOptionString('fileman', "toolbar_config_".$editorType, false);
-		if ($res)
+		if ($res && CheckSerializedData($res))
 		{
 			$arConfig = unserialize($res);
 			if (is_array($arConfig))

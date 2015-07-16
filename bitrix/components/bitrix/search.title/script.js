@@ -17,6 +17,7 @@ function JCTitleSearch(arParams)
 	this.cache_key = null;
 
 	this.startText = '';
+	this.running = false;
 	this.currentRow = -1;
 	this.RESULT = null;
 	this.CONTAINER = null;
@@ -25,24 +26,23 @@ function JCTitleSearch(arParams)
 
 	this.ShowResult = function(result)
 	{
-		var pos = BX.pos(_this.CONTAINER);
-		pos.width = pos.right - pos.left;
-		_this.RESULT.style.position = 'absolute';
-		_this.RESULT.style.top = (pos.bottom + 2) + 'px';
-		_this.RESULT.style.left = pos.left + 'px';
-		_this.RESULT.style.width = pos.width + 'px';
-		if(result != null)
+		if(BX.type.isString(result))
+		{
 			_this.RESULT.innerHTML = result;
+		}
 
-		if(_this.RESULT.innerHTML.length > 0)
-			_this.RESULT.style.display = 'block';
-		else
-			_this.RESULT.style.display = 'none';
+		_this.RESULT.style.display = _this.RESULT.innerHTML !== '' ? 'block' : 'none';
+		var pos = _this.adjustResultNode();
 
-		//ajust left column to be an outline
+		//adjust left column to be an outline
+		var res_pos;
 		var th;
 		var tbl = BX.findChild(_this.RESULT, {'tag':'table','class':'title-search-result'}, true);
-		if(tbl) th = BX.findChild(tbl, {'tag':'th'}, true);
+		if(tbl)
+		{
+			th = BX.findChild(tbl, {'tag':'th'}, true);
+		}
+
 		if(th)
 		{
 			var tbl_pos = BX.pos(tbl);
@@ -63,7 +63,7 @@ function JCTitleSearch(arParams)
 
 			//Check if table is too wide and shrink result div to it's width
 			tbl_pos = BX.pos(tbl);
-			var res_pos = BX.pos(_this.RESULT);
+			res_pos = BX.pos(_this.RESULT);
 			if(res_pos.right > tbl_pos.right)
 			{
 				_this.RESULT.style.width = (tbl_pos.right - tbl_pos.left) + 'px';
@@ -81,7 +81,7 @@ function JCTitleSearch(arParams)
 			fade.style.height = (res_pos.bottom - res_pos.top) + 'px';
 			fade.style.display = 'block';
 		}
-	}
+	};
 
 	this.onKeyPress = function(keyCode)
 	{
@@ -89,6 +89,7 @@ function JCTitleSearch(arParams)
 		if(!tbl)
 			return false;
 
+		var i;
 		var cnt = tbl.rows.length;
 
 		switch (keyCode)
@@ -104,7 +105,7 @@ function JCTitleSearch(arParams)
 				_this.RESULT.style.display = 'block';
 
 			var first = -1;
-			for(var i = 0; i < cnt; i++)
+			for(i = 0; i < cnt; i++)
 			{
 				if(!BX.findChild(tbl.rows[i], {'class':'title-search-separator'}, true))
 				{
@@ -134,7 +135,7 @@ function JCTitleSearch(arParams)
 				_this.RESULT.style.display = 'block';
 
 			var last = -1;
-			for(var i = cnt-1; i >= 0; i--)
+			for(i = cnt-1; i >= 0; i--)
 			{
 				if(!BX.findChild(tbl.rows[i], {'class':'title-search-separator'}, true))
 				{
@@ -162,7 +163,7 @@ function JCTitleSearch(arParams)
 		case 13: // enter key - choose current search result
 			if(_this.RESULT.style.display == 'block')
 			{
-				for(var i = 0; i < cnt; i++)
+				for(i = 0; i < cnt; i++)
 				{
 					if(_this.currentRow == i)
 					{
@@ -182,17 +183,21 @@ function JCTitleSearch(arParams)
 		}
 
 		return false;
-	}
+	};
 
 	this.onTimeout = function()
 	{
 		_this.onChange(function(){
 			setTimeout(_this.onTimeout, 500);
 		});
-	}
+	};
 
 	this.onChange = function(callback)
 	{
+		if (_this.running)
+			return;
+		_this.running = true;
+
 		if(_this.INPUT.value != _this.oldValue && _this.INPUT.value != _this.startText)
 		{
 			_this.oldValue = _this.INPUT.value;
@@ -230,6 +235,7 @@ function JCTitleSearch(arParams)
 								_this.WAIT.style.display = 'none';
 							if (!!callback)
 								callback();
+							_this.running = false;
 						}
 					);
 					return;
@@ -250,7 +256,8 @@ function JCTitleSearch(arParams)
 		}
 		if (!!callback)
 			callback();
-	}
+		_this.running = false;
+	};
 
 	this.UnSelectAll = function()
 	{
@@ -261,7 +268,7 @@ function JCTitleSearch(arParams)
 			for(var i = 0; i < cnt; i++)
 				tbl.rows[i].className = '';
 		}
-	}
+	};
 
 	this.EnableMouseEvents = function()
 	{
@@ -287,18 +294,18 @@ function JCTitleSearch(arParams)
 					};
 				}
 		}
-	}
+	};
 
 	this.onFocusLost = function(hide)
 	{
 		setTimeout(function(){_this.RESULT.style.display = 'none';}, 250);
-	}
+	};
 
 	this.onFocusGain = function()
 	{
 		if(_this.RESULT.innerHTML.length)
 			_this.ShowResult();
-	}
+	};
 
 	this.onKeyDown = function(e)
 	{
@@ -310,11 +317,42 @@ function JCTitleSearch(arParams)
 			if(_this.onKeyPress(e.keyCode))
 				return BX.PreventDefault(e);
 		}
-	}
+	};
 
+	this.adjustResultNode = function()
+	{
+		var pos;
+		var fixedParent = BX.findParent(_this.CONTAINER, BX.is_fixed);
+		if(!!fixedParent)
+		{
+			_this.RESULT.style.position = 'fixed';
+			_this.RESULT.style.zIndex = BX.style(fixedParent, 'z-index') + 2;
+			pos = BX.pos(_this.CONTAINER, true);
+		}
+		else
+		{
+			_this.RESULT.style.position = 'absolute';
+			pos = BX.pos(_this.CONTAINER);
+		}
+		pos.width = pos.right - pos.left;
+		_this.RESULT.style.top = (pos.bottom + 2) + 'px';
+		_this.RESULT.style.left = pos.left + 'px';
+		_this.RESULT.style.width = pos.width + 'px';
+		return pos;
+	};
+
+	this._onContainerLayoutChange = function()
+	{
+		if(_this.RESULT.style.display !== "none" && _this.RESULT.innerHTML !== '')
+		{
+			_this.adjustResultNode();
+		}
+	};
 	this.Init = function()
 	{
 		this.CONTAINER = document.getElementById(this.arParams.CONTAINER_ID);
+		BX.addCustomEvent(this.CONTAINER, "OnNodeLayoutChange", this._onContainerLayoutChange);
+
 		this.RESULT = document.body.appendChild(document.createElement("DIV"));
 		this.RESULT.className = 'title-search-result';
 		this.INPUT = document.getElementById(this.arParams.INPUT_ID);
@@ -339,7 +377,6 @@ function JCTitleSearch(arParams)
 		}
 
 		BX.bind(this.INPUT, 'bxchange', function() {_this.onChange()});
-	}
-
+	};
 	BX.ready(function (){_this.Init(arParams)});
 }

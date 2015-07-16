@@ -140,12 +140,13 @@ class CSecurityRedirect
 					$html_url = '<nobr><a href="'.$url.'">'.$url.'</a></nobr>';
 					$html_mess = str_replace("#URL#", $html_url, $html_mess);
 					header('X-Frame-Options: DENY');
+					header('X-Robots-Tag: noindex, nofollow');
 		?>
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=<?echo $charset?>" />
 <meta http-equiv="Refresh" content="<?=$timeout?>; URL=<?=$url?>">
-<meta name="robots" content="none" />
+<meta name="robots" content="noindex, nofollow" />
 <link rel="stylesheet" type="text/css" href="/bitrix/themes/.default/adminstyles.css" />
 <link rel="stylesheet" type="text/css" href="/bitrix/themes/.default/404.css" />
 </head>
@@ -344,7 +345,7 @@ class CSecurityRedirect
 		{
 			if(!CSecurityRedirect::IsActive())
 			{
-				COption::SetOptionString("security", "redirect_sid", md5(mt_rand()));
+				COption::SetOptionString("security", "redirect_sid", Bitrix\Security\Random::getString(32));
 				RegisterModuleDependences("main", "OnBeforeLocalRedirect", "security", "CSecurityRedirect", "BeforeLocalRedirect", "1");
 				RegisterModuleDependences("main", "OnEndBufferContent", "security", "CSecurityRedirect", "EndBufferContent", "1");
 			}

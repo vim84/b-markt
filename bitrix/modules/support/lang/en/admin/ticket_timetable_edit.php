@@ -19,4 +19,14 @@ $MESS["SUP_CUSTOM"] = "business hours:<br>(HH24:MI)";
 $MESS["SUP_ADMIN_USER_FIELDS"] = "Additional properties";
 $MESS["SUP_ADMIN_ROW_COPY"] = "Copy";
 $MESS["SUP_ADMIN_ROW_DELETE"] = "Delete row";
+$MESS["MAIN_ADMIN_MENU_LIST"] = "List";
+$MESS["MAIN_ADMIN_MENU_DELETE"] = "Delete";
+$MESS["MAIN_ADMIN_MENU_COPY"] = "Copy";
+$MESS["SUP_WEEKDAY_0"] = "Monday";
+$MESS["SUP_WEEKDAY_1"] = "Tuesday";
+$MESS["SUP_WEEKDAY_2"] = "Wednesday";
+$MESS["SUP_WEEKDAY_3"] = "Thursday";
+$MESS["SUP_WEEKDAY_4"] = "Friday";
+$MESS["SUP_WEEKDAY_5"] = "Saturday";
+$MESS["SUP_WEEKDAY_6"] = "Sunday";
 ?>

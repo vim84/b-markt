@@ -1,9 +1,9 @@
 <?
 $search_default_option = array(
 	"include_mask" => "*.php;*.html;*.htm",
-	"exclude_mask" => "/bitrix/*;/404.php;/upload/*",
+	"exclude_mask" => "/bitrix/*;/404.php;/upload/*;*/.hg/*;*/.svn/*;*/.git/*;*/cgi-bin/*",
 	"max_file_size" => "",
-	"max_execution_time" => "",
+	"max_execution_time" => "20",
 	"use_stemming" => "Y",
 	"agent_stemming" => "N",
 	"agent_duration" => 2,

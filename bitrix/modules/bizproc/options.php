@@ -50,6 +50,8 @@ if ($REQUEST_METHOD == "POST" && strlen($Update) > 0 && $bizprocPerms == "W" && 
 	COption::SetOptionString("bizproc", "limit_simultaneous_processes", $limit_simultaneous_processes ? $limit_simultaneous_processes : 0);
 	COption::SetOptionString("bizproc", "log_skip_types", $log_skip_types ? implode(',', $log_skip_types) : "");
 
+	\Bitrix\Main\Config\Option::set("bizproc", "use_gzip_compression", $_REQUEST["use_gzip_compression"]);
+
 	foreach($arSites as $site)
 	{
 		if (isset($_POST["name_template_".$site["LID"]]))
@@ -107,6 +109,17 @@ $tabControl->BeginNextTab();
 		</tr>
 	<?endfor;?>
 		<tr>
+			<td width="50%" valign="top"><?= GetMessage("BIZPROC_OPT_USE_GZIP_COMPRESSION") ?>:</td>
+			<td width="50%" valign="top">
+				<select name="use_gzip_compression">
+					<?$useGZipCompression = \Bitrix\Main\Config\Option::get("bizproc", "use_gzip_compression", "");?>
+					<option value="" <? if (empty($useGZipCompression)) echo "selected";  ?>><?= GetMessage("BIZPROC_OPT_USE_GZIP_COMPRESSION_EMPTY") ?></option>
+					<option value="Y" <? if ($useGZipCompression == "Y") echo "selected";  ?>><?= GetMessage("BIZPROC_OPT_USE_GZIP_COMPRESSION_Y") ?></option>
+					<option value="N" <? if ($useGZipCompression == "N") echo "selected";  ?>><?= GetMessage("BIZPROC_OPT_USE_GZIP_COMPRESSION_N") ?></option>
+				</select>
+			</td>
+		</tr>
+		<tr>
 			<td valign="top" colspan="2" align="center">
 			<?
 				$subTabControl->Begin();
@@ -116,7 +129,7 @@ $tabControl->BeginNextTab();
 					$curVal = COption::GetOptionString("bizproc", "name_template", "", $site["LID"]);
 						?>
 						<label><?=GetMessage("BIZPROC_NAME_TEMPLATE")?></label>:
-							<select name="<?php echo $Option[0]?>_<?php echo $site["LID"]?>">
+							<select name="name_template_<?php echo $site["LID"]?>">
 								<?
 								$arNameTemplates = CSite::GetNameTemplates();
 								$arNameTemplates = array_reverse($arNameTemplates, true); //prepend array with default '' => Site Format value

@@ -25,4 +25,5 @@ $MESS["ISSUING_CENTER"] = "Пункт выдачи";
 $MESS["STORE_SITE_ID"] = "Сайт";
 $MESS["STORE_SELECT_SITE_ID"] = "Выберите сайт";
 $MESS["CAT_FEATURE_NOT_ALLOW"] = "Данный функционал не входит в Вашу редакцию продукта.";
+$MESS["STORE_SAVE_ERROR"] = "Ошибка сохранения склада";
 ?>
