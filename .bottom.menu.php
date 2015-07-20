@@ -1,40 +1,123 @@
 <?
 $aMenuLinks = Array(
 	Array(
-		"Как купить",
-		"about/howto/",
-		Array(), 
-		Array(), 
-		"" 
-	),
-
-	Array(
-		"Доставка",
-		"about/delivery/",
+		"Наши услуги", 
+		"/services/", 
 		Array(), 
 		Array(), 
 		"" 
 	),
 	Array(
-		"О магазине",
-		"about/",
-		Array(),
-		Array(),
-		""
+		"Как заказать", 
+		"/how-to-order/", 
+		Array(), 
+		Array(), 
+		"" 
 	),
 	Array(
-		"Гарантия",
-		"about/guaranty/",
-		Array(),
-		Array(),
-		""
+		"Оплата и доставка", 
+		"/payment-and-delivery/", 
+		Array(), 
+		Array(), 
+		"" 
 	),
 	Array(
-		"Контакты",
-		"about/contacts/",
-		Array(),
-		Array(),
-		""
+		"Контакты", 
+		"/contacts/", 
+		Array(), 
+		Array(), 
+		"" 
 	),
+	Array(
+		"Уголок потребителя", 
+		"/consumer-area/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Конфиденциальность", 
+		"/privacy-policy/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Гарантия качества", 
+		"/guarantee/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Новости", 
+		"/news/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Акции", 
+		"/actions/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Статьи", 
+		"/articles/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Советы по выбору", 
+		"/tips-for-choosing/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Новинки", 
+		"/new/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Распродажа", 
+		"/sale/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Избранное", 
+		"/favorites/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Сравнение товаров", 
+		"/compare/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Список брендов", 
+		"/brands/", 
+		Array(), 
+		Array(), 
+		"" 
+	),
+	Array(
+		"Отзывы о нас", 
+		"/reviews/", 
+		Array(), 
+		Array(), 
+		"" 
+	)
 );
 ?>

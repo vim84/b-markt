@@ -67,15 +67,37 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		</div>
 		<div class="col-md-3 col-sm-3 h-contacts">
 			<span class="hc-city">Россия:</span>
-			<span class="hc-phone">+7 (812) 000-00-00</span>
+			<div class="hc-phone">
+			<?php
+			$APPLICATION->IncludeFile(
+				SITE_DIR."include/phone-russia.php",
+				Array(),
+				Array("MODE"=>"text")
+			);
+			?>
+			</div>
 			<span class="hc-notice">Звонок бесплатный</span>
 		</div>
 		<div class="col-md-2 col-sm-2">
-			<ul class="list-unstyled">
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Доставка и оплата</a></li>
-				<li><a href="#">Контакты</a></li>
-			</ul>
+			<?$APPLICATION->IncludeComponent(
+				"bitrix:menu", 
+				"top_small", 
+				array(
+					"ROOT_MENU_TYPE" => "top_small",
+					"MENU_CACHE_TYPE" => "Y",
+					"MENU_CACHE_TIME" => "36000000",
+					"MENU_CACHE_USE_GROUPS" => "N",
+					"MENU_CACHE_GET_VARS" => array(
+					),
+					"MAX_LEVEL" => "1",
+					"USE_EXT" => "N",
+					"ALLOW_MULTI_SELECT" => "N",
+					"COMPONENT_TEMPLATE" => "top_small",
+					"CHILD_MENU_TYPE" => "left",
+					"DELAY" => "N"
+				),
+				false
+			);?>
 		</div>
 	</div>
 	<div class="row search-form">

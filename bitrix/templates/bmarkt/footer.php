@@ -105,34 +105,28 @@ $APPLICATION->IncludeComponent(
 		</div>
 	</div>
 	<div class="row pre-footer">
-		<div class="col-md-2 col-sm-2">
-			<ul class="list-unstyled">
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Доставка и оплата</a></li>
-				<li><a href="#">Контакты</a></li>
-			</ul>
-		</div>
-		<div class="col-md-2 col-sm-2">
-			<ul class="list-unstyled">
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Как заказать</a></li>
-			</ul>
-		</div>
-		<div class="col-md-2 col-sm-2">
-			<ul class="list-unstyled">
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Как заказать</a></li>
-			</ul>
-		</div>
-		<div class="col-md-2 col-sm-2">
-			<ul class="list-unstyled">
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Как заказать</a></li>
-				<li><a href="#">Как заказать</a></li>
-			</ul>
-		</div>
+		<?php
+		$APPLICATION->IncludeComponent(
+			"bitrix:menu", 
+			"bottom", 
+			array(
+				"ROOT_MENU_TYPE" => "bottom",
+				"MENU_CACHE_TYPE" => "Y",
+				"MENU_CACHE_TIME" => "36000000",
+				"MENU_CACHE_USE_GROUPS" => "N",
+				"MENU_CACHE_GET_VARS" => array(
+				),
+				"MAX_LEVEL" => "1",
+				"USE_EXT" => "N",
+				"ALLOW_MULTI_SELECT" => "N",
+				"COMPONENT_TEMPLATE" => "top_small",
+				"CHILD_MENU_TYPE" => "left",
+				"DELAY" => "N"
+			),
+			false
+		);
+		?>
+
 		<div class="col-md-4 col-sm-4">
 			<form role="form">
 				<div class="form-group">
