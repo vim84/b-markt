@@ -137,38 +137,93 @@ $APPLICATION->IncludeComponent(
 			</form>
 		</div>
 	</div>
-	<div class="row">
+	<div class="row footer-row">
 		<div class="col-md-8 col-sm-8">
-			<p>
-				Информация
-			</p>
+			<?php
+			$APPLICATION->IncludeFile(
+				SITE_DIR."include/footer-text.php",
+				Array(),
+				Array("MODE"=>"html")
+			);
+			?>
 		</div>
 		<div class="col-md-4 col-sm-4">
-			<p>
-				Принимаем к оплате
-			</p><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/40/" />
+			<p>Принимаем к оплате</p>
+			<img alt="Принимаем к оплате — B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/pays.png" />
 		</div>
 	</div>
-	<div class="row">
+	<div class="row footer-row">
 		<div class="col-md-3 col-sm-3">
-			<img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/60/" />
+			<img alt="B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/logo-f.png" /><br /><br />
+			<?php
+			$APPLICATION->IncludeFile(
+				SITE_DIR."include/footer-copyright.php",
+				Array(),
+				Array("MODE"=>"html")
+			);
+			?>
 			<p>Копирайт</p>
 		</div>
 		<div class="col-md-3 col-sm-3">
-			<ul class="list-unstyled list-inline">
-				<li>
-					VK
-				</li>
-				<li>
-					FB
-				</li>
-				<li>
-					TW
-				</li>
-				<li>
-					G+
-				</li>
-			</ul>
+			<?php
+			$APPLICATION->IncludeComponent(
+	"bitrix:news.list", 
+	"f-social-list", 
+	array(
+		"IBLOCK_TYPE" => "banners",
+		"IBLOCK_ID" => "5",
+		"NEWS_COUNT" => "5",
+		"SORT_BY1" => "SORT",
+		"SORT_ORDER1" => "ASC",
+		"SORT_BY2" => "TIMESTAMP_X",
+		"SORT_ORDER2" => "DESC",
+		"FILTER_NAME" => "arrFilter",
+		"FIELD_CODE" => array(
+			0 => "NAME",
+			1 => "DETAIL_PICTURE",
+			2 => "",
+		),
+		"PROPERTY_CODE" => array(
+			0 => "SOCIAL_LINK",
+			1 => "",
+		),
+		"CHECK_DATES" => "N",
+		"DETAIL_URL" => "",
+		"AJAX_MODE" => "N",
+		"AJAX_OPTION_JUMP" => "N",
+		"AJAX_OPTION_STYLE" => "Y",
+		"AJAX_OPTION_HISTORY" => "N",
+		"CACHE_TYPE" => "A",
+		"CACHE_TIME" => "3600000",
+		"CACHE_FILTER" => "N",
+		"CACHE_GROUPS" => "N",
+		"PREVIEW_TRUNCATE_LEN" => "",
+		"ACTIVE_DATE_FORMAT" => "d.m.Y",
+		"SET_TITLE" => "N",
+		"SET_STATUS_404" => "N",
+		"INCLUDE_IBLOCK_INTO_CHAIN" => "N",
+		"ADD_SECTIONS_CHAIN" => "N",
+		"HIDE_LINK_WHEN_NO_DETAIL" => "N",
+		"PARENT_SECTION" => "",
+		"PARENT_SECTION_CODE" => "",
+		"INCLUDE_SUBSECTIONS" => "N",
+		"PAGER_TEMPLATE" => ".default",
+		"DISPLAY_TOP_PAGER" => "N",
+		"DISPLAY_BOTTOM_PAGER" => "N",
+		"PAGER_TITLE" => "Новости",
+		"PAGER_SHOW_ALWAYS" => "N",
+		"PAGER_DESC_NUMBERING" => "N",
+		"PAGER_DESC_NUMBERING_CACHE_TIME" => "36000",
+		"PAGER_SHOW_ALL" => "N",
+		"AJAX_OPTION_ADDITIONAL" => "",
+		"COMPONENT_TEMPLATE" => "f-social-list",
+		"SET_BROWSER_TITLE" => "N",
+		"SET_META_KEYWORDS" => "N",
+		"SET_META_DESCRIPTION" => "N"
+	),
+	false
+);
+			?>
 		</div>
 		<div class="col-md-6 col-sm-6">
 		</div>
