@@ -1,6 +1,87 @@
-<?
+<?php
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
-$APPLICATION->SetTitle("Интернет-магазин \"Одежда\"");
+$APPLICATION->SetTitle("Интернет-магазин B-Markt");
+?>
+	<div class="row reviews-wrap">
+		<div class="col-md-3 col-sm-3">
+			<h4>Отзывы о нас</h4>
+			<ul class="list-unstyled">
+				<li>
+					<a href="#">Отзыв 1</a>
+				</li>
+				<li>
+					<a href="#">Отзыв 2</a>
+				</li>
+			</ul>
+			<a href="#">Показать ещё</a>
+		</div>
+		<div class="col-md-3 col-sm-3">
+			<p>Не знаете как выбрать?</p>
+			<a href="#">Мы подскажем!</a>
+		</div>
+		<div class="col-md-3 col-sm-3">
+			<p>Служба установки</p>
+			<a href="#">Решаем проблемы!</a>
+		</div>
+		<div class="col-md-3 col-sm-3">
+			<p>Качество гарантировано производителем</p>
+			<a href="#">Сервисные центры</a>
+		</div>
+	</div>
+	<div class="row goods-list gl-hits">
+		<div class="col-md-12"><h4>Хиты и новинки</h4></div>
+			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
+				<div class="gl-item">
+					<span class="label label-warning">New</span>
+					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
+					<h4>Duravit Starck 3</h4>
+					<p>Унитаз подвесной без сидения</p>	
+					<div class="gl-buy-block">
+						<span class="gl-price">23 490 р.</span>
+						<a href="#" class="btn btn-success" type="button">В корзину</a>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
+				<div class="gl-item">
+					<span class="label label-primary">Хит</span>
+					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
+					<h4>Duravit Starck 3</h4>
+					<p>Унитаз подвесной без сидения</p>
+					<div class="gl-buy-block">
+						<span class="gl-price">23 490 р.</span>
+						<a href="#" class="btn btn-success" type="button">В корзину</a>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
+				<div class="gl-item">
+					<span class="label label-warning">New</span>
+					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
+					<h4>Duravit Starck 3</h4>
+					<p>Унитаз подвесной без сидения</p>
+					
+					<div class="gl-buy-block">
+						<span class="gl-price">23 490 р.</span>
+						<a href="#" class="btn btn-success" type="button">В корзину</a>
+					</div>
+				</div>
+			</div>
+			
+			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
+				<div class="gl-item">
+					<span class="label label-warning">New</span>
+					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
+					<h4>Duravit Starck 3</h4>
+					<p>Унитаз подвесной без сидения</p>	
+					<div class="gl-buy-block">
+						<span class="gl-price">23 490 р.</span>
+						<a href="#" class="btn btn-success" type="button">В корзину</a>
+					</div>
+				</div>
+			</div>
+		</div>
+<?/*
 ?>
 <h2>Лучшие коллекции</h2>
 <?$APPLICATION->IncludeComponent(
@@ -257,5 +338,7 @@ $APPLICATION->SetTitle("Интернет-магазин \"Одежда\"");
 		),
 		"AJAX_OPTION_ADDITIONAL" => ""
 	)
-);?>
-<?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>
+);*/?>
+<?php
+require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");
+?>

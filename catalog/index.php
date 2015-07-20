@@ -552,8 +552,8 @@ $filterView = (COption::GetOptionString("main", "wizard_template_id", "eshop_ada
 		"COMMON_ADD_TO_BASKET_ACTION" => "ADD",
 		"SEF_URL_TEMPLATES" => array(
 			"sections" => "",
-			"section" => "#SECTION_CODE#/",
-			"element" => "#SECTION_CODE#/#ELEMENT_CODE#/",
+			"section" => "#SECTION_PATH#/",
+			"element" => "#SECTION_PATH#/el-#ELEMENT_CODE#/",
 			"compare" => "compare/",
 		)
 	),

@@ -2,6 +2,9 @@
 // ID инфоблока Каталога
 define("IBLOCK_CATALOGUE", 4);
 
+// Текст при отсутствии изображения
+define("NO_IMG_TEXT", "Нет картинки");
+
 // определим константу LOG_FILENAME, в которой зададим путь к лог-файлу
 define("LOG_FILENAME", $_SERVER["DOCUMENT_ROOT"]."/log.txt");
 
@@ -146,5 +149,53 @@ function translitBx ($string) {
 	);
 	
 	return CUtil::translit($string, "ru", $params); 
+}
+
+// Получение id-раздела по пути разделов SECTION_PATH
+// (оставил пока для совместимости)
+// Эту функцию заменит secInfoByPath
+function secIdByPath ($sectionPath = '')
+{
+	if (CModule::IncludeModule('iblock'))
+	{
+		// Массив кодов разделов
+		$arrSecCodes = explode('/', $sectionPath);
+		$arrSecCodesReverse = array_reverse($arrSecCodes);
+		
+		// Ищем по уровню вложенности, если будут разделы с одинаковым символьным кодом
+		$defLevel = count($arrSecCodes) + 1;
+		
+		$obSec = CIBlockSection::GetList(array("SORT" => "ASC"), array("IBLOCK_ID" => IBLOCK_CATALOGUE, "CODE" => $arrSecCodesReverse[0], "DEPTH_LEVEL" => $defLevel), false, array("ID", "NAME"));
+		   
+		if ($arSec = $obSec->GetNext())
+			return $arSec["ID"];
+		else 
+			return false;
+	}
+	else 
+		return false;
+}
+
+// Получение информации по пути разделов SECTION_PATH
+function secInfoByPath ($sectionPath = '')
+{
+	if (CModule::IncludeModule('iblock'))
+	{
+		// Массив кодов разделов
+		$arrSecCodes = explode('/', $sectionPath);
+		$arrSecCodesReverse = array_reverse($arrSecCodes);
+		
+		// Ищем по уровню вложенности, если будут разделы с одинаковым символьным кодом
+		$defLevel = count($arrSecCodes) + 1;
+
+		$obSec = CIBlockSection::GetList(array("SORT" => "ASC"), array("IBLOCK_ID" => IBLOCK_CATALOGUE, "CODE" => $arrSecCodesReverse[0], "DEPTH_LEVEL" => $defLevel), false, array("ID", "NAME", "CODE", "DESCRIPTION"));
+		   
+		if ($arSec = $obSec->GetNext())
+			return $arSec;
+		else 
+			return false;
+	}
+	else 
+		return false;
 }
 ?>

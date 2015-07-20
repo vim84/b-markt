@@ -1,4 +1,146 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?>
+
+<?php
+if (!$bMainPage)
+	echo '</div></div>';
+?>
+
+<div class="row news-block">
+		<div class="col-md-4 col-sm-4">
+			<h4 class="text-center">Новости</h4>
+			<ul class="list-unstyled">
+				<li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li>
+				<li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li><li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li>
+			</ul>
+			<a href="#">Другие новости</a>
+		</div>
+		<div class="col-md-4 col-sm-4">
+			<h4 class="text-center">Акции</h4>
+			<ul class="list-unstyled">
+				<li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li>
+				<li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li><li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li>
+			</ul>
+			<a href="#">Больше СКИДОК и АКЦИЙ</a>
+		</div>
+		<div class="col-md-4 col-sm-4">
+			<h4 class="text-center">Статьи</h4>
+			<ul class="list-unstyled">
+				<li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li>
+				<li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li><li>
+					<a href="#">У нас новые душевые кабинки</a>
+					<p>С этого момента вы можете купить новые душевые кабинки</p>
+				</li>
+			</ul>
+			<a href="#">Ещё статьи</a>
+		</div>
+	</div>
+	<div class="row pre-footer">
+		<div class="col-md-2 col-sm-2">
+			<ul class="list-unstyled">
+				<li><a href="#">Как заказать</a></li>
+				<li><a href="#">Доставка и оплата</a></li>
+				<li><a href="#">Контакты</a></li>
+			</ul>
+		</div>
+		<div class="col-md-2 col-sm-2">
+			<ul class="list-unstyled">
+				<li><a href="#">Как заказать</a></li>
+				<li><a href="#">Как заказать</a></li>
+				<li><a href="#">Как заказать</a></li>
+			</ul>
+		</div>
+		<div class="col-md-2 col-sm-2">
+			<ul class="list-unstyled">
+				<li><a href="#">Как заказать</a></li>
+				<li><a href="#">Как заказать</a></li>
+				<li><a href="#">Как заказать</a></li>
+			</ul>
+		</div>
+		<div class="col-md-2 col-sm-2">
+			<ul class="list-unstyled">
+				<li><a href="#">Как заказать</a></li>
+				<li><a href="#">Как заказать</a></li>
+				<li><a href="#">Как заказать</a></li>
+			</ul>
+		</div>
+		<div class="col-md-4 col-sm-4">
+			<form role="form">
+				<div class="form-group">
+					<input class="form-control" placeholder="Ваш e-mail" type="email" />
+				</div>
+			
+				<button type="submit" class="btn btn-primary btn-block">Подписаться на новости</button>
+			</form>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-8 col-sm-8">
+			<p>
+				Информация
+			</p>
+		</div>
+		<div class="col-md-4 col-sm-4">
+			<p>
+				Принимаем к оплате
+			</p><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/40/" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-3 col-sm-3">
+			<img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/60/" />
+			<p>Копирайт</p>
+		</div>
+		<div class="col-md-3 col-sm-3">
+			<ul class="list-unstyled list-inline">
+				<li>
+					VK
+				</li>
+				<li>
+					FB
+				</li>
+				<li>
+					TW
+				</li>
+				<li>
+					G+
+				</li>
+			</ul>
+		</div>
+		<div class="col-md-6 col-sm-6">
+		</div>
+	</div>
+</div>
+	<?/*?><script src="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/js/jquery.min.js")?>"></script><?*/?>
+	<script src="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/js/bootstrap.min.js")?>"></script>
+	<script src="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/js/scripts.js")?>"></script>
+  </body>
+</html>
+
+<?/*?>
 				</div> <!-- //bx_content_section-->
 				<?if ($wizTemplateId == "eshop_adapt_vertical"):?>
 				<div class="bx_sidebar">
@@ -208,3 +350,4 @@
 	<div class="menu_bg" id="bx_menu_bg"></div>
 </body>
 </html>
+<?*/?>
