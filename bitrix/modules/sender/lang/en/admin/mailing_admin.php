@@ -21,6 +21,7 @@ $MESS["rub_f_name"] = "Name";
 $MESS["sender_mailing_adm_wizard"] = "Add using Wizard";
 $MESS["sender_mailing_adm_wizard_title"] = "Create a newsletter using Wizard";
 $MESS["sender_mailing_adm_detbut_chain"] = "Messages";
+$MESS["sender_mailing_trig_adm_detbut_chain"] = "Messages";
 $MESS["sender_mailing_adm_detbut_stat"] = "Statistics";
 $MESS["sender_mailing_adm_detbut_address"] = "Recipients";
 $MESS["POST_U_YES"] = "Yes";

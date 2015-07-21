@@ -379,12 +379,12 @@ class CIBlockResult extends CDBResult
 			{
 				if($use_tilda)
 				{
-					$res["~CANONICAL_PAGE_URL"] = CIBlock::ReplaceSectionUrl($TEMPLATE, $res, true, "E");
+					$res["~CANONICAL_PAGE_URL"] = CIBlock::ReplaceDetailUrl($TEMPLATE, $res, true, "E");
 					$res["CANONICAL_PAGE_URL"] = htmlspecialcharsbx($res["~CANONICAL_PAGE_URL"]);
 				}
 				else
 				{
-					$res["CANONICAL_PAGE_URL"] = CIBlock::ReplaceSectionUrl($TEMPLATE, $res, true, "E");
+					$res["CANONICAL_PAGE_URL"] = CIBlock::ReplaceDetailUrl($TEMPLATE, $res, true, "E");
 				}
 			}
 		}

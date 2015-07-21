@@ -5,9 +5,9 @@ $ADV_RIGHT = $APPLICATION->GetGroupRight("advertising");
 if($ADV_RIGHT!="D")
 {
 	$aMenu = array(
-		"parent_menu" => "global_menu_services",
+		"parent_menu" => "global_menu_marketing",
 		"section" => "advertising",
-		"sort" => 200,
+		"sort" => 1000,
 		"text" => GetMessage("AD_MENU_MAIN"),
 		"title" => GetMessage("AD_MENU_MAIN_TITLE"),
 		"icon" => "advertising_menu_icon",

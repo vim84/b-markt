@@ -6,4 +6,6 @@ $MESS["SENDER_TEMPLATE_EDITOR_SAVE_NAME"] = "с названием";
 
 $MESS["SENDER_ENTITY_TEMPLATE_FIELD_TITLE_NAME"] = "Название";
 $MESS["SENDER_ENTITY_TEMPLATE_FIELD_TITLE_CONTENT"] = "Текст шаблона";
+$MESS["SENDER_ENTITY_TEMPLATE_NOTE_OLD_EDITOR"] = "Чтобы использовать визуальный редактор, %LINK_START%включите настройку%LINK_END% \"Использовать новый визуальный редактор\".
+<br>В теле письма доступны тэги персонализации. Они перечислены рядом с полем \"Тема письма\".";
 ?>

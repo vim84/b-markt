@@ -52,8 +52,8 @@ $MESS["T_IBLOCK_FILTER"] = "Filter";
 $MESS["T_IBLOCK_DESC_PAGER_PHOTO"] = "Photo";
 $MESS["F_READ_TEMPLATE"] = "Topic Read page (empty value - get from the forum settings)";
 $MESS["F_SHOW_LINK_TO_FORUM"] = "Show link to forum";
-$MESS["CP_BP_SET_STATUS_404"] = "Set 404 status if no element or section was found";
 $MESS["CP_BP_BROWSER_TITLE"] = "Set browser window title from property value";
 $MESS["CP_BP_LIST_BROWSER_TITLE"] = "Set browser window title from property value";
 $MESS["CP_BP_CACHE_GROUPS"] = "Respect Access Permissions";
+$MESS["CP_BP_SET_LAST_MODIFIED"] = "Set page last modified date to response header";
 ?>

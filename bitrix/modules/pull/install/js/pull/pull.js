@@ -51,9 +51,11 @@
 	_escStatus = false,
 	_sendAjaxTry = 0,
 	_confirm = null,
+	_beforeUnload = false,
 	_pathToAjax = '/bitrix/components/bitrix/pull.request/ajax.php?',
 
 	_onBeforeUnload = BX.proxy(function(){
+		_beforeUnload = true;
 		_pullTryConnect = false;
 		if (_WS) _WS.close(1000, "onbeforeunload");
 
@@ -258,8 +260,8 @@
 		if (!_pullTryConnect)
 			return false;
 
-		send = send == false? false: true;
-		withoutCache = withoutCache == true? true: false;
+		send = send != false;
+		withoutCache = withoutCache == true;
 		code = typeof(code) == 'undefined'? '0': code;
 
 		BX.ajax({
@@ -308,9 +310,13 @@
 					_channelID = null;
 					clearTimeout(_updateStateStatusTimeout);
 					BX.onCustomEvent(window, 'onPullStatus', ['offline']);
-					if (typeof(data) == 'object' && data.ERROR == 'SESSION_ERROR')
+					if (typeof(data) == 'object' && data.BITRIX_SESSID)
 					{
 						BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+					}
+
+					if (typeof(data) == 'object' && data.ERROR == 'SESSION_ERROR')
+					{
 						clearTimeout(_updateStateTimeout);
 						_updateStateTimeout = setTimeout(function(){BX.PULL.updateState('12', true)}, (_sendAjaxTry < 2? 2000: BX.PULL.tryConnectTimeout()));
 						BX.onCustomEvent(window, 'onPullError', [data.ERROR, data.BITRIX_SESSID]);
@@ -515,22 +521,29 @@
 				}
 			}
 
-			BX.onCustomEvent(window, 'onPullError', ['RECONNECT', code]);
-
-			if (typeof(console) == 'object')
+			if (_beforeUnload)
 			{
-				var text = "\n========= PULL INFO ===========\n"+
-							"time: " + new Date() + "\n"+
-							"type: websocket close\n"+
-							"code: "+code+"\n"+
-							"clean: "+(data.wasClean?'Y':'N')+"\n"+
-							"never connect: "+(neverConnect?'Y':'N')+"\n"+
-							"send connect request: "+(sendConnectRequest?'Y':'N')+"\n"+
-							(reason? "reason: "+JSON.stringify(reason)+"\n": "")+
-							"\n"+
-							"Data array: "+JSON.stringify(data)+"\n"+
-							"================================\n\n";
-				console.log(text);
+				_beforeUnload = false;
+			}
+			else
+			{
+				BX.onCustomEvent(window, 'onPullError', ['RECONNECT', code]);
+
+				if (typeof(console) == 'object')
+				{
+					var text = "\n========= PULL INFO ===========\n"+
+								"time: " + new Date() + "\n"+
+								"type: websocket close\n"+
+								"code: "+code+"\n"+
+								"clean: "+(data.wasClean?'Y':'N')+"\n"+
+								"never connect: "+(neverConnect?'Y':'N')+"\n"+
+								"send connect request: "+(sendConnectRequest?'Y':'N')+"\n"+
+								(reason? "reason: "+JSON.stringify(reason)+"\n": "")+
+								"\n"+
+								"Data array: "+JSON.stringify(data)+"\n"+
+								"================================\n\n";
+					console.log(text);
+				}
 			}
 		};
 		_WS.onmessage = function(event)
@@ -672,9 +685,14 @@
 						{
 							clearTimeout(_updateStateStatusTimeout);
 							BX.onCustomEvent(window, 'onPullStatus', ['offline']);
-							if (data.ERROR == 'SESSION_ERROR')
+
+							if (data && data.BITRIX_SESSID)
 							{
 								BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+							}
+
+							if (data.ERROR == 'SESSION_ERROR')
+							{
 								BX.onCustomEvent(window, 'onPullError', [data.ERROR, data.BITRIX_SESSID]);
 							}
 							else

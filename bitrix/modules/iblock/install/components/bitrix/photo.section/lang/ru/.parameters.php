@@ -26,8 +26,8 @@ $MESS["T_IBLOCK_DESC_PAGER_PHOTO"] = "Фотографии";
 $MESS["T_IBLOCK_DESC_ADD_SECTIONS_CHAIN"] = "Включать раздел в цепочку навигации";
 $MESS["T_IBLOCK_DESC_KEYWORDS"] = "Установить ключевые слова страницы из свойства";
 $MESS["T_IBLOCK_DESC_DESCRIPTION"] = "Установить описание страницы из свойства";
-$MESS["CP_BPS_SET_STATUS_404"] = "Устанавливать статус 404, если не найдены элемент или раздел";
 $MESS["CP_BPS_BROWSER_TITLE"] = "Установить заголовок окна браузера из свойства";
 $MESS["CP_BPS_CACHE_GROUPS"] = "Учитывать права доступа";
 $MESS["CP_BPS_SECTION_USER_FIELDS"] = "Свойства раздела";
+$MESS["CP_BPS_SET_LAST_MODIFIED"] = "Устанавливать в заголовках ответа время модификации страницы";
 ?>

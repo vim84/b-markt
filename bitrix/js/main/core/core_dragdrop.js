@@ -3,6 +3,7 @@
 
 	BX.DragDrop = function(params)
 	{
+		this.dragItemControlClassName = params.dragItemControlClassName || null;
 		this.dragNodeList =  document.body.querySelectorAll('.' + params.dragItemClassName);
 		this.dragStartCallback = params.dragStart || null;
 		this.dragCallback = params.drag || null;
@@ -88,12 +89,24 @@
 		bindDragItem : function(dragList)
 		{
 			var _this = this;
+			var dragItemControl = null;
 			for(var i=dragList.length-1; i>=0; i--)
 			{
-				dragList[i].draggable = true;
+				dragItemControl = null;
+				if(this.dragItemControlClassName)
+				{
+					dragItemControl = dragList[i].querySelector('.' + this.dragItemControlClassName);
+					dragItemControl = BX(dragItemControl);
+				}
+				if(!dragItemControl)
+				{
+					dragItemControl = dragList[i];
+				}
+
+				dragItemControl.draggable = true;
 
 				if(this.isIE){
-					BX.bind(dragList[i], 'selectstart', function(event)
+					BX.bind(dragItemControl, 'selectstart', function(event)
 					{
 						event = event || window.event;
 						BX.PreventDefault(event);
@@ -101,17 +114,17 @@
 					});
 				}
 
-				BX.bind(dragList[i], 'dragstart', function(event)
+				BX.bind(dragItemControl, 'dragstart', BX.delegate(function(event)
 				{
 					event = event || window.event;
 					_this.ondragStart(event, this);
-				});
-				BX.bind(dragList[i], 'drag', BX.proxy(this.ondrag, this));
-				BX.bind(dragList[i], 'dragend', function(event)
+				}, dragList[i]));
+				BX.bind(dragItemControl, 'drag', BX.proxy(this.ondrag, this));
+				BX.bind(dragItemControl, 'dragend', BX.delegate(function(event)
 				{
 					event = event || window.event;
 					_this.ondragEnd(event, this);
-				});
+				}, dragList[i]));
 			}
 		},
 		bindCatcher : function(catcherList)

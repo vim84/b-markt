@@ -597,4 +597,25 @@ if (isset($arCurrentValues['USE_COMPARE']) && $arCurrentValues['USE_COMPARE'] ==
 		unset($positionList);
 	}
 }
+
+$arTemplateParameters['SIDEBAR_SECTION_SHOW'] = array(
+	'PARENT' => 'VISUAL',
+	'NAME' => GetMessage('CPT_SIDEBAR_SECTION_SHOW'),
+	'TYPE' => 'CHECKBOX',
+	'DEFAULT' => 'Y',
+	'SORT' => 800
+);
+$arTemplateParameters['SIDEBAR_DETAIL_SHOW'] = array(
+	'PARENT' => 'VISUAL',
+	'NAME' => GetMessage('CPT_SIDEBAR_DETAIL_SHOW'),
+	'TYPE' => 'CHECKBOX',
+	'DEFAULT' => 'Y',
+	'SORT' => 800
+);
+$arTemplateParameters['SIDEBAR_PATH'] = array(
+	'PARENT' => 'VISUAL',
+	'NAME' => GetMessage('CPT_SIDEBAR_PATH'),
+	'TYPE' => 'STRING',
+	'SORT' => 800
+);
 ?>

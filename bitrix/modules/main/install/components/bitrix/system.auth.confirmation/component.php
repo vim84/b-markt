@@ -1,10 +1,24 @@
-<?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?><?
+<?
+if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
+{
+	die();
+}
+
 /*
 Authorization form (for prolog)
 Params:
 	REGISTER_URL => path to page with authorization script (component?)
 	PROFILE_URL => path to page with profile component
 */
+
+/**
+ * Bitrix vars
+ * @global CMain $APPLICATION
+ * @global CUser $USER
+ * @var array $arParams
+ * @var array $arResult
+ */
+
 $arParams["USER_ID"] = trim($arParams["USER_ID"]);
 if(strlen($arParams["USER_ID"]) <= 0)
 	$arParams["USER_ID"] = "confirm_user_id";

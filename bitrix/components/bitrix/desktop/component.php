@@ -575,6 +575,8 @@ foreach($arGadgets as $gadget)
 		continue;
 	if ($gadget["WEBDAV_ONLY"] == true && !IsModuleInstalled("webdav"))
 		continue;
+	if ($gadget["DISK_ONLY"] == true && !IsModuleInstalled("disk"))
+		continue;
 	if ($gadget["SALE_ONLY"] == true && !IsModuleInstalled("sale"))
 		continue;
 	if ($gadget["SALE_ONLY"] == true && $gadget["AI_ONLY"] == true && $APPLICATION->GetGroupRight("sale") == "D")

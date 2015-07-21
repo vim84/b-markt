@@ -134,6 +134,7 @@ $arParams['CACHE_GROUPS'] = trim($arParams['CACHE_GROUPS']);
 if ('N' != $arParams['CACHE_GROUPS'])
 	$arParams['CACHE_GROUPS'] = 'Y';
 
+$arParams["USE_MAIN_ELEMENT_SECTION"] = $arParams["USE_MAIN_ELEMENT_SECTION"]==="Y";
 /*************************************************************************
 			Processing of the Buy link
 *************************************************************************/
@@ -407,7 +408,9 @@ if($this->StartResultCache(false, array($arrFilter, CDBResult::NavStringForCache
 		//EXECUTE
 		$rsElements = CIBlockElement::GetList($arSort, $arrFilter, false, array("nTopCount"=>$arParams["ELEMENT_COUNT"]), $arSelect);
 		$rsElements->SetUrlTemplates($arParams["DETAIL_URL"]);
-		$rsElements->SetSectionContext($arSection);
+		if(!$arParams["USE_MAIN_ELEMENT_SECTION"])
+			$rsElements->SetSectionContext($arSection);
+
 		$arSection["ITEMS"] = array();
 		while($obElement = $rsElements->GetNextElement())
 		{

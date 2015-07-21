@@ -6237,7 +6237,7 @@ class CSocNetLogComponent
 				{
 					if(in_array($userDepartmentId, $arSiteDepartmentId))
 					{
-						$arResult = $arSite["LID"];
+						$arResult = $arSite;
 						$bFound = true;
 						break;
 					}

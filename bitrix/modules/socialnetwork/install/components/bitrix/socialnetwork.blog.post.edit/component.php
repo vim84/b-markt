@@ -1605,14 +1605,27 @@ if (
 			$arResult["PostToShow"]["CATEGORY_ID"] = $arPost["CATEGORY_ID"];
 			$arResult["PostToShow"]["FAVORITE_SORT"] = $arPost["FAVORITE_SORT"];
 			$arResult["PostToShow"]["MICRO"] = $arPost["MICRO"];
-			if($arParams["ALLOW_POST_CODE"])
+			if ($arParams["ALLOW_POST_CODE"])
+			{
 				$arResult["PostToShow"]["CODE"] = $arPost["CODE"];
+			}
 
 			$arResult["PostToShow"]["SPERM"] = CBlogPost::GetSocnetPerms($arPost["ID"]);
-			if(is_array($arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]]) && in_array("US".$arPost["AUTHOR_ID"], $arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]]))
+			if (
+				is_array($arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]])
+				&& in_array("US".$arPost["AUTHOR_ID"], $arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]])
+			)
+			{
 				$arResult["PostToShow"]["SPERM"]["U"]["A"] = Array();
-			if(!is_array($arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]]) || !in_array("U".$arPost["AUTHOR_ID"], $arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]]))
+			}
+
+			if (
+				!is_array($arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]])
+				|| !in_array("U".$arPost["AUTHOR_ID"], $arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]])
+			)
+			{
 				unset($arResult["PostToShow"]["SPERM"]["U"][$arPost["AUTHOR_ID"]]);
+			}
 		}
 		else
 		{
@@ -1974,7 +1987,10 @@ if (
 					if (
 						$type == 'U' 
 						&& $value == 'A' 
-						&& $bDefaultToAll
+						&& (
+							$bDefaultToAll
+							|| $arParams["ID"] > 0
+						)
 					)
 					{
 						$arResult["PostToShow"]["FEED_DESTINATION"]['SELECTED']['UA'] = 'groups';

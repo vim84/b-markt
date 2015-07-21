@@ -1,5 +1,9 @@
 <?
 define("ADMIN_SECTION",false);
+
+if (!empty($_REQUEST['site_id']) && preg_match('/^[a-z0-9_]{2}$/i', $_REQUEST['site_id']))
+	define('SITE_ID', $_REQUEST['site_id']);
+
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 global $APPLICATION;
 

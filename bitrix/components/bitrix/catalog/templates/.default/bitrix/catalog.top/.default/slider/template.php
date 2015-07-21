@@ -76,7 +76,7 @@ foreach ($arResult['ITEMS'] as $keyRow => $arOneRow)
 			$minPrice = (isset($arItem['RATIO_PRICE']) ? $arItem['RATIO_PRICE'] : $arItem['MIN_PRICE']);
 ?>
 	<div class="<? echo ($arItem['SECOND_PICT'] ? 'bx_catalog_item double' : 'bx_catalog_item'); ?>"><div class="bx_catalog_item_container" id="<? echo $strMainID; ?>">
-		<a id="<? echo $arItemIDs['PICT']; ?>" href="<? echo $arItem['DETAIL_PAGE_URL']; ?>" class="bx_catalog_item_images" style="background-image: url(<? echo $arItem['PREVIEW_PICTURE']['SRC']; ?>)" title="<? echo $imgTitle; ?>">
+		<a id="<? echo $arItemIDs['PICT']; ?>" href="<? echo $arItem['DETAIL_PAGE_URL']; ?>" class="bx_catalog_item_images" style="background-image: url('<? echo $arItem['PREVIEW_PICTURE']['SRC']; ?>')" title="<? echo $imgTitle; ?>">
 <?
 		if ('Y' == $arParams['SHOW_DISCOUNT_PERCENT'])
 		{
@@ -96,11 +96,11 @@ foreach ($arResult['ITEMS'] as $keyRow => $arOneRow)
 		if ($arItem['SECOND_PICT'])
 		{
 ?>
-		<a id="<? echo $arItemIDs['SECOND_PICT']; ?>" href="<? echo $arItem['DETAIL_PAGE_URL']; ?>" class="bx_catalog_item_images_double" style="background-image: url(<? echo (
+		<a id="<? echo $arItemIDs['SECOND_PICT']; ?>" href="<? echo $arItem['DETAIL_PAGE_URL']; ?>" class="bx_catalog_item_images_double" style="background-image: url('<? echo (
 				!empty($arItem['PREVIEW_PICTURE_SECOND'])
 				? $arItem['PREVIEW_PICTURE_SECOND']['SRC']
 				: $arItem['PREVIEW_PICTURE']['SRC']
-			); ?>)" title="<? echo $imgTitle; ?>">
+			); ?>')" title="<? echo $imgTitle; ?>">
 <?
 			if ('Y' == $arParams['SHOW_DISCOUNT_PERCENT'])
 			{

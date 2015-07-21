@@ -20,9 +20,26 @@ $arParams["CONFIRMATION"] = $arParams["CONFIRMATION"]!="N";
 $arParams["USE_PERSONALIZATION"] = $arParams["USE_PERSONALIZATION"]!="N";
 
 $subscr_EMAIL = '';
+$arResult["~FORM_ACTION"] = $APPLICATION->GetCurPageParam('', array('sender_subscription'));
+$arResult["FORM_ACTION"] = htmlspecialcharsbx($arResult["~FORM_ACTION"]);
+
+$messageDictionary = array(
+	'message_success' => array('TYPE' => 'NOTE', 'TEXT' => GetMessage("SENDER_SUBSCR_NOTE_SUCCESS")),
+	'message_confirm' => array('TYPE' => 'NOTE', 'TEXT' => GetMessage("SENDER_SUBSCR_NOTE_CONFIRM")),
+	'message_err_sec' => array('TYPE' => 'ERROR', 'TEXT' => GetMessage("SENDER_SUBSCR_ERR_SECURITY")),
+	'message_err_email' => array('TYPE' => 'ERROR', 'TEXT' => GetMessage("SENDER_SUBSCR_ERR_EMAIL")),
+);
+
+$cookieLifeTime = time() + 60 * 60 * 24 * 30 * 12 * 10; // 30 days * 12 months * 10 ~ 10 years
 
 if($_SERVER['REQUEST_METHOD'] == 'GET')
 {
+	if(isset($_GET['sender_subscription']) && isset($messageDictionary[$_GET['sender_subscription']]))
+	{
+		$arResult['MESSAGE'] = $messageDictionary[$_GET['sender_subscription']];
+		$arResult['MESSAGE']['CODE'] = $_GET['sender_subscription'];
+	}
+
 	if(isset($_GET['tag']) && isset($_GET['sender_subscription']) && $_GET['sender_subscription']=='confirm')
 	{
 		if(!CModule::IncludeModule("sender"))
@@ -38,13 +55,19 @@ if($_SERVER['REQUEST_METHOD'] == 'GET')
 			if($arTag['MODULE_ID'] == 'sender' && check_email($arTag['FIELDS']['EMAIL']) && is_array($arTag['FIELDS']['MAILING_LIST']) && isset($arTag['FIELDS']['SITE_ID']))
 			{
 				\Bitrix\Sender\Subscription::add($arTag['FIELDS']['EMAIL'], $arTag['FIELDS']['MAILING_LIST'], $arTag['FIELDS']['SITE_ID']);
-				$APPLICATION->set_cookie("SENDER_SUBSCR_EMAIL", $arTag['FIELDS']['EMAIL'], mktime(0, 0, 0, 12, 31, 2030));
-				$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'TEXT' => GetMessage("SENDER_SUBSCR_NOTE_SUCCESS"));
+				$APPLICATION->set_cookie("SENDER_SUBSCR_EMAIL", $arTag['FIELDS']['EMAIL'], $cookieLifeTime);
+				$subscr_EMAIL = $arTag['FIELDS']['EMAIL'];
+				$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'CODE' => 'message_success');
+
+				if($arParams['AJAX_MODE'] <> 'Y')
+				{
+					LocalRedirect($APPLICATION->GetCurPageParam('sender_subscription=message_success', array('sender_subscription')));
+				}
 			}
 		}
 		catch (\Bitrix\Main\Security\Sign\BadSignatureException $exception)
 		{
-			$arResult['MESSAGE'] = array('TYPE' => 'ERROR', 'TEXT' => GetMessage("SENDER_SUBSCR_ERR_SECURITY"));
+			$arResult['MESSAGE'] = array('TYPE' => 'ERROR', 'CODE' => 'message_err_sec');
 		}
 	}
 }
@@ -107,31 +130,48 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && check_bitrix_sessid() && isset($_POST
 			if($sendEmailToSubscriber)
 			{
 				\Bitrix\Sender\Subscription::sendEventConfirm($_POST["SENDER_SUBSCRIBE_EMAIL"], $mailingIdList, SITE_ID);
-				$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'TEXT' => GetMessage("SENDER_SUBSCR_NOTE_CONFIRM"));
+				$APPLICATION->set_cookie("SENDER_SUBSCR_EMAIL", $_POST["SENDER_SUBSCRIBE_EMAIL"], $cookieLifeTime);
+				$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'CODE' => 'message_confirm');
 				$subscr_EMAIL = $_POST["SENDER_SUBSCRIBE_EMAIL"];
 			}
 			else
 			{
-				$APPLICATION->set_cookie("SENDER_SUBSCR_EMAIL", $_POST["SENDER_SUBSCRIBE_EMAIL"], mktime(0,0,0,12,31,2030));
-				$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'TEXT' => GetMessage("SENDER_SUBSCR_NOTE_SUCCESS"));
+				$APPLICATION->set_cookie("SENDER_SUBSCR_EMAIL", $_POST["SENDER_SUBSCRIBE_EMAIL"], $cookieLifeTime);
+				$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'CODE' => 'message_success');
 				$subscr_EMAIL = $_POST["SENDER_SUBSCRIBE_EMAIL"];
 			}
 		}
 		else
 		{
 			\Bitrix\Sender\Subscription::add($_POST["SENDER_SUBSCRIBE_EMAIL"], $mailingIdList, SITE_ID);
-			$APPLICATION->set_cookie("SENDER_SUBSCR_EMAIL", $_POST["SENDER_SUBSCRIBE_EMAIL"], mktime(0,0,0,12,31,2030));
-			$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'TEXT' => GetMessage("SENDER_SUBSCR_NOTE_SUCCESS"));
+			$APPLICATION->set_cookie("SENDER_SUBSCR_EMAIL", $_POST["SENDER_SUBSCRIBE_EMAIL"], $cookieLifeTime);
+			$arResult['MESSAGE'] = array('TYPE' => 'NOTE', 'CODE' => 'message_success');
 			$subscr_EMAIL = $_POST["SENDER_SUBSCRIBE_EMAIL"];
 		}
 	}
 	else
 	{
-		$arResult['MESSAGE'] = array('TYPE' => 'ERROR', 'TEXT' => GetMessage("SENDER_SUBSCR_ERR_EMAIL"));
+		$arResult['MESSAGE'] = array('TYPE' => 'ERROR', 'CODE' => 'message_err_email');
 	}
 }
 
+if(isset($arResult['MESSAGE']) && isset($arResult['MESSAGE']['CODE']))
+{
+	$arResult['MESSAGE']['TEXT'] = $messageDictionary[$arResult['MESSAGE']['CODE']]['TEXT'];
+}
 
+if($_SERVER['REQUEST_METHOD'] == 'POST' && $arParams['AJAX_MODE'] <> 'Y')
+{
+	if(isset($arResult['MESSAGE']) && $arResult['MESSAGE']['TYPE'] == 'NOTE')
+	{
+		LocalRedirect(
+			$APPLICATION->GetCurPageParam(
+				'sender_subscription=' . $arResult['MESSAGE']['CODE'],
+				array('sender_subscription')
+			)
+		);
+	}
+}
 
 $arSubscriptionRubrics = array();
 $arSubscription = array("ID"=>0, "EMAIL"=>"");
@@ -197,8 +237,6 @@ else
 	$mailingList = $obCache->GetVars();
 }
 
-$arResult["FORM_ACTION"] = htmlspecialcharsbx($APPLICATION->GetCurPageParam('', array('sender_subscription')));
-
 if(strlen($_REQUEST["SENDER_SUBSCRIBE_EMAIL"])>0)
 	$arResult["EMAIL"] = htmlspecialcharsbx($_REQUEST["SENDER_SUBSCRIBE_EMAIL"]);
 elseif(strlen($arSubscription["EMAIL"])>0)
@@ -222,6 +260,7 @@ foreach($mailingList as $mailing)
 	$arResult["RUBRICS"][]=array(
 		"ID"=>$mailing["ID"],
 		"NAME"=>$mailing["NAME"],
+		"DESCRIPTION"=>$mailing["DESCRIPTION"],
 		"CHECKED"=>$bChecked,
 	);
 }

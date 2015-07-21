@@ -70,10 +70,10 @@
     height: 14px;
     width: 20px;
 
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 0 -4351px!important;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -4351px!important;
 }
 .sender-box-list-item-hidden .sender-box-list-item-caption-image{
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 0 -4331px!important;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -4331px!important;
 }
 .sender-box-list-item-caption-delete{
     float: right;
@@ -81,7 +81,7 @@
     height: 20px;
     width: 23px;
     margin-top: -2px;
-    background: url(images/sender/bx-admin-sprite-small-1.png) no-repeat 6px -2446px;
+    background: url(images/sender/bx-admin-sprite-small-2.png) no-repeat 6px -2446px;
 }
 .sender-box-list-item-caption-delete:hover {
     opacity: 1;
@@ -307,17 +307,37 @@ div.sender-group-address-counter .sender-group-address-counter-cnttext{
 }
 .sender-template-type-selector{
     width: 300px;
-    -moz-user-select: -moz-none;
-    -o-user-select: none;
-    -khtml-user-select: none;
     -webkit-user-select: none;
-    user-select: none;
+    overflow: hidden;
+    margin-bottom: 30px;
 }
+.sender-template-type-selector-title {
+    position: relative;
+    font-weight: bold;
+    margin-bottom: 30px;
+    height: 15px;
+    font-size: 14px;
+}
+
+.sender-template-type-selector-title:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 30px;
+    top: 30px;
+    margin: auto;
+    height: 1px;
+    background: rgb(224, 224, 224);
+}
+
 .sender-template-type-selector-button{
-    padding: 10px 0 10px 10px;
-    color: #46484b;
+    padding: 7px 13px;
+    margin-bottom: 10px;
+    display: inline-block;
+    float: left;
+    clear: left;
+    font-weight: normal;
     cursor: pointer;
-    margin-bottom: 5px;
 }
 .sender-template-type-selector-button:hover, .sender-template-type-selector-button-selected{
     color: #fff;
@@ -930,6 +950,13 @@ p.adm-white-container-subtitle {
 .sender-mailing-group-container.sender-mailing-group-del .adm-white-container-p {
     border-left: 1px solid #f1cecc;
 }
+.sender-mailing-group-container.sender-mailing-group-ok {
+    background: #E7F0CF;
+    color: #738A37;
+}
+.sender-mailing-group-container.sender-mailing-group-ok .adm-white-container-p {
+    border-left: 1px solid #D4E49A;
+}
 
 .sender-mailing-group-container .sender-mailing-group-container-title {
     font-size: 20px;
@@ -938,7 +965,7 @@ p.adm-white-container-subtitle {
     line-height: 27px;
     padding-right: 27px;
     padding-left: 38px;
-    text-shadow: 0px 0px 0px #fff;
+    text-shadow: rgb(255, 255, 255) 0px 1px 0px;
     float: left;
     position: relative;
     display: table;
@@ -957,10 +984,13 @@ p.adm-white-container-subtitle {
     top: 0px;
     bottom: 0px;
     margin: auto;
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 0 -4642px!important;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -4642px!important;
 }
 .sender-mailing-group-container.sender-mailing-group-del .sender-mailing-group-container-title:before {
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 0 -4672px!important;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -4672px!important;
+}
+.sender-mailing-group-container.sender-mailing-group-ok .sender-mailing-group-container-title:before {
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -4702px!important;
 }
 
 .sender-mailing-group-container .adm-white-container-p {
@@ -1033,7 +1063,7 @@ p.adm-white-container-subtitle {
 }
 
 .adm-detail-content-table.edit-table td span.hidden-when-show-template-list-info {
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 0px -4595px;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0px -4598px;
     width: 19px;
     height: 20px;
     display: inline-block;
@@ -1124,7 +1154,7 @@ table.adm-detail-content-table>tbody>tr.hidden-when-show-template-list>td:first-
     right: -10px;
     width: 11px;
     height: 29px;
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 0px -4495px!important;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0px -4495px!important;
 }
 
 .sender-template-type-selector-button:active:before {
@@ -1134,7 +1164,7 @@ table.adm-detail-content-table>tbody>tr.hidden-when-show-template-list>td:first-
     right: -10px;
     width: 11px;
     height: 29px;
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 0 -4562px!important;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -4562px!important;
 }
 
 
@@ -1148,7 +1178,7 @@ table.adm-detail-content-table>tbody>tr.hidden-when-show-template-list>td:first-
     bottom: 0px;
     right: 15px;
     margin: auto;
-    background: url("images/sender/bx-admin-sprite-small-1.png") -3px -4478px;
+    background: url("images/sender/bx-admin-sprite-small-2.png") -3px -4478px;
 }
 
 .adm-email-master-container .adm-white-container .adm-btn.adm-btn-grey{
@@ -1222,10 +1252,396 @@ table.adm-detail-content-table>tbody>tr.hidden-when-show-template-list>td:first-
     width: 12px;
     height: 9px;
     margin: auto;
-    background: url("images/sender/bx-admin-sprite-small-1.png") -3px -4478px;
+    background: url("images/sender/bx-admin-sprite-small-2.png") -3px -4478px;
     cursor: pointer;
 }
 
 .adm-email-master-container .adm-white-container input[type="button"].adm-btn-add.adm-btn-green, .sender-box-selector input[type="button"].adm-btn-add.adm-btn-green{
-    background: url("images/sender/bx-admin-sprite-small-1.png") no-repeat 10px -665px #86ad00!important;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 10px -665px #86ad00!important;
+}
+
+.sender-mailing-container{
+    background: rgb(244, 249, 249);
+    border: 1px solid rgb(230, 230, 230);
+    border-image-source: initial;
+    border-image-slice: initial;
+    border-image-width: initial;
+    border-image-outset: initial;
+    border-image-repeat: initial;
+    border-radius: 3px;
+    padding: 20px;
+}
+
+.sender-wizard-trig-mailing-tmpl-list-item {
+    position: relative;
+    display: block;
+    margin: 0 25px 25px 0;
+}
+
+.sender-wizard-trig-mailing-tmpl-list-item-inner {
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    margin: auto;
+    z-index: 3;
+    position: relative;
+    padding: 15px 25px 30px;
+    box-shadow: 0 0 5px 0 rgba(0,0,0,0.25);
+    background: #fff url("images/sender/email-master-triger-bg.jpg") repeat-x 25px 0px;
+}
+
+.sender-wizard-trig-mailing-tmpl-list-item:before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: -10px;
+    right: -10px;
+    left: 10px;
+    margin: auto;
+    box-shadow: 0 0 5px 0 rgba(0,0,0,0.25);
+    background: #fff;
+    z-index: 2;
+}
+
+.sender-wizard-trig-mailing-tmpl-list-item:after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    bottom: -20px;
+    right: -20px;
+    left: 20px;
+    margin: auto;
+    box-shadow: 0 0 5px 0 rgba(0,0,0,0.25);
+    background: #fff;
+    z-index: 1;
+}
+
+.sender-wizard-trig-mailing-tmpl-list-item-inner h2 {
+    border-bottom: 1px solid #c6d2dd;
+    padding-bottom: 15px;
+}
+
+.sender-time-dialog {
+    padding: 10px 0px;
+    display: none;
+}
+#bx-admin-prefix #sender-letter-container-time-dialog .popup-window-close-icon{
+    background-color: #fff;
+}
+
+.sender-trigger-status-mailing {
+    margin-bottom: 10px;
+    background: url(images/sender/container-letter-bg.png) repeat-y 5px 0;
+    padding: 0 0 25px 30px;
+}
+
+.sender-trigger-status-mailing-finish {
+    background: none;
+}
+
+.sender-trigger-status-mailing-title {
+    position: relative;
+    font-size: 17px;
+    color: #2d2e2f;
+    line-height: 36px;
+    font-weight: bold;
+}
+
+.sender-trigger-status-mailing-title:before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 0;
+    left: -29px;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    background: #949caa;
+    display: block;
+    box-shadow: 0 5px 0 0 #f5f9f9, 0 -12px 0 0 #f5f9f9
+}
+
+.sender-trigger-status-mailing-desc {
+    color: #536677;
+    font-size: 14px;
+    background: #e3ecee;
+    line-height: 37px;
+    padding: 0 17px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.sender-trigger-chain-container-letter {
+    background: url(images/sender/container-letter-bg.png) repeat-y 5px 0;
+    padding: 0 0 25px 30px;
+    margin-top: 10px;
+}
+
+.sender-trigger-status-mailing-time {
+    position: relative;
+    font-size: 14px;
+    color: #2d2e2f;
+    line-height: 16px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.sender-trigger-status-mailing-time:before {
+    display: inline-block;
+    content: '';
+    width: 12px;
+    height: 30px;
+    background: #f5f9f9 url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -4726px;
+    position: absolute;
+    left: -30px;
+    top: 10px;
+    bottom: 0;
+    margin: auto;
+}
+
+.sender_letter_container_move {
+    width: 14px;
+    padding: 4px 0;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    cursor: move;
+}
+
+.sender_letter_container_burger {
+    position: relative;
+    width: 14px;
+    height: 2px;
+    background: #6f797e;
+}
+
+.sender_letter_container_burger:before,
+.sender_letter_container_burger:after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 2px;
+    background: #6f797e;
+    top: -4px;
+}
+
+.sender_letter_container_burger:after {
+    bottom: -4px;
+    top: auto;
+}
+
+.sender_letter_container_head h3 {
+    font-size: 17px;
+    font-weight: bold;
+    color: #2d2e2f;
+    margin: 0 0 15px;
+    min-height: 21px;
+}
+
+.sender_letter_container_head {}
+
+.sender_letter_container_sorter_view {
+    height: 67px;
+    float: left;
+    padding: 15px 33px;
+    text-align: center;
+    border-right: 1px solid #eeeff0;
+    margin-right: 20px;
+}
+.sender_letter_container_sorter_view .sender_letter_container_sorter_text {
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 37px;
+    display: inline-block;
+}
+.sender_letter_container_sorter_icon {
+    position: relative;
+    width: 47px;
+    height: 37px;
+    background: #fff;
+    border: 2px solid #9ba3b2;
+    display: block;
+    padding-left: 12px;
+    text-align: left;
+}
+.sender_letter_container_sorter_icon:before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 7px;
+    height: 7px;
+    background: #9ba3b2;
+}
+.sender_letter_container_sorter_icon:after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 6px;
+    border-top: 2px solid #8aa3ac;
+    border-bottom: 2px solid #8aa3ac;
+    right: 3px;
+    bottom: 3px;
+    box-shadow: inset 0 2px 0 0 #fff, inset 0 -2px 0 0 #fff;
+    background: #8aa3ac;
+}
+
+.sender_letter_container-info {
+    display: block;
+    font-size: 12px;
+    color: #86898b;
+    margin-bottom: 20px;
+}
+
+.sender_letter_container-author {
+    color: #474747;
+    font-size: 12px;
+}
+
+.sender_letter_container-author:hover {
+    text-decoration: none;
+}
+
+.sender_letter_container-create {
+    font-weight: bold;
+    color: #383b3c;
+}
+
+.sender_letter_container_button_show {
+    font-size: 14px;
+    font-weight: bold;
+    color: #475056;
+    text-shadow: 0 1px 0 #fff;
+    background: #f6f5f9;
+    text-decoration: none;
+    display: inline-block;
+    line-height: 29px;
+    padding: 0 30px 0 15px;
+    border-radius: 3px;
+    position: relative;
+}
+
+.sender_letter_container_button_show:before {
+    content: '';
+    position: absolute;
+    top: 0px;
+    bottom: 0;
+    right: 13px;
+    margin: auto;
+    height: 0;
+    border: 4px solid transparent;
+    border-top: 4px solid #475056;
+    border-bottom: none;
+}
+
+.sender_letter_container_button_show.sender_letter_container_button_hide:before {
+    border: 4px solid transparent;
+    border-bottom: 4px solid #475056;
+    border-top: none;
+}
+
+.sender_letter_container_button_show:hover {
+    text-decoration: none;
+}
+
+.sender_letter_container {
+    border-radius: 3px;
+    box-shadow: 0 0 3px 0 rgba(0,0,0,0.29);
+    padding: 15px;
+    position: relative;
+    background: #fff;
+}
+
+.sender_letter_container_button_delete {
+    position: absolute;
+    width: 13px;
+    height: 20px;
+    display: block;
+    top: 4px;
+    right: 10px;
+    text-decoration: none;
+    line-height: 10px;
+    font-size: 19px;
+    color: #576166;
+    font-weight: bold;
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat 0 -2446px;
+}
+
+.sender_letter_container_button_delete:hover {
+    background: url("images/sender/bx-admin-sprite-small-2.png") no-repeat -4px -2987px;
+}
+
+.sender_letter_container_body {
+    border-top: 1px solid #dee3e8;
+    margin-top: 25px;
+    padding: 20px 0px 0px 35px;
+}
+
+table.trigger_chain_item {
+    padding: 5px 0;
+    width: 100%;
+}
+
+table.trigger_chain_item td {
+    padding: 5px 0;
+}
+
+table.trigger_chain_item .bx-ed-type-selector {
+    text-align: left !important;
+}
+table.trigger_chain_item .typearea, table.trigger_chain_item input.sender_letter_container_subject{
+    width: 98% !important;
+}
+
+table.trigger_chain_item td:first-child {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.sender-trigger-add-letter {
+    position: relative;
+    background: url(images/sender/container-letter-bg.png) repeat-y 5px 0;
+    padding: 0 0 25px 30px;
+}
+
+.sender-trigger-add-letter:before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 0;
+    left: 1px;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    background: #949caa;
+    display: block;
+    box-shadow: 0 10px 0 0 #f5f9f9, 0 -10px 0 0 #f5f9f9;
+}
+
+.adm-white-container .sender-template-type-selector-button{
+    max-width: 85%;
+}
+
+.adm-white-container .sender-template-type-selector-button span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.senderdrag.sender-trigger-chain-container-letter{
+    background: none;
+    border-style: dashed;
+    border-color: rgb(171, 178, 189);
+    border-width: 2px;
+    margin-left: 5px;
+    background-color: rgb(230, 235, 237);
+    margin-bottom: 37px;
+}
+.senderdrag .sender_letter_container{
+    visibility: hidden;
+}
+.senderdrag .sender-trigger-status-mailing-time{
+    display: none;
 }

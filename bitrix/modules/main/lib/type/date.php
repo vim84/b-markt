@@ -11,29 +11,36 @@ class Date
 	protected $value;
 
 	/**
-	 * @param string $date String representation of date
+	 * @param string $date String representation of date.
 	 * @param string $format PHP date format. If not specified, the format is got from the current culture.
+	 *
 	 * @throws Main\ObjectException
 	 */
 	public function __construct($date = null, $format = null)
 	{
-		if ($date === null || $date === "")
-		{
-			$this->value = new \DateTime();
-		}
-		else
+		$this->value = new \DateTime();
+		if ($date !== null && $date !== "")
 		{
 			if ($format === null)
 			{
 				$format = static::getFormat();
 			}
 
-			$this->value = \DateTime::createFromFormat($format, $date);
-
-			if (empty($this->value))
+			$parsedValue = date_parse_from_format($format, $date);
+			//Ignore errors when format is longer than date
+			//or date string is longer than format
+			if ($parsedValue['error_count'] > 1)
 			{
-				throw new Main\ObjectException("Incorrect date: ".$date);
+				if (
+					current($parsedValue['errors']) !== 'Trailing data'
+					&& current($parsedValue['errors']) !== 'Data missing'
+				)
+				{
+					throw new Main\ObjectException("Incorrect date: ".$date);
+				}
 			}
+
+			$this->value->setDate($parsedValue['year'], $parsedValue['month'], $parsedValue['day']);
 		}
 		$this->value->setTime(0, 0, 0);
 	}
@@ -41,7 +48,8 @@ class Date
 	/**
 	 * Formats date value to string.
 	 *
-	 * @param string $format PHP date format
+	 * @param string $format PHP date format.
+	 *
 	 * @return string
 	 */
 	public function format($format)
@@ -49,6 +57,11 @@ class Date
 		return $this->value->format($format);
 	}
 
+	/**
+	 * Produces the copy of the object.
+	 *
+	 * @return void
+	 */
 	public function __clone()
 	{
 		$this->value = clone $this->value;
@@ -57,19 +70,20 @@ class Date
 	/**
 	 * Performs dates arithmetic.
 	 *
-	 * @param string $interval
-	 *    Each duration period is represented by an integer value followed by a period
-	 *    designator. If the duration contains time elements, that portion of the
-	 *    specification is preceded by the letter T.
-	 *    Period Designators: Y - years, M - months, D - days, W - weeks, H - hours,
-	 *    M - minutes, S - seconds.
-	 *    Examples: two days - 2D, two seconds - T2S, six years and five minutes - 6YT5M.
-	 *    The unit types must be entered from the largest scale unit on the left to the
-	 *    smallest scale unit on the right.
-	 *    Use first "-" char for negative periods.
-	 *    OR
-	 *    Relative period.
-	 *    Examples: "+5 weeks", "12 day", "-7 weekdays", '3 months - 5 days'
+	 * Each duration period is represented by an integer value followed by a period
+	 * designator. If the duration contains time elements, that portion of the
+	 * specification is preceded by the letter T.
+	 * Period Designators: Y - years, M - months, D - days, W - weeks, H - hours,
+	 * M - minutes, S - seconds.
+	 * Examples: two days - 2D, two seconds - T2S, six years and five minutes - 6YT5M.
+	 * The unit types must be entered from the largest scale unit on the left to the
+	 * smallest scale unit on the right.
+	 * Use first "-" char for negative periods.
+	 * OR
+	 * Relative period.
+	 * Examples: "+5 weeks", "12 day", "-7 weekdays", '3 months - 5 days'
+	 *
+	 * @param string $interval Time interval to add.
 	 *
 	 * @return Date
 	 */
@@ -125,7 +139,8 @@ class Date
 	/**
 	 * Converts a date to the string.
 	 *
-	 * @param Context\Culture $culture Culture contains date format
+	 * @param Context\Culture $culture Culture contains date format.
+	 *
 	 * @return string
 	 */
 	public function toString(Context\Culture $culture = null)
@@ -134,6 +149,11 @@ class Date
 		return $this->format($format);
 	}
 
+	/**
+	 * Converts a date to the string with default culture format setting.
+	 *
+	 * @return string
+	 */
 	public function __toString()
 	{
 		return $this->toString();
@@ -142,7 +162,8 @@ class Date
 	/**
 	 * Returns a date format from the culture in the php format.
 	 *
-	 * @param Context\Culture $culture
+	 * @param Context\Culture $culture Optional culture.
+	 *
 	 * @return string
 	 */
 	public static function getFormat(Context\Culture $culture = null)
@@ -164,6 +185,13 @@ class Date
 		return static::convertFormatToPhp($format);
 	}
 
+	/**
+	 * Returns short date culture format.
+	 *
+	 * @param Context\Culture $culture Culture.
+	 *
+	 * @return string
+	 */
 	protected static function getCultureFormat(Context\Culture $culture)
 	{
 		return $culture->getDateFormat();
@@ -172,7 +200,8 @@ class Date
 	/**
 	 * Converts date format from culture to php format.
 	 *
-	 * @param $format
+	 * @param string $format Format string.
+	 *
 	 * @return mixed
 	 */
 	public static function convertFormatToPhp($format)
@@ -220,8 +249,9 @@ class Date
 	/**
 	 * Checks the string for correct date (by trying to create Date object).
 	 *
-	 * @param string $time String representation of date
+	 * @param string $time String representation of date.
 	 * @param string $format PHP date format. If not specified, the format is got from the current culture.
+	 *
 	 * @return bool
 	 */
 	public static function isCorrect($time, $format = null)
@@ -248,7 +278,8 @@ class Date
 	/**
 	 * Creates Date object from PHP \DateTime object.
 	 *
-	 * @param \DateTime $datetime
+	 * @param \DateTime $datetime Source object.
+	 *
 	 * @return static
 	 */
 	public static function createFromPhp(\DateTime $datetime)
@@ -263,7 +294,8 @@ class Date
 	/**
 	 * Creates Date object from Unix timestamp.
 	 *
-	 * @param int $timestamp
+	 * @param int $timestamp Source timestamp.
+	 *
 	 * @return static
 	 */
 	public static function createFromTimestamp($timestamp)

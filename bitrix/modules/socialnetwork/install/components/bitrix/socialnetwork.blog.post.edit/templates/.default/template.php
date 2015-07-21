@@ -434,7 +434,8 @@ HTML;
 						"fontFamily" => "'Helvetica Neue', Helvetica, Arial, sans-serif",
 						"fontSize" => "14px",
 						"bInitByJS" => (!$bVarsFromForm && $arParams["TOP_TABS_VISIBLE"] == "Y")
-					)
+					),
+					"USE_CLIENT_DATABASE" => "Y"
 				)),
 				false,
 				Array("HIDE_ICONS" => "Y")
@@ -616,11 +617,34 @@ HTML;
 									'lastTabDisable' : true,
 									'callback' : {
 										'select' : BXfpGratSelectCallback,
-										'unSelect' : BXfpGratUnSelectCallback,
-										'openDialog' : BXfpGratOpenDialogCallback,
-										'closeDialog' : BXfpGratCloseDialogCallback,
-										'openSearch' : BXfpGratOpenDialogCallback,
-										'closeSearch' : BXfpGratCloseSearchCallback
+										'unSelect' : BX.delegate(BX.SocNetLogDestination.BXfpUnSelectCallback, {
+											formName: window['BXSocNetLogGratFormName'],
+											inputContainerName: 'feed-add-post-grat-item',
+											inputName: 'feed-add-post-grat-input',
+											tagInputName: 'bx-grat-tag',
+											tagLink1: BX.message('BX_FPGRATMEDAL_LINK_1'),
+											tagLink2: BX.message('BX_FPGRATMEDAL_LINK_2')
+										}),
+										'openDialog' : BX.delegate(BX.SocNetLogDestination.BXfpOpenDialogCallback, {
+											inputBoxName: 'feed-add-post-grat-input-box',
+											inputName: 'feed-add-post-grat-input',
+											tagInputName: 'bx-grat-tag'
+										}),
+										'closeDialog' : BX.delegate(BX.SocNetLogDestination.BXfpOpenDialogCallback, {
+											inputBoxName: 'feed-add-post-grat-input-box',
+											inputName: 'feed-add-post-grat-input',
+											tagInputName: 'bx-grat-tag'
+										}),
+										'openSearch' : BX.delegate(BX.SocNetLogDestination.BXfpOpenDialogCallback, {
+											inputBoxName: 'feed-add-post-grat-input-box',
+											inputName: 'feed-add-post-grat-input',
+											tagInputName: 'bx-grat-tag'
+										}),
+										'closeSearch' : BX.delegate(BX.SocNetLogDestination.BXfpCloseSearchCallback, {
+											inputBoxName: 'feed-add-post-grat-input-box',
+											inputName: 'feed-add-post-grat-input',
+											tagInputName: 'bx-grat-tag'
+										})
 									},
 									'items' : {
 										'users' : <?=((array_key_exists("GRAT_CURRENT", $arResult["PostToShow"]) && is_array($arResult["PostToShow"]["GRAT_CURRENT"]["USERS_FOR_JS"])) ? CUtil::PhpToJSObject($arResult["PostToShow"]["GRAT_CURRENT"]["USERS_FOR_JS"]) : '{}')?>,
@@ -638,8 +662,15 @@ HTML;
 									'itemsSelected' : <?=(($arGratCurrentUsers && is_array($arGratCurrentUsers)) ? CUtil::PhpToJSObject($arGratCurrentUsers) : '{}')?>,
 									'LHEObjName' : '<?=CUtil::JSEscape($jsObjName)?>'
 								});
-								BX.bind(BX('feed-add-post-grat-input'), 'keyup', BXfpGratSearch);
-								BX.bind(BX('feed-add-post-grat-input'), 'keydown', BXfpGratSearchBefore);
+								BX.bind(BX('feed-add-post-grat-input'), 'keyup', BX.delegate(BX.SocNetLogDestination.BXfpSearch, {
+									formName: window["BXSocNetLogGratFormName"],
+									inputName: 'feed-add-post-grat-input',
+									tagInputName: 'bx-grat-tag'
+								}));
+								BX.bind(BX('feed-add-post-grat-input'), 'keydown', BX.delegate(BX.SocNetLogDestination.BXfpSearchBefore, {
+									formName: window["BXSocNetLogGratFormName"],
+									inputName: 'feed-add-post-grat-input'
+								}));
 								BX.bind(BX('bx-grat-tag'), 'click', function(e){BX.SocNetLogDestination.openDialog(BXSocNetLogGratFormName); BX.PreventDefault(e); });
 								BX.bind(BX('feed-add-post-grat-container'), 'click', function(e){BX.SocNetLogDestination.openDialog(BXSocNetLogGratFormName); BX.PreventDefault(e); });
 							</script>

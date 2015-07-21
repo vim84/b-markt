@@ -112,7 +112,11 @@ class Encoding
 			{
 				$s = '';
 
-				$arData[$key] = self::convertEncodingArray($value, $charsetFrom, $charsetTo, $s);
+				$newKey = self::convertEncoding($key, $charsetFrom, $charsetTo, $s);
+				$arData[$newKey] = self::convertEncodingArray($value, $charsetFrom, $charsetTo, $s);
+
+				if($newKey != $key)
+					unset($arData[$key]);
 
 				if($s!=='')
 				{

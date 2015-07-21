@@ -1,4 +1,12 @@
 /* catalog.section */
+.bx-section-desc-post{
+	font-size: 12px;
+	padding: 0 0 0 15px;
+	margin: 15px 0;
+}
+.bx-section-desc{
+	border-left: 3px solid #d3d3d3;
+}
 .bx_catalog_list_home{
 	margin-bottom:20px;
 	border-bottom:1px solid #e5e5e5;
@@ -107,12 +115,13 @@
 	font-size:13px;
 }
 .bx_catalog_list_home .bx_catalog_item_title{
-	overflow:hidden;
-	height:34px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .bx-no-touch .bx_catalog_list_home .bx_catalog_item:hover .bx_catalog_item_title{
-	overflow:auto;
-	height:auto !important;
+	overflow: auto;
+	white-space: normal;
 }
 .bx_catalog_list_home .bx_catalog_item_title a{
 	color:#3f3f3f;

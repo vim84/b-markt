@@ -1,15 +1,18 @@
 <?
 define("STOP_STATISTICS", true);
 define("BX_SECURITY_SHOW_MESSAGE", true);
+define('NO_AGENT_CHECK', true);
 
-use Bitrix\Main\Localization\Loc as Loc;
+use Bitrix\Main\Localization\Loc;
 
-if (isset($_REQUEST['admin']) && $_REQUEST['admin'] === 'Y')
+if (isset($_REQUEST['admin']) && is_string($_REQUEST['admin']) && $_REQUEST['admin'] == 'Y')
 	define('ADMIN_SECTION', true);
 if (isset($_REQUEST['site']) && !empty($_REQUEST['site']))
 {
-	$strSite = substr((string)$_REQUEST['site'], 0, 2);
-	define('SITE_ID', $strSite);
+	if (!is_string($_REQUEST['site']))
+		die();
+	if (preg_match('/^[a-z0-9_]{2}$/i', $_REQUEST['site']) === 1)
+		define('SITE_ID', $_REQUEST['SITE_ID']);
 }
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");

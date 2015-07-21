@@ -18,4 +18,5 @@ $MESS["LM_PLEASE_WAIT"] = "Загрузка, пожалуйста подожди
 $MESS["LM_CREATE_SONETGROUP_TITLE"] = "Группа с таким названием не найдена, создать группу \"#TITLE#\"";
 $MESS["LM_CREATE_SONETGROUP_BUTTON_CREATE"] = "Создать";
 $MESS["LM_CREATE_SONETGROUP_BUTTON_CANCEL"] = "Отменить";
+$MESS["LM_POPUP_WAITER_TEXT"] = "Идет поиск дополнительных результатов...";
 ?>

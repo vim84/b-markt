@@ -98,7 +98,7 @@ class CAllIBlockProperty
 
 			if(
 				$by === "ID"
-				|| $by === "BLOCK_ID"
+				|| $by === "IBLOCK_ID"
 				|| $by === "NAME"
 				|| $by === "ACTIVE"
 				|| $by === "SORT"

@@ -25,6 +25,7 @@ class AdvTabEngine
 		if(
 			Option::get('main', 'vendor', '') == '1c_bitrix'
 			&& Loc::getDefaultLang(LANGUAGE_ID) == 'ru'
+			&& IsModuleInstalled('socialservices')
 		)
 		{
 			return array(

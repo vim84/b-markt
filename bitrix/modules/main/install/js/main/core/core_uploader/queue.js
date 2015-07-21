@@ -23,6 +23,7 @@
 
 		this.placeHolder = BX(params["placeHolder"]);
 		this.showImage = (params["showImage"] !== false);
+		this.sortItems = (params["sortItems"] !== false);
 
 		this.uploader = caller;
 		this.itForUpload = new BX.UploaderUtils.Hash();
@@ -161,7 +162,7 @@
 					}
 				}
 
-				if (!!window["jsDD"])
+				if (!!window["jsDD"] && this.sortItems)
 				{
 					if (!this._onbxdragstart)
 					{
@@ -185,6 +186,7 @@
 					node.onbxdestdragfinish = this._onbxdestdragfinish;
 					window.jsDD.registerDest(node);
 				}
+				node.setAttribute("bx-item-id", res.id);
 				if (BX(being))
 				{
 					BX.onCustomEvent(this.uploader, "onFileIsBound", [res.id, res, this.caller, being]);
@@ -213,37 +215,69 @@
 			return null;
 		},
 		onbxdragstart : function() {
-			var item = BX.proxy_context;
-			item.__dragCopyDiv = BX.create('DIV', {
-				attrs : {
-					className : "bx-drag-object"
-				},
-				style : {
-					position : "absolute",
-					zIndex : 10,
-					width : item.clientWidth + 'px'
-				},
-				html : item.innerHTML
-			});
+			var item = BX.proxy_context,
+				id = (item && item.getAttribute("bx-item-id"));
+			if (id)
+			{
+				var template = item.innerHTML.replace(new RegExp(id, "gi"), "DragCopy");
+				item.__dragCopyDiv = BX.create('DIV', {
+					attrs : {
+						className : "bx-drag-object " + item.className
+					},
+					style : {
+						position : "absolute",
+						zIndex : 10,
+						width : item.clientWidth + 'px'
+					},
+					html : template
+				});
+				item.__dragCopyPos = BX.pos(item);
+				BX.onCustomEvent(this.uploader, "onBxDragStart", [item, item.__dragCopyDiv]);
+				document.body.appendChild(item.__dragCopyDiv);
 
-			document.body.appendChild(item.__dragCopyDiv);
-			BX.addClass(item, "bx-drag-source");
+				BX.addClass(item, "bx-drag-source");
+				var c = BX('DragCopyProperCanvas'),
+					c1,
+					it = this.items.getItem(id);
+				if (c && (it && BX(it.canvas)))
+				{
+					c1 = it.canvas.cloneNode(true);
+					c.parentNode.replaceChild(c1, c);
+					c1.getContext("2d").drawImage(it.canvas, 0, 0);
+				}
+			}
 			return true;
 		},
 		onbxdragstop : function() {
 			var item = BX.proxy_context;
-			BX.removeClass(item, "bx-drag-source");
-			if (!!item.__dragCopyDiv)
+			if (item.__dragCopyDiv)
 			{
+				BX.removeClass(item, "bx-drag-source");
 				item.__dragCopyDiv.parentNode.removeChild(item.__dragCopyDiv);
 				item.__dragCopyDiv = null;
+				delete item['__dragCopyDiv'];
+				delete item['__dragCopyPos'];
 			}
 			return true;
 		},
 		onbxdrag : function(x, y) {
-			var item = BX.proxy_context, div = item.__dragCopyDiv;
-			div.style.left = x + 'px';
-			div.style.top = y + 'px';
+			var item = BX.proxy_context,
+				div = item.__dragCopyDiv;
+			if (div)
+			{
+				if (item.__dragCopyPos)
+				{
+					if (!item.__dragCopyPos.deltaX)
+						item.__dragCopyPos.deltaX = item.__dragCopyPos.left - x;
+					if (!item.__dragCopyPos.deltaY)
+						item.__dragCopyPos.deltaY = item.__dragCopyPos.top - y;
+					x += item.__dragCopyPos.deltaX;
+					y += item.__dragCopyPos.deltaY;
+				}
+
+				div.style.left = x + 'px';
+				div.style.top = y + 'px';
+			}
 		},
 		onbxdraghout : function(currentNode, x, y) {
 		},
@@ -343,14 +377,15 @@
 						delete window.jsDD.arDestinations[node.__bxddeid];
 					}
 					BX.unbindAll(node);
-					node.parentNode.removeChild(node);
+					if (item["replaced"] !== true)
+						node.parentNode.removeChild(node);
 				}
 
 				this.items.removeItem(id);
 				this.itUploaded.removeItem(id);
 				this.itFailed.removeItem(id);
 				this.itForUpload.removeItem(id);
-				BX.onCustomEvent(this.uploader, "onQueueIsChanged", [this, "add", id, item]);
+				BX.onCustomEvent(this.uploader, "onQueueIsChanged", [this, "delete", id, item]);
 				return true;
 			}
 			return false;
@@ -434,18 +469,17 @@
 			while ((item = this.items.getFirst()) && !!item)
 				this.deleteItem(item.id, item);
 		},
-		restoreFiles : function(data, restoreError)
+		restoreFiles : function(data, restoreError, restoreUpload)
 		{
 			restoreError = (restoreError === true);
 			var item = data.getFirst();
-
 			while(item)
 			{
 				if (this.items.hasItem(item.id) &&
-					!this.itUploaded.hasItem(item.id) &&
-					(!restoreError && !this.itFailed.hasItem(item.id) || restoreError))
+					(restoreUpload === true || !this.itUploaded.hasItem(item.id)) &&
+					(restoreError || !this.itFailed.hasItem(item.id)))
 				{
-					if (this.itFailed.hasItem(item.id))
+					if (this.itFailed.hasItem(item.id) || restoreUpload === true)
 					{
 						delete item["uploadStatus"];
 
@@ -467,9 +501,14 @@
 							}
 							item.file["copies"].reset();
 						}
+						item["restored"] = "Y"; // Start again
 					}
-					item["restored"] = "Y";
+					else
+					{
+						item["restored"] = "C"; // Continue
+					}
 					this.itFailed.removeItem(item.id);
+					this.itUploaded.removeItem(item.id);
 					this.itForUpload.setItem(item.id, item);
 					BX.onCustomEvent(item, "onUploadRestore", [item]);
 				}

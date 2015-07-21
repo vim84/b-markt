@@ -3835,9 +3835,12 @@ table.crm-feed-info-table tr .crm-feed-info-right-cell {
 }
 
 .crm-feed-client-block .crm-item-tel-num,
-.crm-feed-client-block .crm-item-tel-num:hover {
+.crm-feed-client-block .crm-item-tel-num:hover,
+.crm-feed-info-table .crm-item-tel-num,
+.crm-feed-info-table .crm-item-tel-num:hover {
 	line-height: normal;
 	text-decoration: none;
+	width: auto;
 }
 
 .crm-feed-client-block {

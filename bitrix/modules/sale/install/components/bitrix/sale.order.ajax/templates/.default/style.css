@@ -59,6 +59,11 @@
 	float: left;
 	margin: 0 10px 10px 0;
 }
+
+#order_form_div label {
+	color: #000;
+	font-size: 13px;
+}
 #order_form_div .sale_order_table {
 	font-size: 12px;
 	border-collapse: collapse;

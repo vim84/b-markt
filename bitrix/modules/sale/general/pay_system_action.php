@@ -87,12 +87,12 @@ class CAllSalePaySystemAction
 		return $DB->Query("DELETE FROM b_sale_pay_system_action WHERE ID = ".$ID."", true);
 	}
 
-	function SerializeParams($arParams)
+	static function SerializeParams($arParams)
 	{
 		return serialize($arParams);
 	}
 
-	function UnSerializeParams($strParams)
+	static function UnSerializeParams($strParams)
 	{
 		$arParams = unserialize($strParams);
 

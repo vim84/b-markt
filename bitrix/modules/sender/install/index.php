@@ -77,10 +77,21 @@ class sender extends CModule
 			RegisterModuleDependences("sender", "OnPresetTemplateList", "sender", "Bitrix\\Sender\\TemplateTable", "onPresetTemplateList");
 			RegisterModuleDependences("sender", "OnPresetMailBlockList", "sender", "Bitrix\\Sender\\Preset\\MailBlockBase", "OnPresetMailBlockList");
 
+			// triggers
+			RegisterModuleDependences("sender", "OnTriggerList", "sender", "bitrix\\sender\\triggermanager", "onTriggerList");
+			RegisterModuleDependences("sender", "OnAfterRecipientUnsub", "sender", "Bitrix\\Sender\\TriggerManager", "onAfterRecipientUnsub");
+
+			// conversion
+			RegisterModuleDependences("sender", "OnAfterRecipientClick", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onAfterRecipientClick");
+			RegisterModuleDependences("conversion", "OnSetDayContextAttributes", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onSetDayContextAttributes");
+			RegisterModuleDependences("main", "OnBeforeProlog", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onBeforeProlog");
+			RegisterModuleDependences("conversion", "OnGetAttributeTypes", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onGetAttributeTypes");
+
 			CTimeZone::Disable();
 
 			\Bitrix\Sender\MailingManager::actualizeAgent();
 			CAgent::AddAgent( \Bitrix\Sender\MailingManager::getAgentNamePeriod(), "sender", "N", COption::GetOptionString("sender", "reiterate_interval"));
+			\Bitrix\Sender\TriggerManager::activateAllHandlers(true);
 
 			CTimeZone::Enable();
 
@@ -92,6 +103,9 @@ class sender extends CModule
 	{
 		global $DB, $DBType, $APPLICATION;
 		$this->errors = false;
+
+		CModule::IncludeModule("sender");
+		\Bitrix\Sender\TriggerManager::activateAllHandlers(false);
 
 		if(!array_key_exists("save_tables", $arParams) || ($arParams["save_tables"] != "Y"))
 		{
@@ -113,6 +127,14 @@ class sender extends CModule
 		UnRegisterModuleDependences("sender", "OnPresetTemplateList", "sender", "Bitrix\\Sender\\Preset\\TemplateBase", "onPresetTemplateList");
 		UnRegisterModuleDependences("sender", "OnPresetTemplateList", "sender", "Bitrix\\Sender\\TemplateTable", "onPresetTemplateList");
 		UnRegisterModuleDependences("sender", "OnPresetMailBlockList", "sender", "Bitrix\\Sender\\Preset\\MailBlockBase", "OnPresetMailBlockList");
+
+		UnRegisterModuleDependences("sender", "OnTriggerList", "sender", "bitrix\\sender\\triggermanager", "onTriggerList");
+		UnRegisterModuleDependences("sender", "OnAfterRecipientUnsub", "sender", "Bitrix\\Sender\\TriggerManager", "onAfterRecipientUnsub");
+
+		UnRegisterModuleDependences("sender", "OnAfterRecipientClick", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onAfterRecipientClick");
+		UnRegisterModuleDependences("conversion", "OnSetDayContextAttributes", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onSetDayContextAttributes");
+		UnRegisterModuleDependences("main", "OnBeforeProlog", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onBeforeProlog");
+		UnRegisterModuleDependences("conversion", "OnGetAttributeTypes", "sender", "Bitrix\\Sender\\Internals\\ConversionHandler", "onGetAttributeTypes");
 
 		UnRegisterModule("sender");
 
@@ -156,6 +178,7 @@ class sender extends CModule
 			CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/components", $_SERVER["DOCUMENT_ROOT"]."/bitrix/components", True, True);
 			CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/images", $_SERVER["DOCUMENT_ROOT"]."/bitrix/images", true, true);
 			CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/js", $_SERVER["DOCUMENT_ROOT"]."/bitrix/js", true, true);
+			CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/tools", $_SERVER["DOCUMENT_ROOT"]."/bitrix/tools", true, true);
 		}
 
 		return true;
@@ -167,6 +190,7 @@ class sender extends CModule
 		{
 			//admin files
 			DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/admin", $_SERVER["DOCUMENT_ROOT"]."/bitrix/admin");
+			DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/tools", $_SERVER["DOCUMENT_ROOT"]."/bitrix/tools");
 			//css
 			DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/themes/.default/", $_SERVER["DOCUMENT_ROOT"]."/bitrix/themes/.default");
 			DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sender/install/js", $_SERVER["DOCUMENT_ROOT"]."/bitrix/js");

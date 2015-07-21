@@ -3259,7 +3259,7 @@ class CAllSQLWhere
 			break;
 		case "E":
 			if (is_array($FIELD_VALUE))
-				$result[] = "(".$this->_Upper($FIELD_NAME)." like '".implode("' OR ".$this->_Upper($FIELD_NAME)." like '", $FIELD_VALUE)."')";
+				$result[] = "(".$this->_Upper($FIELD_NAME)." like upper('".implode("') OR ".$this->_Upper($FIELD_NAME)." like upper('", $FIELD_VALUE)."'))";
 			elseif (is_object($FIELD_VALUE))
 				$result[] = $this->_ExprEQ($FIELD_NAME, $FIELD_VALUE);
 			elseif(strlen($FIELD_VALUE)<=0)
@@ -3454,11 +3454,28 @@ class CAllSQLWhere
 		{
 			$FIELD_VALUE = array();
 			foreach ($value as $val)
-				$FIELD_VALUE[] = $DB->CharToDateFunction($val, $format);
+			{
+				if ($val instanceof \Bitrix\Main\Type\Date)
+				{
+					$FIELD_VALUE[] = $DB->CharToDateFunction((string)$val, $format);
+				}
+				elseif (is_object($val))
+				{
+					$FIELD_VALUE[] = $val->compile();
+				}
+				elseif (strlen($val))
+				{
+					$FIELD_VALUE[] = $DB->CharToDateFunction($val, $format);
+				}
+				else
+				{
+					$FIELD_VALUE[] = '';
+				}
+			}
 		}
 		elseif ($value instanceof \Bitrix\Main\Type\Date)
 		{
-			$FIELD_VALUE = $DB->CharToDateFunction($value, $format);
+			$FIELD_VALUE = $DB->CharToDateFunction((string)$value, $format);
 		}
 		elseif (is_object($value))
 		{

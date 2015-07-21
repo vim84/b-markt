@@ -3213,6 +3213,9 @@ class CAdvBanner_all
 				"id=".$arBanner["ID"]
 			);
 
+			if (defined('SITE_ID'))
+				$arUrlParams[] = 'site_id=' . SITE_ID;
+
 			$event1 = CAdvBanner::PrepareHTML($arBanner["STAT_EVENT_1"], $arBanner);
 			$event2 = CAdvBanner::PrepareHTML($arBanner["STAT_EVENT_2"], $arBanner);
 			$event3 = CAdvBanner::PrepareHTML($arBanner["STAT_EVENT_3"], $arBanner);

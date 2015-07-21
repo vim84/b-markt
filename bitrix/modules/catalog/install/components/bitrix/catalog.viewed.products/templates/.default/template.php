@@ -136,9 +136,14 @@ if (!empty($arResult['ITEMS']))
 	<div class="bx_item_list_title"><? echo GetMessage('CVP_TPL_MESS_YOU_LOOKED') ?>:</div>
 	<div class="bx_item_list_section">
 	<div class="bx_item_list_slide active"><?
+	$elementEdit = CIBlock::GetArrayByID($arParams['IBLOCK_ID'], 'ELEMENT_EDIT');
+	$elementDelete = CIBlock::GetArrayByID($arParams['IBLOCK_ID'], 'ELEMENT_DELETE');
+	$elementDeleteParams = array('CONFIRM' => GetMessage('CVP_TPL_ELEMENT_DELETE_CONFIRM'));
 	foreach ($arResult['ITEMS'] as $key => $arItem)
 	{
-		$strMainID = $this->GetEditAreaId($arItem['ID'] . $key);
+		$this->AddEditAction($arItem['ID'], $arItem['EDIT_LINK'], $elementEdit);
+		$this->AddDeleteAction($arItem['ID'], $arItem['DELETE_LINK'], $elementDelete, $elementDeleteParams);
+		$strMainID = $this->GetEditAreaId($arItem['ID']);
 
 		$arItemIDs = array(
 			'ID' => $strMainID,
@@ -594,6 +599,7 @@ if (!empty($arResult['ITEMS']))
 	}
 	?></div></div><?
 	}
+	unset($elementDeleteParams, $elementDelete, $elementEdit);
 	?>
 	<div style="clear: both;"></div>
 	</div>

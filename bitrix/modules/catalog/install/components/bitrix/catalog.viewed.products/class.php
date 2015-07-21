@@ -1,16 +1,19 @@
 <?php
-use \Bitrix\Main;
+use Bitrix\Main;
 use Bitrix\Iblock;
-use \Bitrix\Catalog\CatalogViewedProductTable as CatalogViewedProductTable;
-use \Bitrix\Main\Text\String as String;
-use \Bitrix\Main\Localization\Loc;
-use \Bitrix\Main\SystemException as SystemException;
+use Bitrix\Catalog;
+use Bitrix\Main\Text\String as String;
+use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\SystemException as SystemException;
 
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
 
-
 class CCatalogViewedProductsComponent extends CBitrixComponent
 {
+	const ACTION_BUY = 'BUY';
+	const ACTION_ADD_TO_BASKET = 'ADD2BASKET';
+	const ACTION_SUBSCRIBE = 'SUBSCRIBE_PRODUCT';
+
 	/**
 	 * Primary data - viewed product.
 	 * @var array[]
@@ -88,7 +91,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	 */
 	protected function isAjax()
 	{
-		return isset($_REQUEST['ajax_basket']) && 'Y' == $_REQUEST['ajax_basket'];
+		return isset($_REQUEST['ajax_basket']) && $_REQUEST['ajax_basket'] == 'Y';
 	}
 
 	/**
@@ -98,12 +101,10 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	protected function getProductQuantityFromRequest()
 	{
 		$quantity = 0;
-		if ($this->arParams["USE_PRODUCT_QUANTITY"])
+		if ($this->arParams['USE_PRODUCT_QUANTITY'])
 		{
-			if (isset($_REQUEST[$this->arParams["PRODUCT_QUANTITY_VARIABLE"]]))
-			{
-				$quantity = (float)$_REQUEST[$this->arParams["PRODUCT_QUANTITY_VARIABLE"]];
-			}
+			if (isset($_REQUEST[$this->arParams['PRODUCT_QUANTITY_VARIABLE']]))
+				$quantity = (float)$_REQUEST[$this->arParams['PRODUCT_QUANTITY_VARIABLE']];
 		}
 		return $quantity;
 	}
@@ -115,10 +116,11 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	protected function getProductPropertiesFromRequest()
 	{
 		$values = array();
-		if (isset($_REQUEST[$this->arParams["PRODUCT_PROPS_VARIABLE"]]) && is_array($_REQUEST[$this->arParams["PRODUCT_PROPS_VARIABLE"]]))
-		{
+		if (
+			isset($_REQUEST[$this->arParams['PRODUCT_PROPS_VARIABLE']])
+			&& is_array($_REQUEST[$this->arParams['PRODUCT_PROPS_VARIABLE']])
+		)
 			$values = $_REQUEST[$this->arParams["PRODUCT_PROPS_VARIABLE"]];
-		}
 		return $values;
 	}
 
@@ -128,20 +130,23 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	protected function processBuyAction()
 	{
 		global $APPLICATION;
-		if (!(isset($_REQUEST[$this->arParams["ACTION_VARIABLE"]]) && $_REQUEST[$this->arParams["ACTION_VARIABLE"]] == "BUY"))
+		if (
+			!isset($_REQUEST[$this->arParams['ACTION_VARIABLE']])
+			|| $_REQUEST[$this->arParams['ACTION_VARIABLE']] != self::ACTION_BUY
+		)
 			return;
 
 		$productID = 0;
-		if (isset($_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]]))
-			$productID = (int)$_REQUEST[$this->arParams["PRODUCT_ID_VARIABLE"]];
+		if (isset($_REQUEST[$this->arParams['PRODUCT_ID_VARIABLE']]))
+			$productID = (int)$_REQUEST[$this->arParams['PRODUCT_ID_VARIABLE']];
 		if ($productID <= 0)
-			throw new SystemException(Loc::getMessage("CVP_ACTION_PRODUCT_ID_REQUIRED"));
+			throw new SystemException(Loc::getMessage('CVP_ACTION_PRODUCT_ID_REQUIRED'));
 
 		$this->addProductToBasket($productID, $this->getProductQuantityFromRequest(), $this->getProductPropertiesFromRequest());
 
 		if (!$this->isAjax())
 		{
-			LocalRedirect($this->arParams["BASKET_URL"]);
+			LocalRedirect($this->arParams['BASKET_URL']);
 		}
 		else
 		{
@@ -157,7 +162,10 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	protected function processAddToBasketAction()
 	{
 		global $APPLICATION;
-		if (!(isset($_REQUEST[$this->arParams["ACTION_VARIABLE"]]) && $_REQUEST[$this->arParams["ACTION_VARIABLE"]] == "ADD2BASKET"))
+		if (
+			!isset($_REQUEST[$this->arParams['ACTION_VARIABLE']])
+			|| $_REQUEST[$this->arParams['ACTION_VARIABLE']] == self::ACTION_ADD_TO_BASKET
+		)
 			return;
 
 		$productID = 0;
@@ -170,7 +178,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 
 		if (!$this->isAjax())
 		{
-			LocalRedirect($APPLICATION->GetCurPageParam("", array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"])));
+			LocalRedirect($APPLICATION->GetCurPageParam('', array($this->arParams['PRODUCT_ID_VARIABLE'], $this->arParams['ACTION_VARIABLE'])));
 		}
 		else
 		{
@@ -186,7 +194,10 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	protected function processSubscribeAction()
 	{
 		global $APPLICATION;
-		if (!(isset($_REQUEST[$this->arParams["ACTION_VARIABLE"]]) && $_REQUEST[$this->arParams["ACTION_VARIABLE"]] == "SUBSCRIBE_PRODUCT"))
+		if (
+			!isset($_REQUEST[$this->arParams['ACTION_VARIABLE']])
+			|| $_REQUEST[$this->arParams['ACTION_VARIABLE']] == self::ACTION_SUBSCRIBE
+		)
 			return;
 
 		$productID = 0;
@@ -195,7 +206,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		if ($productID <= 0)
 			throw new SystemException(Loc::getMessage("CVP_ACTION_PRODUCT_ID_REQUIRED"));
 
-		$rewriteFields = array("SUBSCRIBE" => "Y", "CAN_BUY" => "N");
+		$rewriteFields = array('SUBSCRIBE' => 'Y', 'CAN_BUY' => 'N');
 
 		$this->addProductToBasket($productID, $this->getProductQuantityFromRequest(), $this->getProductPropertiesFromRequest(), $rewriteFields);
 
@@ -345,7 +356,10 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	}
 
 	/**
-	 * Prepare Component Params
+	 * Prepare Component Params.
+	 *
+	 * @param array $params			Component parameters.
+	 * @return array
 	 */
 	public function onPrepareComponentParams($params)
 	{
@@ -619,7 +633,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			else
 				$sectionId = $this->getSectionIdByElement($this->arParams["SECTION_ELEMENT_ID"], $this->arParams["SECTION_ELEMENT_CODE"]);
 
-			$map = CatalogViewedProductTable::getProductSkuMap(
+			$map = Catalog\CatalogViewedProductTable::getProductSkuMap(
 				$this->arParams['IBLOCK_ID'],
 				$sectionId,
 				$basketUserId,
@@ -637,7 +651,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			if ($this->arParams['SECTION_ELEMENT_ID'] > 0)
 				$filter['!ELEMENT_ID'] = $this->arParams['SECTION_ELEMENT_ID'];
 
-			$viewedIterator = CatalogViewedProductTable::GetList(array(
+			$viewedIterator = Catalog\CatalogViewedProductTable::GetList(array(
 				'select' => array('PRODUCT_ID', 'ELEMENT_ID'),
 				'filter' => $filter,
 				'order' => array('DATE_VISIT' => 'DESC'),
@@ -656,7 +670,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 
 			if (!empty($emptyProducts))
 			{
-				$emptyProducts = CatalogViewedProductTable::getProductsMap($emptyProducts);
+				$emptyProducts = Catalog\CatalogViewedProductTable::getProductsMap($emptyProducts);
 				if (!empty($emptyProducts))
 				{
 					foreach ($emptyProducts as $product => $parent)
@@ -682,7 +696,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 	 */
 	private function makeSkuMap(array $ids = array())
 	{
-		return CatalogViewedProductTable::getProductsMap($ids);
+		return Catalog\CatalogViewedProductTable::getProductsMap($ids);
 	}
 
 	/**
@@ -799,10 +813,19 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		while ($elementObj = $elementIterator->GetNextElement())
 		{
 			$item = $elementObj->GetFields();
-			$item['ID'] = intval($item['ID']);
+			$item['ID'] = (int)$item['ID'];
 
 			$item['ACTIVE_FROM'] = $item['DATE_ACTIVE_FROM'];
 			$item['ACTIVE_TO'] = $item['DATE_ACTIVE_TO'];
+
+			$buttons = CIBlock::GetPanelButtons(
+				$item["IBLOCK_ID"],
+				$item["ID"],
+				0,
+				array("SECTION_BUTTONS" => false, "SESSID" => false, "CATALOG" => true)
+			);
+			$item["EDIT_LINK"] = $buttons["edit"]["edit_element"]["ACTION_URL"];
+			$item["DELETE_LINK"] = $buttons["edit"]["delete_element"]["ACTION_URL"];
 
 			// Inherited Properties
 			$ipropValues = new \Bitrix\Iblock\InheritedProperty\ElementValues($item["IBLOCK_ID"], $item["ID"]);
@@ -875,11 +898,8 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 				);
 
 				if (!empty($item["PRODUCT_PROPERTIES"]))
-				{
 					$item['PRODUCT_PROPERTIES_FILL'] = CIBlockPriceTools::getFillProductProperties($item['PRODUCT_PROPERTIES']);
-				}
 			}
-
 
 			if (!isset($item["CATALOG_MEASURE_RATIO"]))
 				$item["CATALOG_MEASURE_RATIO"] = 1;
@@ -934,7 +954,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		}
 		else
 		{
-			$this->productIdsMap = CatalogViewedProductTable::getProductsMap($this->productIds);
+			$this->productIdsMap = Catalog\CatalogViewedProductTable::getProductsMap($this->productIds);
 		}
 
 		$this->data['CATALOG_PRICES'] = $this->getCatalogPrices($this->arParams["PRICE_CODE"]);
@@ -1022,13 +1042,13 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 
 			$item["CAN_BUY"] = CIBlockPriceTools::CanBuy($item['IBLOCK_ID'], $prices, $item);
 			// Action links
-			$item["~BUY_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . "=BUY&" . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $item["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
+			$item["~BUY_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . '='.self::ACTION_BUY.'&' . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $item["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
 			$item["BUY_URL"] = htmlspecialcharsbx($item["~BUY_URL"]);
-			$item["~ADD_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . "=ADD2BASKET&" . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $item["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
+			$item["~ADD_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . '='.self::ACTION_ADD_TO_BASKET.'&' . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $item["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
 			$item["ADD_URL"] = htmlspecialcharsbx($item["~ADD_URL"]);
 			$item["~COMPARE_URL"] = $APPLICATION->GetCurPageParam("action=ADD_TO_COMPARE_LIST&id=" . $item["ID"], array("action", "id"));
 			$item["COMPARE_URL"] = htmlspecialcharsbx($item["~COMPARE_URL"]);
-			$item["~SUBSCRIBE_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . "=SUBSCRIBE_PRODUCT&" . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $item["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
+			$item["~SUBSCRIBE_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . '='.self::ACTION_SUBSCRIBE.'&' . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $item["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
 			$item["SUBSCRIBE_URL"] = htmlspecialcharsbx($item["~SUBSCRIBE_URL"]);
 		}
 	}
@@ -1066,8 +1086,8 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 		{
 			if (isset($this->items[$ratio['PRODUCT_ID']]))
 			{
-				$intRatio = intval($ratio['RATIO']);
-				$dblRatio = doubleval($ratio['RATIO']);
+				$intRatio = (int)$ratio['RATIO'];
+				$dblRatio = (float)$ratio['RATIO'];
 				$mxRatio = ($dblRatio > $intRatio ? $dblRatio : $intRatio);
 				if (CATALOG_VALUE_EPSILON > abs($mxRatio))
 					$mxRatio = 1;
@@ -1142,13 +1162,13 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			return;
 		foreach ($totalOffers as $offer)
 		{
-			$offer["~BUY_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . "=BUY&" . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $offer["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
+			$offer["~BUY_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . '='.self::ACTION_BUY.'&' . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $offer["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
 			$offer["BUY_URL"] = htmlspecialcharsbx($offer["~BUY_URL"]);
-			$offer["~ADD_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . "=ADD2BASKET&" . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $offer["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
+			$offer["~ADD_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . '='.self::ACTION_ADD_TO_BASKET.'&' . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $offer["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
 			$offer["ADD_URL"] = htmlspecialcharsbx($offer["~ADD_URL"]);
 			$offer["~COMPARE_URL"] = $APPLICATION->GetCurPageParam("action=ADD_TO_COMPARE_LIST&id=" . $offer["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
 			$offer["COMPARE_URL"] = htmlspecialcharsbx($offer["~COMPARE_URL"]);
-			$offer["~SUBSCRIBE_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . "=SUBSCRIBE_PRODUCT&id=" . $offer["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
+			$offer["~SUBSCRIBE_URL"] = $APPLICATION->GetCurPageParam($this->arParams["ACTION_VARIABLE"] . '='.self::ACTION_SUBSCRIBE.'&' . $this->arParams["PRODUCT_ID_VARIABLE"] . "=" . $offer["ID"], array($this->arParams["PRODUCT_ID_VARIABLE"], $this->arParams["ACTION_VARIABLE"]));
 			$offer["SUBSCRIBE_URL"] = htmlspecialcharsbx($offer["~SUBSCRIBE_URL"]);
 
 			$linkId = (int)$offer['LINK_ELEMENT_ID'];
@@ -1178,8 +1198,7 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 			}
 			$item['OFFERS_SELECTED'] = $index;
 		}
-		unset($item);
-		unset($offer);
+		unset($item, $offer);
 	}
 
 	/**
@@ -1239,7 +1258,6 @@ class CCatalogViewedProductsComponent extends CBitrixComponent
 				continue;
 			$this->selectFields[] = $value["SELECT"];
 		}
-
 	}
 
 	/**

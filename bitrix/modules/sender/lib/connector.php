@@ -11,6 +11,7 @@ namespace Bitrix\Sender;
 abstract class Connector
 {
 	var $fieldPrefix;
+	var $fieldPrefixExtended;
 	var $fieldValues;
 	var $fieldFormName;
 	var $moduleId;
@@ -58,6 +59,19 @@ abstract class Connector
 	}
 
 	/**
+	 * @param $fieldPrefixExtended
+	 */
+	public function setFieldPrefixExtended($fieldPrefixExtended)
+	{
+		$this->fieldPrefixExtended = $fieldPrefixExtended;
+	}
+	/** @return string */
+	public function getFieldPrefixExtended()
+	{
+		return $this->fieldPrefixExtended;
+	}
+
+	/**
 	 * @param array $fieldValues
 	 */
 	public function setFieldValues(array $fieldValues = null)
@@ -65,13 +79,29 @@ abstract class Connector
 		$this->fieldValues = $fieldValues;
 	}
 
+	/**
+	 * @return array $fieldValues
+	 */
+	public function getFieldValues()
+	{
+		if(is_array($this->fieldValues))
+			return $this->fieldValues;
+		else
+			return array();
+	}
+
 	/** @return string */
 	public function getFieldId($id)
 	{
 		$fieldPrefix = $this->getFieldPrefix();
+		$fieldPrefixExtended = $this->getFieldPrefixExtended();
 		if($fieldPrefix)
 		{
 			return $fieldPrefix.'_'.$this->getModuleId().'_'.$this->getCode().'_%CONNECTOR_NUM%_'.$id;
+		}
+		elseif($fieldPrefixExtended)
+		{
+			return str_replace(array('][', '[', ']'), array('_', '', ''), $fieldPrefixExtended) .'_'. $id;
 		}
 		else
 			return $id;
@@ -81,10 +111,15 @@ abstract class Connector
 	public function getFieldName($name)
 	{
 		$fieldPrefix = $this->getFieldPrefix();
-		if($fieldPrefix)
+		$fieldPrefixExtended = $this->getFieldPrefixExtended();
+		if($fieldPrefix || $fieldPrefixExtended)
 		{
 			$arReturnName = array();
-			$arReturnName[] = $fieldPrefix.'['.$this->getModuleId().']['.$this->getCode().'][%CONNECTOR_NUM%]';
+			if($fieldPrefix)
+				$arReturnName[] = $fieldPrefix.'['.$this->getModuleId().']['.$this->getCode().'][%CONNECTOR_NUM%]';
+			else
+				$arReturnName[] = $fieldPrefixExtended;
+
 			$arName = explode('[', $name);
 			$arReturnName[] = '['.$arName[0].']';
 			if(count($arName)>1)
@@ -125,6 +160,11 @@ abstract class Connector
 		}
 
 		return $dataDb->SelectedRowsCount();
+	}
+
+	final function getResult()
+	{
+
 	}
 
 	/** @return bool */

@@ -1250,7 +1250,7 @@ function ImgShw(ID, width, height, alt)
 				{
 					$strReturn =
 						'<a href="'.$strImageUrl.'" title="'.$sPopupTitle.'" target="_blank">'.
-						'<img src="'.$strImage.'" '.$sParams.' width="'.$iWidth.'" height="'.$iHeight.' title="'.htmlspecialcharsEx($sPopupTitle).'" />'.
+						'<img src="'.$strImage.'" '.$sParams.' width="'.$iWidth.'" height="'.$iHeight.'" title="'.htmlspecialcharsEx($sPopupTitle).'" />'.
 						'</a>';
 				}
 				else
@@ -2092,7 +2092,7 @@ function ImgShw(ID, width, height, alt)
 		if (class_exists("imagick") && function_exists('memory_get_usage'))
 		{
 			//When memory limit reached we'll try to use ImageMagic
-			$memoryNeeded = round(($arSourceFileSizeTmp[0] * $arSourceFileSizeTmp[1] * $arSourceFileSizeTmp['bits'] * ($arSourceFileSizeTmp['channels'] > 0? $arSourceFileSizeTmp['channels']: 1) / 8 + pow(2, 16)) * 1.65);
+			$memoryNeeded = $arSourceFileSizeTmp[0] * $arSourceFileSizeTmp[1] * 4 * 2;
 			$memoryLimit = CUtil::Unformat(ini_get('memory_limit'));
 			if ((memory_get_usage() + $memoryNeeded) > $memoryLimit)
 			{
@@ -2296,10 +2296,31 @@ function ImgShw(ID, width, height, alt)
 						array( -$k,    -$k, -$k)
 					);
 
-					if(function_exists("imageconvolution"))
-						CFile::imageconvolution_fix($picture, $mask, 1, 0);
-					else
+					//Probe corners for transparent pixels
+					$corner = 0;
+					if ($bHasAlpha)
+					{
+						$corner = imagecolorat($picture, 0, 0) >> 24;
+						if ($corner == 0)
+						{
+							$x = imagesx($picture) - 1;
+							$corner = imagecolorat($picture, $x, 0) >> 24;
+						}
+						if ($corner == 0)
+						{
+							$y = imagesy($picture) - 1;
+							$corner = imagecolorat($picture, 0, $y) >> 24;
+						}
+						if ($corner == 0)
+						{
+							$corner = imagecolorat($picture, $x, $y) >> 24;
+						}
+					}
+
+					if(!function_exists("imageconvolution") || ($corner > 0))
 						CFile::imageconvolution($picture, $mask, 1, 0);
+					else
+						CFile::imageconvolution_fix($picture, $mask, 1, 0);
 				}
 				return true; //Image was modified
 			case "watermark":
@@ -2400,6 +2421,7 @@ function ImgShw(ID, width, height, alt)
 
 		imageconvolution($picture, $matrix, $div, $offset);
 		//Fix left top corner
+		imagealphablending($picture, false);
 		imagesetpixel($picture, $x, $y, $new_pxl);
 	}
 
@@ -2944,7 +2966,7 @@ function ImgShw(ID, width, height, alt)
 		{
 			$text = $APPLICATION->ConvertCharset($text, SITE_CHARSET, "UTF-8");
 			if ($Params["use_copyright"] == "Y")
-				$text = chr(169)."! ".$text;
+				$text = chr(169)." ".$text;
 
 			$result = @imagettftext($obj, $iSize, 0, $wm_pos["x"], $wm_pos["y"], $text_color, $font, $text);
 		}
@@ -3361,7 +3383,7 @@ function ImgShw(ID, width, height, alt)
 
 	public static function isEnabledTrackingResizeImage()
 	{
-		 return static::$enableTrackingResizeImage;
+		return static::$enableTrackingResizeImage;
 	}
 
 	public static function enableTrackingResizeImage()

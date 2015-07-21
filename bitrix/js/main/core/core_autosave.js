@@ -130,6 +130,8 @@ BX.CAutoSave.prototype.Init = function()
 
 	// may also be useful
 	BX.onCustomEvent(this.FORM, 'onAutoSaveInit', [this]);
+
+	return true;
 };
 
 BX.CAutoSave.prototype.TimerHandler = function()

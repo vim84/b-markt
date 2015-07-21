@@ -5,6 +5,8 @@ $pathCSSPanel = '/bitrix/panel/main';
 $pathLang = BX_ROOT.'/modules/main/lang/'.LANGUAGE_ID;
 //WARNING: Don't use CUserOptions here! CJSCore::Init can be called from php_interface/init.php where no $USER exists
 
+$amChartsPath = '/bitrix/js/main/amcharts/3.13/';
+
 $arJSCoreConfig = array(
 	'ajax' => array(
 		'js' => $pathJS.'/core_ajax.js',
@@ -93,7 +95,7 @@ $arJSCoreConfig = array(
 	'finder' => array(
 		'js' => $pathJS.'/core_finder.js',
 		'css' => $pathCSS.'/core_finder.css',
-		'rel' => array('popup', 'ajax'),
+		'rel' => array('popup', 'ajax', 'db_indexeddb'),
 	),
 	'date' => array(
 		'js' => $pathJS.'/core_date.js',
@@ -109,7 +111,9 @@ $arJSCoreConfig = array(
 	'db' => array(
 		'js' => $pathJS.'/core_db.js',
 	),
-
+	'db_indexeddb' => array(
+		'js' => $pathJS.'/core_db_indexeddb.js',
+	),
 	'fc' => array(
 		'js' => $pathJS . '/core_frame_cache.js',
 		'rel' => array('db','ajax', 'ls', 'fx')
@@ -132,7 +136,8 @@ $arJSCoreConfig = array(
 			"phpMaxFileUploads" => ini_get("max_file_uploads"),
 			"phpPostMaxSize" => CUtil::Unformat(ini_get("post_max_size")),
 			"phpUploadMaxFilesize" => CUtil::Unformat(ini_get("upload_max_filesize")),
-			"bxImageExtensions" => CFile::GetImageExtensions()
+			"bxImageExtensions" => CFile::GetImageExtensions(),
+			"bxUploaderLog" => COption::GetOptionString("main", "uploaderLog", "N")
 		),
 		'lang' => $pathLang.'/js_core_uploader.php',
 		'rel' => array('ajax', 'dd')
@@ -146,6 +151,12 @@ $arJSCoreConfig = array(
 		'js' => array(
 			'/bitrix/js/main/qrcode/qrcode.js'
 		)
+	),
+	'fileinput' => array(
+		'js' => $pathJS.'/core_fileinput.js',
+		'css' => $pathCSS.'/core_fileinput.css',
+		'lang' => $pathLang.'/js_core_fileinput.php',
+		'rel' => array("ajax", "window", "popup", "uploader", "canvas", "dd")
 	),
 
 	/* external libs */
@@ -175,36 +186,40 @@ $arJSCoreConfig = array(
 		'skip_core' => true,
 	),
 	'amcharts' => array(
-		'js' => '/bitrix/js/main/amcharts/3.13/amcharts.js',
+		'js' => $amChartsPath.'amcharts.js',
+		'lang_additional' => array(
+			'AMCHARTS_PATH' => $amChartsPath, // will be needed in 3.14
+			'AMCHARTS_IMAGES_PATH' => $amChartsPath.'images/',
+		),
 		'skip_core' => true,
 	),
 	'amcharts_funnel' => array(
-		'js' => '/bitrix/js/main/amcharts/3.13/funnel.js',
+		'js' => $amChartsPath.'funnel.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_gauge' => array(
-		'js' => '/bitrix/js/main/amcharts/3.13/gauge.js',
+		'js' => $amChartsPath.'gauge.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_pie' => array(
-		'js' => '/bitrix/js/main/amcharts/3.13/pie.js',
+		'js' => $amChartsPath.'pie.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_radar' => array(
-		'js' => '/bitrix/js/main/amcharts/3.13/radar.js',
+		'js' => $amChartsPath.'radar.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_serial' => array(
-		'js' => '/bitrix/js/main/amcharts/3.13/serial.js',
+		'js' => $amChartsPath.'serial.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),
 	'amcharts_xy' => array(
-		'js' => '/bitrix/js/main/amcharts/3.13/xy.js',
+		'js' => $amChartsPath.'xy.js',
 		'rel' => array('amcharts'),
 		'skip_core' => true,
 	),

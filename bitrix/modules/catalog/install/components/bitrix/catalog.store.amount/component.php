@@ -221,6 +221,7 @@ if ($this->StartResultCache())
 			else
 				$storeCoordinates = null;
 
+			$realAmount = $amount;
 			if ($arParams["USE_MIN_AMOUNT"] == 'Y')
 				$amount = getStringCatalogStoreAmount($amount, $arParams['MIN_AMOUNT']);
 
@@ -234,7 +235,8 @@ if ($this->StartResultCache())
 				'EMAIL' => $storeEmail,
 				'COORDINATES' => $storeCoordinates,
 				'DESCRIPTION' => $storeDescription,
-				'AMOUNT' => $amount
+				'AMOUNT' => $amount,
+				'REAL_AMOUNT' => $realAmount
 			);
 
 			$arResult["USER_FIELDS"] = $arParams["USER_FIELDS"];

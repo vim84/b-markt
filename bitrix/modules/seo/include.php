@@ -197,6 +197,7 @@ class CSeoEventHandlers
 			);
 
 			originalTextWnd.Show();
+			originalTextWnd.Get().style.zIndex = 3010;
 
 			document.forms.seo_original_text_form.original_text.value = content;
 			BX('seo_original_text_form_form').style.display = 'block';
@@ -210,6 +211,7 @@ class CSeoEventHandlers
 		else
 		{
 			originalTextWnd.Show();
+			originalTextWnd.Get().style.zIndex = 3010;
 			originalTextBtn.btn.disabled = true;
 		}
 	};
@@ -341,6 +343,7 @@ class CSeoEventHandlers
 				);
 
 				originalTextWnd.Show();
+				originalTextWnd.Get().style.zIndex = 3010;
 
 				document.forms.seo_original_text_form.original_text.value = content;
 				BX('seo_original_text_form_form').style.display = 'block';
@@ -354,6 +357,7 @@ class CSeoEventHandlers
 			else
 			{
 				originalTextWnd.Show();
+				originalTextWnd.Get().style.zIndex = 3010;
 				originalTextBtn.btn.disabled = true;
 			}
 		};

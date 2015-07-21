@@ -35,6 +35,12 @@ class Catalog
 			return;
 		}
 
+		if (!isset($arFields['MODULE']) || $arFields['MODULE'] != 'catalog')
+		{
+			// catalog items only
+			return;
+		}
+
 		global $APPLICATION;
 
 		// alter b_sale_basket - add recommendation, update it here
@@ -183,6 +189,12 @@ class Catalog
 
 		$data = static::getOrderInfo($orderId);
 
+		// catalog items only
+		if (empty($data['products']))
+		{
+			return;
+		}
+
 		// add bxuid
 		$data['bx_user_id'] = static::getBxUserId();
 
@@ -246,6 +258,12 @@ class Catalog
 		if ($value == 'Y')
 		{
 			$data = static::getOrderInfo($orderId);
+
+			// catalog items only
+			if (empty($data['products']))
+			{
+				return;
+			}
 
 			// add bxuid
 			$data['bx_user_id'] = static::getBxUserId();
@@ -312,7 +330,7 @@ class Catalog
 		$products = array();
 
 		$result = \CSaleBasket::getList(
-			array(), $arFilter = array('ORDER_ID' => $orderId), false, false,
+			array(), $arFilter = array('ORDER_ID' => $orderId, 'MODULE' => 'catalog'), false, false,
 			array('PRODUCT_ID', 'RECOMMENDATION', 'QUANTITY', 'PRICE', 'CURRENCY')
 		);
 

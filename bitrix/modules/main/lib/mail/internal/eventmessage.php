@@ -120,7 +120,7 @@ class EventMessageTable extends Entity\DataManager
 		preg_match_all("/#([0-9a-zA-Z_.]+?)#/", $str, $matchesFindPlaceHolders);
 		$matchesFindPlaceHoldersCount = count($matchesFindPlaceHolders[1]);
 		for($i=0; $i<$matchesFindPlaceHoldersCount; $i++)
-			if(strlen($matchesFindPlaceHolders[1][$i])>50)
+			if(strlen($matchesFindPlaceHolders[1][$i]) > 200)
 				unset($matchesFindPlaceHolders[1][$i]);
 
 		if(empty($matchesFindPlaceHolders[1]))

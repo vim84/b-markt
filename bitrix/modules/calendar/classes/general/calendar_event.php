@@ -135,20 +135,20 @@ class CCalendarEvent
 					if($n == 'FROM_LIMIT')
 					{
 						if (strtoupper($DB->type) == "MYSQL")
-							$arSqlSearch[] = "CE.DT_TO>=FROM_UNIXTIME('".MkDateTime(FmtDate($val,"D.M.Y"),"d.m.Y")."')";
+							$arSqlSearch[] = "CE.DT_TO>=FROM_UNIXTIME('".CCalendar::Timestamp($val, false)."')";
 						elseif(strtoupper($DB->type) == "MSSQL")
 							$arSqlSearch[] = "CE.DT_TO>=".$DB->CharToDateFunction($val, "SHORT");
 						elseif(strtoupper($DB->type) == "ORACLE")
-							$arSqlSearch[] = "CE.DT_TO>=TO_DATE('".FmtDate($val, "D.M.Y")." 00:00:00','dd.mm.yyyy hh24:mi:ss')";
+							$arSqlSearch[] = "CE.DT_TO>=TO_DATE('".$DB->FormatDate($val, CSite::GetDateFormat("SHORT", SITE_ID), "D.M.Y")." 00:00:00','dd.mm.yyyy hh24:mi:ss')";
 					}
 					elseif($n == 'TO_LIMIT')
 					{
 						if (strtoupper($DB->type) == "MYSQL")
-							$arSqlSearch[] = "CE.DT_FROM<=FROM_UNIXTIME('".MkDateTime(FmtDate($val,"D.M.Y")." 23:59:59","d.m.Y H:i:s")."')";
+							$arSqlSearch[] = "CE.DT_FROM<=FROM_UNIXTIME('".(CCalendar::Timestamp($val, false) + 86399)."')";
 						elseif(strtoupper($DB->type) == "MSSQL")
 							$arSqlSearch[] = "CE.DT_FROM<=dateadd(day, 1, ".$DB->CharToDateFunction($val, "SHORT").")";
 						elseif(strtoupper($DB->type) == "ORACLE")
-							$arSqlSearch[] = "CE.DT_FROM<=TO_DATE('".FmtDate($val, "D.M.Y")." 23:59:59','dd.mm.yyyy hh24:mi:ss')";
+							$arSqlSearch[] = "CE.DT_FROM<=TO_DATE('".$DB->FormatDate($val, CSite::GetDateFormat("SHORT", SITE_ID), "D.M.Y")." 23:59:59','dd.mm.yyyy hh24:mi:ss')";
 					}
 					elseif($n == 'TIMESTAMP_X')
 					{
@@ -2147,11 +2147,11 @@ class CCalendarEvent
 			$from_ts = CCalendar::Timestamp($val);
 
 			if (strtoupper($DB->type) == "MYSQL")
-				$arSqlSearch[] = "CE.DT_TO>=FROM_UNIXTIME('".MkDateTime(FmtDate($val,"D.M.Y"),"d.m.Y")."')";
+				$arSqlSearch[] = "CE.DT_TO>=FROM_UNIXTIME('".CCalendar::Timestamp($val, false)."')";
 			elseif(strtoupper($DB->type) == "MSSQL")
 				$arSqlSearch[] = "CE.DT_TO>=".$DB->CharToDateFunction($val, "SHORT");
 			elseif(strtoupper($DB->type) == "ORACLE")
-				$arSqlSearch[] = "CE.DT_TO>=TO_DATE('".FmtDate($val, "D.M.Y")." 00:00:00','dd.mm.yyyy hh24:mi:ss')";
+				$arSqlSearch[] = "CE.DT_TO>=TO_DATE('".$DB->FormatDate($val, CSite::GetDateFormat("SHORT", SITE_ID), "D.M.Y")." 00:00:00','dd.mm.yyyy hh24:mi:ss')";
 		}
 		if ($Params['to'])
 		{
@@ -2161,11 +2161,11 @@ class CCalendarEvent
 				$to_ts += CCalendar::DAY_LENGTH;
 
 			if (strtoupper($DB->type) == "MYSQL")
-				$arSqlSearch[] = "CE.DT_FROM<=FROM_UNIXTIME('".MkDateTime(FmtDate($val,"D.M.Y")." 23:59:59","d.m.Y H:i:s")."')";
+				$arSqlSearch[] = "CE.DT_FROM<=FROM_UNIXTIME('".(CCalendar::Timestamp($val, false) + 86399)."')";
 			elseif(strtoupper($DB->type) == "MSSQL")
 				$arSqlSearch[] = "CE.DT_FROM<dateadd(day, 1, ".$DB->CharToDateFunction($val, "SHORT").")";
 			elseif(strtoupper($DB->type) == "ORACLE")
-				$arSqlSearch[] = "CE.DT_FROM<=TO_DATE('".FmtDate($val, "D.M.Y")." 23:59:59','dd.mm.yyyy hh24:mi:ss')";
+				$arSqlSearch[] = "CE.DT_FROM<=TO_DATE('".$DB->FormatDate($val, CSite::GetDateFormat("SHORT", SITE_ID), "D.M.Y")." 23:59:59','dd.mm.yyyy hh24:mi:ss')";
 		}
 		$arSqlSearch[] = GetFilterQuery("DELETED", "N");
 
@@ -2397,22 +2397,22 @@ class CCalendarEvent
 		{
 			$strSql .= "AND ";
 			if (strtoupper($DB->type) == "MYSQL")
-				$strSql .= "CE.DT_TO>=FROM_UNIXTIME('".MkDateTime(FmtDate($arFilter['FROM_LIMIT'],"D.M.Y"),"d.m.Y")."')";
+				$strSql .= "CE.DT_TO>=FROM_UNIXTIME('".CCalendar::Timestamp($arFilter['FROM_LIMIT'], false)."')";
 			elseif(strtoupper($DB->type) == "MSSQL")
 				$strSql .= "CE.DT_TO>=".$DB->CharToDateFunction($arFilter['FROM_LIMIT'], "SHORT");
 			elseif(strtoupper($DB->type) == "ORACLE")
-				$strSql .= "CE.DT_TO>=TO_DATE('".FmtDate($arFilter['FROM_LIMIT'], "D.M.Y")." 00:00:00','dd.mm.yyyy hh24:mi:ss')";
+				$strSql .= "CE.DT_TO>=TO_DATE('".$DB->FormatDate($arFilter['FROM_LIMIT'], CSite::GetDateFormat("SHORT", SITE_ID), "D.M.Y")." 00:00:00','dd.mm.yyyy hh24:mi:ss')";
 		}
 
 		if($arFilter['TO_LIMIT'])
 		{
 			$strSql .= "AND ";
 			if (strtoupper($DB->type) == "MYSQL")
-				$strSql .= "CE.DT_FROM<=FROM_UNIXTIME('".MkDateTime(FmtDate($arFilter['TO_LIMIT'],"D.M.Y")." 23:59:59","d.m.Y H:i:s")."')";
+				$strSql .= "CE.DT_FROM<=FROM_UNIXTIME('".(CCalendar::Timestamp($arFilter['TO_LIMIT'], false) + 86399)."')";
 			elseif(strtoupper($DB->type) == "MSSQL")
 				$strSql .= "CE.DT_FROM<=dateadd(day, 1, ".$DB->CharToDateFunction($arFilter['TO_LIMIT'], "SHORT").")";
 			elseif(strtoupper($DB->type) == "ORACLE")
-				$strSql .= "CE.DT_FROM<=TO_DATE('".FmtDate($arFilter['TO_LIMIT'], "D.M.Y")." 23:59:59','dd.mm.yyyy hh24:mi:ss')";
+				$strSql .= "CE.DT_FROM<=TO_DATE('".$DB->FormatDate($arFilter['TO_LIMIT'], CSite::GetDateFormat("SHORT", SITE_ID), "D.M.Y")." 23:59:59','dd.mm.yyyy hh24:mi:ss')";
 		}
 
 		$res = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);

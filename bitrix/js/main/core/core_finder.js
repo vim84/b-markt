@@ -36,6 +36,33 @@ BX.Finder = function(container, context, panels, lang)
 		BX.addCustomEvent(BX.Access, "onDeleteItem", BX.Finder.onDeleteItem);
 		BX.addCustomEvent(BX.Access, "onAfterPopupShow", BX.Finder.onAfterPopupShow);
 	}
+
+	BX.Finder.dBScheme = {
+		stores: [
+			{
+				name: 'users',
+				autoIncrement: true,
+				indexes: [
+					{
+						name: 'id',
+						keyPath: 'id',
+						unique: true
+					},
+					{
+						name: 'checksum',
+						keyPath: 'checksum',
+						unique: true
+					}
+				]
+			}
+		],
+		version: "1"
+	};
+
+	if (BX.Finder.context == 'destination')
+	{
+		BX.addCustomEvent("initFinderDb", BX.Finder.initFinderDb);
+	}
 }
 
 BX.Finder.onAddItem = function(provider, type, element)
@@ -344,4 +371,138 @@ BX.Finder.Search = function(element, provider)
 		}, 500);
 	}
 }
+
+BX.Finder.initFinderDb = function(obDestination)
+{
+	BX.indexedDB({
+		name: 'BX.Finder.' + BX.message('USER_ID'),
+		oScheme: BX.Finder.dBScheme.stores,
+		version: BX.Finder.dBScheme.version,
+		callback: function(dbObject)
+		{
+			if (typeof dbObject == 'object')
+			{
+				obDestination.obClientDb = dbObject;
+				BX.indexedDB.openCursor(dbObject, 'users', {}, {
+					callback: function(cursorValue)
+					{
+						if (typeof obDestination.obClientDbData.users == 'undefined')
+						{
+							obDestination.obClientDbData.users = {};
+							BX.addCustomEvent("findEntityByName", BX.Finder.findEntityByName);
+							BX.addCustomEvent("syncClientDb", BX.Finder.syncClientDb);
+							BX.addCustomEvent("removeClientDbObject", BX.Finder.removeClientDbObject);
+						}
+
+						obDestination.obClientDbData.users[cursorValue.id] = cursorValue;
+						BX.Finder.addSearchIndex(obDestination, cursorValue);
+					}
+				});
+
+				BX.addCustomEvent("onFinderAjaxSuccess", BX.Finder.onFinderAjaxSuccess);
+			}
+		}
+	});
+}
+
+BX.Finder.addSearchIndex = function(obDestination, ob)
+{
+	var partsSearchText = ob.name.toLowerCase().split(" ");
+	for (var i in partsSearchText)
+	{
+		if (typeof obDestination.obClientDbDataSearchIndex[partsSearchText[i]] == 'undefined')
+		{
+			obDestination.obClientDbDataSearchIndex[partsSearchText[i]] = [];
+		}
+
+		if (!BX.util.in_array(ob.id, partsSearchText[i]))
+		{
+			obDestination.obClientDbDataSearchIndex[partsSearchText[i]].push(ob.id);
+		}
+	}
+}
+
+BX.Finder.findEntityByName = function(obDestination, obSearch, oParams, oResult)
+{
+	var keysFiltered = Object.keys(obDestination.obClientDbDataSearchIndex).filter(function(key) {
+		return (key.indexOf(obSearch.searchString) === 0);
+	});
+
+	if (
+		keysFiltered.length <= 0
+		&& BX.message('LANGUAGE_ID') == 'ru'
+		&& BX.correctText
+	)
+	{
+		obSearch.searchString = BX.correctText(obSearch.searchString);
+		keysFiltered = Object.keys(obDestination.obClientDbDataSearchIndex).filter(function(key) {
+			return (key.indexOf(obSearch.searchString) === 0);
+		});
+	}
+
+	var arResult = [];
+	for (var key in keysFiltered)
+	{
+		BX.util.array_merge(arResult, obDestination.obClientDbDataSearchIndex[keysFiltered[key]]);
+	}
+
+	oResult[obSearch.searchString] = BX.util.array_unique(arResult);
+}
+
+BX.Finder.onFinderAjaxSuccess = function(data, obDestination)
+{
+	if (typeof data.USERS != 'undefined')
+	{
+		for (var key in data.USERS)
+		{
+			oUser = data.USERS[key];
+			if (
+				typeof obDestination.obClientDbData.users == 'undefined'
+				|| typeof obDestination.obClientDbData.users[oUser.id] == 'undefined'
+				|| obDestination.obClientDbData.users[oUser.id].checksum != oUser.checksum
+			)
+			{
+				BX.indexedDB.updateValue(obDestination.obClientDb, 'users', oUser);
+
+				if (typeof obDestination.obClientDbData.users == 'undefined')
+				{
+					obDestination.obClientDbData.users = [];
+				}
+				obDestination.obClientDbData.users[oUser.id] = oUser;
+				BX.Finder.addSearchIndex(obDestination, oUser);
+			}
+		}
+	}
+}
+
+BX.Finder.syncClientDb = function(obDestination, name, oDbData, oAjaxData)
+{
+	if (
+		typeof oDbData != 'undefined'
+		&& typeof oAjaxData != 'undefined'
+	)
+	{
+		for (var key in oDbData)
+		{
+			if (!BX.util.in_array(oDbData[key], oAjaxData))
+			{
+				BX.indexedDB.deleteValueByIndex(obDestination.obClientDb, 'users', 'id', oDbData[key], {});
+				delete obDestination.obItems[name].users[oDbData[key]];
+				obDestination.deleteItem(oDbData[key], 'users', name);
+			}
+		}
+	}
+}
+
+BX.Finder.removeClientDbObject = function(obDestination, id, type)
+{
+	if (
+		typeof type != 'undefined'
+		&& type == 'users'
+	)
+	{
+		BX.indexedDB.deleteValueByIndex(obDestination.obClientDb, 'users', 'id', id, {});
+	}
+}
+
 })(window);

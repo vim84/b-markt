@@ -22,7 +22,7 @@ $MESS["IBLOCK_FIELD"] = "Поля";
 $MESS["IBLOCK_PROPERTY"] = "Свойства";
 $MESS["T_IBLOCK_DESC_KEYWORDS"] = "Установить ключевые слова страницы из свойства";
 $MESS["T_IBLOCK_DESC_DESCRIPTION"] = "Установить описание страницы из свойства";
-$MESS["CP_BPD_SET_STATUS_404"] = "Устанавливать статус 404, если не найдены элемент или раздел";
 $MESS["CP_BPD_BROWSER_TITLE"] = "Установить заголовок окна браузера из свойства";
 $MESS["CP_BPD_CACHE_GROUPS"] = "Учитывать права доступа";
+$MESS["CP_BPD_SET_LAST_MODIFIED"] = "Устанавливать в заголовках ответа время модификации страницы";
 ?>

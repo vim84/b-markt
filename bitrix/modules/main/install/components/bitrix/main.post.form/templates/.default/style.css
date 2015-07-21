@@ -1154,6 +1154,19 @@
 	position: relative;
 	cursor: text;
 }
+.feed-add-post-micro-dnd-ready.feed-add-post-micro {
+	background: rgba(248,250,250,0.9);
+	border: 2px dashed #a7b0b5;
+	padding: 17px 0 25px 16px;
+	cursor: default;
+}
+.feed-add-post-micro .feed-add-post-micro-dnd,
+.feed-add-post-micro-dnd-ready.feed-add-post-micro .feed-add-post-micro-title{
+	display: none;
+}
+.feed-add-post-micro-dnd-ready.feed-add-post-micro .feed-add-post-micro-dnd {
+	display: block;
+}
 
 .bx-smile-f {
 	margin: -1px -4px -5px;
@@ -1300,16 +1313,60 @@ div.lhe-list-item-cont[title="xx-large"] span.lhe-list-font-span {
 .feed-add-post-edit-form .bx-html-editor .bxhtmled-toolbar-cnt {
 	opacity: 0;
 }
-.bxu-file-input-over .feed-add-post-form-dnd {
-	display: block;
+.feed-add-post-dnd-ready, .feed-add-post-dnd-over {
+	position: relative;
 }
-.feed-add-post-form-dnd{
+.feed-add-post-dnd-over .feed-add-post-dnd,
+.feed-add-post-dnd-ready .feed-add-post-dnd-notice {
+	display: block;
+	z-index: 31;
+}
+.feed-add-post-dnd-ready.feed-add-post-dnd-over .feed-add-post-dnd-notice {
 	display: none;
+}
+
+.feed-add-post-dnd, .feed-add-post-dnd-notice {
 	position: absolute;
-	z-index: 1199;
-	top : 0;
-	bottom : 0;
-	left: 0;
+	top: 0;
+	bottom: 0;
 	right: 0;
-	opacity: 0.5;
+	left: 0;
+	background: rgba(248,250,250,0.9);
+	z-index: 1;
+	border: 2px dashed #a7b0b5;
+	text-align: center;
+	display: none;
+}
+
+.feed-add-post-dnd-inner {
+	height: 110px;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	left: 0;
+	margin: auto;
+}
+
+.feed-add-post-dnd-icon {
+	width: 37px;
+	height: 45px;
+	background: url("images/sprite_mpf_5.png?5") no-repeat 0 -968px;
+	display: block;
+	margin: 0 auto 15px;
+}
+
+.feed-add-post-dnd-text {
+	font-weight: bold;
+	font-size: 18px;
+	color: rgba(83,92,105,0.7);
+}
+
+.feed-add-post-dnd-text span {
+	font-size: 12px;
+	display: block;
+	margin-top: 8px;
+}
+.feed-add-post-dnd-over .bxu-file-input-over .diskuf-extended-overlay {
+	display: none;
 }

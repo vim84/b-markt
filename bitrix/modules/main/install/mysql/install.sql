@@ -81,8 +81,8 @@ CREATE TABLE b_event_message
 	EMAIL_FROM varchar(255) not null default '#EMAIL_FROM#',
 	EMAIL_TO varchar(255) not null default '#EMAIL_TO#',
 	SUBJECT varchar(255),
-	MESSAGE text,
-	MESSAGE_PHP text,
+	MESSAGE longtext,
+	MESSAGE_PHP longtext,
 	BODY_TYPE varchar(4) not null default 'text',
 	BCC text,
 	REPLY_TO varchar(255),
@@ -654,7 +654,8 @@ CREATE TABLE b_rating_user
 	VOTE_WEIGHT decimal(18,4) null default '0.0000',
 	VOTE_COUNT int(11) null default '0',
 	PRIMARY KEY (ID),
-	KEY RATING_ID (RATING_ID,ENTITY_ID)
+	KEY RATING_ID (RATING_ID, ENTITY_ID),
+	KEY IX_B_RAT_USER_2 (ENTITY_ID)
 );
 
 CREATE TABLE b_rating_vote_group

@@ -11,6 +11,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /** @global CMain $APPLICATION */
 /** @global CCacheManager $CACHE_MANAGER */
 use Bitrix\Main\Loader;
+use Bitrix\Iblock;
+use Bitrix\Main;
 
 if (!isset($arParams['CACHE_TIME']))
 	$arParams['CACHE_TIME'] = 36000000;
@@ -93,7 +95,7 @@ else
 	$arParams['VK_API_ID'] = '';
 }
 
-if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $USER->GetGroups())))
+if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N' ? false: $USER->GetGroups())))
 {
 	if (!Loader::includeModule("iblock"))
 	{
@@ -107,9 +109,8 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 		'blog' => false
 	);
 	if ($arParams['BLOG_USE'] == 'Y')
-	{
-		$arResultModules['blog'] = Loader::includeModule("blog");
-	}
+		$arResultModules['blog'] = Loader::includeModule('blog');
+
 	$arParams['BLOG_USE'] = ($arResultModules['blog'] ? 'Y' : 'N');
 	$arResult['BLOG_USE'] = $arResultModules['blog'];
 	$arResult['BLOG_FROM_AJAX'] = $arResult['BLOG_USE'] && ($arParams['BLOG_FROM_AJAX'] == 'Y');
@@ -153,11 +154,20 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 			'BLOG_ID' => 0,
 			'BLOG_POST_ID_PROP' => 0,
 			'BLOG_COMMENTS_COUNT_PROP' => 0,
-			'BLOG_POST_ID' => 0
+			'BLOG_POST_ID' => 0,
+			'IBLOCK_SITES' => array()
 		);
 
 		if ($arResultModules['blog'])
 		{
+			$siteIterator = Iblock\IblockSiteTable::getList(array(
+				'select' => array('SITE_ID'),
+				'filter' => array('=IBLOCK_ID' => $arParams['IBLOCK_ID'])
+			));
+			while ($iblockSite = $siteIterator->fetch())
+				$arResult['BLOG_DATA']['IBLOCK_SITES'][] = $iblockSite['SITE_ID'];
+			unset($iblockSite, $siteIterator);
+
 			$newBlog = false;
 			$blogExist = false;
 			$blogGroupExist = false;
@@ -170,7 +180,7 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 			);
 			if ($blog = $blogIterator->Fetch())
 			{
-				if ($blog['GROUP_SITE_ID'] == SITE_ID)
+				if ($blog['GROUP_SITE_ID'] == SITE_ID || in_array($blog['GROUP_SITE_ID'], $arResult['BLOG_DATA']['IBLOCK_SITES']))
 				{
 					$blogExist = true;
 					$blogGroupExist = true;
@@ -193,7 +203,7 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 				);
 				if ($blog = $blogIterator->Fetch())
 				{
-					if ($blog['GROUP_SITE_ID'] == SITE_ID)
+					if ($blog['GROUP_SITE_ID'] == SITE_ID || in_array($blog['GROUP_SITE_ID'], $arResult['BLOG_DATA']['IBLOCK_SITES']))
 					{
 						$blogExist = true;
 						$blogGroupExist = true;
@@ -283,56 +293,56 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 				if ($arParams['BLOG_FROM_AJAX'] === 'N')
 				{
 					if ($blog['EMAIL_NOTIFY'] != $arParams['EMAIL_NOTIFY'])
-					{
 						CBlog::Update($blogID, array('EMAIL_NOTIFY' => $arParams['EMAIL_NOTIFY']));
-					}
 				}
 			}
 
 			if ($blogID > 0)
 			{
 				$arResult['BLOG_DATA']['BLOG_ID'] = $blogID;
-				$rsProps = CIBlockProperty::GetList(
-					array(),
-					array('IBLOCK_ID' => $arParams['IBLOCK_ID'], 'PROPERTY_TYPE' => 'N', 'MULTIPLE' => 'N')
-				);
-				while ($propIBlock = $rsProps->Fetch())
+				$propertyIterator = Iblock\PropertyTable::getList(array(
+					'select' => array('ID', 'CODE'),
+					'filter' => array(
+						'=IBLOCK_ID' => $arParams['IBLOCK_ID'],
+						'=PROPERTY_TYPE' => Iblock\PropertyTable::TYPE_NUMBER,
+						'=MULTIPLE' => 'N',
+						'=CODE' => array(CIBlockPropertyTools::CODE_BLOG_POST, CIBlockPropertyTools::CODE_BLOG_COMMENTS_COUNT)
+					)
+				));
+				while ($propIBlock = $propertyIterator->fetch())
 				{
 					if ($propIBlock['CODE'] == CIBlockPropertyTools::CODE_BLOG_POST)
-					{
 						$propBlogPostID = (int)$propIBlock['ID'];
-					}
 					elseif ($propIBlock['CODE'] == CIBlockPropertyTools::CODE_BLOG_COMMENTS_COUNT)
-					{
 						$propBlogCommentsCountID = (int)$propIBlock['ID'];
-					}
 				}
+				unset($propIBlock, $propertyIterator);
 				if (($propBlogPostID == 0 || $propBlogCommentsCountID == 0) && $arParams['BLOG_FROM_AJAX'] === 'N')
 				{
-					$obProperty = new CIBlockProperty;
 					if ($propBlogPostID == 0)
 					{
-						$propBlogPostID = (int)$obProperty->Add(array(
-							"IBLOCK_ID" => $arParams["IBLOCK_ID"],
-							"ACTIVE" => "Y",
-							"PROPERTY_TYPE" => "N",
-							"MULTIPLE" => "N",
-							"NAME" => GetMessage("IBLOCK_CSC_BLOG_POST_ID"),
-							"CODE" => CIBlockPropertyTools::CODE_BLOG_POST
-						));
+						$propBlogPostID = (int)CIBlockPropertyTools::createProperty(
+							$arParams['IBLOCK_ID'],
+							CIBlockPropertyTools::CODE_BLOG_POST
+						);
+						if ($propBlogPostID == 0)
+						{
+							$arResult['ERRORS'] = array_merge($arResult['ERRORS'], CIBlockPropertyTools::getErrors());
+							CIBlockPropertyTools::clearErrors();
+						}
 					}
 					if ($propBlogCommentsCountID == 0)
 					{
-						$propBlogCommentsCountID = (int)$obProperty->Add(array(
-							"IBLOCK_ID" => $arParams["IBLOCK_ID"],
-							"ACTIVE" => "Y",
-							"PROPERTY_TYPE" => "N",
-							"MULTIPLE" => "N",
-							"NAME" => GetMessage("IBLOCK_CSC_BLOG_COMMENTS_CNT"),
-							"CODE" => CIBlockPropertyTools::CODE_BLOG_COMMENTS_COUNT
-						));
+						$propBlogCommentsCountID = (int)CIBlockPropertyTools::createProperty(
+							$arParams['IBLOCK_ID'],
+							CIBlockPropertyTools::CODE_BLOG_COMMENTS_COUNT
+						);
+						if ($propBlogCommentsCountID == 0)
+						{
+							$arResult['ERRORS'] = array_merge($arResult['ERRORS'], CIBlockPropertyTools::getErrors());
+							CIBlockPropertyTools::clearErrors();
+						}
 					}
-					unset($obProperty);
 				}
 				$arResult['BLOG_DATA']['BLOG_POST_ID_PROP'] = $propBlogPostID;
 				$arResult['BLOG_DATA']['BLOG_COMMENTS_COUNT_PROP'] = $propBlogCommentsCountID;
@@ -390,7 +400,7 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 			if ($arResult['BLOG_USE'])
 			{
 				$postID = (int)$arElement['PROPERTY_'.$arResult['BLOG_DATA']['BLOG_POST_ID_PROP'].'_VALUE'];
-				$commentsCount = (int)$arElement['PROPERTY_'.$arResult['BLOG_DATA']['BLOG_COMMENTS_COUNT_PROP']];
+				$commentsCount = (int)$arElement['PROPERTY_'.$arResult['BLOG_DATA']['BLOG_COMMENTS_COUNT_PROP'].'_VALUE'];
 				if ($postID > 0)
 				{
 					$rsPosts = CBlogPost::GetList(
@@ -403,7 +413,7 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 					if ($postInfo = $rsPosts->Fetch())
 					{
 						$postInfo['NUM_COMMENTS'] = (int)$postInfo['NUM_COMMENTS'];
-						if ($postInfo['NUM_COMMENTS'] > 0 && $postInfo['NUM_COMMENTS'] != $commentsCount)
+						if ($postInfo['NUM_COMMENTS'] >= 0 && $postInfo['NUM_COMMENTS'] != $commentsCount)
 						{
 							CIBlockElement::SetPropertyValues($arResult['ELEMENT']['ID'], $arResult['ELEMENT']['IBLOCK_ID'], $postInfo['NUM_COMMENTS'], $arResult['BLOG_DATA']['BLOG_COMMENTS_COUNT_PROP']);
 							$commentsCount = $postInfo['NUM_COMMENTS'];
@@ -420,22 +430,13 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 					$ownerID = 1;
 					if (!empty($arResult['ELEMENT']['CREATED_BY']))
 					{
-						$userSort = 'ID';
-						$userOrder = 'ASC';
-						$rsUsers = CUser::GetList(
-							$userSort,
-							$userOrder,
-							array('ID_EQUAL_EXACT' => $arResult['ELEMENT']['CREATED_BY']),
-							array('FIELDS' => array("ID"))
-						);
-						if ($owner = $rsUsers->Fetch())
-						{
+						$ownersIterator = Main\UserTable::getList(array(
+							'select' => array('ID'),
+							'filter' => array('=ID' => $arResult['ELEMENT']['CREATED_BY'])
+						));
+						if ($owner = $ownersIterator->fetch())
 							$ownerID = $owner['ID'];
-						}
-						unset($owner);
-						unset($rsUsers);
-						unset($userOrder);
-						unset($userSort);
+						unset($owner, $ownersIterator);
 					}
 
 					$arFields = array(
@@ -452,11 +453,9 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 						"BLOG_ID" => $arResult['BLOG_DATA']['BLOG_ID'],
 						"ENABLE_TRACKBACK" => "N"
 					);
-					$postID = CBlogPost::Add($arFields);
-					if ($postID)
-					{
+					$postID = (int)CBlogPost::Add($arFields);
+					if ($postID > 0)
 						CIBlockElement::SetPropertyValues($arResult['ELEMENT']['ID'], $arResult['ELEMENT']['IBLOCK_ID'], $postID, $arResult['BLOG_DATA']['BLOG_POST_ID_PROP']);
-					}
 				}
 				$arResult['BLOG_DATA']['BLOG_POST_ID'] = $postID;
 				$arResult['COMMENT_ID'] = $postID;
@@ -493,4 +492,3 @@ if ($this->StartResultCache(false, ($arParams['CACHE_GROUPS'] === 'N'? false: $U
 		return 0;
 	}
 }
-?>

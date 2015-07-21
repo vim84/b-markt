@@ -58,7 +58,7 @@ class CIMStatus
 		return true;
 	}
 
-	public static function SetIdle($userId, $result)
+	public static function SetIdle($userId, $result = true)
 	{
 		$date = null;
 		if ($result)
@@ -67,6 +67,16 @@ class CIMStatus
 			$date->add('-10 MINUTE');
 		}
 		CIMStatus::Set($userId, Array('IDLE' => $date));
+	}
+
+	public static function SetMobile($userId, $result = true)
+	{
+		$date = null;
+		if ($result)
+		{
+			$date = new Bitrix\Main\Type\DateTime();
+		}
+		CIMStatus::Set($userId, Array('MOBILE_LAST_DATE' => $date));
 	}
 
 	private static function PrepereToPush($params)
@@ -130,7 +140,7 @@ class CIMStatus
 		}
 
 		global $USER;
-		if(!isset($arParams['ID']) && !IsModuleInstalled('intranet') && is_object($USER))
+		if(!isset($arParams['SKIP_CHECK']) && !isset($arParams['ID']) && !IsModuleInstalled('intranet') && is_object($USER))
 		{
 			$arID[] = $USER->GetID();
 			if (CModule::IncludeModule('socialnetwork') && CSocNetUser::IsFriendsAllowed())
@@ -158,7 +168,7 @@ class CIMStatus
 		$query->addSelect('ID');
 		if ($enable)
 		{
-			$query->addSelect('ref.STATUS', 'STATUS')->addSelect('ref.IDLE', 'IDLE');
+			$query->addSelect('ref.STATUS', 'STATUS')->addSelect('ref.IDLE', 'IDLE')->addSelect('ref.MOBILE_LAST_DATE', 'MOBILE_LAST_DATE');
 		}
 		$query->addFilter('>LAST_ACTIVITY_DATE', new \Bitrix\Main\DB\SqlExpression(Bitrix\Main\Application::getConnection()->getSqlHelper()->addSecondsToDateTime('-180')));
 		$result = $query->exec();
@@ -172,6 +182,7 @@ class CIMStatus
 				'id' => $arUser["ID"],
 				'status' => $enable && in_array($arUser['STATUS'], self::$AVAILABLE_STATUSES)? $arUser['STATUS']: 'online',
 				'idle' => $enable && is_object($arUser['IDLE'])? $arUser['IDLE']->getTimestamp(): 0,
+				'mobileLastDate' => $enable && is_object($arUser['MOBILE_LAST_DATE'])? $arUser['MOBILE_LAST_DATE']->getTimestamp(): 0,
 			);
 		}
 

@@ -554,6 +554,8 @@ do{ //one iteration loop
 		{
 			if (isset($PROP_del[$k1]) && is_array($PROP_del[$k1]))
 			{
+				if (!is_array($PROP[$k1]))
+					$PROP[$k1] = array();
 				foreach ($PROP_del[$k1] as $prop_value_id => $tmp)
 				{
 					if (!array_key_exists($prop_value_id, $PROP[$k1]))
@@ -638,7 +640,11 @@ do{ //one iteration loop
 		}
 
 		//Now reorder property values
-		if(is_array($PROP) && !empty($arFileProps))
+		if(
+			is_array($PROP)
+			&& !empty($arFileProps)
+			&& !class_exists('\Bitrix\Main\UI\FileInput', true)
+		)
 		{
 			foreach($arFileProps as $id)
 			{
@@ -872,10 +878,19 @@ do{ //one iteration loop
 					);
 
 					if(isset($_POST["IBLOCK_SECTION"]) && is_array($_POST["IBLOCK_SECTION"]))
+					{
 						$arFields["IBLOCK_SECTION"] = $_POST["IBLOCK_SECTION"];
+					}
+
+					if($arIBlock["FIELDS"]["IBLOCK_SECTION"]["DEFAULT_VALUE"]["KEEP_IBLOCK_SECTION_ID"] === "Y")
+					{
+						$arFields["IBLOCK_SECTION_ID"] = intval($_POST["IBLOCK_ELEMENT_SECTION_ID"]);
+					}
 
 					if(COption::GetOptionString("iblock", "show_xml_id", "N")=="Y" && is_set($_POST, "XML_ID"))
+					{
 						$arFields["XML_ID"] = trim($_POST["XML_ID"], " \t\n\r");
+					}
 
 					if($bEditRights)
 					{
@@ -1007,7 +1022,6 @@ do{ //one iteration loop
 					{
 						$ipropValues = new \Bitrix\Iblock\InheritedProperty\ElementValues($IBLOCK_ID, $ID);
 						$ipropValues->clearValues();
-						CIBlockElement::RecalcSections($ID);
 					}
 
 					if ('' == $strWarning && $bCatalog)
@@ -1332,7 +1346,12 @@ else
 	ClearVars("prn_");
 	$str_SORT="500";
 
-	if(!$error && $bWorkflow && $view!="Y")
+	if (
+		!$error
+		&& $bWorkflow
+		&& $view != "Y"
+		&& CIBlockElementRights::UserHasRightTo($IBLOCK_ID, $ID, "element_edit")
+	)
 	{
 		if(!$bCopy)
 			CIBlockElement::WF_Lock($ID);
@@ -1907,8 +1926,65 @@ else
 	$tabControl->AddEditField("CODE", GetMessage("IBLOCK_FIELD_CODE").":", $arIBlock["FIELDS"]["CODE"]["IS_REQUIRED"] === "Y", array("size" => 20, "maxlength" => 255), $str_CODE);
 }
 
+if (
+	$arShowTabs['sections']
+	&& $arIBlock["FIELDS"]["IBLOCK_SECTION"]["DEFAULT_VALUE"]["KEEP_IBLOCK_SECTION_ID"] === "Y"
+)
+{
+	$arDropdown = array();
+	if ($str_IBLOCK_ELEMENT_SECTION)
+	{
+		$sectionList = CIBlockSection::GetList(
+			array("left_margin"=>"asc"),
+			array("=ID"=>$str_IBLOCK_ELEMENT_SECTION),
+			false,
+			array("ID", "NAME")
+		);
+		while ($section = $sectionList->Fetch())
+			$arDropdown[$section["ID"]] = $section["NAME"];
+	}
+	$tabControl->BeginCustomField("IBLOCK_ELEMENT_SECTION_ID", GetMessage("IBEL_E_MAIN_IBLOCK_SECTION_ID").":", false);
+	?>
+		<tr id="tr_IBLOCK_ELEMENT_SECTION_ID">
+			<td class="adm-detail-valign-top"><?echo $tabControl->GetCustomLabelHTML()?></td>
+			<td>
+				<div id="RESULT_IBLOCK_ELEMENT_SECTION_ID">
+				<select name="IBLOCK_ELEMENT_SECTION_ID" id="IBLOCK_ELEMENT_SECTION_ID" onchange="InheritedPropertiesTemplates.updateInheritedPropertiesValues(false, true)">
+				<?foreach($arDropdown as $key => $val):?>
+					<option value="<?echo $key?>" <?if ($str_IBLOCK_SECTION_ID == $key) echo 'selected'?>><?echo $val?></option>
+				<?endforeach?>
+				</select>
+				</div>
+				<script>
+					window.ipropTemplates[window.ipropTemplates.length] = {
+						"ID": "IBLOCK_ELEMENT_SECTION_ID",
+						"INPUT_ID": "IBLOCK_ELEMENT_SECTION_ID",
+						"RESULT_ID": "RESULT_IBLOCK_ELEMENT_SECTION_ID",
+						"TEMPLATE": ""
+					};
+					window.ipropTemplates[window.ipropTemplates.length] = {
+						"ID": "CODE",
+						"INPUT_ID": "CODE",
+						"RESULT_ID": "",
+						"TEMPLATE": ""
+					};
+					window.ipropTemplates[window.ipropTemplates.length] = {
+						"ID": "XML_ID",
+						"INPUT_ID": "XML_ID",
+						"RESULT_ID": "",
+						"TEMPLATE": ""
+					};
+				</script>
+			</td>
+		</tr>
+	<?
+	$tabControl->EndCustomField("IBLOCK_ELEMENT_SECTION_ID",
+		'<input type="hidden" name="IBLOCK_ELEMENT_SECTION_ID" id="IBLOCK_ELEMENT_SECTION_ID" value="'.$str_IBLOCK_SECTION_ID.'">'
+	);
+}
+
 if(COption::GetOptionString("iblock", "show_xml_id", "N")=="Y")
-	$tabControl->AddEditField("XML_ID", GetMessage("IBLOCK_FIELD_XML_ID").":", $arIBlock["FIELDS"]["XML_ID"]["IS_REQUIRED"] === "Y", array("size" => 20, "maxlength" => 255), $str_XML_ID);
+	$tabControl->AddEditField("XML_ID", GetMessage("IBLOCK_FIELD_XML_ID").":", $arIBlock["FIELDS"]["XML_ID"]["IS_REQUIRED"] === "Y", array("size" => 20, "maxlength" => 255, "id" => "XML_ID"), $str_XML_ID);
 
 $tabControl->AddEditField("SORT", GetMessage("IBLOCK_FIELD_SORT").":", $arIBlock["FIELDS"]["SORT"]["IS_REQUIRED"] === "Y", array("size" => 7, "maxlength" => 10), $str_SORT);
 
@@ -1942,7 +2018,7 @@ if(!empty($PROP)):
 			<td class="adm-detail-valign-top" width="40%"><?if($prop_fields["HINT"]!=""):
 				?><span id="hint_<?echo $prop_fields["ID"];?>"></span><script type="text/javascript">BX.hint_replace(BX('hint_<?echo $prop_fields["ID"];?>'), '<?echo CUtil::JSEscape($prop_fields["HINT"])?>');</script>&nbsp;<?
 			endif;?><?echo $tabControl->GetCustomLabelHTML();?>:</td>
-			<td width="60%"><?_ShowPropertyField('PROP['.$prop_fields["ID"].']', $prop_fields, $prop_fields["VALUE"], (($historyId <= 0) && (!$bVarsFromForm) && ($ID<=0)), $bVarsFromForm||$bPropertyAjax, 50000, $tabControl->GetFormName(), $bCopy);?></td>
+			<td width="60%"><?_ShowPropertyField('PROP['.$prop_fields["ID"].']', $prop_fields, $prop_fields["VALUE"], (($historyId <= 0) && (!$bVarsFromForm) && ($ID<=0) && (!$bPropertyAjax)), $bVarsFromForm||$bPropertyAjax, 50000, $tabControl->GetFormName(), $bCopy);?></td>
 		</tr>
 		<?
 			$hidden = "";
@@ -2027,26 +2103,44 @@ if($bVarsFromForm && !array_key_exists("PREVIEW_PICTURE", $_REQUEST) && $arEleme
 				));
 				?>
 			<?else:?>
-				<?echo CFileInput::Show("PREVIEW_PICTURE", ($ID > 0 && !$bCopy? $str_PREVIEW_PICTURE: 0),
-					array(
-						"IMAGE" => "Y",
-						"PATH" => "Y",
-						"FILE_SIZE" => "Y",
-						"DIMENSIONS" => "Y",
-						"IMAGE_POPUP" => "Y",
-						"MAX_SIZE" => array(
-							"W" => COption::GetOptionString("iblock", "detail_image_size"),
-							"H" => COption::GetOptionString("iblock", "detail_image_size"),
-						),
-					), array(
-						'upload' => true,
-						'medialib' => true,
-						'file_dialog' => true,
-						'cloud' => true,
-						'del' => true,
-						'description' => true,
-					)
-				);
+				<?
+				if (class_exists('\Bitrix\Main\UI\FileInput', true))
+				{
+					echo \Bitrix\Main\UI\FileInput::createInstance(array(
+							"name" => "PREVIEW_PICTURE",
+							"description" => true,
+							"upload" => true,
+							"allowUpload" => "I",
+							"medialib" => true,
+							"fileDialog" => true,
+							"cloud" => true,
+							"delete" => true,
+							"maxCount" => 1
+						))->show($str_PREVIEW_PICTURE);
+				}
+				else
+				{
+					echo CFileInput::Show("PREVIEW_PICTURE", ($ID > 0 && !$bCopy? $str_PREVIEW_PICTURE: 0),
+						array(
+							"IMAGE" => "Y",
+							"PATH" => "Y",
+							"FILE_SIZE" => "Y",
+							"DIMENSIONS" => "Y",
+							"IMAGE_POPUP" => "Y",
+							"MAX_SIZE" => array(
+								"W" => COption::GetOptionString("iblock", "detail_image_size"),
+								"H" => COption::GetOptionString("iblock", "detail_image_size"),
+							),
+						), array(
+							'upload' => true,
+							'medialib' => true,
+							'file_dialog' => true,
+							'cloud' => true,
+							'del' => true,
+							'description' => true,
+						)
+					);
+				}
 				?>
 			<?endif?>
 		</td>
@@ -2087,7 +2181,8 @@ $tabControl->BeginCustomField("PREVIEW_TEXT", GetMessage("IBLOCK_FIELD_PREVIEW_T
 			false,
 			array(
 				'toolbarConfig' => CFileman::GetEditorToolbarConfig("iblock_".(defined('BX_PUBLIC_MODE') && BX_PUBLIC_MODE == 1 ? 'public' : 'admin')),
-				'saveEditorKey' => $IBLOCK_ID
+				'saveEditorKey' => $IBLOCK_ID,
+				'hideTypeSelector' => $arIBlock["FIELDS"]["PREVIEW_TEXT_TYPE_ALLOW_CHANGE"]["DEFAULT_VALUE"] === "N",
 			)
 			);?>
 		</td>
@@ -2129,26 +2224,43 @@ if($bVarsFromForm && !array_key_exists("DETAIL_PICTURE", $_REQUEST) && $arElemen
 				));
 				?>
 			<?else:?>
-				<?echo CFileInput::Show("DETAIL_PICTURE", ($ID > 0 && !$bCopy? $str_DETAIL_PICTURE: 0),
-					array(
-						"IMAGE" => "Y",
-						"PATH" => "Y",
-						"FILE_SIZE" => "Y",
-						"DIMENSIONS" => "Y",
-						"IMAGE_POPUP" => "Y",
-						"MAX_SIZE" => array(
-							"W" => COption::GetOptionString("iblock", "detail_image_size"),
-							"H" => COption::GetOptionString("iblock", "detail_image_size"),
-						),
-					), array(
-						'upload' => true,
-						'medialib' => true,
-						'file_dialog' => true,
-						'cloud' => true,
-						'del' => true,
-						'description' => true,
-					)
-				);
+				<?if (class_exists('\Bitrix\Main\UI\FileInput', true))
+				{
+					echo \Bitrix\Main\UI\FileInput::createInstance(array(
+							"name" => "DETAIL_PICTURE",
+							"description" => true,
+							"upload" => true,
+							"allowUpload" => "I",
+							"medialib" => true,
+							"fileDialog" => true,
+							"cloud" => true,
+							"delete" => true,
+							"maxCount" => 1
+						))->show($str_DETAIL_PICTURE);
+				}
+				else
+				{
+					echo CFileInput::Show("DETAIL_PICTURE", ($ID > 0 && !$bCopy? $str_DETAIL_PICTURE: 0),
+						array(
+							"IMAGE" => "Y",
+							"PATH" => "Y",
+							"FILE_SIZE" => "Y",
+							"DIMENSIONS" => "Y",
+							"IMAGE_POPUP" => "Y",
+							"MAX_SIZE" => array(
+								"W" => COption::GetOptionString("iblock", "detail_image_size"),
+								"H" => COption::GetOptionString("iblock", "detail_image_size"),
+							),
+						), array(
+							'upload' => true,
+							'medialib' => true,
+							'file_dialog' => true,
+							'cloud' => true,
+							'del' => true,
+							'description' => true,
+						)
+					);
+				}
 				?>
 			<?endif?>
 		</td>
@@ -2187,7 +2299,11 @@ $tabControl->BeginCustomField("DETAIL_TEXT", GetMessage("IBLOCK_FIELD_DETAIL_TEX
 				$arIBlock["LID"],
 				true,
 				false,
-				array('toolbarConfig' => CFileman::GetEditorToolbarConfig("iblock_".(defined('BX_PUBLIC_MODE') && BX_PUBLIC_MODE == 1 ? 'public' : 'admin')), 'saveEditorKey' => $IBLOCK_ID)
+				array(
+					'toolbarConfig' => CFileman::GetEditorToolbarConfig("iblock_".(defined('BX_PUBLIC_MODE') && BX_PUBLIC_MODE == 1 ? 'public' : 'admin')),
+					'saveEditorKey' => $IBLOCK_ID,
+					'hideTypeSelector' => $arIBlock["FIELDS"]["DETAIL_TEXT_TYPE_ALLOW_CHANGE"]["DEFAULT_VALUE"] === "N",
+				)
 			);
 		?></td>
 	</tr>
@@ -2668,6 +2784,9 @@ $tabControl->EndCustomField("DETAIL_TEXT",
 		<?if($arIBlock["SECTION_PROPERTY"] === "Y" || defined("CATALOG_PRODUCT")):?>
 		var groupField = new JCIBlockGroupField(form, 'tr_IBLOCK_ELEMENT_PROPERTY', url);
 		groupField.reload();
+		<?endif?>
+		<?if($arIBlock["FIELDS"]["IBLOCK_SECTION"]["DEFAULT_VALUE"]["KEEP_IBLOCK_SECTION_ID"] === "Y"):?>
+		InheritedPropertiesTemplates.updateInheritedPropertiesValues(false, true);
 		<?endif?>
 		return;
 	}

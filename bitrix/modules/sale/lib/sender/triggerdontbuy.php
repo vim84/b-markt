@@ -25,28 +25,46 @@ class TriggerDontBuy extends \Bitrix\Sender\TriggerConnectorClosed
 		return false;
 	}
 
+	/** @return bool */
+	public static function canRunForOldData()
+	{
+		return true;
+	}
+
 	public function filter()
 	{
-	\Bitrix\Main\Loader::includeModule('sale');
+		\Bitrix\Main\Loader::includeModule('sale');
 
 		$daysDontBuy = $this->getFieldValue('DAYS_DONT_BUY');
 		if(!is_numeric($daysDontBuy))
 			$daysDontBuy = 90;
 
-		$dateFrom = new \Bitrix\Main\Type\Date;
-		$dateTo = new \Bitrix\Main\Type\Date;
+		$dateFrom = new \Bitrix\Main\Type\DateTime;
+		$dateTo = new \Bitrix\Main\Type\DateTime;
 
-		$dateFrom->add('-' . $daysDontBuy . ' days');
-		$dateTo->add('1 days')->add('-' . $daysDontBuy . ' days');
+		$dateFrom->setTime(0, 0, 0)->add('-' . $daysDontBuy . ' days');
+		$dateTo->setTime(0, 0, 0)->add('1 days')->add('-' . $daysDontBuy . ' days');
+
+		if($this->isRunForOldData())
+		{
+			$filter = array(
+				'<MAX_DATE_INSERT' => $dateTo->format(\Bitrix\Main\UserFieldTable::MULTIPLE_DATETIME_FORMAT),
+			);
+		}
+		else
+		{
+			$filter = array(
+				'>MAX_DATE_INSERT' => $dateFrom->format(\Bitrix\Main\UserFieldTable::MULTIPLE_DATETIME_FORMAT),
+				'<MAX_DATE_INSERT' => $dateTo->format(\Bitrix\Main\UserFieldTable::MULTIPLE_DATETIME_FORMAT),
+			);
+		}
+		$filter = $filter + array(
+			'=LID' => $this->getSiteId()
+		);
 
 		$userListDb = \Bitrix\Sale\OrderTable::getList(array(
 			'select' => array('BUYER_USER_ID' => 'BUYER.ID', 'EMAIL' => 'BUYER.EMAIL', 'BUYER_USER_NAME' => 'BUYER.NAME'),
-			'filter' => array(
-				'=LID' => $this->getSiteId(),
-				'>MAX_DATE_INSERT' => $dateFrom->format(\Bitrix\Main\UserFieldTable::MULTIPLE_DATE_FORMAT),
-				'<MAX_DATE_INSERT' => $dateTo->format(\Bitrix\Main\UserFieldTable::MULTIPLE_DATE_FORMAT),
-
-			),
+			'filter' => $filter,
 			'runtime' => array(
 				new \Bitrix\Main\Entity\ExpressionField('MAX_DATE_INSERT', 'MAX(%s)', 'DATE_INSERT'),
 			),

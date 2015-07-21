@@ -18,7 +18,7 @@ if(!empty($arResult["STORES"]) && $arParams["MAIN_TITLE"] != ''):?>
 	<?if(!empty($arResult["STORES"])):?>
 	<hr><ul id="c_store_amount">
 		<?foreach($arResult["STORES"] as $pid => $arProperty):?>
-			<li style="display: <? echo ($arParams['SHOW_EMPTY_STORE'] == 'N' && $arProperty['AMOUNT'] <= 0 ? 'none' : ''); ?>;">
+			<li style="display: <? echo ($arParams['SHOW_EMPTY_STORE'] == 'N' && isset($arProperty['REAL_AMOUNT']) && $arProperty['REAL_AMOUNT'] <= 0 ? 'none' : ''); ?>;">
 				<?if (isset($arProperty["TITLE"])):?>
 					<a href="<?=$arProperty["URL"]?>"> <?=$arProperty["TITLE"]?></a><br />
 				<?endif;?>

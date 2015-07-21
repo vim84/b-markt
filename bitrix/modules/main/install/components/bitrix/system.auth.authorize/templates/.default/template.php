@@ -30,7 +30,7 @@ ShowMessage($arResult['ERROR_MESSAGE']);
 			</tr>
 			<tr>
 				<td class="bx-auth-label"><?=GetMessage("AUTH_PASSWORD")?></td>
-				<td><input class="bx-auth-input" type="password" name="USER_PASSWORD" maxlength="255" />
+				<td><input class="bx-auth-input" type="password" name="USER_PASSWORD" maxlength="255" autocomplete="off" />
 <?if($arResult["SECURE_AUTH"]):?>
 				<span class="bx-auth-secure" id="bx_auth_secure" title="<?echo GetMessage("AUTH_SECURE_NOTE")?>" style="display:none">
 					<div class="bx-auth-secure-icon"></div>

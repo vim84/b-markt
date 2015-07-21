@@ -1,4 +1,5 @@
 <?
+use Bitrix\Main\Loader;
 IncludeModuleLangFile(__FILE__);
 
 class CAllIBlock
@@ -647,7 +648,10 @@ class CAllIBlock
 					CIBlock::CleanCache($ID);
 				}
 
-				if(!array_key_exists("FIELDS", $arResult))
+				if (
+					!array_key_exists("FIELDS", $arResult)
+					|| !is_array($arResult["FIELDS"]["IBLOCK_SECTION"]["DEFAULT_VALUE"])
+				)
 				{
 					$arResult["FIELDS"] = CIBlock::GetFields($ID);
 					CIBlock::CleanCache($ID);
@@ -880,11 +884,9 @@ class CAllIBlock
 	///////////////////////////////////////////////////////////////////
 	function Update($ID, $arFields)
 	{
-		/** @global CCacheManager $CACHE_MANAGER */
-		global $CACHE_MANAGER;
 		/** @global CDatabase $DB */
 		global $DB;
-		$ID = intval($ID);
+		$ID = (int)$ID;
 		$SAVED_PICTURE = null;
 
 		if(is_set($arFields, "EXTERNAL_ID"))
@@ -1071,8 +1073,7 @@ class CAllIBlock
 		foreach (GetModuleEvents("iblock", "OnAfterIBlockUpdate", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arFields));
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$CACHE_MANAGER->ClearByTag("iblock_id_".$ID);
+		self::clearIblockTagCache($ID);
 
 		return $Result;
 	}
@@ -1089,10 +1090,8 @@ class CAllIBlock
 		global $APPLICATION;
 		/** @global CUserTypeManager $USER_FIELD_MANAGER */
 		global $USER_FIELD_MANAGER;
-		/** @global CCacheManager $CACHE_MANAGER */
-		global $CACHE_MANAGER;
 
-		$ID = IntVal($ID);
+		$ID = (int)$ID;
 
 		$APPLICATION->ResetException();
 		foreach(GetModuleEvents("iblock", "OnBeforeIBlockDelete", true) as $arEvent)
@@ -1183,8 +1182,7 @@ class CAllIBlock
 		foreach(GetModuleEvents("iblock", "OnAfterIBlockDelete", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array($ID));
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$CACHE_MANAGER->ClearByTag("iblock_id_".$ID);
+		self::clearIblockTagCache($ID);
 
 		$_SESSION["SESS_RECOUNT_DB"] = "Y";
 		return true;
@@ -1522,175 +1520,198 @@ REQ
 +	CODE 			varchar(255),
 +	TAGS 			varchar(255),
 **************/
-		$jpgQuality = intval(COption::GetOptionString('main', 'image_resize_quality', '95'));
-		if($jpgQuality <= 0 || $jpgQuality > 100)
-			$jpgQuality = 95;
-
 		static $res = false;
-		if(!$res)
-		$res = array(
-			"IBLOCK_SECTION" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_SECTIONS"),
-				"IS_REQUIRED" => false,
-			),
-			"ACTIVE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_ACTIVE"),
-				"IS_REQUIRED" => "Y",
-			),
-			"ACTIVE_FROM" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_ACTIVE_PERIOD_FROM"),
-				"IS_REQUIRED" => false,
-			),
-			"ACTIVE_TO" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_ACTIVE_PERIOD_TO"),
-				"IS_REQUIRED" => false,
-			),
-			"SORT" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_SORT"),
-				"IS_REQUIRED" => false,
-			),
-			"NAME" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_NAME"),
-				"IS_REQUIRED" => "Y",
-			),
-			"PREVIEW_PICTURE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_PICTURE"),
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => serialize(array(
-					"METHOD" => "resample",
-					"COMPRESSION" => $jpgQuality,
-				)),
-			),
-			"PREVIEW_TEXT_TYPE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_TEXT_TYPE"),
-				"IS_REQUIRED" => "Y",
-			),
-			"PREVIEW_TEXT" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_TEXT"),
-				"IS_REQUIRED" => false,
-			),
-			"DETAIL_PICTURE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_PICTURE"),
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => serialize(array(
-					"METHOD" => "resample",
-					"COMPRESSION" => $jpgQuality,
-				)),
-			),
-			"DETAIL_TEXT_TYPE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_TEXT_TYPE"),
-				"IS_REQUIRED" => "Y",
-			),
-			"DETAIL_TEXT" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_TEXT"),
-				"IS_REQUIRED" => false,
-			),
-			"XML_ID" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_XML_ID"),
-				"IS_REQUIRED" => false,
-			),
-			"CODE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_CODE"),
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => serialize(array(
-					"UNIQUE" => "N",
-					"TRANSLITERATION" => "N",
-					"TRANS_LEN" => 100,
-					"TRANS_CASE" => "L",
-					"TRANS_SPACE" => "-",
-					"TRANS_OTHER" => "-",
-					"TRANS_EAT" => "Y",
-					"USE_GOOGLE" => "N",
-				)),
-			),
-			"TAGS" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_TAGS"),
-				"IS_REQUIRED" => false,
-			),
+		if (!$res)
+		{
+			$jpgQuality = intval(COption::GetOptionString('main', 'image_resize_quality', '95'));
+			if($jpgQuality <= 0 || $jpgQuality > 100)
+				$jpgQuality = 95;
 
-			"SECTION_NAME" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_NAME"),
-				"IS_REQUIRED" => "Y",
-			),
-			"SECTION_PICTURE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_PICTURE"),
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => serialize(array(
-					"METHOD" => "resample",
-					"COMPRESSION" => $jpgQuality,
-				)),
-			),
-			"SECTION_DESCRIPTION_TYPE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_SECTION_DESCRIPTION_TYPE"),
-				"IS_REQUIRED" => "Y",
-			),
-			"SECTION_DESCRIPTION" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_SECTION_DESCRIPTION"),
-				"IS_REQUIRED" => false,
-			),
-			"SECTION_DETAIL_PICTURE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_PICTURE"),
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => serialize(array(
-					"METHOD" => "resample",
-					"COMPRESSION" => $jpgQuality,
-				)),
-			),
-			"SECTION_XML_ID" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_XML_ID"),
-				"IS_REQUIRED" => false,
-			),
-			"SECTION_CODE" => array(
-				"NAME" => GetMessage("IBLOCK_FIELD_CODE"),
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => serialize(array(
-					"UNIQUE" => "N",
-					"TRANSLITERATION" => "N",
-					"TRANS_LEN" => 100,
-					"TRANS_CASE" => "L",
-					"TRANS_SPACE" => "-",
-					"TRANS_OTHER" => "-",
-					"TRANS_EAT" => "Y",
-					"USE_GOOGLE" => "N",
-				)),
-			),
-			"LOG_SECTION_ADD" => array(
-				"NAME" => "LOG_SECTION_ADD",
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => false,
-			),
-			"LOG_SECTION_EDIT" => array(
-				"NAME" => "LOG_SECTION_EDIT",
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => false,
-			),
-			"LOG_SECTION_DELETE" => array(
-				"NAME" => "LOG_SECTION_DELETE",
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => false,
-			),
-			"LOG_ELEMENT_ADD" => array(
-				"NAME" => "LOG_ELEMENT_ADD",
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => false,
-			),
-			"LOG_ELEMENT_EDIT" => array(
-				"NAME" => "LOG_ELEMENT_EDIT",
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => false,
-			),
-			"LOG_ELEMENT_DELETE" => array(
-				"NAME" => "LOG_ELEMENT_DELETE",
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => false,
-			),
-			"XML_IMPORT_START_TIME" => array(
-				"NAME" => "XML_IMPORT_START_TIME",
-				"IS_REQUIRED" => false,
-				"DEFAULT_VALUE" => false,
-				"VISIBLE" => "N",
-			),
-		);
+			$res = array(
+				"IBLOCK_SECTION" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_SECTIONS"),
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => serialize(array(
+						"KEEP_IBLOCK_SECTION_ID" => "N",
+					)),
+				),
+				"ACTIVE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_ACTIVE"),
+					"IS_REQUIRED" => "Y",
+				),
+				"ACTIVE_FROM" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_ACTIVE_PERIOD_FROM"),
+					"IS_REQUIRED" => false,
+				),
+				"ACTIVE_TO" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_ACTIVE_PERIOD_TO"),
+					"IS_REQUIRED" => false,
+				),
+				"SORT" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_SORT"),
+					"IS_REQUIRED" => false,
+				),
+				"NAME" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_NAME"),
+					"IS_REQUIRED" => "Y",
+				),
+				"PREVIEW_PICTURE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_PICTURE"),
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => serialize(array(
+						"METHOD" => "resample",
+						"COMPRESSION" => $jpgQuality,
+					)),
+				),
+				"PREVIEW_TEXT_TYPE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_TEXT_TYPE"),
+					"IS_REQUIRED" => "Y",
+				),
+				"PREVIEW_TEXT" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_TEXT"),
+					"IS_REQUIRED" => false,
+				),
+				"DETAIL_PICTURE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_PICTURE"),
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => serialize(array(
+						"METHOD" => "resample",
+						"COMPRESSION" => $jpgQuality,
+					)),
+				),
+				"DETAIL_TEXT_TYPE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_TEXT_TYPE"),
+					"IS_REQUIRED" => "Y",
+				),
+				"DETAIL_TEXT" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_TEXT"),
+					"IS_REQUIRED" => false,
+				),
+				"XML_ID" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_XML_ID"),
+					"IS_REQUIRED" => false,
+				),
+				"CODE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_CODE"),
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => serialize(array(
+						"UNIQUE" => "N",
+						"TRANSLITERATION" => "N",
+						"TRANS_LEN" => 100,
+						"TRANS_CASE" => "L",
+						"TRANS_SPACE" => "-",
+						"TRANS_OTHER" => "-",
+						"TRANS_EAT" => "Y",
+						"USE_GOOGLE" => "N",
+					)),
+				),
+				"TAGS" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_TAGS"),
+					"IS_REQUIRED" => false,
+				),
+
+				"SECTION_NAME" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_NAME"),
+					"IS_REQUIRED" => "Y",
+				),
+				"SECTION_PICTURE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_PREVIEW_PICTURE"),
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => serialize(array(
+						"METHOD" => "resample",
+						"COMPRESSION" => $jpgQuality,
+					)),
+				),
+				"SECTION_DESCRIPTION_TYPE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_SECTION_DESCRIPTION_TYPE"),
+					"IS_REQUIRED" => "Y",
+				),
+				"SECTION_DESCRIPTION" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_SECTION_DESCRIPTION"),
+					"IS_REQUIRED" => false,
+				),
+				"SECTION_DETAIL_PICTURE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_DETAIL_PICTURE"),
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => serialize(array(
+						"METHOD" => "resample",
+						"COMPRESSION" => $jpgQuality,
+					)),
+				),
+				"SECTION_XML_ID" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_XML_ID"),
+					"IS_REQUIRED" => false,
+				),
+				"SECTION_CODE" => array(
+					"NAME" => GetMessage("IBLOCK_FIELD_CODE"),
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => serialize(array(
+						"UNIQUE" => "N",
+						"TRANSLITERATION" => "N",
+						"TRANS_LEN" => 100,
+						"TRANS_CASE" => "L",
+						"TRANS_SPACE" => "-",
+						"TRANS_OTHER" => "-",
+						"TRANS_EAT" => "Y",
+						"USE_GOOGLE" => "N",
+					)),
+				),
+				"LOG_SECTION_ADD" => array(
+					"NAME" => "LOG_SECTION_ADD",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => false,
+				),
+				"LOG_SECTION_EDIT" => array(
+					"NAME" => "LOG_SECTION_EDIT",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => false,
+				),
+				"LOG_SECTION_DELETE" => array(
+					"NAME" => "LOG_SECTION_DELETE",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => false,
+				),
+				"LOG_ELEMENT_ADD" => array(
+					"NAME" => "LOG_ELEMENT_ADD",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => false,
+				),
+				"LOG_ELEMENT_EDIT" => array(
+					"NAME" => "LOG_ELEMENT_EDIT",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => false,
+				),
+				"LOG_ELEMENT_DELETE" => array(
+					"NAME" => "LOG_ELEMENT_DELETE",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => false,
+				),
+				"XML_IMPORT_START_TIME" => array(
+					"NAME" => "XML_IMPORT_START_TIME",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => false,
+					"VISIBLE" => "N",
+				),
+				"DETAIL_TEXT_TYPE_ALLOW_CHANGE" => array(
+					"NAME" => "DETAIL_TEXT_TYPE_ALLOW_CHANGE",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => "Y",
+					"VISIBLE" => "N",
+				),
+				"PREVIEW_TEXT_TYPE_ALLOW_CHANGE" => array(
+					"NAME" => "PREVIEW_TEXT_TYPE_ALLOW_CHANGE",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => "Y",
+					"VISIBLE" => "N",
+				),
+				"SECTION_DESCRIPTION_TYPE_ALLOW_CHANGE" => array(
+					"NAME" => "SECTION_DESCRIPTION_TYPE_ALLOW_CHANGE",
+					"IS_REQUIRED" => false,
+					"DEFAULT_VALUE" => "Y",
+					"VISIBLE" => "N",
+				),
+			);
+		}
 		return $res;
 	}
 
@@ -1891,6 +1912,20 @@ REQ
 			{
 				$arFields["SORT"]["DEFAULT_VALUE"] = intval($arFields["SORT"]["DEFAULT_VALUE"]);
 			}
+			if(array_key_exists("IBLOCK_SECTION", $arFields))
+			{
+				$arDef = &$arFields["IBLOCK_SECTION"]["DEFAULT_VALUE"];
+				if(is_array($arDef))
+				{
+					$arDef = serialize(array(
+						"KEEP_IBLOCK_SECTION_ID" => $arDef["KEEP_IBLOCK_SECTION_ID"] === "Y"? "Y": "N",
+					));
+				}
+				else
+				{
+					$arDef = "";
+				}
+			}
 
 			while($ar = $res->Fetch())
 			{
@@ -2019,6 +2054,7 @@ REQ
 				|| $FIELD_ID == "SECTION_PICTURE"
 				|| $FIELD_ID == "SECTION_DETAIL_PICTURE"
 				|| $FIELD_ID == "SECTION_CODE"
+				|| $FIELD_ID == "IBLOCK_SECTION"
 			)
 			{
 				$a = &$arDefFields[$FIELD_ID]["DEFAULT_VALUE"];
@@ -2494,30 +2530,24 @@ REQ
 		static $arElementCache = array();
 
 		$product_url = "";
-		$OF_ELEMENT_ID = intval($OF_ELEMENT_ID);
-		$OF_IBLOCK_ID = intval($OF_IBLOCK_ID);
+		$OF_ELEMENT_ID = (int)$OF_ELEMENT_ID;
+		$OF_IBLOCK_ID = (int)$OF_IBLOCK_ID;
 
 		if(
 			$arrType === "E"
 			&& $OF_IBLOCK_ID > 0
 			&& $OF_ELEMENT_ID > 0
-			&& CModule::IncludeModule("catalog")
+			&& Loader::includeModule('catalog')
 		)
 		{
-			if(!array_key_exists($OF_IBLOCK_ID, $arIBlockCache))
+			if (!isset($arIBlockCache[$OF_IBLOCK_ID]))
 			{
-				$rsProducts = CCatalog::GetList(
-					array(),
-					array('IBLOCK_ID' => $OF_IBLOCK_ID),
-					false, false,
-					array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID')
-				);
-				$arIBlockCache[$OF_IBLOCK_ID] = $rsProducts->Fetch();
-				if(is_array($arIBlockCache[$OF_IBLOCK_ID]))
+				$arIBlockCache[$OF_IBLOCK_ID] = CCatalogSku::GetInfoByOfferIBlock($OF_IBLOCK_ID);
+				if (is_array($arIBlockCache[$OF_IBLOCK_ID]))
 					$arIBlockCache[$OF_IBLOCK_ID]["PRODUCT_IBLOCK"] = CIBlock::GetArrayByID($arIBlockCache[$OF_IBLOCK_ID]["PRODUCT_IBLOCK_ID"]);
 			}
 
-			if(is_array($arIBlockCache[$OF_IBLOCK_ID]))
+			if (is_array($arIBlockCache[$OF_IBLOCK_ID]))
 			{
 				if(!array_key_exists($OF_ELEMENT_ID, $arElementCache))
 				{

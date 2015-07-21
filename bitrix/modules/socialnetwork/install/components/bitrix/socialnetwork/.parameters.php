@@ -1147,7 +1147,13 @@ if(CModule::IncludeModule("iblock"))
 		$arUGroupsEx[$arUGroups["ID"]] = $arUGroups["NAME"];
 	}
 
-	if (IsModuleInstalled("webdav"))
+	if (
+		IsModuleInstalled("webdav")
+		&& (
+			!IsModuleInstalled("disk")
+			|| !\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false)
+		)
+	)
 	{
 		$arComponentParameters["GROUPS"]["WEBDAV_SETTINGS"] = array(
 			"NAME" => GetMessage("SONET_WEBDAV_SETTINGS"));

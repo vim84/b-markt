@@ -10,6 +10,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /** @global CUser $USER */
 /** @global CMain $APPLICATION */
 
+use Bitrix\Main\Context;
+use Bitrix\Main\Type\DateTime;
 
 CPageOption::SetOptionString("main", "nav_page_in_session", "N");
 
@@ -25,10 +27,16 @@ $arParams["IBLOCK_ID"] = intval($arParams["IBLOCK_ID"]);
 $arParams["SECTION_ID"] = intval($arParams["~SECTION_ID"]);
 if($arParams["SECTION_ID"] > 0 && $arParams["SECTION_ID"]."" != $arParams["~SECTION_ID"])
 {
-	ShowError(GetMessage("PHOTO_SECTION_NOT_FOUND"));
-	@define("ERROR_404", "Y");
-	if($arParams["SET_STATUS_404"]==="Y")
-		CHTTP::SetStatus("404 Not Found");
+	if (CModule::IncludeModule("iblock"))
+	{
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("PHOTO_SECTION_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
+	}
 	return;
 }
 
@@ -73,6 +81,7 @@ if($arParams["LINE_ELEMENT_COUNT"]<=0)
 
 $arParams["ADD_SECTIONS_CHAIN"] = $arParams["ADD_SECTIONS_CHAIN"]!="N"; //Turn on by default
 $arParams["SET_TITLE"] = $arParams["SET_TITLE"]!="N"; //Turn on by default
+$arParams["SET_LAST_MODIFIED"] = $arParams["SET_LAST_MODIFIED"]==="Y";
 $arParams["CACHE_FILTER"]=$arParams["CACHE_FILTER"]=="Y";
 if(!$arParams["CACHE_FILTER"] && count($arrFilter)>0)
 	$arParams["CACHE_TIME"] = 0;
@@ -95,6 +104,17 @@ $arNavigation = CDBResult::GetNavParams($arNavParams);
 if($arNavigation["PAGEN"]==0 && $arParams["PAGER_DESC_NUMBERING_CACHE_TIME"]>0)
 	$arParams["CACHE_TIME"] = $arParams["PAGER_DESC_NUMBERING_CACHE_TIME"];
 
+if (empty($arParams["PAGER_PARAMS_NAME"]) || !preg_match("/^[A-Za-z_][A-Za-z01-9_]*$/", $arParams["PAGER_PARAMS_NAME"]))
+{
+	$pagerParameters = array();
+}
+else
+{
+	$pagerParameters = $GLOBALS[$arParams["PAGER_PARAMS_NAME"]];
+	if (!is_array($pagerParameters))
+		$pagerParameters = array();
+}
+
 $arParams["USE_PERMISSIONS"] = $arParams["USE_PERMISSIONS"]=="Y";
 if(!is_array($arParams["GROUP_PERMISSIONS"]))
 	$arParams["GROUP_PERMISSIONS"] = array(1);
@@ -113,7 +133,7 @@ if($arParams["USE_PERMISSIONS"] && isset($GLOBALS["USER"]) && is_object($GLOBALS
 	}
 }
 
-if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()), $arNavigation, $bUSER_HAVE_ACCESS)))
+if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()), $arNavigation, $bUSER_HAVE_ACCESS, $pagerParameters)))
 {
 	if(!CModule::IncludeModule("iblock"))
 	{
@@ -129,9 +149,12 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 			if(is_string($field) && preg_match("/^UF_/", $field))
 				$arSelect[] = $field;
 	}
-	if(preg_match("/^UF_/", $arParams["META_KEYWORDS"])) $arSelect[] = $arParams["META_KEYWORDS"];
-	if(preg_match("/^UF_/", $arParams["META_DESCRIPTION"])) $arSelect[] = $arParams["META_DESCRIPTION"];
-	if(preg_match("/^UF_/", $arParams["BROWSER_TITLE"])) $arSelect[] = $arParams["BROWSER_TITLE"];
+	if(preg_match("/^UF_/", $arParams["META_KEYWORDS"]))
+		$arSelect[] = $arParams["META_KEYWORDS"];
+	if(preg_match("/^UF_/", $arParams["META_DESCRIPTION"]))
+		$arSelect[] = $arParams["META_DESCRIPTION"];
+	if(preg_match("/^UF_/", $arParams["BROWSER_TITLE"]))
+		$arSelect[] = $arParams["BROWSER_TITLE"];
 
 	$arFilter = array(
 		"ACTIVE" => "Y",
@@ -182,6 +205,7 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 			"CODE",
 			"IBLOCK_ID",
 			"NAME",
+			"TIMESTAMP_X",
 			"PREVIEW_PICTURE",
 			"DETAIL_PICTURE",
 			"DETAIL_PAGE_URL",
@@ -265,9 +289,44 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 				$arItem["PICTURE"] = $arItem["PREVIEW_PICTURE"];
 			elseif(is_array($arItem["DETAIL_PICTURE"]))
 				$arItem["PICTURE"] = $arItem["DETAIL_PICTURE"];
+
+			if ($arParams["SET_LAST_MODIFIED"])
+			{
+				$time = DateTime::createFromUserTime($arItem["TIMESTAMP_X"]);
+				if (
+					!isset($arResult["ITEMS_TIMESTAMP_X"])
+					|| $time->getTimestamp() > $arResult["ITEMS_TIMESTAMP_X"]->getTimestamp()
+				)
+					$arResult["ITEMS_TIMESTAMP_X"] = $time;
+			}
+
 			$arResult["ITEMS"][]=$arItem;
 		}
-		$arResult["NAV_STRING"] = $rsElements->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"]);
+
+		$navComponentParameters = array();
+		if ($arParams["PAGER_BASE_LINK_ENABLE"] === "Y")
+		{
+			$pagerBaseLink = trim($arParams["PAGER_BASE_LINK"]);
+			if ($pagerBaseLink === "")
+				$pagerBaseLink = $arResult["~SECTION_PAGE_URL"];
+
+			if ($pagerParameters && isset($pagerParameters["BASE_LINK"]))
+			{
+				$pagerBaseLink = $pagerParameters["BASE_LINK"];
+				unset($pagerParameters["BASE_LINK"]);
+			}
+
+			$navComponentParameters["BASE_LINK"] = CHTTP::urlAddParams($pagerBaseLink, $pagerParameters, array("encode"=>true));
+		}
+
+		$arResult["NAV_STRING"] = $rsElements->GetPageNavStringEx(
+			$navComponentObject,
+			$arParams["PAGER_TITLE"],
+			$arParams["PAGER_TEMPLATE"],
+			$arParams["PAGER_SHOW_ALWAYS"],
+			$this,
+			$navComponentParameters
+		);
 		$arResult["NAV_CACHED_DATA"] = $navComponentObject->GetTemplateCachedData();
 		$arResult["NAV_RESULT"] = $rsElements;
 
@@ -284,16 +343,20 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 			"NAME",
 			"PATH",
 			"IPROPERTY_VALUES",
+			"ITEMS_TIMESTAMP_X",
 		));
 		$this->IncludeComponentTemplate();
 	}
 	else
 	{
 		$this->AbortResultCache();
-		ShowError(GetMessage("PHOTO_SECTION_NOT_FOUND"));
-		@define("ERROR_404", "Y");
-		if($arParams["SET_STATUS_404"]==="Y")
-			CHTTP::SetStatus("404 Not Found");
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("PHOTO_SECTION_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
 	}
 }
 
@@ -384,6 +447,11 @@ if(isset($arResult["ID"]))
 		{
 			$APPLICATION->AddChainItem($arPath["NAME"], $arPath["~SECTION_PAGE_URL"]);
 		}
+	}
+
+	if ($arParams["SET_LAST_MODIFIED"] && $arResult["ITEMS_TIMESTAMP_X"])
+	{
+		Context::getCurrent()->getResponse()->setLastModified($arResult["ITEMS_TIMESTAMP_X"]);
 	}
 }
 

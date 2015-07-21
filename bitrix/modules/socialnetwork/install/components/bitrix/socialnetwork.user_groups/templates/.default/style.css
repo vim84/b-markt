@@ -1,4 +1,4 @@
-.sonet-groups-title-buttons { position: absolute; right: 0; top: 5px; white-space: nowrap; }
+.sonet-groups-title-buttons { display: block; margin-top: 6px; white-space: nowrap; }
 .sonet-groups-create-group-button { display: inline-block; height: 23px; vertical-align: top; }
 .sonet-groups-create-left,
 .sonet-groups-create-text,

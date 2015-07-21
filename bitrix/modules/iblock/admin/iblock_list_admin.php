@@ -1975,23 +1975,34 @@ while($arRes = $rsData->NavNext(true, "f_"))
 					$arViewHTML[] = $prop["VALUE_ENUM"];
 				elseif($prop['PROPERTY_TYPE']=='F')
 				{
-					$arViewHTML[] = CFileInput::Show('NO_FIELDS['.$prop['PROPERTY_VALUE_ID'].']', $prop["VALUE"], array(
-						"IMAGE" => "Y",
-						"PATH" => "Y",
-						"FILE_SIZE" => "Y",
-						"DIMENSIONS" => "Y",
-						"IMAGE_POPUP" => "Y",
-						"MAX_SIZE" => $maxImageSize,
-						"MIN_SIZE" => $minImageSize,
-						), array(
-							'upload' => false,
-							'medialib' => false,
-							'file_dialog' => false,
-							'cloud' => false,
-							'del' => false,
-							'description' => false,
-						)
-					);
+					if ($bExcel)
+					{
+						$arFile = CFile::GetFileArray($prop["VALUE"]);
+						if (is_array($arFile))
+							$arViewHTML[] = CHTTP::URN2URI($arFile["SRC"]);
+						else
+							$arViewHTML[] = "";
+					}
+					else
+					{
+						$arViewHTML[] = CFileInput::Show('NO_FIELDS['.$prop['PROPERTY_VALUE_ID'].']', $prop["VALUE"], array(
+							"IMAGE" => "Y",
+							"PATH" => "Y",
+							"FILE_SIZE" => "Y",
+							"DIMENSIONS" => "Y",
+							"IMAGE_POPUP" => "Y",
+							"MAX_SIZE" => $maxImageSize,
+							"MIN_SIZE" => $minImageSize,
+							), array(
+								'upload' => false,
+								'medialib' => false,
+								'file_dialog' => false,
+								'cloud' => false,
+								'del' => false,
+								'description' => false,
+							)
+						);
+					}
 				}
 				elseif($prop['PROPERTY_TYPE']=='G')
 				{
@@ -2048,8 +2059,8 @@ while($arRes = $rsData->NavNext(true, "f_"))
 						array(
 							$prop,
 							array(
-								"VALUE" => $prop["VALUE"],
-								"DESCRIPTION" => $prop["DESCRIPTION"],
+								"VALUE" => $prop["~VALUE"],
+								"DESCRIPTION" => $prop["~DESCRIPTION"],
 							),
 							array(
 								"VALUE" => $VALUE_NAME,
@@ -2135,24 +2146,38 @@ while($arRes = $rsData->NavNext(true, "f_"))
 						{
 							$inputName['FIELDS['.$f_TYPE.$f_ID.'][PROPERTY_'.$prop['ID'].']['.$g_prop['PROPERTY_VALUE_ID'].'][VALUE]'] = $g_prop["VALUE"];
 						}
-
-						$arEditHTML[] = CFileInput::ShowMultiple($inputName, 'FIELDS['.$f_TYPE.$f_ID.'][PROPERTY_'.$prop['ID'].'][n#IND#]', array(
-							"IMAGE" => "Y",
-							"PATH" => "Y",
-							"FILE_SIZE" => "Y",
-							"DIMENSIONS" => "Y",
-							"IMAGE_POPUP" => "Y",
-							"MAX_SIZE" => $maxImageSize,
-							"MIN_SIZE" => $minImageSize,
-							), false, array(
-								'upload' => true,
-								'medialib' => false,
-								'file_dialog' => false,
-								'cloud' => false,
-								'del' => true,
-								'description' => $prop["WITH_DESCRIPTION"]=="Y",
-							)
-						);
+						if (class_exists('\Bitrix\Main\UI\FileInput', true))
+						{
+							$arEditHTML[] = \Bitrix\Main\UI\FileInput::createInstance(array(
+									"name" => 'FIELDS['.$f_TYPE.$f_ID.'][PROPERTY_'.$prop['ID'].'][n#IND#]',
+									"description" => $prop["WITH_DESCRIPTION"]=="Y",
+									"upload" => true,
+									"medialib" => false,
+									"fileDialog" => false,
+									"cloud" => false,
+									"delete" => true,
+								))->show($inputName);
+						}
+						else
+						{
+							$arEditHTML[] = CFileInput::ShowMultiple($inputName, 'FIELDS['.$f_TYPE.$f_ID.'][PROPERTY_'.$prop['ID'].'][n#IND#]', array(
+								"IMAGE" => "Y",
+								"PATH" => "Y",
+								"FILE_SIZE" => "Y",
+								"DIMENSIONS" => "Y",
+								"IMAGE_POPUP" => "Y",
+								"MAX_SIZE" => $maxImageSize,
+								"MIN_SIZE" => $minImageSize,
+								), false, array(
+									'upload' => true,
+									'medialib' => false,
+									'file_dialog' => false,
+									'cloud' => false,
+									'del' => true,
+									'description' => $prop["WITH_DESCRIPTION"]=="Y",
+								)
+							);
+						}
 					}
 					else
 					{
@@ -3339,9 +3364,12 @@ function deleteFilter(el)
 }
 
 try {
-var DecimalSeparator = Number("1.2").toLocaleString().charCodeAt(1);
-document.cookie = '<?echo $dsc_cookie_name?>='+DecimalSeparator+'; path=/;';
-} catch (e) {}
+	var DecimalSeparator = Number("1.2").toLocaleString().charCodeAt(1);
+	document.cookie = '<?echo $dsc_cookie_name?>='+DecimalSeparator+'; path=/;';
+}
+catch (e)
+{
+}
 </script><?
 $oFilter->Begin();
 ?>

@@ -123,6 +123,11 @@ $arComponentParameters = array(
 		)
 	),
 	"PARAMETERS" => array(
+		"SEF_MODE" => array(),
+		"SEF_RULE" => array(
+			"VALUES" => array(
+			),
+		),
 		"IBLOCK_TYPE" => array(
 			"PARENT" => "BASE",
 			"NAME" => GetMessage("IBLOCK_TYPE"),

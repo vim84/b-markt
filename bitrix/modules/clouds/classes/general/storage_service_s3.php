@@ -770,7 +770,8 @@ class CCloudStorageService_AmazonS3 extends CCloudStorageService
 				'GET',
 				$arBucket["BUCKET"],
 				'/',
-				'?'.($bRecursive? '': 'delimiter=%2F&').'prefix='.urlencode($filePath).'&marker='.urlencode($marker)
+				'?'.($bRecursive? '': 'delimiter=%2F&').'prefix='.urlencode($filePath)
+					.'&marker='.str_replace("+", "%20", urlencode($marker))
 			);
 
 			if(
@@ -794,6 +795,7 @@ class CCloudStorageService_AmazonS3 extends CCloudStorageService
 					}
 				}
 
+				$lastKey = null;
 				if(
 					isset($response["ListBucketResult"]["#"]["Contents"])
 					&& is_array($response["ListBucketResult"]["#"]["Contents"])
@@ -804,6 +806,7 @@ class CCloudStorageService_AmazonS3 extends CCloudStorageService
 						$file_name = substr($a["#"]["Key"][0]["#"], strlen($filePath));
 						$result["file"][] = $APPLICATION->ConvertCharset($file_name, "UTF-8", LANG_CHARSET);
 						$result["file_size"][] = $a["#"]["Size"][0]["#"];
+						$lastKey = $a["#"]["Key"][0]["#"];
 					}
 				}
 
@@ -811,16 +814,21 @@ class CCloudStorageService_AmazonS3 extends CCloudStorageService
 					isset($response["ListBucketResult"]["#"]["IsTruncated"])
 					&& is_array($response["ListBucketResult"]["#"]["IsTruncated"])
 					&& $response["ListBucketResult"]["#"]["IsTruncated"][0]["#"] === "true"
-					&& strlen($response["ListBucketResult"]["#"]["NextMarker"][0]["#"]) > 0
 				)
 				{
-					$marker = $response["ListBucketResult"]["#"]["NextMarker"][0]["#"];
-					continue;
+					if (strlen($response["ListBucketResult"]["#"]["NextMarker"][0]["#"]) > 0)
+					{
+						$marker = $response["ListBucketResult"]["#"]["NextMarker"][0]["#"];
+						continue;
+					}
+					elseif ($lastKey !== null);
+					{
+						$marker = $lastKey;
+						continue;
+					}
 				}
-				else
-				{
-					break;
-				}
+
+				break;
 			}
 			else
 			{

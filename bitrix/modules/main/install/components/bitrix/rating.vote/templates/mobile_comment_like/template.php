@@ -1,6 +1,5 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
-$APPLICATION->AddHeadScript(SITE_TEMPLATE_PATH."/components/bitrix/rating.vote/mobile_comment_like/script_attached.js");
-
+$APPLICATION->AddHeadScript("/bitrix/components/bitrix/rating.vote/templates/mobile_comment_like/script_attached.js");
 ?><script>
 BX.message({
 	RVCSessID: '<?=CUtil::JSEscape(bitrix_sessid())?>',

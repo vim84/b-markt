@@ -967,6 +967,11 @@ BX.findPreviousSibling = function(obj, params)
 	return null;
 };
 
+BX.checkNode = function(obj, params)
+{
+	return _checkNode(obj, params);
+};
+
 BX.findFormElements = function(form)
 {
 	if (BX.type.isString(form))
@@ -1747,50 +1752,58 @@ BX.submit = function(obForm, action_name, action_value, onAfterSubmit)
 	setTimeout(BX.delegate(function() {BX.fireEvent(this, 'click'); if (onAfterSubmit) onAfterSubmit();}, obForm['BXFormSubmit_' + action_name]), 10);
 };
 
-BX.debounce = function(fn, timeout, ctx){
-
+// returns function which runs fn in timeout ms after returned function is finished being called
+BX.debounce = function(fn, timeout, ctx)
+{
 	var timer = 0;
 
-	return function(){
-
+	return function()
+	{
 		ctx = ctx || this;
 		var args = arguments;
 
 		clearTimeout(timer);
 
-		timer = setTimeout(function(){
+		timer = setTimeout(function()
+		{
 			fn.apply(ctx, args);
 		}, timeout);
 	}
-}
+};
 
-BX.throttle = function(fn, timeout, ctx){
+// returns function which runs fn and repeats every timeout ms while returned function is being called
+BX.throttle = function(fn, timeout, ctx)
+{
 
 	var timer = 0,
 		args = null,
 		invoke;
 
-	return function(){
-
+	return function()
+	{
 		ctx = ctx || this;
 		args = arguments;
 		invoke = true;
 
-		if(!timer){
-			(function(){
-
-				if(invoke) {
+		if(!timer)
+		{
+			var q = function()
+			{
+				if(invoke)
+				{
 					fn.apply(ctx, args);
 					invoke = false;
-					timer = setTimeout(arguments.callee, timeout);
+					timer = setTimeout(q, timeout);
 				}
 				else
+				{
 					timer = null;
-			})();
+				}
+			};
+			q();
 		}
-
 	};
-}
+};
 
 /* browser detection */
 BX.browser = {
@@ -1865,6 +1878,11 @@ BX.browser = {
 		return (/(iPad;)|(iPhone;)/i.test(navigator.userAgent));
 	},
 
+	IsMobile: function()
+	{
+		return (/(ipad|iphone|android|mobile|touch)/i.test(navigator.userAgent));
+	},
+
 	DetectIeVersion: function()
 	{
 		if(BX.browser.IsOpera() || BX.browser.IsSafari() || BX.browser.IsFirefox() || BX.browser.IsChrome())
@@ -1930,7 +1948,11 @@ BX.browser = {
 
 	addGlobalClass: function() {
 
-		var globalClass = "";
+		var globalClass = "bx-core";
+		if (BX.hasClass(document.documentElement, globalClass))
+		{
+			return;
+		}
 
 		//Mobile
 		if (BX.browser.IsIOS())
@@ -1946,7 +1968,7 @@ BX.browser = {
 			globalClass += " bx-android";
 		}
 
-		globalClass += (BX.browser.IsIOS() || BX.browser.IsAndroid() ? " bx-touch" : " bx-no-touch");
+		globalClass += (BX.browser.IsMobile() ? " bx-touch" : " bx-no-touch");
 		globalClass += (BX.browser.isRetina() ? " bx-retina" : " bx-no-retina");
 
 		//Desktop
@@ -1974,8 +1996,6 @@ BX.browser = {
 		}
 
 		BX.addClass(document.documentElement, globalClass);
-
-		BX.browser.addGlobalClass = BX.DoNothing;
 	},
 
 	isPropertySupported: function(jsProperty, bReturnCSSName)
@@ -2284,6 +2304,14 @@ BX.util = {
 		for (var i = 0; i < escapes.length; i++)
 			str = str.replace(new RegExp(escapes[i].c, 'g'), escapes[i].r);
 		return str;
+	},
+
+	nl2br: function(str)
+	{
+		if (!str || !str.replace)
+			return str;
+
+		return str.replace(/([^>])\n/g, '$1<br/>');
 	},
 
 	str_pad: function(input, pad_length, pad_string, pad_type)
@@ -3706,7 +3734,7 @@ function initCssList()
 {
 	if(!cssInit)
 	{
-		var linksCol = document.getElementsByTagName('LINK'), links = [];
+		var linksCol = document.getElementsByTagName('link');
 
 		if(!!linksCol && linksCol.length > 0)
 		{
@@ -3759,7 +3787,7 @@ function initJsList()
 {
 	if(!jsInit)
 	{
-		var scriptCol = document.getElementsByTagName('script'), script = [];
+		var scriptCol = document.getElementsByTagName('script');
 
 		if(!!scriptCol && scriptCol.length > 0)
 		{
@@ -4923,7 +4951,6 @@ else
 BX(BX.DoNothing);
 window.BX = BX;
 BX.browser.addGlobalClass();
-BX.browser.addGlobalFeatures(["boxShadow", "borderRadius", "flexWrap", "boxDirection", "transition", "transform"])
 
 /* data storage */
 BX.data = function(node, key, value)
@@ -5196,6 +5223,221 @@ BX.getCookie = function (name)
 
 	return matches ? decodeURIComponent(matches[1]) : undefined;
 };
+
+BX.FixFontSize = function(params)
+{
+	this.node = null;
+	this.prevWindowSize = 0;
+	this.mainWrapper = null;
+	this.textWrapper = null;
+	this.objList = params.objList;
+	this.minFontSizeList = [];
+	this.minFontSize = 0;
+
+	if(params.onresize)
+	{
+		this.prevWindowSize = window.innerWidth || document.documentElement.clientWidth;
+		BX.bind(window, 'resize', BX.proxy(BX.throttle(this.onResize, 350),this));
+	}
+
+	this.createTestNodes();
+	this.decrease();
+};
+
+BX.FixFontSize.prototype =
+{
+	createTestNodes: function()
+	{
+		this.textWrapper = BX.create('div',{
+			style : {
+				display : 'inline-block',
+				whiteSpace : 'nowrap'
+			}
+		});
+
+		this.mainWrapper = BX.create('div',{
+			style : {
+				height : 0,
+				overflow : 'hidden'
+			},
+			children : [this.textWrapper]
+		});
+
+	},
+	insertTestNodes: function()
+	{
+		document.body.appendChild(this.mainWrapper);
+	},
+	removeTestNodes: function()
+	{
+		document.body.removeChild(this.mainWrapper);
+	},
+	decrease: function()
+	{
+		var width,
+			fontSize;
+
+		this.insertTestNodes();
+
+		for(var i=this.objList.length-1; i>=0; i--)
+		{
+			width  = parseInt(getComputedStyle(this.objList[i].node)["width"]);
+			fontSize = parseInt(getComputedStyle(this.objList[i].node)["font-size"]);
+
+			this.textWrapperSetStyle(this.objList[i].node);
+
+			if(this.textWrapperInsertText(this.objList[i].node))
+			{
+				while(this.textWrapper.offsetWidth > width && fontSize > 0)
+				{
+					this.textWrapper.style.fontSize = --fontSize + 'px';
+				}
+
+				if(this.objList[i].smallestValue)
+				{
+					this.minFontSize = this.minFontSize ? Math.min(this.minFontSize, fontSize) : fontSize;
+
+					this.minFontSizeList.push(this.objList[i].node)
+				}
+				else
+				{
+					this.objList[i].node.style.fontSize = fontSize + 'px';
+				}
+			}
+		}
+
+		if(this.minFontSizeList.length > 0)
+			this.setMinFont();
+
+		this.removeTestNodes();
+
+	},
+	increase: function()
+	{
+		this.insertTestNodes();
+		var width,
+			fontSize;
+
+		this.insertTestNodes();
+
+		for(var i=this.objList.length-1; i>=0; i--)
+		{
+			width  = parseInt(getComputedStyle(this.objList[i].node)["width"]);
+			fontSize = parseInt(getComputedStyle(this.objList[i].node)["font-size"]);
+
+			this.textWrapperSetStyle(this.objList[i].node);
+
+			if(this.textWrapperInsertText(this.objList[i].node))
+			{
+				while(this.textWrapper.offsetWidth < width && fontSize < this.objList[i].maxFontSize)
+				{
+					this.textWrapper.style.fontSize = ++fontSize + 'px';
+				}
+
+				if(this.objList[i].smallestValue)
+				{
+					this.minFontSize = this.minFontSize ? Math.min(this.minFontSize, fontSize) : fontSize;
+
+					this.minFontSizeList.push(this.objList[i].node)
+				}
+				else
+				{
+					this.objList[i].node.style.fontSize = fontSize + 'px';
+				}
+			}
+		}
+
+		if(this.minFontSizeList.length > 0)
+			this.setMinFont();
+
+		this.removeTestNodes();
+	},
+	setMinFont : function()
+	{
+		for(var i = this.minFontSizeList.length-1; i>=0; i--)
+		{
+			this.minFontSizeList[i].style.fontSize = this.minFontSize + 'px';
+		}
+
+		this.minFontSize = 0;
+	},
+	onResize : function()
+	{
+		var width = window.innerWidth || document.documentElement.clientWidth;
+
+		if(this.prevWindowSize > width)
+			this.decrease();
+
+		else if (this.prevWindowSize < width)
+			this.increase();
+
+		this.prevWindowSize = width;
+	},
+	textWrapperInsertText : function(node)
+	{
+		if(node.textContent){
+			this.textWrapper.textContent = node.textContent;
+			return true;
+		}
+		else if(node.innerText)
+		{
+			this.textWrapper.innerText = node.innerText;
+			return true;
+		}
+		else {
+			return false;
+		}
+	},
+	textWrapperSetStyle : function(node)
+	{
+		this.textWrapper.style.fontFamily = getComputedStyle(node)["font-family"];
+		this.textWrapper.style.fontSize = getComputedStyle(node)["font-size"];
+		this.textWrapper.style.fontStyle = getComputedStyle(node)["font-style"];
+		this.textWrapper.style.fontWeight = getComputedStyle(node)["font-weight"];
+		this.textWrapper.style.lineHeight = getComputedStyle(node)["line-height"];
+	}
+};
+
+BX.FixFontSize.init = function(params)
+{
+	return new BX.FixFontSize(params);
+};
+
+if(typeof(BX.ParamBag) === "undefined")
+{
+	BX.ParamBag = function()
+	{
+		this._params = {};
+	};
+
+	BX.ParamBag.prototype =
+	{
+		initialize: function(params)
+		{
+			this._params = params ? params : {};
+		},
+		getParam: function(name, defaultvalue)
+		{
+			var p = this._params;
+			return typeof(p[name]) != "undefined" ? p[name] : defaultvalue;
+		},
+		setParam: function(name, value)
+		{
+			this._params[name] = value;
+		},
+		clear: function()
+		{
+			this._params = {};
+		}
+	};
+
+	BX.ParamBag.create = function(params)
+	{
+		var self = new BX.ParamBag();
+		self.initialize(params);
+		return self;
+	}
+}
 
 })(window);
 

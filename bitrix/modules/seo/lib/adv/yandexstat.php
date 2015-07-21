@@ -3,11 +3,9 @@ namespace Bitrix\Seo\Adv;
 
 use Bitrix\Main\Entity;
 use Bitrix\Main\Loader;
-use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Type\Date;
 use Bitrix\Seo\Engine\YandexDirect;
 use Bitrix\Seo\Engine\YandexDirectException;
-use Bitrix\Seo\Engine\YandexDirectLive;
 
 /**
  * Class YandexStatTable
@@ -178,7 +176,7 @@ class YandexStatTable extends Entity\DataManager
 
 	public static function loadBannerStat($bannerId, $dateStart, $dateFinish)
 	{
-		$liveEngine = new YandexDirectLive();
+		$liveEngine = new YandexDirect();
 
 		$dbRes = YandexBannerTable::getList(array(
 			'filter' => array(
@@ -207,7 +205,7 @@ class YandexStatTable extends Entity\DataManager
 
 	public static function loadCampaignStat($campaignId, $dateStart, $dateFinish)
 	{
-		$liveEngine = new YandexDirectLive();
+		$liveEngine = new YandexDirect();
 
 		$dbRes = YandexCampaignTable::getList(array(
 			'filter' => array(
@@ -233,7 +231,7 @@ class YandexStatTable extends Entity\DataManager
 		return false;
 	}
 
-	protected function loadStat(YandexDirectLive $liveEngine, $campaignXmlId, $dateStart, $dateFinish, $skipCurrency = false)
+	protected function loadStat(YandexDirect $liveEngine, $campaignXmlId, $dateStart, $dateFinish, $skipCurrency = false)
 	{
 		$dateStart = new Date($dateStart);
 		$dateFinish = new Date($dateFinish);
@@ -274,7 +272,7 @@ class YandexStatTable extends Entity\DataManager
 		}
 		catch(YandexDirectException $e)
 		{
-			if($currency != '' && $e->getCode() == YandexDirectLive::ERROR_WRONG_CURRENCY)
+			if($currency != '' && $e->getCode() == YandexDirect::ERROR_WRONG_CURRENCY)
 			{
 				$result = static::loadStat($liveEngine, $campaignXmlId, $dateStart, $dateFinish, true);
 			}
@@ -287,7 +285,7 @@ class YandexStatTable extends Entity\DataManager
 		return $result;
 	}
 
-	protected function processStatsResult($campaignId, array $result, YandexDirectLive $liveEngine)
+	protected function processStatsResult($campaignId, array $result, YandexDirect $liveEngine)
 	{
 		if($result['Stat'])
 		{
@@ -381,7 +379,7 @@ class YandexStatTable extends Entity\DataManager
 					);
 
 					$checkDate = new Date($dateCurrent->toString());
-					$checkDate->add("+".YandexDirectLive::MAX_STAT_DAYS_DELTA." days");
+					$checkDate->add("+".YandexDirect::MAX_STAT_DAYS_DELTA." days");
 
 					$datePrevoius = true;
 				}

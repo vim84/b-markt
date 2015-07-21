@@ -38,7 +38,7 @@ else
 
 if(!function_exists("FillAllPicturesAndDescriptions"))
 {
-	function FillAllPicturesAndDescriptions(&$arAllItems, $arMenuItemsIDs)
+	function FillAllPicturesAndDescriptions(&$arAllItems, $arMenuItemsIDs, &$arImgDesc)
 	{
 		//find picture or description for the first level, if it hasn't
 		foreach ($arMenuItemsIDs as $itemIdLevel_1=>$arLevels2)
@@ -114,6 +114,9 @@ if(!function_exists("FillAllPicturesAndDescriptions"))
 					$arItem["PARAMS"]["description"] = $descriptionLevel_2;
 				$arAllItems[$itemID] = $arItem;
 			}
+
+			$arImgDesc[$itemID]["PICTURE"] = $arItem["PARAMS"]["picture_src"];
+			$arImgDesc[$itemID]["DESC"] = $arItem["PARAMS"]["description"];
 		}
 	}
 }
@@ -172,6 +175,7 @@ if (IsModuleInstalled("iblock"))
 
 $arMenuItemsIDs = array();
 $arAllItems = array();
+$arImgDesc = array();
 foreach($arResult as $key=>$arItem)
 {
 	if($arItem["DEPTH_LEVEL"] > $arParams["MAX_LEVEL"])
@@ -209,7 +213,7 @@ foreach($arResult as $key=>$arItem)
 	}
 }
 
-FillAllPicturesAndDescriptions($arAllItems, $arMenuItemsIDs);
+FillAllPicturesAndDescriptions($arAllItems, $arMenuItemsIDs, $arImgDesc);
 
 $arMenuStructure = array();
 foreach ($arMenuItemsIDs as $itemIdLevel_1=>$arLevels2)
@@ -246,5 +250,5 @@ foreach ($arMenuItemsIDs as $itemIdLevel_1=>$arLevels2)
 
 $arResult = array();
 $arResult["ALL_ITEMS"] = $arAllItems;
-$arResult["ALL_ITEMS_ID"] = $arMenuItemsIDs;
+$arResult["ITEMS_IMG_DESC"] = $arImgDesc;
 $arResult["MENU_STRUCTURE"] = $arMenuStructure;

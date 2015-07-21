@@ -51,9 +51,34 @@
 .bx-finder-box-tab-selected:before { background: url(/bitrix/js/main/core/images/controls-sprite.png) no-repeat -8px -599px; }
 .bx-finder-box-tab-selected:after { background: url(/bitrix/js/main/core/images/controls-sprite.png) no-repeat -12px -599px; }
 
-.bx-finder-box-tabs-content { margin: 7px 0 0 0; height: 315px; overflow:auto; position:relative;}
+.bx-finder-box-tabs-content { margin: 7px 0 0 0; height: 315px; overflow:auto; position:relative; background-color: #FFFFFF; z-index: 100;}
 .bx-finder-box-tab-content { display: none; }
 .bx-finder-box-tab-content-selected { display: block;}
+
+.bx-finder-box-search-waiter {
+	position: relative;
+}
+
+.bx-finder-box-search-waiter-background {
+	position: absolute;
+	left: 17px;
+	bottom: 9px;
+	width: 20px;
+	height: 20px;
+}
+
+.bx-finder-box-search-waiter-text {
+	position: absolute;
+	left: 60px;
+	bottom: 12px;
+}
+
+.bx-finder-box-search-waiter-text {
+	color: #CCCCCC;
+	font-style: italic;
+	font-size: 13px;
+	vertical-align: middle;
+}
 
 .bx-finder-box-tabs-content-table {
 	border-spacing: 0;
@@ -199,6 +224,11 @@
 	margin-top: 0;
 }
 
+.bx-finder-box-item-t7-avatar-img {
+	width: 24px;
+	height: 24px;
+}
+
 .bx-finder-box-item-t7-avatarless .bx-finder-box-item-t7-avatar { display: none; }
 .bx-finder-box-item-t7-avatarless .bx-finder-box-item-t7-info { margin-left: 6px; }
 
@@ -217,9 +247,12 @@
 	margin-left: -1px;
 	vertical-align: middle;
 }
-.bx-finder-box-item-t7:hover { background-color: #f7f7f7; }
-.bx-finder-box-item-t7-hover { background-color: #f7f7f7; }
+.bx-finder-box-item-t7:hover,
+.bx-finder-box-item-t7-hover { outline: #dddddd solid 1px; }
+
 .bx-finder-box-item-t7-selected { background-color: #f0f0f0; }
+.bx-finder-box-item-t7-selected.bx-finder-box-item-t7:hover,
+.bx-finder-box-item-t7-selected.bx-finder-box-item-t7-hover { outline: #8dc4d6 solid 1px; }
 
 .bx-finder-box-item-t7-desc { font: normal normal normal 11px/normal Arial, Helvetica, sans-serif; color: #b2b2b2; line-height:11px; }
 .bx-finder-box-item-t7-desc-mode .bx-finder-box-item-t7-info { padding-top: 2px; }

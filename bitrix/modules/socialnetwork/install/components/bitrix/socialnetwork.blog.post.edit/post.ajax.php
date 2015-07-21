@@ -116,14 +116,20 @@ if (check_bitrix_sessid())
 							$imageFile = CFile::GetFileArray($list['PICTURE']);
 							if($imageFile !== false)
 							{
-								$listData[$list['ID']]['PICTURE'] = '<img src="'.$imageFile["SRC"].'" width="36" height="30" border="0" />';
-								$listData[$list['ID']]['PICTURE_SMALL'] = '<img src="'.$imageFile["SRC"].'" width="19" height="16" border="0" />';
+								$imageFile = CFile::ResizeImageGet(
+									$imageFile,
+									array("width" => 36, "height" => 30),
+									BX_RESIZE_IMAGE_PROPORTIONAL,
+									false
+								);
+								$listData[$list['ID']]['PICTURE'] = '<img src="'.$imageFile["src"].'" width="36" height="30" border="0" />';
+								$listData[$list['ID']]['PICTURE_SMALL'] = '<img src="'.$imageFile["src"].'" width="19" height="16" border="0" />';
 							}
 						}
 						else
 						{
-							$listData[$list['ID']]['PICTURE'] = "<img src=\"/bitrix/images/lists/default.png\" width=\"36\" height=\"30\" border=\"0\" />";
-							$listData[$list['ID']]['PICTURE_SMALL'] = "<img src=\"/bitrix/images/lists/default.png\" width=\"19\" height=\"16\" border=\"0\" />";
+							$listData[$list['ID']]['PICTURE'] = '<img src="/bitrix/images/lists/default.png" width="36" height="30" border="0" />';
+							$listData[$list['ID']]['PICTURE_SMALL'] = '<img src="/bitrix/images/lists/default.png" width="19" height="16" border="0" />';
 						}
 					}
 				}

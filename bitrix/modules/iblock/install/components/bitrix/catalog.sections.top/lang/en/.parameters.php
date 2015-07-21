@@ -66,4 +66,5 @@ $MESS["QUANTITY_FLOAT_TIP"] = "If this option is activated, fractional amounts c
 $MESS["HIDE_NOT_AVAILABLE_TIP"] = "If checked: the products whose stock at all the warehouses is zero or less will be hidden; stock control will be enabled; out-of-stock items will be available for purchase.";
 $MESS["USE_PRICE_COUNT_TIP"] = "If checked, all existing price ranges will be selected.";
 $MESS["SHOW_PRICE_COUNT_TIP"] = "If the \"Use price ranges\" option is unchecked (meaning only one price is shown for the product) but there are quantity based pricing products, specify the quantity to pick a correct price. This option has no effect for products with fixed price.";
+$MESS["CP_BCST_USE_MAIN_ELEMENT_SECTION"] = "Use main section to show element";
 ?>

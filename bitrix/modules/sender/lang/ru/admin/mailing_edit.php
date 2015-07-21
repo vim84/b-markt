@@ -34,4 +34,35 @@ $MESS["sender_mailing_edit_grp_del_desc"] = "Исключите одну или 
 $MESS["sender_mailing_edit_grp_all"] = "Все группы";
 $MESS["sender_mailing_edit_grp_sel"] = "Выбранные группы";
 
+
+$MESS["sender_chain_edit_field_email_from"] = "Отправитель:";
+
+$MESS["sender_mailing_edit_tmpl_add_manual"] = "Создать вручную";
+$MESS["sender_mailing_edit_tmpl_add_manual_desc"] = "Выберите самостоятельно условия начала и прекращения рассылки. А также самостоятельно создайте текст писем";
+$MESS["sender_mailing_edit_tmpl_add_preset"] = "Готовые шаблоны триггерных рассылок";
+$MESS["sender_mailing_edit_tmpl_add_desc"] = "Описание";
+$MESS["sender_mailing_edit_tmpl_btn_add"] = "Создать рассылку";
+$MESS["sender_mailing_edit_tmpl_btn_sel"] = "Выбрать рассылку";
+$MESS["sender_mailing_edit_field_preset"] = "Готовая рассылка";
+$MESS["sender_mailing_edit_field_preset_man"] = "Вручную";
+
+$MESS["sender_mailing_edit_field_trig_select"] = "Выберите условие:";
+$MESS["sender_mailing_edit_field_trig_select_close_time"] = "Время запуска:";
+$MESS["sender_mailing_edit_field_trig_old_data"] = "Обработать старые данные:";
+$MESS["sender_mailing_edit_field_trig_old_data_desc"] = "Указав эту настройку, рассылка дополнительно запустится еще и для пользователей,
+которые не выполняли действие больше указанного количества дней.";
+$MESS["sender_mailing_edit_field_trig_old_data_state"] = "выполнено";
+$MESS["sender_mailing_edit_field_trig_none"] = "уведомить, отправить все письма";
+$MESS["sender_mailing_edit_field_trig_start"] = "Условие запуска";
+$MESS["sender_mailing_edit_field_trig_start_caption"] = "Что должен сделать пользователь, чтобы запустилась рассылка";
+$MESS["sender_mailing_edit_field_trig_start_desc"] = "Что должен сделать пользователь, чтобы запустилась рассылка";
+$MESS["sender_mailing_edit_field_trig_end"] = "Достижение цели";
+$MESS["sender_mailing_edit_field_trig_end_caption"] = "Чего вы хотите добиться от пользователя";
+$MESS["sender_mailing_edit_field_trig_end_desc"] = "Что должен сделать пользователь, чтобы рассылка остановилась";
+$MESS["sender_mailing_edit_btn_show_preset"] = "Выбрать другую";
+$MESS["sender_mailing_edit_field_email_from_last"] = "Ваши адреса:";
+
+$MESS["sender_chain_edit_error_email_from"] = "Не указан отправитель";
+$MESS["sender_chain_edit_error_tmpl_no_found"] = "Не удалось найти готовую рассылку с кодом";
+$MESS["sender_chain_edit_error_tmpl_no_found"] = "Не удалось найти готовую рассылку с кодом";
 ?>

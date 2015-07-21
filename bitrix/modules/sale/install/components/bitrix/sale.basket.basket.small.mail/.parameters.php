@@ -120,9 +120,9 @@ $arComponentParameters = Array(
 			"TYPE" => "LIST",
 			"MULTIPLE" => "N",
 			"VALUES" => Array(
-				"{#USER_ID#}" => "={#USER_ID#}",
-				"{#ORDER_USER_ID#}" => "{#ORDER_USER_ID#}",
-				"{#ID#}" => "{#ID#}",
+				"={#USER_ID#}" => "={#USER_ID#}",
+				"={#ORDER_USER_ID#}" => "={#ORDER_USER_ID#}",
+				"={#ID#}" => "={#ID#}",
 			),
 			"ADDITIONAL_VALUES" => "Y",
 			"DEFAULT" => Array(

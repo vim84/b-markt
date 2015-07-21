@@ -431,8 +431,6 @@ class CAdminMenu
 		$this->aGlobalMenu = array(
 			"global_menu_desktop" => array(
 				"menu_id" => "desktop",
-				"page_icon" => "content_title_icon",
-				"index_icon" => "content_page_icon",
 				"text" => GetMessage('admin_lib_desktop'),
 				"title" => GetMessage('admin_lib_desktop_title'),
 				"url" => "index.php?lang=".LANGUAGE_ID,
@@ -443,9 +441,6 @@ class CAdminMenu
 			),
 			"global_menu_content" => array(
 				"menu_id" => "content",
-				//"icon" => "button_content",
-				"page_icon" => "content_title_icon",
-				"index_icon" => "content_page_icon",
 				"text" => GetMessage("admin_lib_menu_content"),
 				"title" => GetMessage("admin_lib_menu_content_title"),
 				"sort" => 100,
@@ -453,35 +448,34 @@ class CAdminMenu
 				"help_section" => "content",
 				"items" => array()
 			),
-			"global_menu_services" => array(
-				"menu_id" => "services",
-				//"icon" => "button_services",
-				"page_icon" => "services_title_icon",
-				"index_icon" => "services_page_icon",
-				"text" => GetMessage("admin_lib_menu_services"),
-				"title" => GetMessage("admin_lib_menu_service_title"),
-				"sort" => 200,
-				"items_id" => "global_menu_services",
-				"help_section" => "service",
+			"global_menu_marketing" => array(
+				"menu_id" => "marketing",
+				"text" => GetMessage("admin_lib_menu_marketing"),
+				"sort" => 150,
+				"items_id" => "global_menu_marketing",
+				"help_section" => "store",
 				"items" => array()
 			),
 			"global_menu_store" => array(
 				"menu_id" => "store",
-				//"icon" => "button_store",
-				"page_icon" => "store_title_icon",
-				"index_icon" => "store_page_icon",
 				"text" => GetMessage("admin_lib_menu_store"),
 				"title" => GetMessage("admin_lib_menu_store_title"),
-				"sort" => 300,
+				"sort" => 200,
 				"items_id" => "global_menu_store",
 				"help_section" => "store",
 				"items" => array()
 			),
+			"global_menu_services" => array(
+				"menu_id" => "services",
+				"text" => GetMessage("admin_lib_menu_services"),
+				"title" => GetMessage("admin_lib_menu_service_title"),
+				"sort" => 300,
+				"items_id" => "global_menu_services",
+				"help_section" => "service",
+				"items" => array()
+			),
 			"global_menu_statistics" => array(
 				"menu_id" => "analytics",
-				//"icon" => "button_statistics",
-				"page_icon" => "statistics_title_icon",
-				"index_icon" => "statistics_page_icon",
 				"text" => GetMessage("admin_lib_menu_stat"),
 				"title" => GetMessage("admin_lib_menu_stat_title"),
 				"sort" => 400,
@@ -491,22 +485,16 @@ class CAdminMenu
 			),
 			"global_menu_marketplace" => array(
 				"menu_id" => "marketPlace",
-				//"icon" => "button_marketplace",
-				"page_icon" => "marketplace_title_icon",
-				"index_icon" => "marketplace_page_icon",
 				"text" => GetMessage("admin_lib_menu_marketplace"),
 				"title" => GetMessage("admin_lib_menu_marketplace_title"),
 				"url" => "update_system_market.php?lang=".LANGUAGE_ID,
-				"sort" => 400,
+				"sort" => 450,
 				"items_id" => "global_menu_marketplace",
 				"help_section" => "marketplace",
 				"items" => array()
 			),
 			"global_menu_settings" => array(
 				"menu_id" => "settings",
-				//"icon" => "button_settings",
-				"page_icon" => "settings_title_icon",
-				"index_icon" => "settings_page_icon",
 				"text" => GetMessage("admin_lib_menu_settings"),
 				"title" => GetMessage("admin_lib_menu_settings_title"),
 				"sort" => 500,
@@ -3007,7 +2995,7 @@ class CAdminList
 
 	/**
 	 * @param string $table_id
-	 * @param CAdminSorting $sort
+	 * @param CAdminSorting|bool $sort
 	 */
 	function CAdminList($table_id, $sort = false)
 	{
@@ -3148,7 +3136,7 @@ class CAdminList
 				{
 					foreach($v as $k2 => $v2)
 					{
-						if($f_old[$k][$k2] != $v2)
+						if($f_old[$k][$k2] !== $v2)
 							return true;
 						unset($f_old[$k][$k2]);
 					}
@@ -3160,7 +3148,7 @@ class CAdminList
 			{
 				if(is_array($f_old[$k]))
 					return true;
-				elseif($f_old[$k] != $v)
+				elseif($f_old[$k] !== $v)
 					return true;
 			}
 			unset($f_old[$k]);
@@ -3582,8 +3570,8 @@ class CAdminList
 					echo ' align="'.$header_props['align'].'"';
 				if ($header_props['valign'])
 					echo ' valign="'.$header_props['valign'].'"';
-				if (preg_match("/^([0-9]+|[0-9]+[.,][0-9]+)\$/", $val))
-					echo ' style="mso-number-format:0"';
+				if (preg_match("/^([1-9][0-9]*|[1-9][0-9]*[.,][0-9]+)\$/", $val))
+					echo ' class="number0"';
 				echo '>';
 				echo ($val<>""? $val: '&nbsp;');
 				echo '</td>';
@@ -5934,6 +5922,8 @@ class CAdminForm extends CAdminTabControl
 			$html .= ' size="'.intval($arParams["size"]).'"';
 		if(intval($arParams["maxlength"]) > 0)
 			$html .= ' maxlength="'.intval($arParams["maxlength"]).'"';
+		if($arParams["id"])
+			$html .= ' id="'.htmlspecialcharsbx($arParams["id"]).'"';
 		$html .= '>';
 
 		$this->tabs[$this->tabIndex]["FIELDS"][$id] = array(
@@ -6272,15 +6262,196 @@ class CAdminUtil
 
 function ShowJSHint($text, $arParams=false)
 {
-	if (strlen($text) <= 0)
+	if ($text == '')
+	{
 		return '';
+	}
 
 	CJSCore::Init();
 
-	$res = '<img src="/bitrix/images/1.gif" onload="BX.hint_replace(this, \''.htmlspecialcharsbx(CUtil::JSEscape($text)).'\')" />';
+	$id = "h".mt_rand();
+
+	$res = '
+		<script type="text/javascript">BX.ready(function(){BX.hint_replace(BX("'.$id.'"), "'.CUtil::JSEscape($text).'");})</script>
+		<span id="'.$id.'"></span>
+	';
 
 	if (isset($arParams['return']) && $arParams['return'])
+	{
 		return $res;
+	}
 	echo $res;
 	return null;
+}
+
+
+class CAdminTabControlDrag extends CAdminTabControl
+{
+	function CAdminTabControlDrag($name, $tabs, $moduleId="", $bCanExpand = true, $bDenyAutosave = false)
+	{
+		parent::CAdminTabControl($name, $tabs, $bCanExpand, $bDenyAutosave);
+		$this->moduleId = $moduleId;
+		\Bitrix\Main\Page\Asset::getInstance()->addJs("/bitrix/js/main/admin_dd.js");
+	}
+
+	function BeginNextTab()
+	{
+		if ($this->AUTOSAVE)
+			$this->AUTOSAVE->Init();
+
+		//end previous tab
+		$this->EndTab();
+
+		if($this->tabIndex >= count($this->tabs))
+			return;
+
+		$css = '';
+		if ($this->tabs[$this->tabIndex]["DIV"] <> $this->selectedTab)
+			$css .= 'display:none; ';
+
+		echo '
+<div class="adm-detail-content" id="'.$this->tabs[$this->tabIndex]["DIV"].'"'.($css != '' ? ' style="'.$css.'"' : '').'>';
+
+		if (!empty($this->tabs[$this->tabIndex]["TITLE"]))
+			echo '
+	<div class="adm-detail-title">'.$this->tabs[$this->tabIndex]["TITLE"].'</div>';
+
+		if ($this->tabs[$this->tabIndex]["IS_DRAGGABLE"] == "Y")
+		{
+			$arJsParams = array(
+				"moduleId" => $this->moduleId,
+				"optionName" => $this->getCurrentTabOptionName($this->tabIndex),
+				"tabId" => $this->tabs[$this->tabIndex]["DIV"],
+				"hidden" => $this->getTabHiddenBlocks($this->tabIndex)
+			);
+			echo '
+			<script>
+				BX.ready(function(){
+					var orderObj = new BX.Admin.DraggableTab('.CUtil::PhpToJSObject($arJsParams).');
+				});
+			</script>';
+		}
+
+		$showWrap = $this->tabs[$this->tabIndex]["SHOW_WRAP"] == "N" ? false : true;
+		echo '
+	<div '.($showWrap ? 'class="adm-detail-content-item-block"' : '').'>
+		<table class="adm-detail-content-table edit-table" id="'.$this->tabs[$this->tabIndex]["DIV"].'_edit_table">
+			<tbody>
+';
+		if(array_key_exists("CUSTOM", $this->tabs[$this->tabIndex]) && $this->tabs[$this->tabIndex]["CUSTOM"] == "Y")
+		{
+			$this->customTabber->ShowTab($this->tabs[$this->tabIndex]["DIV"]);
+			$this->tabIndex++;
+			$this->BeginNextTab();
+		}
+		elseif(array_key_exists("CONTENT", $this->tabs[$this->tabIndex]))
+		{
+			echo $this->tabs[$this->tabIndex]["CONTENT"];
+			$this->tabIndex++;
+			$this->BeginNextTab();
+		}
+		else
+		{
+			$this->tabIndex++;
+		}
+	}
+
+	function ShowTabButtons()
+	{
+		$s = '';
+		if (!$this->bPublicMode)
+		{
+			if(count($this->tabs) > 1 && $this->bCanExpand/* || $this->AUTOSAVE*/)
+			{
+				$s .= '<div class="adm-detail-title-setting" onclick="'.$this->name.'.ToggleTabs();" title="'.GetMessage("admin_lib_expand_tabs").'" id="'.$this->name.'_expand_link"><span class="adm-detail-title-setting-btn adm-detail-title-expand"></span></div>';
+			}
+		}
+		return $s;
+	}
+
+	function getCurrentTabOptionName($tabIdx)
+	{
+		return $this->name."_".$this->tabs[$tabIdx]["DIV"];
+	}
+
+	function getTabSettings($tabIdx)
+	{
+		if (isset($this->tabs[$tabIdx]["SETTINGS"]))
+			return $this->tabs[$tabIdx]["SETTINGS"];
+
+		$tabSettings = CUserOptions::getOption($this->moduleId, $this->getCurrentTabOptionName($tabIdx));
+
+		$tabSettings["order"] = isset($tabSettings["order"]) ? $tabSettings["order"] : array();
+		if (!empty($tabSettings["order"]))
+			$tabSettings["order"] = explode(",", $tabSettings["order"]);
+
+		$tabSettings["hidden"] = isset($tabSettings["hidden"]) ? $tabSettings["hidden"] : array();
+		if (!empty($tabSettings["hidden"]))
+			$tabSettings["hidden"] = explode(",", $tabSettings["hidden"]);
+
+		$this->tabs[$tabIdx]["SETTINGS"] = $tabSettings;
+		return $tabSettings;
+	}
+
+	function getCurrentTabBlocksOrder($defaultBlocksOrder = array())
+	{
+		$tabSettings = $this->getTabSettings($this->tabIndex-1);
+		$blocksOrder = $tabSettings["order"];
+
+		if (is_array($defaultBlocksOrder) && !empty($defaultBlocksOrder))
+		{
+			if (empty($blocksOrder))
+			{
+				$blocksOrder = $defaultBlocksOrder;
+			}
+			else
+			{
+				foreach($blocksOrder as $key => $blockCode)
+				{
+					if (!in_array($blockCode, $defaultBlocksOrder))
+						unset($blocksOrder[$key]);
+				}
+				$blocksOrder = array_unique(array_merge($blocksOrder, $defaultBlocksOrder));
+			}
+		}
+
+		return $blocksOrder;
+	}
+
+	function getTabHiddenBlocks($tabIdx)
+	{
+		$tabSettings = $this->getTabSettings($tabIdx);
+		$hiddenBlocks = $tabSettings["hidden"];
+		return is_array($hiddenBlocks) ? $hiddenBlocks : array();
+	}
+
+	function DraggableBlocksStart()
+	{
+		echo '<div data-role="dragObj" data-onlydest="Y" style="height:5px;width:100%"></div>';
+	}
+
+	function DraggableBlockBegin($title, $dataId = "")
+	{
+		echo '
+		<div class="adm-container-draggable'.(in_array($dataId, $this->getTabHiddenBlocks($this->tabIndex-1)) ? ' hidden' : '').'" data-role="dragObj" data-id="'.$dataId.'">
+			<div class="adm-bus-statusorder">
+				<div class="adm-bus-component-container">
+					<div class="adm-bus-component-title-container draggable">
+						<div class="adm-bus-component-title-icon"></div>
+						<div class="adm-bus-component-title">'.$title.'</div>
+						<div class="adm-bus-component-title-icon-turn" data-role="toggleObj"></div>'.
+			//'<div class="adm-bus-component-title-icon-close"></div>'
+			'</div>
+					<div class="adm-bus-component-content-container">
+						<div class="adm-bus-table-container">';
+	}
+
+	function DraggableBlockEnd()
+	{
+		echo '			</div>
+					</div>
+				</div>
+			</div>
+		</div>';
+	}
 }

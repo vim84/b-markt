@@ -36,4 +36,5 @@ $MESS["CP_BCLL_DISPLAY_COMPARE"] = "Enable product comparison";
 $MESS["CP_BCLL_COMPARE_PATH"] = "Product comparison page";
 $MESS["DISPLAY_COMPARE_TIP"] = "Check this option to show <b>Compare</b> button enabling a customer to add a product to the comparison chart.";
 $MESS["COMPARE_PATH_TIP"] = "Specifies the path to a page that includes the product comparison component. If empty, a current page will be used.";
+$MESS["CP_BCLL_SET_LAST_MODIFIED"] = "Set page last modified date to response header";
 ?>

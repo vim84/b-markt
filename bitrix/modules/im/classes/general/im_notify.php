@@ -38,7 +38,6 @@ class CIMNotify
 			FROM b_im_relation R
 			INNER JOIN b_im_message M ON M.CHAT_ID = R.CHAT_ID
 			WHERE R.USER_ID = ".$this->user_id." AND R.MESSAGE_TYPE = '".IM_MESSAGE_SYSTEM."'
-			GROUP BY M.CHAT_ID
 		";
 		$res_cnt = $DB->Query($sqlStr);
 		$res_cnt = $res_cnt->Fetch();

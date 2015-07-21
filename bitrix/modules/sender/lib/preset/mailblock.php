@@ -39,7 +39,7 @@ class MailBlock
 		$event = new Event('sender', 'OnPresetMailBlockList');
 		$event->send();
 
-		if($event->getResults()) foreach ($event->getResults() as $eventResult)
+		foreach ($event->getResults() as $eventResult)
 		{
 			if ($eventResult->getType() == EventResult::ERROR)
 			{

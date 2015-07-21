@@ -68,7 +68,7 @@ if(isset($_REQUEST['action']))
 				break;
 
 				case 'site_verify':
-					$res = array('error' => 'Unknown domain');
+					$res = array('error' => array('message' => 'Unknown domain'));
 
 					if(is_array($arDomain))
 					{

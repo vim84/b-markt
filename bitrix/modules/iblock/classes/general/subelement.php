@@ -110,6 +110,10 @@ class CAdminSubList extends CAdminList
 		{
 			$arJSDescr['css'] = '/bitrix/panel/iblock/sub-public.css';
 		}
+		else
+		{
+			$arJSDescr['css'] = '/bitrix/panel/iblock/sub-admin.css';
+		}
 
 		CJSCore::RegisterExt('subelement', $arJSDescr);
 		CJSCore::Init(array("subelement"));

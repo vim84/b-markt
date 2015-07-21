@@ -1283,7 +1283,7 @@ window.JCCatalogSectionSRec.prototype.BasketResult = function(arResult)
 			);
 			break;
 		}
-		strContent = '<div style="width: 96%; margin: 10px 2%; text-align: center;"><img src="'+strPict+'" height="130"><p>'+strName+'</p></div>';
+		strContent = '<div style="width: 96%; margin: 10px 2%; text-align: center;"><img src="'+strPict+'" height="130" style="max-height:130px"><p>'+strName+'</p></div>';
 		buttons = [
 			new BasketButton({
 				ownerClass: this.obProduct.parentNode.parentNode.parentNode.className,

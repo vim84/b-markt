@@ -20,4 +20,5 @@ $MESS["IBLOCK_ELSEARCH_INCLUDING_SUBSECTIONS"] = "Including subsections";
 $MESS["IBLOCK_ELSEARCH_FROMTO_ID"] = "ID (first and last values):";
 $MESS["IBLOCK_ELSEARCH_ELEMENTS"] = "Elements";
 $MESS["IBLOCK_FIELD_EXTERNAL_ID"] = "External ID";
+$MESS["IBLOCK_FIELD_CODE"] = "Symbolic code";
 ?>

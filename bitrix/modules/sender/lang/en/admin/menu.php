@@ -20,4 +20,15 @@ $MESS["mnu_sender_site_mailing_addr"] = "Recipients";
 $MESS["mnu_sender_site_mailing_addr_alt"] = "Recipients";
 $MESS["mnu_sender_sect"] = "Email Marketing";
 $MESS["mnu_sender_sect_title"] = "Email Marketing";
+$MESS["mnu_sender_mailing_trig_admin"] = "List";
+$MESS["mnu_sender_mailing_admin_trig_alt"] = "Manage triggered e-mails";
+$MESS["mnu_sender_mailing_trig"] = "Triggered E-mails";
+$MESS["mnu_sender_mailing_trig_alt"] = "View and manage triggered e-mails";
+$MESS["mnu_sender_site_mailing_trig"] = "Newsletters";
+$MESS["mnu_sender_site_mailing_trig_alt"] = "Newsletters";
+$MESS["mnu_sender_site_mailing_trig_one_alt"] = "Triggered E-mails";
+$MESS["mnu_sender_site_mailing_trig_chain"] = "Messages";
+$MESS["mnu_sender_site_mailing_trig_chain_alt"] = "Edit and test messages";
+$MESS["mnu_sender_site_mailing_trig_stat"] = "Statistics";
+$MESS["mnu_sender_site_mailing_trig_stat_alt"] = "Statistics";
 ?>

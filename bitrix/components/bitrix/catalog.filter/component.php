@@ -242,15 +242,14 @@ if($arParams["SAVE_IN_SESSION"])
 	$_SESSION[$FILTER_NAME."arrOPFV"] = $arrOPFV;
 }
 
+if (!CModule::IncludeModule("iblock"))
+{
+	ShowError(GetMessage("CC_BCF_MODULE_NOT_INSTALLED"));
+	return 0;
+}
+
 if ($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups())))
 {
-	if (!CModule::IncludeModule("iblock"))
-	{
-		$this->AbortResultCache();
-		ShowError(GetMessage("CC_BCF_MODULE_NOT_INSTALLED"));
-		return 0;
-	}
-
 	$arResultModules = array(
 		'iblock' => true,
 		'catalog' => false,
@@ -398,6 +397,10 @@ $arResult["ITEMS"] = array();
 foreach($arParams["FIELD_CODE"] as $field_code)
 {
 	$field_res = "";
+	$field_type = "";
+	$field_names = "";
+	$field_values = "";
+	$field_list = array();
 	$arResult["arrInputNames"][$FILTER_NAME."_ff"]=true;
 	$name = $FILTER_NAME."_ff[".$field_code."]";
 	$value = $arrFFV[$field_code];
@@ -418,34 +421,38 @@ foreach($arParams["FIELD_CODE"] as $field_code)
 			if(!is_array($value))
 			{
 				$field_res = '<input type="text" name="'.$name.'" size="'.$arParams["TEXT_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />';
-
 				if (strlen($value)>0)
 					${$FILTER_NAME}["?".$field_code] = $value;
+
+				$field_type = 'INPUT';
 			}
 			break;
 		case "ID":
 		case "SORT":
 		case "SHOW_COUNTER":
-			$name = $FILTER_NAME."_ff[".$field_code."][LEFT]";
+			$name_left = $FILTER_NAME."_ff[".$field_code."][LEFT]";
 			if(is_array($value) && isset($value["LEFT"]))
 				$value_left = $value["LEFT"];
 			else
 				$value_left = "";
-			$field_res = '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_left).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
+			$field_res = '<input type="text" name="'.$name_left.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_left).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
 
 			if(strlen($value_left) > 0)
 				${$FILTER_NAME}[">=".$field_code] = intval($value_left);
 
-			$name = $FILTER_NAME."_ff[".$field_code."][RIGHT]";
+			$name_right = $FILTER_NAME."_ff[".$field_code."][RIGHT]";
 			if(is_array($value) && isset($value["RIGHT"]))
 				$value_right = $value["RIGHT"];
 			else
 				$value_right = "";
-			$field_res .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_right).'" />';
+			$field_res .= '<input type="text" name="'.$name_right.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_right).'" />';
 
 			if(strlen($value_right) > 0)
 				${$FILTER_NAME}["<=".$field_code] = intval($value_right);
 
+			$field_type = 'RANGE';
+			$field_names = array($name_left, $name_right);
+			$field_values = array($value_left, $value_right);
 			break;
 		case "SECTION_ID":
 			$arrRef = array("reference" => array_values($arResult["arrSection"]), "reference_id" => array_keys($arResult["arrSection"]));
@@ -461,6 +468,8 @@ foreach($arParams["FIELD_CODE"] as $field_code)
 			if (isset(${$FILTER_NAME}[$field_code]) && $_value=="Y")
 				${$FILTER_NAME}["INCLUDE_SUBSECTIONS"] = "Y";
 
+			$field_type = 'SELECT';
+			$field_list = $arResult["arrSection"];
 			break;
 		case "ACTIVE_DATE":
 		case "DATE_ACTIVE_FROM":
@@ -495,6 +504,10 @@ foreach($arParams["FIELD_CODE"] as $field_code)
 
 			if(strlen($arDateField["to"]["value"]) > 0)
 				${$FILTER_NAME}[$arDateField["filter_to"]] = $arDateField["to"]["value"];
+
+			$field_type = 'DATE_RANGE';
+			$field_names = array($arDateField["from"]["name"], $arDateField["to"]["name"]);
+			$field_values = array($arDateField["from"]["value"], $arDateField["to"]["value"]);
 			break;
 	}
 
@@ -506,6 +519,11 @@ foreach($arParams["FIELD_CODE"] as $field_code)
 			"INPUT_NAME" => $name,
 			"INPUT_VALUE" => is_array($value)? array_map("htmlspecialcharsbx", $value): htmlspecialcharsbx($value),
 			"~INPUT_VALUE" => $value,
+			"TYPE" => $field_type,
+			"INPUT_NAMES" => $field_names,
+			"INPUT_VALUES" => is_array($field_values)? array_map("htmlspecialcharsbx", $field_values): htmlspecialcharsbx($field_values),
+			"~INPUT_VALUES" => $field_values,
+			"LIST" => $field_list,
 		);
 	}
 }
@@ -515,6 +533,10 @@ foreach($arResult["arrProp"] as $prop_id => $arProp)
 	$res = "";
 	$name = "";
 	$value ="";
+	$type = "";
+	$names = "";
+	$values = "";
+	$list = array();
 	$arResult["arrInputNames"][$FILTER_NAME."_pf"]=true;
 	switch ($arProp["PROPERTY_TYPE"])
 	{
@@ -527,6 +549,8 @@ foreach($arResult["arrProp"] as $prop_id => $arProp)
 				$arListRadio = array();
 				if ('Y' == $arProp['MULTIPLE'])
 				{
+					$type = "CHECKBOX";
+					$list = $arProp["VALUE_LIST"];
 					$arListValue = (is_array($value) ? $value : array($value));
 					foreach ($arProp["VALUE_LIST"] as $key=>$val)
 					{
@@ -535,21 +559,26 @@ foreach($arResult["arrProp"] as $prop_id => $arProp)
 				}
 				else
 				{
+					$type = "RADIO";
+					$list[""] = GetMessage("CC_BCF_ALL");
 					$arListRadio[] = '<input type="radio" name="'.$name.'" value=""'.($key == $value ? ' checked' : '').'> '.GetMessage("CC_BCF_ALL");
 					foreach ($arProp["VALUE_LIST"] as $key=>$val)
 					{
 						$arListRadio[] = '<input type="radio" name="'.$name.'" value="'.htmlspecialcharsbx($key).'"'.($key == $value ? ' checked' : '').'> '.htmlspecialcharsex($val);
+						$list[$key] = $val;
 					}
 				}
 				$res .= implode('<br>', $arListRadio);
 			}
 			else
 			{
+				$type = 'SELECT';
 				if ($arProp["MULTIPLE"]=="Y")
 					$res .= '<select multiple name="'.$name.'[]" size="'.$arParams["LIST_HEIGHT"].'">';
 				else
 					$res .= '<select name="'.$name.'">';
 				$res .= '<option value="">'.GetMessage("CC_BCF_ALL").'</option>';
+				$list[""] = GetMessage("CC_BCF_ALL");
 				foreach($arProp["VALUE_LIST"] as $key=>$val)
 				{
 					$res .= '<option';
@@ -566,6 +595,7 @@ foreach($arResult["arrProp"] as $prop_id => $arProp)
 					}
 
 					$res .= ' value="'.htmlspecialcharsbx($key).'">'.htmlspecialcharsbx($val).'</option>';
+					$list[$key] = $val;
 				}
 				$res .= '</select>';
 			}
@@ -583,26 +613,29 @@ foreach($arResult["arrProp"] as $prop_id => $arProp)
 			break;
 		case "N":
 			$value = $arrPFV[$arProp["CODE"]];
-			$name = $FILTER_NAME."_pf[".$arProp["CODE"]."][LEFT]";
+			$name_left = $FILTER_NAME."_pf[".$arProp["CODE"]."][LEFT]";
 			if(is_array($value) && isset($value["LEFT"]))
 				$value_left = $value["LEFT"];
 			else
 				$value_left = "";
-			$res .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_left).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
+			$res .= '<input type="text" name="'.$name_left.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_left).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
 
 			if (strlen($value_left) > 0)
 				${$FILTER_NAME}["PROPERTY"][">=".$arProp["CODE"]] = doubleval($value_left);
 
-			$name = $FILTER_NAME."_pf[".$arProp["CODE"]."][RIGHT]";
+			$name_right = $FILTER_NAME."_pf[".$arProp["CODE"]."][RIGHT]";
 			if(is_array($value) && isset($value["RIGHT"]))
 				$value_right = $value["RIGHT"];
 			else
 				$value_right = "";
-			$res .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_right).'" />';
+			$res .= '<input type="text" name="'.$name_right.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_right).'" />';
 
 			if (strlen($value_right) > 0)
 				${$FILTER_NAME}["PROPERTY"]["<=".$arProp["CODE"]] = doubleval($value_right);
 
+			$type = 'RANGE';
+			$names = array($name_left, $name_right);
+			$values = array($value_left, $value_right);
 			break;
 		case "S":
 		case "E":
@@ -616,6 +649,7 @@ foreach($arResult["arrProp"] as $prop_id => $arProp)
 				if (strlen($value) > 0)
 					${$FILTER_NAME}["PROPERTY"]["?".$arProp["CODE"]] = $value;
 			}
+			$type = 'INPUT';
 			break;
 	}
 	if($res)
@@ -626,6 +660,11 @@ foreach($arResult["arrProp"] as $prop_id => $arProp)
 			"INPUT_NAME" => $name,
 			"INPUT_VALUE" => is_array($value)? array_map("htmlspecialcharsbx", $value): htmlspecialcharsbx($value),
 			"~INPUT_VALUE" => $value,
+			"TYPE" => $type,
+			"INPUT_NAMES" => $names,
+			"INPUT_VALUES" => is_array($values)? array_map("htmlspecialcharsbx", $values): htmlspecialcharsbx($values),
+			"~INPUT_VALUES" => $values,
+			"LIST" => $list,
 		);
 	}
 }
@@ -634,6 +673,10 @@ $bHasOffersFilter = false;
 foreach($arParams["OFFERS_FIELD_CODE"] as $field_code)
 {
 	$field_res = "";
+	$field_type = "";
+	$field_names = "";
+	$field_values = "";
+	$field_list = array();
 	$arResult["arrInputNames"][$FILTER_NAME."_of"]=true;
 	$name = $FILTER_NAME."_of[".$field_code."]";
 	$value = $arrOFV[$field_code];
@@ -651,30 +694,32 @@ foreach($arParams["OFFERS_FIELD_CODE"] as $field_code)
 		case "IBLOCK_EXTERNAL_ID":
 		case "SEARCHABLE_CONTENT":
 			$field_res = '<input type="text" name="'.$name.'" size="'.$arParams["TEXT_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />';
-
 			if (strlen($value)>0)
 				${$FILTER_NAME}["OFFERS"]["?".$field_code] = $value;
 
+			$field_type = 'INPUT';
 			break;
 		case "ID":
 		case "SORT":
 		case "SHOW_COUNTER":
-			$name = $FILTER_NAME."_of[".$field_code."][LEFT]";
+			$name_left = $FILTER_NAME."_of[".$field_code."][LEFT]";
 			$value = $arrOFV[$field_code]["LEFT"];
-			$field_res = '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
+			$field_res = '<input type="text" name="'.$name_left.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
 
 			if(strlen($value)>0)
 				${$FILTER_NAME}["OFFERS"][">=".$field_code] = intval($value);
 
-			$name = $FILTER_NAME."_of[".$field_code."][RIGHT]";
+			$name_right = $FILTER_NAME."_of[".$field_code."][RIGHT]";
 			$value = $arrOFV[$field_code]["RIGHT"];
-			$field_res .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />';
+			$field_res .= '<input type="text" name="'.$name_right.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />';
 
 			if(strlen($value)>0)
 				${$FILTER_NAME}["OFFERS"]["<=".$field_code] = intval($value);
 
+			$field_type = 'RANGE';
+			$field_names = array($name_left, $name_right);
+			$field_values = array($value_left, $value_right);
 			break;
-
 		case "ACTIVE_DATE":
 		case "DATE_ACTIVE_FROM":
 		case "DATE_ACTIVE_TO":
@@ -708,6 +753,10 @@ foreach($arParams["OFFERS_FIELD_CODE"] as $field_code)
 
 			if(strlen($arDateField["to"]["value"]) > 0)
 				${$FILTER_NAME}["OFFERS"][$arDateField["filter_to"]] = $arDateField["to"]["value"];
+
+			$field_type = 'DATE_RANGE';
+			$field_names = array($arDateField["from"]["name"], $arDateField["to"]["name"]);
+			$field_values = array($arDateField["from"]["value"], $arDateField["to"]["value"]);
 			break;
 	}
 	if($field_res)
@@ -719,6 +768,11 @@ foreach($arParams["OFFERS_FIELD_CODE"] as $field_code)
 			"INPUT_NAME" => $name,
 			"INPUT_VALUE" => htmlspecialcharsbx($value),
 			"~INPUT_VALUE" => $value,
+			"TYPE" => $field_type,
+			"INPUT_NAMES" => $field_names,
+			"INPUT_VALUES" => is_array($field_values)? array_map("htmlspecialcharsbx", $field_values): htmlspecialcharsbx($field_values),
+			"~INPUT_VALUES" => $field_values,
+			"LIST" => $field_list,
 		);
 	}
 }
@@ -728,6 +782,10 @@ foreach($arResult["arrOfferProp"] as $prop_id => $arProp)
 	$res = "";
 	$name = "";
 	$value = "";
+	$type = "";
+	$names = "";
+	$values = "";
+	$list = array();
 	$arResult["arrInputNames"][$FILTER_NAME."_op"]=true;
 	switch ($arProp["PROPERTY_TYPE"])
 	{
@@ -741,6 +799,8 @@ foreach($arResult["arrOfferProp"] as $prop_id => $arProp)
 				$arListRadio = array();
 				if ('Y' == $arProp['MULTIPLE'])
 				{
+					$type = "CHECKBOX";
+					$list = $arProp["VALUE_LIST"];
 					$arListValue = (is_array($value) ? $value : array($value));
 					foreach ($arProp["VALUE_LIST"] as $key=>$val)
 					{
@@ -749,21 +809,26 @@ foreach($arResult["arrOfferProp"] as $prop_id => $arProp)
 				}
 				else
 				{
+					$type = "RADIO";
+					$list[""] = GetMessage("CC_BCF_ALL");
 					$arListRadio[] = '<input type="radio" name="'.$name.'" value=""'.($key == $value ? ' checked' : '').'> '.GetMessage("CC_BCF_ALL");
 					foreach ($arProp["VALUE_LIST"] as $key=>$val)
 					{
 						$arListRadio[] = '<input type="radio" name="'.$name.'" value="'.htmlspecialcharsbx($key).'"'.($key == $value ? ' checked' : '').'> '.htmlspecialcharsex($val);
+						$list[$key] = $val;
 					}
 				}
 				$res .= implode('<br>', $arListRadio);
 			}
 			else
 			{
+				$type = 'SELECT';
 				if ($arProp["MULTIPLE"]=="Y")
 					$res .= '<select multiple name="'.$name.'[]" size="'.$arParams["LIST_HEIGHT"].'">';
 				else
 					$res .= '<select name="'.$name.'">';
 				$res .= '<option value="">'.GetMessage("CC_BCF_ALL").'</option>';
+				$list[""] = GetMessage("CC_BCF_ALL");
 				foreach($arProp["VALUE_LIST"] as $key=>$val)
 				{
 					$res .= '<option';
@@ -780,6 +845,7 @@ foreach($arResult["arrOfferProp"] as $prop_id => $arProp)
 					}
 
 					$res .= ' value="'.htmlspecialcharsbx($key).'">'.htmlspecialcharsbx($val).'</option>';
+					$list[$key] = $val;
 				}
 				$res .= '</select>';
 			}
@@ -794,26 +860,28 @@ foreach($arResult["arrOfferProp"] as $prop_id => $arProp)
 				if (strlen($value)>0)
 					${$FILTER_NAME}["OFFERS"]["PROPERTY"][$arProp["CODE"]] = $value;
 			}
-			break;
 
+			break;
 		case "N":
 
-			$name = $FILTER_NAME."_op[".$arProp["CODE"]."][LEFT]";
+			$name_left = $FILTER_NAME."_op[".$arProp["CODE"]."][LEFT]";
 			$value = $arrOPFV[$arProp["CODE"]]["LEFT"];
-			$res .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
+			$res .= '<input type="text" name="'.$name_left.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
 
 			if (strlen($value)>0)
 				${$FILTER_NAME}["OFFERS"]["PROPERTY"][">=".$arProp["CODE"]] = intval($value);
 
-			$name = $FILTER_NAME."_op[".$arProp["CODE"]."][RIGHT]";
+			$name_right = $FILTER_NAME."_op[".$arProp["CODE"]."][RIGHT]";
 			$value = $arrOPFV[$arProp["CODE"]]["RIGHT"];
-			$res .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />';
+			$res .= '<input type="text" name="'.$name_right.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />';
 
 			if (strlen($value)>0)
 				${$FILTER_NAME}["OFFERS"]["PROPERTY"]["<=".$arProp["CODE"]] = doubleval($value);
 
+			$type = 'RANGE';
+			$names = array($name_left, $name_right);
+			$values = array(htmlspecialcharsbx($value_left), htmlspecialcharsbx($value_right));
 			break;
-
 		case "S":
 		case "E":
 		case "G":
@@ -825,6 +893,7 @@ foreach($arResult["arrOfferProp"] as $prop_id => $arProp)
 			if (strlen($value)>0)
 				${$FILTER_NAME}["OFFERS"]["PROPERTY"]["?".$arProp["CODE"]] = $value;
 
+			$type = 'INPUT';
 			break;
 	}
 	if($res)
@@ -836,6 +905,11 @@ foreach($arResult["arrOfferProp"] as $prop_id => $arProp)
 			"INPUT_NAME" => $name,
 			"INPUT_VALUE" => htmlspecialcharsbx($value),
 			"~INPUT_VALUE" => $value,
+			"TYPE" => $type,
+			"INPUT_NAMES" => $names,
+			"INPUT_VALUES" => is_array($values)? array_map("htmlspecialcharsbx", $values): htmlspecialcharsbx($values),
+			"~INPUT_VALUES" => $values,
+			"LIST" => $list,
 		);
 	}
 }
@@ -852,34 +926,89 @@ foreach($arResult["arrPrice"] as $price_code => $arPrice)
 	$res_price = "";
 	$arResult["arrInputNames"][$FILTER_NAME."_cf"]=true;
 
-	$name = $FILTER_NAME."_cf[".$arPrice["ID"]."][LEFT]";
-	$value = $arrCFV[$arPrice["ID"]]["LEFT"];
+	$name_left = $FILTER_NAME."_cf[".$arPrice["ID"]."][LEFT]";
+	$value_left = $arrCFV[$arPrice["ID"]]["LEFT"];
 
-	if (strlen($value)>0)
+	if (strlen($value_left)>0)
 	{
 		if ($arResult['MODULES']['catalog'])
-			${$FILTER_NAME}[">=CATALOG_PRICE_".$arPrice["ID"]] = $value;
+			${$FILTER_NAME}[">=CATALOG_PRICE_".$arPrice["ID"]] = $value_left;
 		else
-			${$FILTER_NAME}[">=PROPERTY_".$arPrice["ID"]] = $value;
+			${$FILTER_NAME}[">=PROPERTY_".$arPrice["ID"]] = $value_left;
 	}
 
-	$res_price .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
+	$res_price .= '<input type="text" name="'.$name_left.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_left).'" />&nbsp;'.GetMessage("CC_BCF_TILL").'&nbsp;';
 
-	$name = $FILTER_NAME."_cf[".$arPrice["ID"]."][RIGHT]";
-	$value = $arrCFV[$arPrice["ID"]]["RIGHT"];
+	$name_right = $FILTER_NAME."_cf[".$arPrice["ID"]."][RIGHT]";
+	$value_right = $arrCFV[$arPrice["ID"]]["RIGHT"];
 
-	if (strlen($value)>0)
+	if (strlen($value_right)>0)
 	{
 		if ($arResult['MODULES']['catalog'])
-			${$FILTER_NAME}["<=CATALOG_PRICE_".$arPrice["ID"]] = $value;
+			${$FILTER_NAME}["<=CATALOG_PRICE_".$arPrice["ID"]] = $value_right;
 		else
-			${$FILTER_NAME}["<=PROPERTY_".$arPrice["ID"]] = $value;
+			${$FILTER_NAME}["<=PROPERTY_".$arPrice["ID"]] = $value_right;
 	}
 
-	$res_price .= '<input type="text" name="'.$name.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value).'" />';
+	$res_price .= '<input type="text" name="'.$name_right.'" size="'.$arParams["NUMBER_WIDTH"].'" value="'.htmlspecialcharsbx($value_right).'" />';
 
-	$arResult["ITEMS"]["PRICE_".$price_code] = array("NAME" => htmlspecialcharsbx($arPrice["TITLE"]), "INPUT" => $res_price);
+	$arResult["ITEMS"]["PRICE_".$price_code] = array(
+		"NAME" => htmlspecialcharsbx($arPrice["TITLE"]),
+		"INPUT" => $res_price,
+		"TYPE" => "RANGE",
+		"INPUT_NAMES" => array($name_left, $name_right),
+		"INPUT_VALUES" => array(htmlspecialcharsbx($value_left), htmlspecialcharsbx($value_right)),
+		"~INPUT_VALUES" => array($value_left, $value_right),
+		"LIST" => array(),
+	);
 
+}
+
+if (
+	!empty($arParams["PAGER_PARAMS_NAME"])
+	&& preg_match("/^[A-Za-z_][A-Za-z01-9_]*$/", $arParams["PAGER_PARAMS_NAME"])
+)
+{
+	if (!is_array($GLOBALS[$arParams["PAGER_PARAMS_NAME"]]))
+		$GLOBALS[$arParams["PAGER_PARAMS_NAME"]] = array();
+
+	foreach ($arResult["ITEMS"] as $arItem)
+	{
+		if (isset($arItem["INPUT_NAMES"]) && is_array($arItem["INPUT_NAMES"]))
+		{
+			foreach ($arItem["INPUT_NAMES"] as $i => $name)
+			{
+				$value = $arItem["~INPUT_VALUES"][$i];
+				if (strlen($value) > 0)
+				{
+					$GLOBALS[$arParams["PAGER_PARAMS_NAME"]][$name] = $value;
+				}
+			}
+		}
+		elseif (isset($arItem["INPUT_NAME"]) && is_array($arItem["~INPUT_VALUE"]))
+		{
+			foreach ($arItem["~INPUT_VALUE"] as $value)
+			{
+				if (strlen($value) > 0)
+				{
+					$GLOBALS[$arParams["PAGER_PARAMS_NAME"]][$arItem["INPUT_NAME"]][] = $value;
+				}
+			}
+		}
+		elseif (isset($arItem["INPUT_NAME"]) && strlen($arItem["~INPUT_VALUE"]) > 0)
+		{
+			$GLOBALS[$arParams["PAGER_PARAMS_NAME"]][$arItem["INPUT_NAME"]] = $arItem["~INPUT_VALUE"];
+		}
+	}
+
+	if (strlen($_REQUEST["del_filter"]) > 0)
+	{
+		//$GLOBALS[$arParams["PAGER_PARAMS_NAME"]]["del_filter"] = $_REQUEST["del_filter"];
+	}
+	elseif (strlen($_REQUEST["set_filter"]) > 0)
+	{
+		$GLOBALS[$arParams["PAGER_PARAMS_NAME"]]["set_filter"] = $_REQUEST["set_filter"];
+	}
 }
 
 $arResult["arrInputNames"]["set_filter"]=true;

@@ -25,6 +25,7 @@ $this->setFrameMode(true);
 		"CACHE_TYPE" => $arParams["CACHE_TYPE"],
 		"CACHE_TIME" => $arParams["CACHE_TIME"],
 		"CACHE_GROUPS" => $arParams["CACHE_GROUPS"],
+		"PAGER_PARAMS_NAME" => $arParams["PAGER_PARAMS_NAME"],
 	),
 	$component
 );
@@ -45,7 +46,10 @@ $this->setFrameMode(true);
 		"PROPERTY_CODE" => $arParams["LIST_PROPERTY_CODE"],
 		"DISPLAY_PANEL" => $arParams["DISPLAY_PANEL"],
 		"SET_TITLE" => $arParams["SET_TITLE"],
+		"MESSAGE_404" => $arParams["MESSAGE_404"],
 		"SET_STATUS_404" => $arParams["SET_STATUS_404"],
+		"SHOW_404" => $arParams["SHOW_404"],
+		"FILE_404" => $arParams["FILE_404"],
 		"USE_PERMISSIONS" => $arParams["USE_PERMISSIONS"],
 		"GROUP_PERMISSIONS" => $arParams["GROUP_PERMISSIONS"],
 		"CACHE_TYPE" => $arParams["CACHE_TYPE"],
@@ -60,8 +64,12 @@ $this->setFrameMode(true);
 		"PAGER_DESC_NUMBERING" => $arParams["PAGER_DESC_NUMBERING"],
 		"PAGER_DESC_NUMBERING_CACHE_TIME" => $arParams["PAGER_DESC_NUMBERING_CACHE_TIME"],
 		"PAGER_SHOW_ALL" => $arParams["PAGER_SHOW_ALL"],
+		"PAGER_BASE_LINK_ENABLE" => $arParams["PAGER_BASE_LINK_ENABLE"],
+		"PAGER_BASE_LINK" => $arParams["PAGER_BASE_LINK"],
+		"PAGER_PARAMS_NAME" => $arParams["PAGER_PARAMS_NAME"],
 		"FILTER_NAME" => $arParams["FILTER_NAME"],
 		"BROWSER_TITLE" => $arParams["LIST_BROWSER_TITLE"],
+		"SET_LAST_MODIFIED" => $arParams["SET_LAST_MODIFIED"],
 
 		"SECTION_ID" => $arResult["VARIABLES"]["SECTION_ID"],
 		"SECTION_CODE" => $arResult["VARIABLES"]["SECTION_CODE"],

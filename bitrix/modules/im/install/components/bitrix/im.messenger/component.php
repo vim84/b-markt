@@ -35,6 +35,10 @@ if ($arParams['DESKTOP'] == 'Y')
 	CIMMessenger::SetDesktopStatusOnline();
 	CIMMessenger::SetDesktopVersion(empty($_GET['BXD_API_VERSION'])? 0 : $_GET['BXD_API_VERSION']);
 }
+else if ($arParams['FULLSCREEN'] == 'Y')
+{
+	$GLOBALS["APPLICATION"]->SetPageProperty("BodyClass", "bx-im-fullscreen bx-language-".LANGUAGE_ID);
+}
 
 if ($arResult['SETTINGS']['bxdNotify'] && CIMMessenger::CheckInstallDesktop())
 {

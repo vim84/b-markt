@@ -29,6 +29,11 @@ elseif (
 	$arParams['ALLOW_UPLOAD'] = 'A';
 }
 
+if ($arParams['ALLOW_UPLOAD'] == 'I')
+{
+	$arParams["sign"] = new \Bitrix\Main\Security\Sign\Signer;
+}
+
 if ($_POST['mfi_mode'] &&
 	(
 		!array_key_exists("controlID", $_REQUEST) || // for custom templates
@@ -91,7 +96,14 @@ if ($_POST['mfi_mode'] &&
 					if ($file)
 					{
 						$tmp["fileContentType"] = $file["CONTENT_TYPE"];
-						$tmp["fileURL"] = CHTTP::URN2URI($APPLICATION->GetCurPageParam("mfi_mode=down&fileID=".$fileID."&cid=".$cid."&".bitrix_sessid_get(), array("mfi_mode", "fileID", "cid")));
+						$query = array(
+							"mfi_mode" => "down",
+							"fileID" => $fileID,
+							"cid" => $cid,
+							"sessid" => bitrix_sessid());
+						if (array_key_exists("sign", $arParams))
+							$query["s"] = $arParams["sign"]->sign($cid, "main.file.input");;
+						$tmp['fileURL'] = "/bitrix/components/bitrix/main.file.input/file.php?" . http_build_query($query);
 						$tmp["fileSize"] = CFile::FormatSize($file['FILE_SIZE']);
 					}
 				}
@@ -131,30 +143,12 @@ parent.FILE_UPLOADER_CALLBACK_<?=$uid?>(<?=CUtil::PhpToJsObject($arResult);?>, <
 	die();
 }
 
-if ($_GET['mfi_mode'] === 'down')
+if ($_GET['mfi_mode'] === "down")
 {
-	$fid = intval($_GET["fileID"]);
+	if (array_key_exists("sign", $arParams))
+		$_REQUEST["s"] = $arParams["sign"]->sign($_REQUEST["cid"], "main.file.input");;
 
-	$cid = trim($_REQUEST['cid']);
-	if (!$cid || !preg_match('/^[a-f01-9]{32}$/', $cid) || !check_bitrix_sessid())
-		die();
-
-	if ($fid > 0 && FileInputUtility::instance()->checkFile($cid, $fid))
-	{
-		$arFile = CFile::GetFileArray($fid);
-		if ($arFile)
-		{
-			$APPLICATION->RestartBuffer();
-			while(ob_end_clean()); // hack!
-
-			if ($arParams['ALLOW_UPLOAD'] == 'I')
-				CFile::ViewByUser($arFile, array("content_type" => $arFile["CONTENT_TYPE"]));
-			else
-				CFile::ViewByUser($arFile, array("force_download" => true));
-
-			die();
-		}
-	}
+	require(__DIR__."/file.php");
 }
 
 if ($arParams['SILENT'])
@@ -195,7 +189,15 @@ if (is_array($arParams['INPUT_VALUE']) && strlen(implode(",", $arParams["INPUT_V
 	$dbRes = CFile::GetList(array(), array("@ID" => implode(",", $arParams["INPUT_VALUE"])));
 	while ($arFile = $dbRes->GetNext())
 	{
-		$arFile['URL'] = CHTTP::URN2URI($APPLICATION->GetCurPageParam("mfi_mode=down&fileID=".$arFile['ID']."&cid=".$arResult['CONTROL_UID']."&".bitrix_sessid_get(), array("mfi_mode", "fileID", "cid")));
+		$query = array(
+			"mfi_mode" => "down",
+			"fileID" => $arFile['ID'],
+			"cid" => $arResult['CONTROL_UID'],
+			"sessid" => bitrix_sessid());
+		if (array_key_exists("sign", $arParams))
+			$query["s"] = $arParams["sign"]->sign($arResult["CONTROL_UID"], "main.file.input");;
+
+		$arFile['URL'] = "/bitrix/components/bitrix/main.file.input/file.php?" . http_build_query($query);
 		$arFile['FILE_SIZE_FORMATTED'] = CFile::FormatSize($arFile['FILE_SIZE']);
 		$arResult['FILES'][$arFile['ID']] = $arFile;
 

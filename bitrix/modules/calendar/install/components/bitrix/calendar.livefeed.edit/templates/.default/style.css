@@ -1175,6 +1175,7 @@
 
 .feed-event .feed-add-post{
 	display: block !important;
+	margin: 0 20px;
 }
 
 .feed-event .feed-add-post-edit-form

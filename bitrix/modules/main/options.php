@@ -113,6 +113,7 @@ $arAllOptions = array(
 		Array("optimize_css_files", GetMessage("MAIN_OPTIMIZE_CSS"), "N", Array("checkbox", "Y")),
 		Array("optimize_js_files", GetMessage("MAIN_OPTIMIZE_JS"), "N", Array("checkbox", "Y")),
 		Array("use_minified_assets", GetMessage("MAIN_USE_MINIFIED_ASSETS"), "Y", Array("checkbox", "Y")),
+		Array("move_js_to_body", GetMessage("MAIN_MOVE_JS_TO_BODY"), "N", Array("checkbox", "Y")),
 		Array("compres_css_js_files", GetMessage("MAIN_COMPRES_CSS_JS"), "N", Array("checkbox", "Y")),
 
 		GetMessage("MAIN_OPTIMIZE_TRANSLATE_SETTINGS"),
@@ -143,6 +144,7 @@ $arAllOptions = array(
 		Array("use_digest_auth", GetMessage("MAIN_OPT_HTTP_DIGEST"), "N", Array("checkbox", "Y")),
 		Array("note"=>GetMessage("MAIN_OPT_DIGEST_NOTE")),
 		Array("custom_register_page", GetMessage("MAIN_OPT_REGISTER_PAGE"), "", Array("text", 40)),
+		Array("auth_components_template", GetMessage("MAIN_OPTIONS_AUTH_TEMPLATE") , "", Array("text", 40)),
 
 		GetMessage("MAIN_OPT_SECURE_AUTH"),
 		Array("use_encrypted_auth", GetMessage("MAIN_OPT_SECURE_PASS"), "N", Array("checkbox", "Y"), (CRsaSecurity::Possible()? "N":"Y")),
@@ -284,6 +286,7 @@ $arAllOptions["auth"][] = Array("new_user_email_uniq_check", GetMessage("MAIN_RE
 
 $arAllOptions["auth"][] = GetMessage("MAIN_OPTION_SESS");
 $arAllOptions["auth"][] = Array("session_expand", GetMessage("MAIN_OPTION_SESS_EXPAND"), "Y", Array("checkbox", "Y"));
+$arAllOptions["auth"][] = Array("session_auth_only", GetMessage("MAIN_OPTION_SESS_AUTH"), "Y", Array("checkbox", "Y"));
 $arAllOptions["auth"][] = Array("session_show_message", GetMessage("MAIN_OPTION_SESS_MESS"), "Y", Array("checkbox", "Y"));
 
 $aTabs = array(

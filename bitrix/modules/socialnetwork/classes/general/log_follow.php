@@ -1,7 +1,7 @@
 <?
 class CSocNetLogFollow
 {
-	function Set($user_id, $code = "**", $type = "Y", $follow_date = false, $site_id = SITE_ID)
+	function Set($user_id, $code = "**", $type = "Y", $follow_date = false, $site_id = SITE_ID, $bByWF = false)
 	{
 		static $LOG_CACHE;
 
@@ -67,7 +67,9 @@ class CSocNetLogFollow
 					);
 
 					if ($arLog = $rsLog->Fetch())
+					{
 						$LOG_CACHE[$log_id] = $arLog;
+					}
 				}
 
 				if ($arLog)
@@ -89,7 +91,8 @@ class CSocNetLogFollow
 											? $log_update 
 											: ($code == "**" ? $log_date : false)
 									)
-							)
+							),
+							$bByWF
 						);
 					}
 					elseif ($type != $default_type) // new record in the follow table only if not equal to default type
@@ -106,7 +109,8 @@ class CSocNetLogFollow
 											? $log_update 
 											: $log_date
 									)
-							)
+							),
+							$bByWF
 						);
 					}
 				}
@@ -124,7 +128,7 @@ class CSocNetLogFollow
 		return $res;
 	}
 	
-	function Add($user_id, $code, $type, $follow_date = false)
+	function Add($user_id, $code, $type, $follow_date = false, $bByWF = false)
 	{
 		global $DB;
 
@@ -144,8 +148,8 @@ class CSocNetLogFollow
 		$ref_id = (preg_match('/(\d+)/', $code, $matches) ? intval($matches[1]) : 0);
 
 		$strSQL = "INSERT INTO b_sonet_log_follow 
-			(USER_ID, CODE, REF_ID, TYPE, FOLLOW_DATE) 
-			VALUES(".$user_id.", '".$code."', ".$ref_id.", '".$type."', ".($follow_date ? $DB->CharToDateFunction($follow_date) : $DB->CurrentTimeFunction()).")";
+			(USER_ID, CODE, REF_ID, TYPE, FOLLOW_DATE, BY_WF)
+			VALUES(".$user_id.", '".$code."', ".$ref_id.", '".$type."', ".($follow_date ? $DB->CharToDateFunction($follow_date) : $DB->CurrentTimeFunction()).", ".($bByWF ? "'Y'" : "null").")";
 
 		if ($DB->Query($strSQL, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__))
 		{
@@ -164,7 +168,7 @@ class CSocNetLogFollow
 			return false;
 	}
 
-	function Update($user_id, $code, $type, $follow_date = false)
+	function Update($user_id, $code, $type, $follow_date = false, $bByWF = false)
 	{
 		global $DB;
 
@@ -174,7 +178,7 @@ class CSocNetLogFollow
 		if ($type != "Y")
 			$type = "N";
 
-		$strSQL = "UPDATE b_sonet_log_follow SET TYPE = '".$type."', FOLLOW_DATE = ".($follow_date ? $DB->CharToDateFunction($follow_date) : $DB->CurrentTimeFunction())." WHERE USER_ID = ".$user_id." AND CODE = '".$code."'";
+		$strSQL = "UPDATE b_sonet_log_follow SET TYPE = '".$type."', FOLLOW_DATE = ".($follow_date ? $DB->CharToDateFunction($follow_date) : $DB->CurrentTimeFunction()).", BY_WF = ".($bByWF ? "'Y'" : "null")." WHERE USER_ID = ".$user_id." AND CODE = '".$code."'";
 		if ($DB->Query($strSQL, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__))
 		{
 			if (
@@ -222,9 +226,14 @@ class CSocNetLogFollow
 		global $DB;
 
 		if (intval($log_id) <= 0)
+		{
 			return false;
+		}
 
-		if ($type == "Y" && $bUseSmartLogic)
+		if (
+			$type == "Y"
+			&& $bUseSmartLogic
+		)
 		{
 			$default_follow = COption::GetOptionString("socialnetwork", "follow_default_type", "Y");
 
@@ -239,8 +248,10 @@ class CSocNetLogFollow
 						";
 				$dbRes = $DB->Query($strSQL, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 				while ($arRes = $dbRes->Fetch())
+				{
 					$arUserID[] = $arRes["USER_ID"];
-				
+				}
+
 				if (count($arUserID) > 0)
 				{
 					$strSQL = "DELETE FROM b_sonet_log_follow 
@@ -259,9 +270,13 @@ class CSocNetLogFollow
 						AND CODE = 'L".$log_id."' 
 				";
 				if ($DB->Query($strSQL, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__))
+				{
 					return true;
+				}
 				else
+				{
 					return false;
+				}
 			}
 			else
 			{
@@ -396,7 +411,9 @@ class CSocNetLogFollow
 		global $DB;
 
 		if (count($arSelectFields) <= 0)
-			$arSelectFields = array("USER_ID", "CODE", "TYPE", "FOLLOW_DATE");
+		{
+			$arSelectFields = array("USER_ID", "CODE", "TYPE", "FOLLOW_DATE", "BY_WF");
+		}
 
 		// FIELDS -->
 		$arFields = array(
@@ -405,6 +422,7 @@ class CSocNetLogFollow
 			"REF_ID" => Array("FIELD" => "SLF.REF_ID", "TYPE" => "int"),
 			"TYPE" => array("FIELD" => "SLF.TYPE", "TYPE" => "char"),
 			"FOLLOW_DATE" => Array("FIELD" => "SLF.FOLLOW_DATE", "TYPE" => "datetime"),
+			"BY_WF" => array("FIELD" => "SLF.BY_WF", "TYPE" => "char"),
 		);
 		// <-- FIELDS
 
@@ -427,14 +445,13 @@ class CSocNetLogFollow
 	function GetDefaultValue($user_id)
 	{
 		if (intval($user_id) <= 0)
+		{
 			return false;
+		}
 
 		global $CACHE_MANAGER;
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$ttl = 2592000;
-		else
-			$ttl = 600;
+		$ttl = (defined("BX_COMP_MANAGED_CACHE") ? 2592000 : 600);
 
 		$cache_id = 'sonet_follow_default_'.$user_id;
 		$obCache = new CPHPCache;
@@ -467,7 +484,9 @@ class CSocNetLogFollow
 				array("TYPE")
 			);
 			if ($arFollow = $rsFollow->Fetch())
+			{
 				$default_follow = $arFollow["TYPE"];
+			}
 
 			if (is_object($obCache))
 			{
@@ -475,14 +494,18 @@ class CSocNetLogFollow
 					"VALUE" => $default_follow
 				);
 				$obCache->EndDataCache($arCacheData);
-				if(defined("BX_COMP_MANAGED_CACHE"))
+				if (defined("BX_COMP_MANAGED_CACHE"))
+				{
 					$GLOBALS["CACHE_MANAGER"]->EndTagCache();
+				}
 			}
 		}
 		unset($obCache);
 
 		if (!$default_follow)
+		{
 			$default_follow = COption::GetOptionString("socialnetwork", "follow_default_type", "Y");
+		}
 
 		return $default_follow;
 	}

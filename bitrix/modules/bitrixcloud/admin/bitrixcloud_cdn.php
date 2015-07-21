@@ -71,6 +71,8 @@ if (
 		CAdminNotify::DeleteByTag("bitrixcloud_off");
 
 		$server_name = trim($_POST["server_name"]);
+		$https =  ($_POST["https"]==="y");
+		$optimize = ($_POST["optimize"]==="y");
 		if ($server_name == "")
 		{
 			$message = new CAdminMessage(GetMessage("BCL_DOMAIN_ERROR"));
@@ -82,11 +84,19 @@ if (
 		else
 		{
 			$cdn_config = CBitrixCloudCDNConfig::getInstance()->loadFromOptions();
-			if ($cdn_config->getDomain() !== $server_name)
+			if (
+				$cdn_config->getDomain() !== $server_name
+				|| $cdn_config->isHttpsEnabled() !== $https
+				|| $cdn_config->isOptimizationEnabled() !== $optimize
+			)
+			{
 				CBitrixCloudCDN::domainChanged();
+			}
 
 			$cdn_config->setSites(array_keys($_POST["site"]));
 			$cdn_config->setDomain($server_name);
+			$cdn_config->setHttps($https);
+			$cdn_config->setOptimization($optimize);
 			$cdn_config->setKernelRewrite($_POST["kernel_folder"]!=="n");
 			$cdn_config->setContentRewrite($_POST["content_folders"]==="y");
 
@@ -154,7 +164,17 @@ if (CBitrixCloudCDN::IsActive())
 if ($bVarsFromForm)
 {
 	$active = $_POST["cdn_active"] === "Y";
+	$optimize = $_POST["optimize"]==="y";
+	$kernel_folder = $_POST["bitrix_folder"]!=="n";
+	$content_folders = $_POST["content_folders"]==="y";
+	if (is_array($_POST["site"]))
+		$sites = $_POST["site"];
+	else
+		$sites = array(
+			1,
+		);
 	$server_name = $_POST["server_name"];
+	$https = $_POST["https"]==="y";
 }
 else
 {
@@ -164,11 +184,16 @@ else
 		$active &= $cdn_config->getQuota()->getTrafficSize() <= $cdn_config->getQuota()->getAllowedSize();
 		$active &= !$cdn_config->getQuota()->isExpired();
 	}
-	$server_name = $cdn_config->getDomain();
 	if (!$server_name)
 	{
 		$server_name = COption::GetOptionString("main", "server_name", $_SERVER["HTTP_HOST"]);
 	}
+	$optimize = $cdn_config->isOptimizationEnabled();
+	$kernel_folder = $cdn_config->isKernelRewriteEnabled();
+	$content_folders = $cdn_config->isContentRewriteEnabled();
+	$sites = $cdn_config->getSites();
+	$server_name = $cdn_config->getDomain();
+	$https = $cdn_config->isHttpsEnabled();
 }
 ?>
 <form method="POST" action="bitrixcloud_cdn.php?lang=<?echo LANGUAGE_ID ?><?echo $_GET["return_url"] ? "&amp;return_url=".urlencode($_GET["return_url"]) : "" ?>" enctype="multipart/form-data" name="editform">
@@ -176,27 +201,26 @@ else
 $tabControl->Begin();
 $tabControl->BeginNextTab();
 ?>
-<tr>
-	<td width="40%">
-		<label for="cdn_active"><?echo GetMessage("BCL_TURN_ON"); ?>:</label>
-	</td>
-	<td width="60%">
-		<input type="hidden" name="cdn_active" value="N">
-		<input type="checkbox" id="cdn_active" name="cdn_active" value="Y" <?echo $active ? 'checked="checked"' : '' ?>>
-	</td>
-</tr>
+	<tr>
+		<td width="40%">
+			<label for="cdn_active"><?echo GetMessage("BCL_TURN_ON"); ?>:</label>
+		</td>
+		<td width="60%">
+			<input type="hidden" name="cdn_active" value="N">
+			<input type="checkbox" id="cdn_active" name="cdn_active" value="Y" <?echo $active ? 'checked="checked"' : '' ?>>
+		</td>
+	</tr>
+	<tr>
+		<td width="40%">
+			<label for="optimize"><?echo GetMessage("BCL_OPTIMIZE"); ?>:</label>
+		</td>
+		<td width="60%">
+			<input type="hidden" name="optimize" value="n">
+			<input type="checkbox" id="optimize" name="optimize" value="y" <?echo $optimize ? 'checked="checked"' : '' ?>>
+		</td>
+	</tr>
 <?
 $tabControl->BeginNextTab();
-if ($bVarsFromForm)
-{
-	$kernel_folder = $_POST["bitrix_folder"]!=="n";
-	$content_folders = $_POST["content_folders"]==="y";
-}
-else
-{
-	$kernel_folder = $cdn_config->isKernelRewriteEnabled();
-	$content_folders = $cdn_config->isContentRewriteEnabled();
-}
 ?>
 	<tr>
 		<td width="40%">
@@ -220,19 +244,6 @@ else
 	</tr>
 <?
 $tabControl->BeginNextTab();
-if ($bVarsFromForm)
-{
-	if (is_array($_POST["site"]))
-		$sites = $_POST["site"];
-	else
-		$sites = array(
-			1,
-		);
-}
-else
-{
-	$sites = $cdn_config->getSites();
-}
 ?>
 	<tr>
 		<td width="40%">
@@ -263,10 +274,19 @@ $tabControl->BeginNextTab();
 ?>
 	<tr class="adm-detail-required-field">
 		<td width="40%">
-			<label  for="server_name"><?echo GetMessage("BCL_SERVER_URL");?>:</label>
+			<label  for="server_name"><?echo GetMessage("BCL_SERVER_DOMAIN_NAME");?>:</label>
 		</td>
 		<td width="60%">
 			<input type="text" id="server_name" name="server_name" value="<?echo htmlspecialcharsbx($server_name); ?>">
+		</td>
+	</tr>
+	<tr>
+		<td width="40%">
+			<label for="https"><?echo GetMessage("BCL_HTTPS"); ?>:</label>
+		</td>
+		<td width="60%">
+			<input type="hidden" name="https" value="n">
+			<input type="checkbox" id="https" name="https" value="y" <?echo $https ? 'checked="checked"' : '' ?>>
 		</td>
 	</tr>
 <?

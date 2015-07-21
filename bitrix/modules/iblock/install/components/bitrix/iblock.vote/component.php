@@ -85,7 +85,10 @@ $arParams = array(
 	"CACHE_TIME" => $arParams["CACHE_TIME"],
 	"DISPLAY_AS_RATING" => $arParams["DISPLAY_AS_RATING"]=="vote_avg"? "vote_avg": "rating",
 	"READ_ONLY" => $arParams["READ_ONLY"],
-	"ELEMENT_CODE" => $arParams["ELEMENT_CODE"]
+	"ELEMENT_CODE" => $arParams["ELEMENT_CODE"],
+	"SHOW_RATING" => $arParams["SHOW_RATING"]=="Y"? "Y": "N",
+	"SET_STATUS_404" => $arParams["SET_STATUS_404"]=="Y"? "Y": "N",
+	"MESSAGE_404" => $arParams["MESSAGE_404"],
 );
 
 //Handle case when ELEMENT_CODE used
@@ -203,8 +206,7 @@ if(
 				$DB->Commit();
 				$this->ClearResultCache(array($USER->GetGroups(), 1));
 				$this->ClearResultCache(array($USER->GetGroups(), 0));
-				if(defined("BX_COMP_MANAGED_CACHE"))
-					$CACHE_MANAGER->ClearByTag("iblock_id_".$arParams["IBLOCK_ID"]);
+				CIBlock::clearIblockTagCache($arParams['IBLOCK_ID']);
 			}
 		}
 	}
@@ -263,7 +265,7 @@ if($this->StartResultCache(false, array($USER->GetGroups(), $bVoted)))
 				$arResult["VOTE_NAMES"][$i]=$i+1;
 
 		$arResult["VOTED"] = $bVoted;
-		
+
 		$this->SetResultCacheKeys(array(
 			"AJAX",
 		));
@@ -272,10 +274,11 @@ if($this->StartResultCache(false, array($USER->GetGroups(), $bVoted)))
 	else
 	{
 		$this->AbortResultCache();
-		ShowError(GetMessage("PHOTO_ELEMENT_NOT_FOUND"));
-		@define("ERROR_404", "Y");
-		if($arParams["SET_STATUS_404"]==="Y")
-			CHTTP::SetStatus("404 Not Found");
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("PHOTO_ELEMENT_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+		);
 	}
 }
 

@@ -11,6 +11,7 @@ use Bitrix\Main\Config\Option;
 use Bitrix\Main;
 use Bitrix\Currency;
 use Bitrix\Catalog;
+use Bitrix\Sale;
 
 define('CATALOG_NEW_OFFERS_IBLOCK_NEED','-1');
 
@@ -23,18 +24,11 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 	$useSaleDiscountOnly = false;
 	$saleIsInstalled = ModuleManager::isModuleInstalled('sale');
 	if ($saleIsInstalled)
-	{
 		$useSaleDiscountOnly = (string)Option::get('sale', 'use_sale_discount_only') == 'Y';
-	}
 
 	$applyDiscSaveModeList = CCatalogDiscountSave::GetApplyModeList(true);
 
-	$reserveConditionList = array(
-		'O' => Loc::getMessage('CAT_PRODUCT_RESERVE_1_ORDER'),
-		'P' => Loc::getMessage('CAT_PRODUCT_RESERVE_2_PAYMENT'),
-		'D' => Loc::getMessage('CAT_PRODUCT_RESERVE_3_DELIVERY'),
-		'S' => Loc::getMessage('CAT_PRODUCT_RESERVE_4_DEDUCTION')
-	);
+	$saleSettingsUrl = 'settings.php?lang='.LANGUAGE_ID.'&mid=sale&mid_menu=1';
 
 	if ($_SERVER['REQUEST_METHOD'] == 'GET' && !empty($_REQUEST['RestoreDefaults']) && !$bReadOnly && check_bitrix_sessid())
 	{
@@ -319,35 +313,6 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 		else
 			$strEnableReservation = (isset($_POST['enable_reservation']) && (string)$_POST['enable_reservation'] === 'Y' ? 'Y' : 'N');
 		Option::set('catalog', 'enable_reservation', $strEnableReservation, '');
-
-		if ($saleIsInstalled)
-		{
-			$reserveCondition = '';
-			if (isset($_POST['PRODUCT_RESERVE_CONDITION']))
-			{
-				$_POST['PRODUCT_RESERVE_CONDITION'] = (string)$_POST['PRODUCT_RESERVE_CONDITION'];
-				if (isset($reserveConditionList[$_POST['PRODUCT_RESERVE_CONDITION']]))
-					$reserveCondition = $_POST['PRODUCT_RESERVE_CONDITION'];
-			}
-			if ($reserveCondition != '')
-				Option::set('sale', 'product_reserve_condition', $reserveCondition, '');
-
-			if (isset($_POST['product_reserve_clear_period']))
-			{
-				$product_reserve_clear_period = (isset($_POST['product_reserve_clear_period']) ? (int)$_POST['product_reserve_clear_period'] : 0);
-				if ($product_reserve_clear_period >= 0)
-				{
-					$prevVal = (int)Option::get('sale', 'product_reserve_clear_period');
-					if ($product_reserve_clear_period != $prevVal)
-					{
-						CAgent::RemoveAgent("CSaleOrder::ClearProductReservedQuantity();", "sale");
-						if ($product_reserve_clear_period > 0)
-							CAgent::AddAgent("CSaleOrder::ClearProductReservedQuantity();", "sale", "N", $product_reserve_clear_period*24*3600);
-					}
-					Option::set('sale', 'product_reserve_clear_period', $product_reserve_clear_period, '');
-				}
-			}
-		}
 
 		if (!$useSaleDiscountOnly)
 		{
@@ -1211,14 +1176,7 @@ if ($USER->CanDoOperation('catalog_read') || !$bReadOnly)
 
 	$currentSettings = array();
 	$currentSettings['discsave_apply'] = Option::get('catalog', 'discsave_apply');
-	if ($saleIsInstalled)
-	{
-		$currentSettings['get_discount_percent_from_base_price'] = Option::get('sale', 'get_discount_percent_from_base_price');
-	}
-	else
-	{
-		$currentSettings['get_discount_percent_from_base_price'] = Option::get('catalog', 'get_discount_percent_from_base_price');
-	}
+	$currentSettings['get_discount_percent_from_base_price'] = Option::get(($saleIsInstalled ? 'sale' : 'catalog'), 'get_discount_percent_from_base_price');
 
 	$strShowCatalogTab = Option::get('catalog', 'show_catalog_tab_with_offers');
 	$strSaveProductWithoutPrice = Option::get('catalog', 'save_product_without_price');
@@ -1270,13 +1228,11 @@ function showReservation(show)
 
 	show = !!show;
 	if (!!obRowReservationPeriod)
-	{
 		BX.style(obRowReservationPeriod, 'display', (show ? 'table-row' : 'none'));
-	}
+	obRowReservationPeriod = null;
 	if (!!obReservationType)
-	{
 		obReservationType.innerHTML = (show ? titleProductReserved : titleQuantityDecrease);
-	}
+	obReservationType = null;
 }
 
 function onClickReservation(el)
@@ -1388,33 +1344,31 @@ function RestoreDefaults()
 </tr>
 
 <?
-if ($saleIsInstalled)
+if ($saleIsInstalled && Loader::includeModule('sale'))
 {
 	?>
-	<tr id="tr_reservation_period" style="display: <? echo ($strUseStoreControl == 'Y' || $strEnableReservation == 'Y' ? 'table-row' : 'none'); ?>;">
-		<td>
-			<?echo Loc::getMessage("CAT_RESERVATION_CLEAR_PERIOD")?>
-		</td>
-		<td>
-			<input type="text" size="10" value="<?=(int)Option::get('sale', 'product_reserve_clear_period'); ?>" name="product_reserve_clear_period" />
-		</td>
-	</tr>
 	<tr>
 		<td id="td_reservation_type"><?
 			echo Loc::getMessage(($strUseStoreControl == 'Y' || $strEnableReservation == 'Y'  ? 'CAT_PRODUCT_RESERVED' : 'CAT_PRODUCT_QUANTITY_DECREASE'));
 		?></td>
 		<td>
 			<?
-			$val = (string)Option::get('sale', 'product_reserve_condition');
-			?>
-			<select name="PRODUCT_RESERVE_CONDITION" id="sl_reserve">
-				<?
-				foreach($reserveConditionList as $conditionID => $conditionName)
-				{
-					?><option value="<?=$conditionID?>"<?if ($val == $conditionID) echo " selected";?>><?=htmlspecialcharsex($conditionName); ?></option><?
-				}
-				?>
-			</select>
+			$currentReserveCondition = Sale\Configuration::getProductReservationCondition();
+			$reserveConditions = Sale\Configuration::getReservationConditionList(true);
+			if (isset($reserveConditions[$currentReserveCondition]))
+				echo htmlspecialcharsex($reserveConditions[$currentReserveCondition]);
+			else
+				echo Loc::getMessage('BX_CAT_RESERVE_CONDITION_EMPTY');
+			unset($reserveConditions, $currentReserveCondition);
+			?>&nbsp;<a href="<? echo $saleSettingsUrl; ?>#section_reservation"><? echo Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_SALE') ?></a>
+		</td>
+	</tr>
+	<tr id="tr_reservation_period" style="display: <? echo ($strUseStoreControl == 'Y' || $strEnableReservation == 'Y' ? 'table-row' : 'none'); ?>;">
+		<td>
+			<?echo Loc::getMessage("CAT_RESERVATION_CLEAR_PERIOD")?>
+		</td>
+		<td>
+			<? echo Sale\Configuration::getProductReserveClearPeriod(); ?>
 		</td>
 	</tr>
 	<?
@@ -1451,7 +1405,7 @@ if ($saleIsInstalled)
 				$currentSettings['get_discount_percent_from_base_price'] == 'Y'
 				? Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_PRICE_YES')
 				: Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_PRICE_NO')
-			);?>&nbsp;<a href="settings.php?lang=<? echo LANGUAGE_ID; ?>&mid=sale&mid_menu=1"><? echo Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_SALE') ?></a><?
+			);?>&nbsp;<a href="<? echo $saleSettingsUrl; ?>#section_discount"><? echo Loc::getMessage('CAT_DISCOUNT_PERCENT_FROM_BASE_SALE') ?></a><?
 		}
 		else
 		{

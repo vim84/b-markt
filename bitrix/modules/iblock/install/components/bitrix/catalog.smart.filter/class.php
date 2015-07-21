@@ -38,6 +38,13 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 					"IBLOCK_ID" => $arParams["IBLOCK_ID"],
 				)
 			);
+			if (!$arParams["SECTION_ID"] && strlen($arParams["SECTION_CODE_PATH"]) > 0)
+			{
+				$arParams["SECTION_ID"] = CIBlockFindTools::GetSectionIDByCodePath(
+					$arParams["IBLOCK_ID"],
+					$arParams["SECTION_CODE_PATH"]
+				);
+			}
 		}
 
 		$arParams["PRICE_CODE"] = is_array($arParams["PRICE_CODE"])? $arParams["PRICE_CODE"]: array();
@@ -72,7 +79,7 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 		{
 			$arParams["CURRENCY_ID"] = "";
 		}
-		
+
 		return $arParams;
 	}
 
@@ -478,6 +485,7 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 		}
 
 		$file_id = null;
+		$url_id = null;
 
 		switch($PROPERTY_TYPE)
 		{
@@ -487,6 +495,7 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 			{
 				$value = $enum["VALUE"];
 				$sort  = $enum["SORT"];
+				$url_id = toLower($enum["XML_ID"]);
 			}
 			else
 			{
@@ -502,12 +511,16 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 					"ACTIVE_DATE" => "Y",
 					"CHECK_PERMISSIONS" => "Y",
 				);
-				$rsLink = CIBlockElement::GetList(array(), $arLinkFilter, false, false, array("ID","IBLOCK_ID","NAME","SORT"));
+				$rsLink = CIBlockElement::GetList(array(), $arLinkFilter, false, false, array("ID","IBLOCK_ID","NAME","SORT","CODE"));
 				$cache[$PROPERTY_TYPE][$key] = $rsLink->Fetch();
 			}
 
 			$value = $cache[$PROPERTY_TYPE][$key]["NAME"];
 			$sort = $cache[$PROPERTY_TYPE][$key]["SORT"];
+			if ($cache[$PROPERTY_TYPE][$key]["CODE"])
+				$url_id = toLower($cache[$PROPERTY_TYPE][$key]["CODE"]);
+			else
+				$url_id = toLower($value);
 			break;
 		case "G":
 			if(!isset($cache[$PROPERTY_TYPE][$key]))
@@ -517,13 +530,17 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 					"GLOBAL_ACTIVE" => "Y",
 					"CHECK_PERMISSIONS" => "Y",
 				);
-				$rsLink = CIBlockSection::GetList(array(), $arLinkFilter, false, array("ID","IBLOCK_ID","NAME","LEFT_MARGIN","DEPTH_LEVEL"));
+				$rsLink = CIBlockSection::GetList(array(), $arLinkFilter, false, array("ID","IBLOCK_ID","NAME","LEFT_MARGIN","DEPTH_LEVEL","CODE"));
 				$cache[$PROPERTY_TYPE][$key] = $rsLink->Fetch();
 				$cache[$PROPERTY_TYPE][$key]['DEPTH_NAME'] = str_repeat(".", $cache[$PROPERTY_TYPE][$key]["DEPTH_LEVEL"]).$cache[$PROPERTY_TYPE][$key]["NAME"];
 			}
 
 			$value = $cache[$PROPERTY_TYPE][$key]['DEPTH_NAME'];
 			$sort = $cache[$PROPERTY_TYPE][$key]["LEFT_MARGIN"];
+			if ($cache[$PROPERTY_TYPE][$key]["CODE"])
+				$url_id = toLower($cache[$PROPERTY_TYPE][$key]["CODE"]);
+			else
+				$url_id = toLower($value);
 			break;
 		case "U":
 			if(!isset($cache[$PROPERTY_ID]))
@@ -543,6 +560,7 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 
 			$value = $cache[$PROPERTY_ID][$key];
 			$sort = 0;
+			$url_id = toLower($value);
 			break;
 		case "Ux":
 			if(!isset($cache[$PROPERTY_ID]))
@@ -562,15 +580,17 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 			$value = $cache[$PROPERTY_ID][$key]['VALUE'];
 			$file_id = $cache[$PROPERTY_ID][$key]['FILE_ID'];
 			$sort = (isset($cache[$PROPERTY_ID][$key]['SORT']) ? $cache[$PROPERTY_ID][$key]['SORT'] : 0);
+			$url_id = toLower($cache[$PROPERTY_ID][$key]['UF_XML_ID']);
 			break;
 		default:
 			$value = $key;
 			$sort = 0;
+			$url_id = toLower($value);
 			break;
 		}
 
 		$keyCrc = abs(crc32($htmlKey));
-		$value = htmlspecialcharsex($value);
+		$safeValue = htmlspecialcharsex($value);
 		$sort = (int)$sort;
 
 		$filterPropertyID = $this->SAFE_FILTER_NAME.'_'.$PROPERTY_ID;
@@ -581,15 +601,20 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 			"CONTROL_NAME_ALT" => $filterPropertyID,
 			"HTML_VALUE_ALT" => $keyCrc,
 			"HTML_VALUE" => "Y",
-			"VALUE" => $value,
+			"VALUE" => $safeValue,
 			"SORT" => $sort,
-			"UPPER" => ToUpper($value),
+			"UPPER" => ToUpper($safeValue),
 			"FLAG" => $flag,
 		);
 
 		if ($file_id)
 		{
 			$resultItem["VALUES"][$htmlKey]['FILE'] = CFile::GetFileArray($file_id);
+		}
+
+		if ($url_id)
+		{
+			$resultItem["VALUES"][$htmlKey]['URL_ID'] = $url_id;
 		}
 
 		return $htmlKey;
@@ -818,5 +843,187 @@ class CBitrixCatalogSmartFilter extends CBitrixComponent
 				$this->currencyCache[$currencyId] = $currencyId;
 		}
 		return $this->currencyCache[$currencyId];
+	}
+
+	public function searchPrice($items, $lookupValue)
+	{
+		foreach($items as $itemId => $arItem)
+		{
+			if ($arItem["PRICE"])
+			{
+				$code = toLower($arItem["CODE"]);
+				if ($lookupValue === $code)
+					return $itemId;
+			}
+		}
+		return false;
+	}
+
+	public function searchProperty($items, $lookupValue)
+	{
+		foreach($items as $itemId => $arItem)
+		{
+			if (!$arItem["PRICE"])
+			{
+				$code = toLower($arItem["CODE"]);
+				if ($lookupValue === $code)
+					return $itemId;
+				if ($lookupValue == intval($arItem["ID"]))
+					return $itemId;
+			}
+		}
+		return false;
+	}
+
+	public function searchValue($item, $lookupValue)
+	{
+		foreach($item as $itemId => $arValue)
+		{
+			if ($lookupValue === $arValue["URL_ID"])
+				return $itemId;
+		}
+		return false;
+	}
+
+	public function convertUrlToCheck($url)
+	{
+		$result = array();
+		$smartParts = explode("/", $url);
+		foreach ($smartParts as $smartPart)
+		{
+			$item = false;
+			$smartPart = preg_split("/-(from|to|is|or)-/", $smartPart, -1, PREG_SPLIT_DELIM_CAPTURE);
+			foreach ($smartPart as $i => $smartElement)
+			{
+				if ($i == 0)
+				{
+					if (preg_match("/^price-(.+)$/", $smartElement, $match))
+						$itemId = $this->searchPrice($this->arResult["ITEMS"], $match[1]);
+					else
+						$itemId = $this->searchProperty($this->arResult["ITEMS"], $smartElement);
+
+					if ($itemId)
+						$item = &$this->arResult["ITEMS"][$itemId];
+					else
+						break;
+				}
+				elseif ($smartElement === "from")
+				{
+					$result[$item["VALUES"]["MIN"]["CONTROL_NAME"]] = $smartPart[$i+1];
+				}
+				elseif ($smartElement === "to")
+				{
+					$result[$item["VALUES"]["MAX"]["CONTROL_NAME"]] = $smartPart[$i+1];
+				}
+				elseif ($smartElement === "is" || $smartElement === "or")
+				{
+					$valueId = $this->searchValue($item["VALUES"], $smartPart[$i+1]);
+					if ($valueId)
+					{
+						$result[$item["VALUES"][$valueId]["CONTROL_NAME"]] = $item["VALUES"][$valueId]["HTML_VALUE"];
+					}
+				}
+			}
+			unset($item);
+		}
+		return $result;
+	}
+
+	public function makeSmartUrl($url, $apply)
+	{
+		$smartParts = array();
+
+		if ($apply)
+		{
+			foreach($this->arResult["ITEMS"] as $PID => $arItem)
+			{
+				$smartPart = array();
+				//Prices
+				if ($arItem["PRICE"])
+				{
+					if ($arItem["VALUES"]["MIN"]["HTML_VALUE"] || $arItem["VALUES"]["MAX"]["HTML_VALUE"])
+					{
+						if ($arItem["VALUES"]["MIN"]["HTML_VALUE"])
+							$smartPart["from"] = $arItem["VALUES"]["MIN"]["HTML_VALUE"];
+						if ($arItem["VALUES"]["MAX"]["HTML_VALUE"])
+							$smartPart["to"] = $arItem["VALUES"]["MAX"]["HTML_VALUE"];
+					}
+				}
+
+				if ($smartPart)
+				{
+					array_unshift($smartPart, toLower("price-".$arItem["CODE"]));
+
+					$smartParts[] = $smartPart;
+				}
+			}
+
+			foreach($this->arResult["ITEMS"] as $PID => $arItem)
+			{
+				$smartPart = array();
+				if ($arItem["PRICE"])
+					continue;
+
+				//Numbers && calendar == ranges
+				if (
+					$arItem["PROPERTY_TYPE"] == "N"
+					|| $arItem["DISPLAY_TYPE"] == "U"
+				)
+				{
+					if ($arItem["VALUES"]["MIN"]["HTML_VALUE"] || $arItem["VALUES"]["MAX"]["HTML_VALUE"])
+					{
+						if ($arItem["VALUES"]["MIN"]["HTML_VALUE"])
+							$smartPart["from"] = $arItem["VALUES"]["MIN"]["HTML_VALUE"];
+						if ($arItem["VALUES"]["MAX"]["HTML_VALUE"])
+							$smartPart["to"] = $arItem["VALUES"]["MAX"]["HTML_VALUE"];
+					}
+				}
+				else
+				{
+					foreach($arItem["VALUES"] as $key => $ar)
+					{
+						if ($ar["CHECKED"] && $ar["URL_ID"])
+							$smartPart[] = $ar["URL_ID"];
+					}
+				}
+
+				if ($smartPart)
+				{
+					if ($arItem["CODE"])
+						array_unshift($smartPart, toLower($arItem["CODE"]));
+					else
+						array_unshift($smartPart, $arItem["ID"]);
+
+					$smartParts[] = $smartPart;
+				}
+			}
+		}
+
+		if (!$smartParts)
+			$smartParts[] = array("clear");
+
+		return str_replace("#SMART_FILTER_PATH#", implode("/", $this->encodeSmartParts($smartParts)), $url);
+	}
+	
+	public function encodeSmartParts($smartParts)
+	{
+		foreach ($smartParts as &$smartPart)
+		{
+			$urlPart = "";
+			foreach ($smartPart as $i => $smartElement)
+			{
+				if (!$urlPart)
+					$urlPart .= urlencode($smartElement);
+				elseif ($i == 'from' || $i == 'to')
+					$urlPart .= urlencode('-'.$i.'-'.$smartElement);
+				elseif ($i == 1)
+					$urlPart .= urlencode('-is-'.$smartElement);
+				else
+					$urlPart .= urlencode('-or-'.$smartElement);
+			}
+			$smartPart = $urlPart;
+		}
+		unset($smartPart);
+		return $smartParts;
 	}
 }

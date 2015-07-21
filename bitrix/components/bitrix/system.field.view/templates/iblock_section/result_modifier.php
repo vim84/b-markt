@@ -36,7 +36,7 @@ if (is_array($arResult['VALUE']) && count($arResult['VALUE']) > 0)
 	{
 		$arValue = array();
 		$dbRes = CIBlockSection::GetList(array('left_margin' => 'asc'), array('ID' => $arResult['VALUE']), false, array("ID", "NAME"));
-		while ($arRes = $dbRes->Fetch())
+		while ($arRes = $dbRes->GetNext())
 		{
 			$arValue[$arRes['ID']] = $arRes['NAME'];
 		}

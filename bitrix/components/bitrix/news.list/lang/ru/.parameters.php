@@ -27,10 +27,10 @@ $MESS["IBLOCK_SECTION_ID"] = "ID раздела";
 $MESS["IBLOCK_SECTION_CODE"] = "Код раздела";
 $MESS["T_IBLOCK_DESC_ADD_SECTIONS_CHAIN"] = "Включать раздел в цепочку навигации";
 $MESS["T_IBLOCK_DESC_CHECK_DATES"] = "Показывать только активные на данный момент элементы";
-$MESS["CP_BNL_SET_STATUS_404"] = "Устанавливать статус 404, если не найдены элемент или раздел";
 $MESS["CP_BNL_CACHE_GROUPS"] = "Учитывать права доступа";
 $MESS["CP_BNL_INCLUDE_SUBSECTIONS"] = "Показывать элементы подразделов раздела";
 $MESS["CP_BNL_SET_BROWSER_TITLE"] = "Устанавливать заголовок окна браузера";
 $MESS["CP_BNL_SET_META_KEYWORDS"] = "Устанавливать ключевые слова страницы";
 $MESS["CP_BNL_SET_META_DESCRIPTION"] = "Устанавливать описание страницы";
+$MESS["CP_BNL_SET_LAST_MODIFIED"] = "Устанавливать в заголовках ответа время модификации страницы";
 ?>

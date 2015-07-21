@@ -84,11 +84,35 @@
 		'bindSearchPopup' : { 'node' : BX('feed-add-post-destination-container-post'), 'offsetTop' : '5px', 'offsetLeft': '15px'},
 		'callback' : {
 			'select' : BXfpdPostSelectCallback,
-			'unSelect' : BXfpdPostUnSelectCallback,
-			'openDialog' : BXfpdPostOpenDialogCallback,
-			'closeDialog' : BXfpdPostCloseDialogCallback,
-			'openSearch' : BXfpdPostOpenDialogCallback,
-			'closeSearch' : BXfpdPostCloseSearchCallback
+			'unSelect' : BX.delegate(BX.SocNetLogDestination.BXfpUnSelectCallback, {
+				formName: window.BXSocNetLogDestinationFormNamePost,
+				inputContainerName: 'feed-add-post-destination-item-post',
+				inputName: 'feed-add-post-destination-input-post',
+				tagInputName: 'bx-destination-tag-post',
+				tagLink1: BX.message('BX_FPD_LINK_1'),
+				tagLink2: BX.message('BX_FPD_LINK_2'),
+				undeleteClassName: 'feed-add-post-destination-undelete'
+			}),
+			'openDialog' : BX.delegate(BX.SocNetLogDestination.BXfpOpenDialogCallback, {
+				inputBoxName: 'feed-add-post-destination-input-box-post',
+				inputName: 'feed-add-post-destination-input-post',
+				tagInputName: 'bx-destination-tag-post'
+			}),
+			'closeDialog' : BX.delegate(BX.SocNetLogDestination.BXfpCloseDialogCallback, {
+				inputBoxName: 'feed-add-post-destination-input-box-post',
+				inputName: 'feed-add-post-destination-input-post',
+				tagInputName: 'bx-destination-tag-post'
+			}),
+			'openSearch' : BX.delegate(BX.SocNetLogDestination.BXfpOpenDialogCallback, {
+				inputBoxName: 'feed-add-post-destination-input-box-post',
+				inputName: 'feed-add-post-destination-input-post',
+				tagInputName: 'bx-destination-tag-post'
+			}),
+			'closeSearch' : BX.delegate(BX.SocNetLogDestination.BXfpCloseSearchCallback, {
+				inputBoxName: 'feed-add-post-destination-input-box-post',
+				inputName: 'feed-add-post-destination-input-post',
+				tagInputName: 'bx-destination-tag-post'
+			})
 		},
 		'items' : {
 			'users' : <?=(empty($arResult["FEED_DESTINATION"]['USERS'])? '{}': CUtil::PhpToJSObject($arResult["FEED_DESTINATION"]['USERS']))?>,
@@ -115,8 +139,15 @@
 		},
 		'itemsSelected' : '{}'
 	});
-	BX.bind(BX('feed-add-post-destination-input-post'), 'keyup', BXfpdPostSearch);
-	BX.bind(BX('feed-add-post-destination-input-post'), 'keydown', BXfpdPostSearchBefore);
+	BX.bind(BX('feed-add-post-destination-input-post'), 'keyup', BX.delegate(BX.SocNetLogDestination.BXfpSearch, {
+		formName: BXSocNetLogDestinationFormNamePost,
+		inputName: 'feed-add-post-destination-input-post',
+		tagInputName: 'bx-destination-tag-post'
+	}));
+	BX.bind(BX('feed-add-post-destination-input-post'), 'keydown', BX.delegate(BX.SocNetLogDestination.BXfpSearchBefore, {
+		formName: BXSocNetLogDestinationFormNamePost,
+		inputName: 'feed-add-post-destination-input-post'
+	}));
 	BX.bind(BX('bx-destination-tag-post'), 'click', function(e){BX.SocNetLogDestination.openDialog(BXSocNetLogDestinationFormNamePost); BX.PreventDefault(e); });
 	BX.bind(BX('feed-add-post-destination-container-post'), 'click', function(e){BX.SocNetLogDestination.openDialog(BXSocNetLogDestinationFormNamePost); BX.PreventDefault(e); });
 </script>

@@ -550,8 +550,14 @@ class CSocNetLogDestination
 		return $GLOBALS["SOCNET_LOG_DESTINATION"]["GetGratMedalUsers"][$userId];
 	}
 
+	public function __percent_walk(&$val)
+	{
+		$val = str_replace('%', '', $val)."%";
+	}
+
 	public static function SearchUsers($search, $nameTemplate = "", $bSelf = true, $bEmployeesOnly = false, $bExtranetOnly = false, $departmentId = false)
 	{
+
 		CUtil::JSPostUnescape();
 
 		$arUsers = array();
@@ -575,13 +581,15 @@ class CSocNetLogDestination
 			CSocNetTools::InitGlobalExtranetArrays();
 		}
 
+		$arSearchValue = preg_split('/\s+/', trim($search));
+		array_walk($arSearchValue, array('CSocNetLogDestination', '__percent_walk'));
 		$arFilter = array(
 			array(
 				'LOGIC' => 'OR',
-				'%NAME' => preg_split('/\s+/', trim($search)),
-				'%LAST_NAME' => preg_split('/\s+/', trim($search)),
-				'%EMAIL' => $search,
-				'%LOGIN' => $search,
+				'%=NAME' => $arSearchValue,
+				'%=LAST_NAME' => $arSearchValue,
+				'%=EMAIL' => $search,
+				'%=LOGIN' => $search,
 			),
 			'ACTIVE' => 'Y'
 		);
@@ -662,7 +670,7 @@ class CSocNetLogDestination
 				continue;
 			}
 
-			if (is_object($acc))
+			if (is_object($acc)) /* if (intval($departmentId) > 0) */
 			{
 				$acc->UpdateCodes(array("USER_ID" => $arUser["ID"]));
 
@@ -702,6 +710,9 @@ class CSocNetLogDestination
 				),
 				'isExtranet' => (isset($GLOBALS["arExtranetUserID"]) && is_array($GLOBALS["arExtranetUserID"]) && in_array($arUser["ID"], $GLOBALS["arExtranetUserID"]) ? "Y" : "N")
 			);
+
+			$checksum = md5(serialize($arUsers['U'.$arUser["ID"]]));
+			$arUsers['U'.$arUser["ID"]]['checksum'] = $checksum;
 		}
 
 		return $arUsers;

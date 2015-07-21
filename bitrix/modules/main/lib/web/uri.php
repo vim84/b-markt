@@ -9,9 +9,6 @@ namespace Bitrix\Main\Web;
 
 class Uri
 {
-	protected $url;
-	protected $parsed = false;
-
 	protected $scheme;
 	protected $host;
 	protected $port;
@@ -24,37 +21,13 @@ class Uri
 
 	public function __construct($url)
 	{
-		$this->url = $url;
-	}
-
-	public function getUrl()
-	{
-		if(!$this->parsed)
+		if(strpos($url, "/") === 0)
 		{
-			$this->parse();
+			//we don't support "current scheme" e.g. "//host/path"
+			$url = "/".ltrim($url, "/");
 		}
 
-		$url = "";
-		if($this->host <> '')
-		{
-			$url .= $this->scheme."://".$this->host;
-
-			if(($this->scheme == "http" && $this->port <> 80) || ($this->scheme == "https" && $this->port <> 443))
-			{
-				$url .= ":".$this->port;
-			}
-		}
-
-		$url .= $this->pathQuery;
-
-		return $url;
-	}
-
-	public function parse()
-	{
-		$parsedUrl = parse_url($this->url);
-
-		$this->parsed = true;
+		$parsedUrl = parse_url($url);
 
 		if($parsedUrl !== false)
 		{
@@ -78,90 +51,69 @@ class Uri
 				$this->pathQuery .= '?'.$this->query;
 			}
 			$this->fragment = $parsedUrl["fragment"];
-
-			return true;
 		}
-		return false;
+	}
+
+	public function getUrl()
+	{
+		$url = "";
+		if($this->host <> '')
+		{
+			$url .= $this->scheme."://".$this->host;
+
+			if(($this->scheme == "http" && $this->port <> 80) || ($this->scheme == "https" && $this->port <> 443))
+			{
+				$url .= ":".$this->port;
+			}
+		}
+
+		$url .= $this->pathQuery;
+
+		return $url;
 	}
 
 	public function getFragment()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->fragment;
 	}
 
 	public function getHost()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->host;
 	}
 
 	public function getPass()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->pass;
 	}
 
 	public function getPath()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->path;
 	}
 
 	public function getPathQuery()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->pathQuery;
 	}
 
 	public function getPort()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->port;
 	}
 
 	public function getQuery()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->query;
 	}
 
 	public function getScheme()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->scheme;
 	}
 
 	public function getUser()
 	{
-		if(!$this->parsed)
-		{
-			$this->parse();
-		}
 		return $this->user;
 	}
 }

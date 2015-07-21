@@ -336,6 +336,9 @@ class CIMMail
 		$userOffset = 0;
 		$localOffset = 0;
 
+		if (!CTimeZone::Enabled())
+			return 0;
+
 		try //possible DateTimeZone incorrect timezone
 		{
 			$localTime = new DateTime();

@@ -62,14 +62,14 @@ class CIBlockPropertyTools
 			return false;
 		$iblockIterator = Iblock\IblockTable::getList(array(
 			'select' => array('ID'),
-			'filter' => array('ID' => $iblockID)
+			'filter' => array('=ID' => $iblockID)
 		));
 		if (!($iblock = $iblockIterator->fetch()))
 			return false;
 		unset($iblock, $iblockIterator);
 		$propertyIterator = Iblock\PropertyTable::getList(array(
 			'select' => array('ID'),
-			'filter' => array('IBLOCK_ID' => $iblockID, '=CODE' => $propertyCode)
+			'filter' => array('=IBLOCK_ID' => $iblockID, '=CODE' => $propertyCode)
 		));
 		if ($property = $propertyIterator->fetch())
 			return (int)$property['ID'];
@@ -197,11 +197,16 @@ class CIBlockPropertyTools
 				{
 					$iblockIterator = Iblock\IblockTable::getList(array(
 						'select' => array('ID'),
-						'filter' => array('ID' => $propertyDescription['LINK_IBLOCK_ID'])
+						'filter' => array('=ID' => $propertyDescription['LINK_IBLOCK_ID'])
 					));
 					if (!($iblock = $iblockIterator->fetch()))
 						$checkResult = false;
 				}
+				break;
+			case self::CODE_MORE_PHOTO:
+			case self::CODE_BLOG_POST:
+			case self::CODE_BLOG_COMMENTS_COUNT:
+				$checkResult = true;
 				break;
 			default:
 				$checkResult = false;
@@ -238,7 +243,7 @@ class CIBlockPropertyTools
 		$result = array();
 		$propertyIterator = Iblock\PropertyTable::getList(array(
 			'select' => array('ID'),
-			'filter' => array('IBLOCK_ID' => $iblockID, '=CODE' => $propertyCodes)
+			'filter' => array('=IBLOCK_ID' => $iblockID, '@CODE' => $propertyCodes)
 		));
 		while ($property = $propertyIterator->fetch())
 		{
@@ -268,7 +273,7 @@ class CIBlockPropertyTools
 		$result = array();
 		$propertyIterator = Iblock\PropertyTable::getList(array(
 			'select' => array('ID', 'CODE'),
-			'filter' => array('IBLOCK_ID' => $iblockID, '@CODE' => $propertyCodes)
+			'filter' => array('=IBLOCK_ID' => $iblockID, '@CODE' => $propertyCodes)
 		));
 		if ($indexCode)
 		{

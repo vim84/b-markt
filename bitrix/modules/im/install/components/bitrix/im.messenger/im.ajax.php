@@ -22,7 +22,7 @@ header('Content-Type: application/x-javascript; charset='.LANG_CHARSET);
 if (!CModule::IncludeModule("im"))
 {
 	echo CUtil::PhpToJsObject(Array('ERROR' => 'IM_MODULE_NOT_INSTALLED'));
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
+	CMain::FinalActions();
 	die();
 }
 
@@ -42,12 +42,17 @@ if (intval($USER->GetID()) <= 0)
 		'ERROR' => 'AUTHORIZE_ERROR',
 		'BITRIX_SESSID' => bitrix_sessid()
 	));
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
+	CMain::FinalActions();
 	die();
 }
 
 if (check_bitrix_sessid())
 {
+	if ($_REQUEST["mobile_action"] && CModule::IncludeModule('mobile'))
+	{
+		Bitrix\Mobile\User::setOnline();
+	}
+
 	if ($_POST['IM_AVATAR_UPDATE'] == 'Y')
 	{
 		$CFileUploader = new CFileUploader(array(
@@ -1519,5 +1524,5 @@ else
 		'BITRIX_SESSID' => bitrix_sessid(),
 	));
 }
-require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
-?>
+CMain::FinalActions();
+die();

@@ -550,7 +550,11 @@ do{ //one iteration loop
 	}
 
 	//Now reorder property values
-	if(is_array($PROP) && !empty($arFileProps))
+	if(
+		is_array($PROP)
+		&& !empty($arFileProps)
+		&& !class_exists('\Bitrix\Main\UI\FileInput', true)
+	)
 	{
 		foreach($arFileProps as $id)
 		{
@@ -725,6 +729,8 @@ do{ //one iteration loop
 					"ACTIVE" => $_POST["SUB_ACTIVE"],
 					"MODIFIED_BY" => $USER->GetID(),
 					"IBLOCK_ID" => $IBLOCK_ID,
+					"ACTIVE_FROM" => $_POST["SUB_ACTIVE_FROM"],
+					"ACTIVE_TO" => $_POST["SUB_ACTIVE_TO"],
 					"SORT" => $_POST["SUB_SORT"],
 					"NAME" => $_POST["SUB_NAME"],
 					"CODE" => trim($_POST["SUB_CODE"], " \t\n\r"),
@@ -780,8 +786,6 @@ do{ //one iteration loop
 
 				if (!$res)
 					$strWarning .= $bs->LAST_ERROR."<br>";
-				else
-					CIBlockElement::RecalcSections($ID);
 
 				if ($strWarning == '')
 				{
@@ -1284,6 +1288,23 @@ $tabControl->BeginNextFormTab();
 		$pr = $p->ExtractFields("prn_");
 	endif;
 $tabControl->AddCheckBoxField("SUB_ACTIVE", GetMessage("IBLOCK_FIELD_ACTIVE").":", false, "Y", $str_ACTIVE=="Y");
+$tabControl->BeginCustomField("SUB_ACTIVE_FROM", GetMessage("IBLOCK_FIELD_ACTIVE_PERIOD_FROM"), $arIBlock["FIELDS"]["ACTIVE_FROM"]["IS_REQUIRED"] === "Y");
+?>
+<tr id="tr_SUB_ACTIVE_FROM">
+	<td><?echo $tabControl->GetCustomLabelHTML()?>:</td>
+	<td><?echo CAdminCalendar::CalendarDate("SUB_ACTIVE_FROM", $str_ACTIVE_FROM, 19, true)?></td>
+</tr>
+<?
+$tabControl->EndCustomField("SUB_ACTIVE_FROM", '<input type="hidden" id="SUB_ACTIVE_FROM" name="SUB_ACTIVE_FROM" value="'.$str_ACTIVE_FROM.'">');
+$tabControl->BeginCustomField("SUB_ACTIVE_TO", GetMessage("IBLOCK_FIELD_ACTIVE_PERIOD_TO"), $arIBlock["FIELDS"]["ACTIVE_TO"]["IS_REQUIRED"] === "Y");
+?>
+<tr id="tr_SUB_ACTIVE_TO">
+	<td><?echo $tabControl->GetCustomLabelHTML()?>:</td>
+	<td><?echo CAdminCalendar::CalendarDate("SUB_ACTIVE_TO", $str_ACTIVE_TO, 19, true)?></td>
+</tr>
+
+<?
+$tabControl->EndCustomField("SUB_ACTIVE_TO", '<input type="hidden" id="SUB_ACTIVE_TO" name="SUB_ACTIVE_TO" value="'.$str_ACTIVE_TO.'">');
 
 if ($arTranslit["TRANSLITERATION"] == "Y")
 {
@@ -1312,7 +1333,7 @@ else
 }
 
 if (COption::GetOptionString("iblock", "show_xml_id", "N")=="Y")
-	$tabControl->AddEditField("SUB_XML_ID", GetMessage("IBLOCK_FIELD_XML_ID").":", $arIBlock["FIELDS"]["XML_ID"]["IS_REQUIRED"] === "Y", array("size" => 20, "maxlength" => 255), $str_XML_ID);
+	$tabControl->AddEditField("SUB_XML_ID", GetMessage("IBLOCK_FIELD_XML_ID").":", $arIBlock["FIELDS"]["XML_ID"]["IS_REQUIRED"] === "Y", array("size" => 20, "maxlength" => 255, "id" => "SUB_XML_ID"), $str_XML_ID);
 
 $tabControl->AddEditField("SUB_SORT", GetMessage("IBLOCK_FIELD_SORT").":", $arIBlock["FIELDS"]["SORT"]["IS_REQUIRED"] === "Y", array("size" => 7, "maxlength" => 10), $str_SORT);
 
@@ -1412,7 +1433,25 @@ if($bVarsFromForm && !array_key_exists("SUB_PREVIEW_PICTURE", $_REQUEST) && $arE
 				));
 				?>
 			<?else:?>
-				<?echo CFileInput::Show("SUB_PREVIEW_PICTURE", ($ID > 0 && !$bSubCopy? $str_PREVIEW_PICTURE: 0),
+				<?
+				if (class_exists('\Bitrix\Main\UI\FileInput', true))
+				{
+					echo \Bitrix\Main\UI\FileInput::createInstance(array(
+						"name" => "SUB_PREVIEW_PICTURE",
+						"description" => true,
+						"upload" => true,
+						"allowUpload" => "I",
+						"medialib" => true,
+						"fileDialog" => true,
+						"cloud" => true,
+						"delete" => true,
+						"maxCount" => 1
+					))->show($str_PREVIEW_PICTURE);
+				}
+				else
+				{
+					?>
+					<?echo CFileInput::Show("SUB_PREVIEW_PICTURE", ($ID > 0 && !$bSubCopy ? $str_PREVIEW_PICTURE : 0),
 					array(
 						"IMAGE" => "Y",
 						"PATH" => "Y",
@@ -1432,8 +1471,8 @@ if($bVarsFromForm && !array_key_exists("SUB_PREVIEW_PICTURE", $_REQUEST) && $arE
 						'description' => true,
 					)
 				);
-				?>
-			<?endif?>
+				}
+			endif?>
 		</td>
 	</tr>
 <?
@@ -1455,26 +1494,27 @@ $tabControl->BeginCustomField("SUB_PREVIEW_TEXT", GetMessage("IBLOCK_FIELD_PREVI
 	<tr id="tr_SUB_PREVIEW_TEXT_EDITOR">
 		<td colspan="2" align="center">
 			<?CFileMan::AddHTMLEditorFrame(
-			"SUB_PREVIEW_TEXT",
-			$str_PREVIEW_TEXT,
-			"SUB_PREVIEW_TEXT_TYPE",
-			$str_PREVIEW_TEXT_TYPE,
-			//300,
-			array(
+				"SUB_PREVIEW_TEXT",
+				$str_PREVIEW_TEXT,
+				"SUB_PREVIEW_TEXT_TYPE",
+				$str_PREVIEW_TEXT_TYPE,
+				//300,
+				array(
 					'height' => 450,
-					'width' => '100%'
+					'width' => '100%',
 				),
-			"N",
-			0,
-			"",
-			"",
-			$arIBlock["LID"],
-			true,
-			false,
-			array(
-				'toolbarConfig' => CFileman::GetEditorToolbarConfig("iblock_".(defined('BX_SUB_SETTINGS') && BX_SUB_SETTINGS == true ? 'admin' : 'public')),
-				'saveEditorKey' => $IBLOCK_ID
-			)
+				"N",
+				0,
+				"",
+				"",
+				$arIBlock["LID"],
+				true,
+				false,
+				array(
+					'toolbarConfig' => CFileman::GetEditorToolbarConfig("iblock_".(defined('BX_SUB_SETTINGS') && BX_SUB_SETTINGS == true ? 'admin' : 'public')),
+					'saveEditorKey' => $IBLOCK_ID,
+					'hideTypeSelector' => $arIBlock["FIELDS"]["PREVIEW_TEXT_TYPE_ALLOW_CHANGE"]["DEFAULT_VALUE"] === "N",
+				)
 			);?>
 		</td>
 	</tr>
@@ -1515,7 +1555,25 @@ if($bVarsFromForm && !array_key_exists("SUB_DETAIL_PICTURE", $_REQUEST) && $arEl
 				));
 				?>
 			<?else:?>
-				<?echo CFileInput::Show("SUB_DETAIL_PICTURE", ($ID > 0 && !$bSubCopy? $str_DETAIL_PICTURE: 0),
+				<?
+				if (class_exists('\Bitrix\Main\UI\FileInput', true))
+				{
+					echo \Bitrix\Main\UI\FileInput::createInstance(array(
+						"name" => "SUB_DETAIL_PICTURE",
+						"description" => true,
+						"upload" => true,
+						"allowUpload" => "I",
+						"medialib" => true,
+						"fileDialog" => true,
+						"cloud" => true,
+						"delete" => true,
+						"maxCount" => 1
+					))->show($str_DETAIL_PICTURE);
+				}
+				else
+				{
+					?>
+					<?echo CFileInput::Show("SUB_DETAIL_PICTURE", ($ID > 0 && !$bSubCopy ? $str_DETAIL_PICTURE : 0),
 					array(
 						"IMAGE" => "Y",
 						"PATH" => "Y",
@@ -1535,6 +1593,7 @@ if($bVarsFromForm && !array_key_exists("SUB_DETAIL_PICTURE", $_REQUEST) && $arEl
 						'description' => true,
 					)
 				);
+				}
 				?>
 			<?endif?>
 		</td>
@@ -1564,17 +1623,21 @@ $tabControl->BeginCustomField("SUB_DETAIL_TEXT", GetMessage("IBLOCK_FIELD_DETAIL
 				$str_DETAIL_TEXT_TYPE,
 				array(
 						'height' => 450,
-						'width' => '100%'
-					),
-					"N",
-					0,
-					"",
-					"",
-					$arIBlock["LID"],
-					true,
-					false,
-					array('toolbarConfig' => CFileman::GetEditorToolbarConfig("iblock_".(defined('BX_SUB_SETTINGS') && BX_SUB_SETTINGS == true ? 'admin' : 'public')), 'saveEditorKey' => $IBLOCK_ID)
-				);
+						'width' => '100%',
+				),
+				"N",
+				0,
+				"",
+				"",
+				$arIBlock["LID"],
+				true,
+				false,
+				array(
+					'toolbarConfig' => CFileman::GetEditorToolbarConfig("iblock_".(defined('BX_SUB_SETTINGS') && BX_SUB_SETTINGS == true ? 'admin' : 'public')),
+					'saveEditorKey' => $IBLOCK_ID,
+					'hideTypeSelector' => $arIBlock["FIELDS"]["DETAIL_TEXT_TYPE_ALLOW_CHANGE"]["DEFAULT_VALUE"] === "N",
+				)
+			);
 		?></td>
 	</tr>
 	<?else:?>

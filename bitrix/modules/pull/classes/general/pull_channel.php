@@ -117,7 +117,7 @@ class CPullChannel
 	public static function SignChannel($channelId)
 	{
 		$signatureKey = COption::GetOptionString("pull", "signature_key", "");
-		if ($signatureKey === "")
+		if ($signatureKey === "" || !is_string($channelId))
 		{
 			return $channelId;
 		}
@@ -395,7 +395,16 @@ class CPullChannel
 		}
 
 		$arUrl = $CHTTP->ParseURL(CPullOptions::GetPublishUrl($channelId), false);
-		if ($CHTTP->Query($options["method"], $arUrl['host'], $arUrl['port'], $arUrl['path_query'], $postdata, $arUrl['proto'], 'N', $options["dont_wait_answer"]))
+		try
+		{
+			$sendResult = $CHTTP->Query($options["method"], $arUrl['host'], $arUrl['port'], $arUrl['path_query'], $postdata, $arUrl['proto'], 'N', $options["dont_wait_answer"]);
+		}
+		catch(Exception $e)
+		{
+			$sendResult = false;
+		}
+
+		if ($sendResult)
 		{
 			$result = $options["dont_wait_answer"] ? '{}': $CHTTP->result;
 		}
@@ -522,7 +531,7 @@ class CPullChannel
 				foreach ($result->infos as $info)
 				{
 					$userId = $arUser[$info->channel];
-					if ($userId <= 0 || $agentUserId == $userId)
+					if ($userId == 0 || $agentUserId == $userId)
 						continue;
 					if ($info->subscribers > 0)
 						$arOnline[$userId] = $userId;
@@ -594,12 +603,14 @@ class CPullChannel
 		unset($_SESSION['USER_LAST_LOGOUT_'.$arParams['user_fields']['ID']]);
 
 		$userStatus = 'online';
+		$userMobileStatus = '0';
 		if (CModule::IncludeModule('im'))
 		{
 			$res = Bitrix\Im\StatusTable::getById($arParams['user_fields']['ID']);
 			if ($status = $res->fetch())
 			{
 				$userStatus = $status['STATUS'];
+				$userMobileStatus = $status['MOBILE_LAST_DATE']? $status['MOBILE_LAST_DATE']->getTimestamp(): 0;
 			}
 		}
 
@@ -609,7 +620,8 @@ class CPullChannel
 			'expiry' => 120,
 			'params' => Array(
 				'USER_ID' => $arParams['user_fields']['ID'],
-				'STATUS' => $userStatus
+				'STATUS' => $userStatus,
+				'MOBILE_LAST_DATE' => $userMobileStatus
 			),
 		));
 

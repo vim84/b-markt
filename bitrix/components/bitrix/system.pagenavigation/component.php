@@ -1,6 +1,10 @@
 <?
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
+/**
+ * @var array $arParams
+ */
+
 if (is_object($arParams["NAV_RESULT"]) &&  is_subclass_of($arParams["NAV_RESULT"], "CAllDBResult"))
 {
 	$dbresult =& $arParams["NAV_RESULT"];
@@ -23,16 +27,32 @@ if (is_object($arParams["NAV_RESULT"]) &&  is_subclass_of($arParams["NAV_RESULT"
 	$arResult["add_anchor"] = $dbresult->add_anchor;
 	$arResult["nPageWindow"] = $nPageWindow = $dbresult->nPageWindow;
 	$arResult["bSavePage"] = (CPageOption::GetOptionString("main", "nav_page_in_session", "Y")=="Y");
-	$arResult["sUrlPath"] = GetPagePath(false, false);
-	$arResult["NavQueryString"]= htmlspecialcharsbx(DeleteParam(array(
-		"PAGEN_".$dbresult->NavNum,
-		"SIZEN_".$dbresult->NavNum,
-		"SHOWALL_".$dbresult->NavNum,
-		"PHPSESSID",
-		"clear_cache",
-		"bitrix_include_areas"
-	)));
-	$arResult['sUrlPathParams'] = $arResult['sUrlPath'].'?'.('' != $arResult['NavQueryString'] ? $arResult['NavQueryString'].'&' : '');
+	if($arParams["BASE_LINK"] <> '')
+	{
+		if(($pos = strpos($arParams["BASE_LINK"], "?")) !== false)
+		{
+			$arResult["sUrlPath"] = substr($arParams["BASE_LINK"], 0, $pos);
+			$arResult["NavQueryString"] = substr($arParams["BASE_LINK"], $pos+1);
+		}
+		else
+		{
+			$arResult["sUrlPath"] = $arParams["BASE_LINK"];
+			$arResult["NavQueryString"] = "";
+		}
+	}
+	else
+	{
+		$arResult["sUrlPath"] = GetPagePath(false, false);
+		$arResult["NavQueryString"] = htmlspecialcharsbx(DeleteParam(array(
+			"PAGEN_".$dbresult->NavNum,
+			"SIZEN_".$dbresult->NavNum,
+			"SHOWALL_".$dbresult->NavNum,
+			"PHPSESSID",
+			"clear_cache",
+			"bitrix_include_areas"
+		)));
+	}
+	$arResult['sUrlPathParams'] = $arResult['sUrlPath'].'?'.($arResult['NavQueryString'] <> ''? $arResult['NavQueryString'].'&' : '');
 
 	if ($dbresult->bDescPageNumbering === true)
 	{
@@ -108,4 +128,3 @@ if (is_object($arParams["NAV_RESULT"]) &&  is_subclass_of($arParams["NAV_RESULT"
 
 	return $this;
 }
-?>

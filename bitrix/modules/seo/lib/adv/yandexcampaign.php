@@ -6,6 +6,7 @@ use Bitrix\Main;
 use Bitrix\Seo\AdvEntity;
 use Bitrix\Seo\Engine;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Seo\Service;
 
 Loc::loadMessages(__FILE__);
 
@@ -138,6 +139,7 @@ class YandexCampaignTable extends AdvEntity
 		$data = $event->getParameter("fields");
 
 		$engine = self::getEngine();
+
 		$ownerInfo = $engine->getCurrentUser();
 
 		if(!static::$skipRemoteUpdate)

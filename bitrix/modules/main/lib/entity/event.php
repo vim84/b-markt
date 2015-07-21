@@ -54,16 +54,14 @@ class Event extends \Bitrix\Main\Event
 	public function getErrors(Result $result)
 	{
 		$hasErrors = false;
-		if ($this->getResults() != null)
+
+		/** @var $evenResult EventResult */
+		foreach($this->getResults() as $evenResult)
 		{
-			/** @var $evenResult EventResult */
-			foreach($this->getResults() as $evenResult)
+			if($evenResult->getType() === EventResult::ERROR)
 			{
-				if($evenResult->getType() === EventResult::ERROR)
-				{
-					$hasErrors = true;
-					$result->addErrors($evenResult->getErrors());
-				}
+				$hasErrors = true;
+				$result->addErrors($evenResult->getErrors());
 			}
 		}
 		return $hasErrors;

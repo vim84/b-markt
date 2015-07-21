@@ -45,9 +45,11 @@ CModule::IncludeModule("fileman");
 $componentName = $_GET["component_name"];
 $componentTemplate = $_GET["component_template"];
 $templateId = $_GET["template_id"];
+$relPath = $io->ExtractPathFromPath($src_path);
 
 CComponentParamsManager::Init(array(
-	'requestUrl' => '/bitrix/admin/fileman_component_params.php'
+	'requestUrl' => '/bitrix/admin/fileman_component_params.php',
+	'relPath' => $relPath
 ));
 
 IncludeModuleLangFile(__FILE__);

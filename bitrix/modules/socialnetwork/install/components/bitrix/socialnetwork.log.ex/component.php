@@ -887,12 +887,16 @@ if (
 		!$arFilter["EVENT_ID"]
 		|| (is_array($arFilter["EVENT_ID"]) && count($arFilter["EVENT_ID"]) <= 0)
 	)
+	{
 		unset($arFilter["EVENT_ID"]);
+	}
 
-	if (CModule::IncludeModule('extranet') && CExtranet::IsExtranetSite())
-		$arFilter["SITE_ID"] = SITE_ID;
-	else
-		$arFilter["SITE_ID"] = array(SITE_ID, false);
+	$arFilter["SITE_ID"] = (
+		CModule::IncludeModule('extranet')
+		&& CExtranet::IsExtranetSite()
+			? SITE_ID
+			: array(SITE_ID, false)
+	);
 
 	if (
 		array_key_exists("LOG_DATE_FROM", $arParams)
@@ -1007,7 +1011,13 @@ if (
 		)
 	)
 	{
-		$arResult["COUNTER_TYPE"] = (is_set($arParams["CUSTOM_DATA"]) && is_set($arParams["CUSTOM_DATA"]["CRM_PRESET_TOP_ID"]) && $arParams["CUSTOM_DATA"]["CRM_PRESET_TOP_ID"] == "all" ? "CRM_**_ALL" : "CRM_**");
+		$arResult["COUNTER_TYPE"] = (
+			is_set($arParams["CUSTOM_DATA"])
+			&& is_set($arParams["CUSTOM_DATA"]["CRM_PRESET_TOP_ID"])
+			&& $arParams["CUSTOM_DATA"]["CRM_PRESET_TOP_ID"] == "all"
+				? "CRM_**_ALL"
+				: "CRM_**"
+		);
 	}
 	elseif($arParams["EXACT_EVENT_ID"] == "blog_post")
 	{
@@ -1042,50 +1052,6 @@ if (
 		$arResult["LAST_LOG_TS"] = intval($_REQUEST["ts"]);
 	}
 
-	if ($arParams["SET_LOG_PAGE_CACHE"] == "Y")
-	{
-		$rsLogPages = CSocNetLogPages::GetList(
-			array(),
-			array(
-				"USER_ID" => $user_id,
-				"SITE_ID" => SITE_ID,
-				"GROUP_CODE" => (strlen($arResult["COUNTER_TYPE"]) > 0 ? $arResult["COUNTER_TYPE"] : "**"),
-				"PAGE_SIZE" => $arParams["PAGE_SIZE"],
-				"PAGE_NUM" => $arResult["PAGE_NUMBER"]
-			),
-			false,
-			false,
-			array("PAGE_LAST_DATE")
-		);
-
-		if ($arLogPages = $rsLogPages->Fetch())
-		{
-			$dateLastPageStart = $arLogPages["PAGE_LAST_DATE"];
-			$arFilter[">=LOG_UPDATE"] = ConvertTimeStamp(MakeTimeStamp($arLogPages["PAGE_LAST_DATE"], CSite::GetDateFormat("FULL")) - 60*60*24*4, "FULL");
-		}
-		elseif ($arResult["MY_GROUPS_ONLY"]) // Y or N
-		{
-			$rsLogPages = CSocNetLogPages::GetList(
-				array("PAGE_LAST_DATE" => "DESC"),
-				array(
-					"SITE_ID" => SITE_ID,
-					"GROUP_CODE" => (strlen($arResult["COUNTER_TYPE"]) > 0 ? $arResult["COUNTER_TYPE"] : "**"),
-					"PAGE_SIZE" => $arParams["PAGE_SIZE"],
-					"PAGE_NUM" => $arResult["PAGE_NUMBER"]
-				),
-				false,
-				false,
-				array("PAGE_LAST_DATE")
-			);
-			if ($arLogPages = $rsLogPages->Fetch())
-			{
-				$dateLastPageStart = $arLogPages["PAGE_LAST_DATE"];
-				$arFilter[">=LOG_UPDATE"] = ConvertTimeStamp(MakeTimeStamp($arLogPages["PAGE_LAST_DATE"], CSite::GetDateFormat("FULL")) - 60*60*24*4, "FULL");
-				$bNeedSetLogPage = true;
-			}
-		}
-	}
-
 	if ($arParams["IS_CRM"] == "Y")
 	{
 		$arListParams = array(
@@ -1098,7 +1064,12 @@ if (
 			"ENTITY_ID" => $arParams["CRM_ENTITY_ID"],
 			"AFFECTED_TYPES" => array(),
 			"OPTIONS" => array(
-				"CUSTOM_DATA" => isset($arParams["CUSTOM_DATA"]) && is_array($arParams["CUSTOM_DATA"]) ? $arParams["CUSTOM_DATA"] : array()
+				"CUSTOM_DATA" => (
+					isset($arParams["CUSTOM_DATA"])
+					&& is_array($arParams["CUSTOM_DATA"])
+						? $arParams["CUSTOM_DATA"]
+						: array()
+				)
 			)
 		);
 
@@ -1119,20 +1090,82 @@ if (
 
 	if (
 		$arParams["USE_FOLLOW"] != "N"
-		&& !IsModuleInstalled("intranet")	
+		&& !IsModuleInstalled("intranet")
 		&& isset($USER) 
 		&& is_object($USER) 
 		&& $USER->IsAuthorized()
-	)
+	) // BSM
 	{
 		$arResult["USE_SMART_FILTER"] = "Y";
-		$arListParams["MY_GROUPS_ONLY"] = (CSocNetLogSmartFilter::GetDefaultValue($user_id) == "Y" ? "Y" : "N");
+		$arListParams["MY_GROUPS_ONLY"] = (
+			CSocNetLogSmartFilter::GetDefaultValue($user_id) == "Y"
+				? "Y"
+				: "N"
+		);
 	}
 
-	if (CModule::IncludeModule('extranet') && CExtranet::IsExtranetSite())
+	if (
+		CModule::IncludeModule('extranet')
+		&& CExtranet::IsExtranetSite()
+	)
+	{
 		$arListParams["MY_GROUPS_ONLY"] = "Y";
+	}
 
-	$arResult["MY_GROUPS_ONLY"] = (isset($arListParams["MY_GROUPS_ONLY"]) ? $arListParams["MY_GROUPS_ONLY"] : false);
+	$arResult["MY_GROUPS_ONLY"] = (
+		isset($arListParams["MY_GROUPS_ONLY"])
+			? $arListParams["MY_GROUPS_ONLY"]
+			: false
+	);
+
+	if ($arParams["SET_LOG_PAGE_CACHE"] == "Y")
+	{
+		$groupCode = (strlen($arResult["COUNTER_TYPE"]) > 0 ? $arResult["COUNTER_TYPE"] : "**");
+
+		$rsLogPages = CSocNetLogPages::GetList(
+			array(),
+			array(
+				"USER_ID" => $user_id,
+				"SITE_ID" => SITE_ID,
+				"GROUP_CODE" => $groupCode,
+				"PAGE_SIZE" => $arParams["PAGE_SIZE"],
+				"PAGE_NUM" => $arResult["PAGE_NUMBER"]
+			),
+			false,
+			false,
+			array("PAGE_LAST_DATE")
+		);
+
+		if ($arLogPages = $rsLogPages->Fetch())
+		{
+			$dateLastPageStart = $arLogPages["PAGE_LAST_DATE"];
+			$arFilter[">=LOG_UPDATE"] = ConvertTimeStamp(MakeTimeStamp($arLogPages["PAGE_LAST_DATE"], CSite::GetDateFormat("FULL")) - 60*60*24*4, "FULL");
+		}
+		elseif (
+			$groupCode != '**'
+			|| $arResult["MY_GROUPS_ONLY"] != 'Y'
+		)
+		{
+			$rsLogPages = CSocNetLogPages::GetList(
+				array("PAGE_LAST_DATE" => "DESC"),
+				array(
+					"SITE_ID" => SITE_ID,
+					"GROUP_CODE" => $groupCode,
+					"PAGE_SIZE" => $arParams["PAGE_SIZE"],
+					"PAGE_NUM" => $arResult["PAGE_NUMBER"]
+				),
+				false,
+				false,
+				array("PAGE_LAST_DATE")
+			);
+			if ($arLogPages = $rsLogPages->Fetch())
+			{
+				$dateLastPageStart = $arLogPages["PAGE_LAST_DATE"];
+				$arFilter[">=LOG_UPDATE"] = ConvertTimeStamp(MakeTimeStamp($arLogPages["PAGE_LAST_DATE"], CSite::GetDateFormat("FULL")) - 60*60*24*4, "FULL");
+				$bNeedSetLogPage = true;
+			}
+		}
+	}
 
 	if ($bCurrentUserIsAdmin)
 	{

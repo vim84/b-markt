@@ -21,9 +21,9 @@ if($APPLICATION->GetGroupRight("seo") > "D")
 
 		$aMenu = array(
 			array(
-				"parent_menu" => "global_menu_services",
+				"parent_menu" => "global_menu_marketing",
 				"section" => "seo",
-				"sort" => 80,
+				"sort" => 900,
 				"text" => Loc::getMessage("SEO_MENU_MAIN"),
 				"title" => Loc::getMessage("SEO_MENU_MAIN_TITLE"),
 				"icon" => "seo_menu_icon",
@@ -176,10 +176,18 @@ if($APPLICATION->GetGroupRight("seo") > "D")
 
 		if(count($arAdvList) > 0)
 		{
+			$arAdvList[] = array(
+				"sort" => 4000,
+				"text" => Loc::getMessage("SEO_MENU_ADV_AUTOLOG"),
+				"title" => Loc::getMessage("SEO_MENU_ADV_AUTOLOG_ALT"),
+				"url" => "seo_search_yandex_direct_autolog.php?lang=".LANGUAGE_ID,
+			);
+
+
 			$aMenu[] = array(
-				"parent_menu" => "global_menu_services",
+				"parent_menu" => "global_menu_marketing",
 				"section" => "seo_adv",
-				"sort" => 70,
+				"sort" => 400,
 				"text" => Loc::getMessage("SEO_MENU_ADV_ENGINES"),
 				"title" => Loc::getMessage("SEO_MENU_ADV_ENGINES_ALT"),
 				"icon" => "seo_adv_menu_icon",

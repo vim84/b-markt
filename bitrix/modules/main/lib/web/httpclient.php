@@ -187,7 +187,11 @@ class HttpClient
 				return true;
 			}
 
-			$this->readResponse();
+			if(!$this->readResponse())
+			{
+				$this->disconnect();
+				return false;
+			}
 
 			$this->disconnect();
 
@@ -556,20 +560,25 @@ class HttpClient
 		while(!feof($this->resource))
 		{
 			$line = fgets($this->resource, self::BUF_READ_LEN);
-			if($line == "\r\n" || $line === false)
+			if($line == "\r\n")
 			{
 				break;
 			}
-			$headers .= $line;
-
 			if($this->streamTimeout > 0)
 			{
 				$info = stream_get_meta_data($this->resource);
 				if($info['timed_out'])
 				{
-					break;
+					$this->error['STREAM_TIMEOUT'] = "Stream reading timeout of ".$this->streamTimeout." second(s) has been reached";
+					return false;
 				}
 			}
+			if($line === false)
+			{
+				$this->error['STREAM_READING'] = "Stream reading error";
+				return false;
+			}
+			$headers .= $line;
 		}
 
 		$this->parseHeaders($headers);
@@ -577,7 +586,7 @@ class HttpClient
 		if($this->redirect && ($location = $this->responseHeaders->get("Location")) !== null && $location <> '')
 		{
 			//do we need entity body on redirect?
-			return;
+			return true;
 		}
 
 		if($this->responseHeaders->get("Transfer-Encoding") == "chunked")
@@ -604,20 +613,21 @@ class HttpClient
 				while($length > 0)
 				{
 					$buf = $this->receive($length);
-					if($buf === false)
-					{
-						break 2;
-					}
-					$length -= String::getBinaryLength($buf);
-
 					if($this->streamTimeout > 0)
 					{
 						$info = stream_get_meta_data($this->resource);
 						if($info['timed_out'])
 						{
-							break 2;
+							$this->error['STREAM_TIMEOUT'] = "Stream reading timeout of ".$this->streamTimeout." second(s) has been reached";
+							return false;
 						}
 					}
+					if($buf === false)
+					{
+						$this->error['STREAM_READING'] = "Stream reading error";
+						return false;
+					}
+					$length -= String::getBinaryLength($buf);
 				}
 			}
 		}
@@ -626,18 +636,19 @@ class HttpClient
 			while(!feof($this->resource))
 			{
 				$buf = $this->receive();
-				if($buf === false)
-				{
-					break;
-				}
-
 				if($this->streamTimeout > 0)
 				{
 					$info = stream_get_meta_data($this->resource);
 					if($info['timed_out'])
 					{
-						break;
+						$this->error['STREAM_TIMEOUT'] = "Stream reading timeout of ".$this->streamTimeout." second(s) has been reached";
+						return false;
 					}
+				}
+				if($buf === false)
+				{
+					$this->error['STREAM_READING'] = "Stream reading error";
+					return false;
 				}
 			}
 		}
@@ -646,6 +657,8 @@ class HttpClient
 		{
 			$this->decompress();
 		}
+
+		return true;
 	}
 
 	protected function decompress()

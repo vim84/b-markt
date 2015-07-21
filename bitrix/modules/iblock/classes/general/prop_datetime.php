@@ -223,19 +223,18 @@ class CIBlockPropertyDateTime
 	//DB form of the value
 	public static function ConvertToDB($arProperty, $value)
 	{
-		static $offsetEnabled = null;
-		static $timeOffset = false;
-		if (!isset($offsetEnabled) || $offsetEnabled !== CTimeZone::Enabled())
-		{
-			$offsetEnabled = CTimeZone::Enabled();
-			$timeOffset = CTimeZone::GetOffset();
-		}
-
 		if (strlen($value["VALUE"]) > 0)
 		{
-			$timestamp = MakeTimeStamp($value['VALUE'], CLang::GetDateFormat("FULL"));
-			$timestamp -= $timeOffset;
-			$value['VALUE'] = date("Y-m-d H:i:s",  $timestamp);
+			try
+			{
+				$time = Bitrix\Main\Type\DateTime::createFromUserTime($value['VALUE']);
+				$time->setTimeZone(new \DateTimeZone('UTC'));
+
+				$value['VALUE'] = $time->format("Y-m-d H:i:s");
+			}
+			catch(Main\ObjectException $e)
+			{
+			}
 		}
 
 		return $value;
@@ -243,20 +242,21 @@ class CIBlockPropertyDateTime
 
 	public static function ConvertFromDB($arProperty, $value, $format = '')
 	{
-		static $offsetEnabled = null;
-		static $timeOffset = false;
-		if (!isset($offsetEnabled) || $offsetEnabled !== CTimeZone::Enabled())
-		{
-			$offsetEnabled = CTimeZone::Enabled();
-			$timeOffset = CTimeZone::GetOffset();
-		}
-
 		if (strlen($value["VALUE"]) > 0)
 		{
-			$timestamp = MakeTimeStamp($value["VALUE"], 'YYYY-MM-DD HH:MI:SS');
-			$timestamp += $timeOffset;
-			$value["VALUE"] = ConvertTimeStamp($timestamp, ($format? $format: "FULL"));
-			$value["VALUE"] = str_replace(" 00:00:00", "", $value["VALUE"]);
+			try
+			{
+				$time = new Bitrix\Main\Type\DateTime($value['VALUE'], "Y-m-d H:i:s", new \DateTimeZone('UTC'));
+				$time->setDefaultTimeZone();
+
+				$phpFormat = $format? $time->convertFormatToPhp($format): $time->getFormat();
+
+				$value["VALUE"] = $time->format($phpFormat);
+				$value["VALUE"] = str_replace(" 00:00:00", "", $value["VALUE"]);
+			}
+			catch(Main\ObjectException $e)
+			{
+			}
 		}
 
 		return $value;

@@ -233,6 +233,7 @@ BX.ready(function(){
 			mid : <?=(!!$arParams["LAST_RECORD"] ? $arParams["LAST_RECORD"]["ID"] : 0)?>,
 			order : '<?=($arParams["PREORDER"] == "N" ? "DESC" : "ASC")?>',
 			rights : <?=CUtil::PhpToJSObject($arParams["RIGHTS"])?>,
+			sign : '<?=$arParams["SIGN"]?>',
 			params : {
 				DATE_TIME_FORMAT : '<?=CUtil::JSEscape($arParams["~DATE_TIME_FORMAT"])?>',
 				NOTIFY_TAG : '<?=CUtil::JSEscape($arParams["~NOTIFY_TAG"])?>',

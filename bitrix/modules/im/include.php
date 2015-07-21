@@ -1,7 +1,7 @@
 <?
 IncludeModuleLangFile(__FILE__);
 
-define("IM_REVISION", 54);
+define("IM_REVISION", 55);
 define("IM_MOBILE_REVISION", 2);
 
 define("IM_MESSAGE_SYSTEM", "S");

@@ -44,10 +44,8 @@ class Path
 		}
 		$pathTmp = preg_replace($pattern, "/", $path);
 
-		if (($p = strpos($pathTmp, "\0")) !== false)
-			$pathTmp = substr($pathTmp, 0, $p);
-		if (($p = strpos($pathTmp, self::PATH_SEPARATOR)) !== false)
-			$pathTmp = substr($pathTmp, 0, $p);
+		if (strpos($pathTmp, "\0") !== false)
+			throw new InvalidPathException($path);
 
 		if (preg_match("#(^|/)(\\.|\\.\\.)(/|\$)#", $pathTmp))
 		{

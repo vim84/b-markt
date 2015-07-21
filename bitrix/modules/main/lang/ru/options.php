@@ -156,6 +156,7 @@ $MESS["MAIN_OPTIMIZE_CSS_SETTINGS"] = "Оптимизация CSS";
 $MESS["MAIN_OPTIMIZE_CSS"] = "Объединять CSS файлы:";
 $MESS["MAIN_OPTIMIZE_JS"] = "Объединять JS файлы:";
 $MESS["MAIN_USE_MINIFIED_ASSETS"] = "Подключать минифицированные версии CSS и JS файлов:";
+$MESS["MAIN_MOVE_JS_TO_BODY"] = "Переместить весь Javascript в конец страницы:";
 $MESS["MAIN_COMPRES_CSS_JS"] = "Создавать сжатую копию объединенных CSS и JS файлов:";
 $MESS["MAIN_OPT_TIME_ZONES"] = "Часовые пояса";
 $MESS["MAIN_OPT_TIME_ZONES_LOCAL"] = "Локальное время сервера:";
@@ -199,4 +200,6 @@ $MESS["MAIN_CATALOG_STAT_SETTINGS"] = "Сервис рекомендаций";
 $MESS["MAIN_GATHER_CATALOG_STAT"] = "Использовать сервис рекомендаций товаров";
 $MESS["MAIN_OPTION_ATTACH_IMAGES"] = "Отправлять картинки в виде вложений в письмо:";
 $MESS["MAIN_OPTION_MAX_FILE_SIZE"] = "Максимальный размер файлов вложения в байтах (0 - без ограничений):";
+$MESS["MAIN_OPTION_SESS_AUTH"] = "Продлевать сессию только для авторизованных посетителей:";
+$MESS["MAIN_OPTIONS_AUTH_TEMPLATE"] = "Шаблон системных компонентов авторизации (system.auth.*):";
 ?>

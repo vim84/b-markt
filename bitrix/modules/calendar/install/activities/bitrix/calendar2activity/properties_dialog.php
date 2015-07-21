@@ -15,6 +15,13 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 		<input type="button" value="..." onclick="BPAShowSelector('id_calendar_owner_id', 'string');">
 	</td>
 </tr>
+<tr>
+	<td align="right" width="40%"><span><?= GetMessage("BPSNMA_PD_CALENDAR_SECTION") ?>:</span></td>
+	<td width="60%">
+		<input type="text" name="calendar_section" id="id_calendar_section" value="<?= htmlspecialcharsbx($arCurrentValues["calendar_section"]) ?>" size="50">
+		<input type="button" value="..." onclick="BPAShowSelector('id_calendar_section', 'string');">
+	</td>
+</tr>
 
 <tr>
 	<td align="right" width="40%"><span class="adm-required-field"><?= GetMessage("BPSNMA_PD_CUSER") ?>:</span></td>

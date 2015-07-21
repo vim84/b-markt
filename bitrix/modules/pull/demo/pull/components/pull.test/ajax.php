@@ -14,13 +14,13 @@ header('Content-Type: application/x-javascript; charset='.LANG_CHARSET);
 if (!CModule::IncludeModule("pull"))
 {
 	echo CUtil::PhpToJsObject(Array('ERROR' => 'PULL_MODULE_IS_NOT_INSTALLED'));
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
+	CMain::FinalActions();
 	die();
 }
 if (intval($USER->GetID()) <= 0)
 {
 	echo CUtil::PhpToJsObject(Array('ERROR' => 'AUTHORIZE_ERROR'));
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
+	CMain::FinalActions();
 	die();
 }
 
@@ -49,5 +49,6 @@ else
 		'ERROR' => 'SESSION_ERROR'
 	));
 }
-require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
-?>
+
+CMain::FinalActions();
+die();

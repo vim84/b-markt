@@ -10,6 +10,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /** @global CUser $USER */
 /** @global CMain $APPLICATION */
 
+use Bitrix\Main\Context;
+use Bitrix\Main\Type\DateTime;
 
 CPageOption::SetOptionString("main", "nav_page_in_session", "N");
 
@@ -23,10 +25,16 @@ if(strlen($arParams["IBLOCK_TYPE"])<=0)
 $arParams["ELEMENT_ID"] = intval($arParams["~ELEMENT_ID"]);
 if($arParams["ELEMENT_ID"] > 0 && $arParams["ELEMENT_ID"]."" != $arParams["~ELEMENT_ID"])
 {
-	ShowError(GetMessage("T_NEWS_DETAIL_NF"));
-	@define("ERROR_404", "Y");
-	if($arParams["SET_STATUS_404"]==="Y")
-		CHTTP::SetStatus("404 Not Found");
+	if (CModule::IncludeModule("iblock"))
+	{
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("T_NEWS_DETAIL_NF")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
+	}
 	return;
 }
 
@@ -57,7 +65,8 @@ if(strlen($arParams["BROWSER_TITLE"])<=0)
 $arParams["INCLUDE_IBLOCK_INTO_CHAIN"] = $arParams["INCLUDE_IBLOCK_INTO_CHAIN"]!="N";
 $arParams["ADD_SECTIONS_CHAIN"] = $arParams["ADD_SECTIONS_CHAIN"]!="N"; //Turn on by default
 $arParams["ADD_ELEMENT_CHAIN"] = (isset($arParams["ADD_ELEMENT_CHAIN"]) && $arParams["ADD_ELEMENT_CHAIN"] == "Y");
-$arParams["SET_TITLE"]=$arParams["SET_TITLE"]!="N";
+$arParams["SET_TITLE"] = $arParams["SET_TITLE"]!="N";
+$arParams["SET_LAST_MODIFIED"] = $arParams["SET_LAST_MODIFIED"]==="Y";
 $arParams["SET_BROWSER_TITLE"] = (isset($arParams["SET_BROWSER_TITLE"]) && $arParams["SET_BROWSER_TITLE"] === 'N' ? 'N' : 'Y');
 $arParams["SET_META_KEYWORDS"] = (isset($arParams["SET_META_KEYWORDS"]) && $arParams["SET_META_KEYWORDS"] === 'N' ? 'N' : 'Y');
 $arParams["SET_META_DESCRIPTION"] = (isset($arParams["SET_META_DESCRIPTION"]) && $arParams["SET_META_DESCRIPTION"] === 'N' ? 'N' : 'Y');
@@ -85,6 +94,17 @@ else
 	$arNavigation = false;
 }
 
+if (empty($arParams["PAGER_PARAMS_NAME"]) || !preg_match("/^[A-Za-z_][A-Za-z01-9_]*$/", $arParams["PAGER_PARAMS_NAME"]))
+{
+	$pagerParameters = array();
+}
+else
+{
+	$pagerParameters = $GLOBALS[$arParams["PAGER_PARAMS_NAME"]];
+	if (!is_array($pagerParameters))
+		$pagerParameters = array();
+}
+
 $arParams["SHOW_WORKFLOW"] = $_REQUEST["show_workflow"]=="Y";
 
 $arParams["USE_PERMISSIONS"] = $arParams["USE_PERMISSIONS"]=="Y";
@@ -110,7 +130,7 @@ if(!$bUSER_HAVE_ACCESS)
 	return 0;
 }
 
-if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()),$bUSER_HAVE_ACCESS, $arNavigation)))
+if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()),$bUSER_HAVE_ACCESS, $arNavigation, $pagerParameters)))
 {
 
 	if(!CModule::IncludeModule("iblock"))
@@ -137,7 +157,7 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams
 	if($arParams["ELEMENT_ID"] <= 0)
 		$arParams["ELEMENT_ID"] = CIBlockFindTools::GetElementID(
 			$arParams["ELEMENT_ID"],
-			$arParams["ELEMENT_CODE"],
+			$arParams["~ELEMENT_CODE"],
 			false,
 			false,
 			$arFilter
@@ -169,6 +189,7 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams
 		"PREVIEW_TEXT",
 		"PREVIEW_TEXT_TYPE",
 		"DETAIL_PICTURE",
+		"TIMESTAMP_X",
 		"ACTIVE_FROM",
 		"LIST_PAGE_URL",
 		"DETAIL_PAGE_URL",
@@ -206,7 +227,30 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams
 		}
 		else
 		{
-			$arResult["NAV_STRING"] = $arResult["NAV_RESULT"]->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"]);
+			$navComponentParameters = array();
+			if ($arParams["PAGER_BASE_LINK_ENABLE"] === "Y")
+			{
+				$pagerBaseLink = trim($arParams["PAGER_BASE_LINK"]);
+				if ($pagerBaseLink === "")
+					$pagerBaseLink = $arResult["DETAIL_PAGE_URL"];
+
+				if ($pagerParameters && isset($pagerParameters["BASE_LINK"]))
+				{
+					$pagerBaseLink = $pagerParameters["BASE_LINK"];
+					unset($pagerParameters["BASE_LINK"]);
+				}
+
+				$navComponentParameters["BASE_LINK"] = CHTTP::urlAddParams($pagerBaseLink, $pagerParameters, array("encode"=>true));
+			}
+
+			$arResult["NAV_STRING"] = $arResult["NAV_RESULT"]->GetPageNavStringEx(
+				$navComponentObject,
+				$arParams["PAGER_TITLE"],
+				$arParams["PAGER_TEMPLATE"],
+				$arParams["PAGER_SHOW_ALWAYS"],
+				$this,
+				$navComponentParameters
+			);
 			$arResult["NAV_CACHED_DATA"] = $navComponentObject->GetTemplateCachedData();
 
 			$arResult["NAV_TEXT"] = "";
@@ -299,6 +343,7 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams
 			"SECTION",
 			"PROPERTIES",
 			"IPROPERTY_VALUES",
+			"TIMESTAMP_X",
 		));
 
 		$this->IncludeComponentTemplate();
@@ -306,10 +351,13 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, array(($arParams
 	else
 	{
 		$this->AbortResultCache();
-		ShowError(GetMessage("T_NEWS_DETAIL_NF"));
-		@define("ERROR_404", "Y");
-		if($arParams["SET_STATUS_404"]==="Y")
-			CHTTP::SetStatus("404 Not Found");
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("T_NEWS_DETAIL_NF")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
 	}
 }
 
@@ -366,7 +414,7 @@ if(isset($arResult["ID"]))
 
 	if ($arParams['SET_CANONICAL_URL'] === 'Y' && $arResult["CANONICAL_PAGE_URL"])
 	{
-		$APPLICATION->AddHeadString('<link rel="canonical" href="'.$arResult["CANONICAL_PAGE_URL"].'" />');
+		$APPLICATION->SetPageProperty('canonical', $arResult["CANONICAL_PAGE_URL"]);
 	}
 
 	if($arParams["SET_TITLE"])
@@ -435,6 +483,11 @@ if(isset($arResult["ID"]))
 			$APPLICATION->AddChainItem($arResult["IPROPERTY_VALUES"]["ELEMENT_PAGE_TITLE"]);
 		else
 			$APPLICATION->AddChainItem($arResult["NAME"]);
+	}
+
+	if ($arParams["SET_LAST_MODIFIED"] && $arResult["TIMESTAMP_X"])
+	{
+		Context::getCurrent()->getResponse()->setLastModified(DateTime::createFromUserTime($arResult["TIMESTAMP_X"]));
 	}
 
 	return $arResult["ID"];

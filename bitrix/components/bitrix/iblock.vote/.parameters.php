@@ -59,13 +59,8 @@ $arComponentParameters = array(
 			"DEFAULT" => array("1","2","3","4","5"),
 			"ADDITIONAL_VALUES" => "Y",
 		),
-		"SET_STATUS_404" => Array(
-			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BIV_SET_STATUS_404"),
-			"TYPE" => "CHECKBOX",
-			"DEFAULT" => "N",
-		),
 		"CACHE_TIME"  =>  Array("DEFAULT"=>36000000),
 	),
 );
-?>
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues, true, false);

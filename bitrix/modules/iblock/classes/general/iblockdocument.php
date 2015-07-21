@@ -12,6 +12,10 @@ class CIBlockDocument
 		if ($iblockId <= 0)
 			throw new CBPArgumentOutOfRangeException("documentType", $documentType);
 
+		global $APPLICATION;
+		if(!$publicMode)
+			$APPLICATION->showAjaxHead();
+
 		static $arDocumentFieldTypes = array();
 		if (!array_key_exists($documentType, $arDocumentFieldTypes))
 			$arDocumentFieldTypes[$documentType] = self::GetDocumentFieldTypes($documentType);
@@ -48,19 +52,22 @@ class CIBlockDocument
 				<?
 				if (!$arFieldType["Required"])
 					echo '<option value="">['.GetMessage("BPCGHLP_NOT_SET").']</option>';
-				foreach ($arFieldType["Options"] as $k => $v)
+				if(!empty($arFieldType["Options"]))
 				{
-					if (is_array($v) && count($v) == 2)
+					foreach ($arFieldType["Options"] as $k => $v)
 					{
-						$v1 = array_values($v);
-						$k = $v1[0];
-						$v = $v1[1];
-					}
+						if (is_array($v) && count($v) == 2)
+						{
+							$v1 = array_values($v);
+							$k = $v1[0];
+							$v = $v1[1];
+						}
 
-					$ind = array_search($k, $fieldValueTmp);
-					echo '<option value="'.htmlspecialcharsbx($k).'"'.($ind !== false ? ' selected' : '').'>'.htmlspecialcharsbx($v).'</option>';
-					if ($ind !== false)
-						unset($fieldValueTmp[$ind]);
+						$ind = array_search($k, $fieldValueTmp);
+						echo '<option value="'.htmlspecialcharsbx($k).'"'.($ind !== false ? ' selected' : '').'>'.htmlspecialcharsbx($v).'</option>';
+						if ($ind !== false)
+							unset($fieldValueTmp[$ind]);
+					}
 				}
 				?>
 			</select>
@@ -166,7 +173,6 @@ class CIBlockDocument
 				$GLOBALS["CBPVirtualDocumentCloneRowPrinted"] = 1;
 				?>
 				<script language="JavaScript">
-				<!--
 				function CBPVirtualDocumentCloneRow(tableID)
 				{
 					var tbl = document.getElementById(tableID);
@@ -215,7 +221,96 @@ class CIBlockDocument
 						}
 					}
 				}
-				//-->
+				function createAdditionalHtmlEditor(tableId)
+				{
+					var tbl = document.getElementById(tableId);
+					var cnt = tbl.rows.length-1;
+					var name = tableId.replace(/(?:CBPVirtualDocument_)(.*)(?:_Table)/, '$1')
+					var idEditor = 'id_'+name+'__n'+cnt+'_';
+					var inputNameEditor = name+'[n'+cnt+']';
+					window.BXHtmlEditor.Show(
+						{
+							'id':idEditor,
+							'inputName':inputNameEditor,
+							'content':'',
+							'useFileDialogs':false,
+							'width':'100%',
+							'height':'200',
+							'allowPhp':false,
+							'limitPhpAccess':false,
+							'templates':[],
+							'templateId':'',
+							'templateParams':[],
+							'componentFilter':'',
+							'snippets':[],
+							'placeholder':'Text here...',
+							'actionUrl':'/bitrix/tools/html_editor_action.php',
+							'cssIframePath':'/bitrix/js/fileman/html_editor/iframe-style.css?1412693817',
+							'bodyClass':'',
+							'bodyId':'',
+							'spellcheck_path':'/bitrix/js/fileman/html_editor/html-spell.js?v=1412693817',
+							'usePspell':'N',
+							'useCustomSpell':'Y',
+							'bbCode':false,
+							'askBeforeUnloadPage':true,
+							'settingsKey':'user_settings_1',
+							'showComponents':true,
+							'showSnippets':true,
+							'view':'wysiwyg',
+							'splitVertical':false,
+							'splitRatio':'1',
+							'taskbarShown':false,
+							'taskbarWidth':'250',
+							'lastSpecialchars':false,
+							'cleanEmptySpans':true,
+							'lazyLoad':false,
+							'showTaskbars':false,
+							'showNodeNavi':false,
+							'controlsMap':[
+								{'id':'Bold','compact':true,'sort':'80'},
+								{'id':'Italic','compact':true,'sort':'90'},
+								{'id':'Underline','compact':true,'sort':'100'},
+								{'id':'Strikeout','compact':true,'sort':'110'},
+								{'id':'RemoveFormat','compact':true,'sort':'120'},
+								{'id':'Color','compact':true,'sort':'130'},
+								{'id':'FontSelector','compact':false,'sort':'135'},
+								{'id':'FontSize','compact':false,'sort':'140'},
+								{'separator':true,'compact':false,'sort':'145'},
+								{'id':'OrderedList','compact':true,'sort':'150'},
+								{'id':'UnorderedList','compact':true,'sort':'160'},
+								{'id':'AlignList','compact':false,'sort':'190'},
+								{'separator':true,'compact':false,'sort':'200'},
+								{'id':'InsertLink','compact':true,'sort':'210','wrap':'bx-b-link-'+idEditor},
+								{'id':'InsertImage','compact':false,'sort':'220'},
+								{'id':'InsertVideo','compact':true,'sort':'230','wrap':'bx-b-video-'+idEditor},
+								{'id':'InsertTable','compact':false,'sort':'250'},
+								{'id':'Code','compact':true,'sort':'260'},
+								{'id':'Quote','compact':true,'sort':'270','wrap':'bx-b-quote-'+idEditor},
+								{'id':'Smile','compact':false,'sort':'280'},
+								{'separator':true,'compact':false,'sort':'290'},
+								{'id':'Fullscreen','compact':false,'sort':'310'},
+								{'id':'BbCode','compact':true,'sort':'340'},
+								{'id':'More','compact':true,'sort':'400'}],
+							'autoResize':true,
+							'autoResizeOffset':'40',
+							'minBodyWidth':'350',
+							'normalBodyWidth':'555'
+						});
+					var htmlEditor = BX.findChildrenByClassName(BX(tableId), 'bx-html-editor');
+					for(var k in htmlEditor)
+					{
+						var editorId = htmlEditor[k].getAttribute('id');
+						var frameArray = BX.findChildrenByClassName(BX(editorId), 'bx-editor-iframe');
+						if(frameArray.length > 1)
+						{
+							for(var i = 0; i < frameArray.length - 1; i++)
+							{
+								frameArray[i].parentNode.removeChild(frameArray[i]);
+							}
+						}
+
+					}
+				}
 				</script>
 				<?
 			}
@@ -240,27 +335,94 @@ class CIBlockDocument
 
 				if (is_array($customMethodName) && count($customMethodName) > 0 || !is_array($customMethodName) && strlen($customMethodName) > 0)
 				{
-					$value1 = $value;
-					if ($bAllowSelection && (preg_match("#^\{=[a-z0-9_]+:[a-z0-9_]+\}$#i", trim($value1)) || substr(trim($value1), 0, 1) == "="))
-						$value1 = null;
+					if($arFieldType["Type"] == "S:HTML")
+					{
+						if (CModule::includeModule("fileman"))
+						{
+							$editor = new \CHTMLEditor;
+							$res = array_merge(
+								array(
+									'useFileDialogs' => false,
+									'height' => 200,
+									'useFileDialogs' => false,
+									'minBodyWidth' => 350,
+									'normalBodyWidth' => 555,
+									'bAllowPhp' => false,
+									'limitPhpAccess' => false,
+									'showTaskbars' => false,
+									'showNodeNavi' => false,
+									'askBeforeUnloadPage' => true,
+									'bbCode' => false,
+									'siteId' => SITE_ID,
+									'autoResize' => true,
+									'autoResizeOffset' => 40,
+									'saveOnBlur' => true,
+									'controlsMap' => array(
+										array('id' => 'Bold',  'compact' => true, 'sort' => 80),
+										array('id' => 'Italic',  'compact' => true, 'sort' => 90),
+										array('id' => 'Underline',  'compact' => true, 'sort' => 100),
+										array('id' => 'Strikeout',  'compact' => true, 'sort' => 110),
+										array('id' => 'RemoveFormat',  'compact' => true, 'sort' => 120),
+										array('id' => 'Color',  'compact' => true, 'sort' => 130),
+										array('id' => 'FontSelector',  'compact' => false, 'sort' => 135),
+										array('id' => 'FontSize',  'compact' => false, 'sort' => 140),
+										array('separator' => true, 'compact' => false, 'sort' => 145),
+										array('id' => 'OrderedList',  'compact' => true, 'sort' => 150),
+										array('id' => 'UnorderedList',  'compact' => true, 'sort' => 160),
+										array('id' => 'AlignList', 'compact' => false, 'sort' => 190),
+										array('separator' => true, 'compact' => false, 'sort' => 200),
+										array('id' => 'InsertLink',  'compact' => true, 'sort' => 210, 'wrap' => 'bx-b-link-'.$fieldNameId),
+										array('id' => 'InsertImage',  'compact' => false, 'sort' => 220),
+										array('id' => 'InsertVideo',  'compact' => true, 'sort' => 230, 'wrap' => 'bx-b-video-'.$fieldNameId),
+										array('id' => 'InsertTable',  'compact' => false, 'sort' => 250),
+										array('id' => 'Code',  'compact' => true, 'sort' => 260),
+										array('id' => 'Quote',  'compact' => true, 'sort' => 270, 'wrap' => 'bx-b-quote-'.$fieldNameId),
+										array('id' => 'Smile',  'compact' => false, 'sort' => 280),
+										array('separator' => true, 'compact' => false, 'sort' => 290),
+										array('id' => 'Fullscreen',  'compact' => false, 'sort' => 310),
+										array('id' => 'BbCode',  'compact' => true, 'sort' => 340),
+										array('id' => 'More',  'compact' => true, 'sort' => 400)
+									)
+								),
+								array(
+									'name' => $fieldNameName,
+									'inputName' => $fieldNameName,
+									'id' => $fieldNameId,
+									'width' => '100%',
+									'content' => htmlspecialcharsBack($value),
+								)
+							);
+							$editor->show($res);
+						}
+						else
+						{
+							?><textarea rows="5" cols="40" id="<?= $fieldNameId ?>" name="<?= $fieldNameName ?>"><?= htmlspecialcharsbx($value) ?></textarea><?
+						}
+					}
 					else
-						unset($fieldValueTmp[$key]);
+					{
+						$value1 = $value;
+						if ($bAllowSelection && (preg_match("#^\{=[a-z0-9_]+:[a-z0-9_]+\}$#i", trim($value1)) || substr(trim($value1), 0, 1) == "="))
+							$value1 = null;
+						else
+							unset($fieldValueTmp[$key]);
 
-					if (($arFieldType["Type"] == "S:employee") && COption::GetOptionString("bizproc", "employee_compatible_mode", "N") != "Y")
-						$value1 = CBPHelper::StripUserPrefix($value1);
+						if (($arFieldType["Type"] == "S:employee") && COption::GetOptionString("bizproc", "employee_compatible_mode", "N") != "Y")
+							$value1 = CBPHelper::StripUserPrefix($value1);
 
-					echo call_user_func_array(
-						$customMethodName,
-						array(
-							array("LINK_IBLOCK_ID" => $arFieldType["Options"]),
-							array("VALUE" => $value1),
+						echo call_user_func_array(
+							$customMethodName,
 							array(
-								"FORM_NAME" => $arFieldName["Form"],
-								"VALUE" => $fieldNameName
-							),
-							true
-						)
-					);
+								array("LINK_IBLOCK_ID" => $arFieldType["Options"]),
+								array("VALUE" => $value1),
+								array(
+									"FORM_NAME" => $arFieldName["Form"],
+									"VALUE" => $fieldNameName
+								),
+								true
+							)
+						);
+					}
 				}
 				else
 				{
@@ -319,7 +481,11 @@ class CIBlockDocument
 								else
 									unset($fieldValueTmp[$key]);
 
-								$ar = CIBlockProperty::GetUserType("DateTime");
+								if($arFieldType["Type"] == "date")
+									$type = "Date";
+								else
+									$type = "DateTime";
+								$ar = CIBlockProperty::GetUserType($type);
 								echo call_user_func_array(
 									$ar["GetPublicEditHTML"],
 									array(
@@ -356,8 +522,15 @@ class CIBlockDocument
 			if ($arFieldType["Multiple"])
 				echo "</table>";
 
-			if ($arFieldType["Multiple"] && (($arFieldType["Type"] != "file") || $publicMode))
+			if ($arFieldType["Multiple"] && $arFieldType["Type"] != "S:HTML" && (($arFieldType["Type"] != "file") || $publicMode))
+			{
 				echo '<input type="button" value="'.GetMessage("BPCGHLP_ADD").'" onclick="CBPVirtualDocumentCloneRow(\'CBPVirtualDocument_'.$arFieldName["Field"].'_Table\')"/><br />';
+			}
+			elseif($arFieldType["Multiple"] && $arFieldType["Type"] == "S:HTML")
+			{
+				$functionOnclick = 'CBPVirtualDocumentCloneRow(\'CBPVirtualDocument_'.$arFieldName["Field"].'_Table\');createAdditionalHtmlEditor(\'CBPVirtualDocument_'.$arFieldName["Field"].'_Table\');';
+				echo '<input type="button" value="'.GetMessage("BPCGHLP_ADD").'" onclick="'.$functionOnclick.'"/><br />';
+			}
 
 			if ($bAllowSelection)
 			{
@@ -1310,6 +1483,17 @@ class CIBlockDocument
 		return $arResult;
 	}
 
+	public static function generateMnemonicCode($integerCode)
+	{
+		$code = '';
+		for ($i = 1; $integerCode >= 0 && $i < 10; $i++)
+		{
+			$code = chr(0x41 + ($integerCode % pow(26, $i) / pow(26, $i - 1))) . $code;
+			$integerCode -= pow(26, $i);
+		}
+		return $code;
+	}
+
 	public function AddDocumentField($documentType, $arFields)
 	{
 		$iblockId = intval(substr($documentType, strlen("iblock_")));
@@ -1331,7 +1515,7 @@ class CIBlockDocument
 		);
 
 		if (strpos("0123456789", substr($arFieldsTmp["CODE"], 0, 1))!==false)
-			unset($arFieldsTmp["CODE"]);
+			$arFieldsTmp["CODE"] = self::generateMnemonicCode($arFieldsTmp["CODE"]);
 
 		if (array_key_exists("additional_type_info", $arFields))
 			$arFieldsTmp["LINK_IBLOCK_ID"] = intval($arFields["additional_type_info"]);
@@ -1408,11 +1592,17 @@ class CIBlockDocument
 			$arFieldsTmp["ROW_COUNT"] = 5;
 		}
 
-		$ibp = new CIBlockProperty;
-		$propId = $ibp->Add($arFieldsTmp);
-
-		if (intval($propId) <= 0)
-			throw new Exception($ibp->LAST_ERROR);
+		$properties = CIBlockProperty::getList(
+			array(),
+			array("IBLOCK_ID" => $arFieldsTmp["IBLOCK_ID"], "CODE" => $arFieldsTmp["CODE"])
+		);
+		if(!$properties->fetch())
+		{
+			$ibp = new CIBlockProperty;
+			$propId = $ibp->Add($arFieldsTmp);
+			if (intval($propId) <= 0)
+				throw new Exception($ibp->LAST_ERROR);
+		}
 
 		return "PROPERTY_".$arFields["code"];
 	}
@@ -1817,13 +2007,11 @@ class CIBlockDocument
 				if (!array_key_exists("WorkflowId", $arParameters))
 					return false;
 
-				if ($operation === CBPCanUserOperateOperation::ViewWorkflow
-					&& !CIBlockRights::UserHasRightTo($arParameters["IBlockId"], $arParameters["IBlockId"], "element_read"))
-					return false;
+				if ($operation === CBPCanUserOperateOperation::ViewWorkflow)
+					return CIBlockRights::UserHasRightTo($arParameters["IBlockId"], 0, "element_read");
 
-				if ($operation === CBPCanUserOperateOperation::StartWorkflow
-					&& !CIBlockRights::UserHasRightTo($arParameters["IBlockId"], $arParameters["IBlockId"], "section_element_bind"))
-					return false;
+				if ($operation === CBPCanUserOperateOperation::StartWorkflow)
+					return CIBlockSectionRights::UserHasRightTo($arParameters["IBlockId"], $arParameters['sectionId'], "section_element_bind");
 
 				$userId = intval($userId);
 				if (!array_key_exists("AllUserGroups", $arParameters))
@@ -2527,6 +2715,9 @@ class CIBlockDocument
 				return array($ar["CREATED_BY"]);
 			return array();
 		}
+
+		if ((string)intval($group) !== (string)$group)
+			return array();
 
 		$group = (int)$group;
 		if ($group <= 0)

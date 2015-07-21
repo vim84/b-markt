@@ -475,6 +475,19 @@ if($USER->CanDoOperation('view_other_settings'))
 		),
 	);
 }
+elseif($USER->CanDoOperation('manage_short_uri'))
+{
+	$aMenu[] = array(
+		"parent_menu" => "global_menu_settings",
+		"sort" => 1700,
+		"text" => GetMessage("MAIN_MENU_SHORT_URLS"),
+		"url" => "short_uri_admin.php?lang=".LANGUAGE_ID,
+		"more_url" => array("short_uri_edit.php"),
+		"title" => GetMessage("MAIN_MENU_SHORT_URLS_ALT"),
+		"icon" => "sys_menu_icon",
+	);
+}
+
 if($USER->CanDoOperation('install_updates'))
 {
 	$arMarket = array();

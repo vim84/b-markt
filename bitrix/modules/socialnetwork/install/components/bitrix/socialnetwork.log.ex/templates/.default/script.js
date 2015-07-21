@@ -487,6 +487,13 @@ function __logCommentFormAutogrow(el)
 
 function __logGetNextPage(more_url, bFirst, oNode)
 {
+	if (oLF.bLoadStarted)
+	{
+		return false;
+	}
+
+	oLF.bLoadStarted = true;
+
 	window.bLockCounterAnimate = true;
 	bFirst = !!bFirst;
 
@@ -512,6 +519,7 @@ function __logGetNextPage(more_url, bFirst, oNode)
 		data: { },
 		onsuccess: function(data)
 		{
+			oLF.bLoadStarted = false;
 			if (
 				!bFirst 
 				&& typeof oNode != 'undefined'
@@ -561,6 +569,7 @@ function __logGetNextPage(more_url, bFirst, oNode)
 		},
 		onfailure: function(data) 
 		{
+			oLF.bLoadStarted = false;
 			if (
 				!bFirst 
 				&& BX('feed-new-message-inf-wrap')
@@ -590,15 +599,24 @@ function __logGetNextPageLinkEntities(entities, correspondences)
 		}
 	}
 }
+
 function __logRefresh(refresh_url)
 {
+	if (oLF.bLoadStarted)
+	{
+		return;
+	}
+
 	var counterWrap = BX("sonet_log_counter_2_wrap", true);
+	oLF.bLoadStarted = true;
 
 	if (counterWrap)
 	{
-		nodeTmp3 = BX.findChild(counterWrap, {'tag':'span', 'className': 'feed-new-message-inf-text-reload'}, true);
+		var nodeTmp3 = BX.findChild(counterWrap, {'tag':'span', 'className': 'feed-new-message-inf-text-reload'}, true);
 		if (nodeTmp3)
+		{
 			nodeTmp3.style.display = 'none';
+		}
 	}
 
 	window.bLockCounterAnimate = true;
@@ -610,6 +628,8 @@ function __logRefresh(refresh_url)
 		data: { },
 		onsuccess: function(data)
 		{
+			oLF.bLoadStarted = false;
+
 			if (
 				typeof data != 'undefined'
 				&& typeof (data.TEXT) != 'undefined'
@@ -683,6 +703,7 @@ function __logRefresh(refresh_url)
 		},
 		onfailure: function(data) 
 		{
+			oLF.bLoadStarted = false;
 			oLF.showRefreshError();
 		}
 	});
@@ -692,23 +713,28 @@ function __logRefresh(refresh_url)
 
 function __logChangeFavorites(log_id, node, newState, bFromMenu)
 {
-	if (!log_id)
+	if (
+		!log_id
+		|| !BX(node)
+	)
+	{
 		return;
-
-	if (!BX(node))
-		return;
+	}
 
 	if (!!bFromMenu)
 	{
 		var menuItem = BX.proxy_context;
 		if (!BX.hasClass(BX(menuItem), 'menu-popup-item-text'))
+		{
 			menuItem = BX.findChild(BX(menuItem), {'className': 'menu-popup-item-text'}, true);
+		}
 	}
 
-	if (BX.hasClass(BX(node), 'feed-post-important-switch'))
-		var nodeToAdjust = BX(node);
-	else
-		var nodeToAdjust = BX.findChild(BX(node), { 'className': 'feed-post-important-switch' });
+	var nodeToAdjust = (
+		BX.hasClass(BX(node), 'feed-post-important-switch')
+			? BX(node)
+			: BX.findChild(BX(node), { 'className': 'feed-post-important-switch' })
+	);
 
 	if (newState != undefined)
 	{
@@ -716,15 +742,19 @@ function __logChangeFavorites(log_id, node, newState, bFromMenu)
 		{
 			BX.addClass(BX(nodeToAdjust), "feed-post-important-switch-active");
 			BX(nodeToAdjust).title = BX.message('sonetLMenuFavoritesTitleY');
-			if (menuItem != undefined)
+			if (typeof menuItem != 'undefined')
+			{
 				BX(menuItem).innerHTML = BX.message('sonetLMenuFavoritesTitleY');
+			}
 		}
 		else
 		{
 			BX.removeClass(BX(nodeToAdjust), "feed-post-important-switch-active");
 			BX(nodeToAdjust).title = BX.message('sonetLMenuFavoritesTitleN');
-			if (menuItem != undefined)
+			if (typeof menuItem != 'undefined')
+			{
 				BX(menuItem).innerHTML = BX.message('sonetLMenuFavoritesTitleN');
+			}
 		}
 	}
 
@@ -1249,6 +1279,7 @@ window.__socOnLightEditorShow = function(content, data){
 
 BitrixLF = function ()
 {
+	this.bLoadStarted = false;
 };
 
 BitrixLF.prototype.showRefreshError = function()

@@ -20,6 +20,7 @@ use Bitrix\Main\Text\Converter;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Seo\Engine;
 use Bitrix\Seo\Adv;
+use Bitrix\Seo\Service;
 
 Loc::loadMessages(dirname(__FILE__).'/../../main/tools.php');
 Loc::loadMessages(dirname(__FILE__).'/seo_search.php');
@@ -45,17 +46,8 @@ if(!Main\Loader::includeModule('socialservices'))
 }
 
 $engine = new Engine\YandexDirect();
-$bNeedAuth = !$engine->getAuthSettings();
-
-try
-{
-	$currentUser = $engine->getCurrentUser();
-}
-catch(Exception $e)
-{
-	$currentUser = null;
-	$bNeedAuth = true;
-}
+$currentUser = $engine->getCurrentUser();
+$bNeedAuth = !is_array($currentUser);
 
 $request = Main\Context::getCurrent()->getRequest();
 
@@ -65,7 +57,6 @@ $tableID = "tbl_yandex_direct_campaign";
 
 $oSort = new \CAdminSorting($tableID, "ID", "desc");
 $adminList = new \CAdminList($tableID, $oSort);
-
 
 if(!$bNeedAuth && ($campaignIDs = $adminList->GroupAction()))
 {
@@ -191,19 +182,13 @@ if($request["mode"]!='excel')
 
 $adminList->AddHeaders($arHeaders);
 
-/*
-// getList has bug with combining aggragators and CLOB fields. This code left for future but alternative route is created.
-
-$map = array_keys(Adv\YandexCampaignTable::getMap());
-$map[] = "BANNER_CNT";
-
 $campaignList = Adv\YandexCampaignTable::getList(array(
 	'order' => array($by => $order),
 	'filter' => array(
 		"=ENGINE_ID" => $engine->getId(),
 		'=ACTIVE' => $archive ? Adv\YandexCampaignTable::INACTIVE : Adv\YandexCampaignTable::ACTIVE,
 	),
-	"select" => $map,
+	"select" => array("ID", "BANNER_CNT"),
 	'runtime' => array(
 		new Entity\ExpressionField(
 			'BANNER_CNT',
@@ -211,18 +196,6 @@ $campaignList = Adv\YandexCampaignTable::getList(array(
 			"\\Bitrix\\Seo\\Adv\\YandexBannerTable:CAMPAIGN.ID"
 		),
 	)
-));
-*/
-
-$map = array_keys(Adv\YandexCampaignTable::getMap());
-
-$campaignList = Adv\YandexCampaignTable::getList(array(
-	'order' => array($by => $order),
-	'filter' => array(
-		"=ENGINE_ID" => $engine->getId(),
-		'=ACTIVE' => $archive ? Adv\YandexCampaignTable::INACTIVE : Adv\YandexCampaignTable::ACTIVE,
-	),
-	"select" => $map
 ));
 
 $data = new \CAdminResult($campaignList, $tableID);
@@ -232,32 +205,15 @@ $adminList->NavText($data->GetNavPrint(Loc::getMessage("PAGES")));
 $campaignAdminList = array();
 while($campaign = $data->NavNext())
 {
-	$campaignAdminList[$campaign['ID']] = $campaign;
-}
+	$bannerCnt = $campaign["BANNER_CNT"];
 
-if(count($campaignAdminList) > 0)
-{
-	$campaignList = Adv\YandexCampaignTable::getList(array(
+	$campaignDetail = Adv\YandexCampaignTable::getList(array(
 		'filter' => array(
-			"=ID" => array_keys($campaignAdminList),
+			"=ID" => $campaign["ID"],
 		),
-		"select" => array('ID', 'BANNER_CNT'),
-		'runtime' => array(
-			new Entity\ExpressionField(
-				'BANNER_CNT',
-				'COUNT(%s)',
-				"\\Bitrix\\Seo\\Adv\\YandexBannerTable:CAMPAIGN.ID"
-			),
-		)
 	));
-	while($campaignCounter = $campaignList->fetch())
-	{
-		$campaignAdminList[$campaignCounter["ID"]]["BANNER_CNT"] = $campaignCounter["BANNER_CNT"];
-	}
-}
+	$campaign = $campaignDetail->fetch();
 
-foreach($campaignAdminList as $campaign)
-{
 	$editUrl = "seo_search_yandex_direct_edit.php?lang=".LANGUAGE_ID."&ID=".$campaign["ID"];
 
 	$row = &$adminList->AddRow($campaign["ID"], $campaign, $editUrl, Loc::getMessage("SEO_CAMPAIGN_EDIT_TITLE", array(
@@ -347,11 +303,11 @@ foreach($campaignAdminList as $campaign)
 
 	if($campaign['SETTINGS']['StatusArchive'] == Engine\YandexDirect::BOOL_YES)
 	{
-		$row->AddViewField('BANNER_CNT', '<a href="seo_search_yandex_direct_banner.php?lang='.LANGUAGE_ID.'&amp;campaign='.$campaign['ID'].'&amp;archive=1" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_BANNER_CNT_TITLE')).'">'.$campaign['BANNER_CNT'].'</a>');
+		$row->AddViewField('BANNER_CNT', '<a href="seo_search_yandex_direct_banner.php?lang='.LANGUAGE_ID.'&amp;campaign='.$campaign['ID'].'&amp;archive=1" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_BANNER_CNT_TITLE')).'">'.$bannerCnt.'</a>');
 	}
 	else
 	{
-		$row->AddViewField('BANNER_CNT', '<a href="seo_search_yandex_direct_banner.php?lang='.LANGUAGE_ID.'&amp;campaign='.$campaign['ID'].'" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_BANNER_CNT_TITLE')).'">'.$campaign['BANNER_CNT'].'</a>'.($bStrategySupported ? ' [<a href="seo_search_yandex_direct_banner_edit.php?lang='.LANGUAGE_ID.'&amp;campaign='.$campaign['ID'].'" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_BANNER_ADD_TITLE')).'">+</a>]' : ''));
+		$row->AddViewField('BANNER_CNT', '<a href="seo_search_yandex_direct_banner.php?lang='.LANGUAGE_ID.'&amp;campaign='.$campaign['ID'].'" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_BANNER_CNT_TITLE')).'">'.$bannerCnt.'</a>'.($bStrategySupported ? ' [<a href="seo_search_yandex_direct_banner_edit.php?lang='.LANGUAGE_ID.'&amp;campaign='.$campaign['ID'].'" title="'.Converter::getHtmlConverter()->encode(Loc::getMessage('SEO_CAMPAIGN_BANNER_ADD_TITLE')).'">+</a>]' : ''));
 	}
 
 	if(!$bNeedAuth)

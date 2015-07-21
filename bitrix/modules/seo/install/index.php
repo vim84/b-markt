@@ -97,6 +97,11 @@ class seo extends CModule
 		$eventManager->registerEventHandler("sale", "onSaleDeliveryOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleDeliveryOrder");
 		$eventManager->registerEventHandler("sale", "onSaleStatusOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleStatusOrder");
 
+		$eventManager->registerEventHandler("conversion", "OnSetDayContextAttributes", "seo", "\\Bitrix\\Seo\\ConversionHandler", "onSetDayContextAttributes");
+		$eventManager->registerEventHandler("conversion", "OnGetAttributeTypes", "seo", "\\Bitrix\\Seo\\ConversionHandler", "onGetAttributeTypes");
+
+		$eventManager->registerEventHandler("catalog", "OnProductUpdate", "seo", "\\Bitrix\\Seo\\Adv\\Auto", "checkQuantity");
+		$eventManager->registerEventHandler("catalog", "OnProductSetAvailableUpdate", "seo", "\\Bitrix\\Seo\\Adv\\Auto", "checkQuantity");
 
 		if (COption::GetOptionString('seo', 'searchers_list', '') == '' && CModule::IncludeModule('statistic'))
 		{
@@ -117,6 +122,7 @@ class seo extends CModule
 
 		\CAgent::AddAgent("Bitrix\\Seo\\Engine\\YandexDirect::updateAgent();","seo", "N", 3600);
 		\CAgent::AddAgent("Bitrix\\Seo\\Adv\\LogTable::clean();","seo", "N", 86400);
+		\CAgent::AddAgent("Bitrix\\Seo\\Adv\\Auto::checkQuantityAgent();","seo", "N", 3600);
 
 		return true;
 	}
@@ -215,6 +221,12 @@ class seo extends CModule
 		$eventManager->unRegisterEventHandler("sale", "onSaleDeductOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleDeductOrder");
 		$eventManager->unRegisterEventHandler("sale", "onSaleDeliveryOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleDeliveryOrder");
 		$eventManager->unRegisterEventHandler("sale", "onSaleStatusOrder", "seo", "\\Bitrix\\Seo\\AdvSession", "onSaleStatusOrder");
+
+		$eventManager->unRegisterEventHandler("conversion", "OnSetDayContextAttributes", "seo", "\\Bitrix\\Seo\\ConversionHandler", "onSetDayContextAttributes");
+		$eventManager->unRegisterEventHandler("conversion", "OnGetAttributeTypes", "seo", "\\Bitrix\\Seo\\ConversionHandler", "onGetAttributeTypes");
+
+		$eventManager->unRegisterEventHandler("catalog", "OnProductUpdate", "seo", "\\Bitrix\\Seo\\Adv\\Auto", "checkQuantity");
+		$eventManager->unRegisterEventHandler("catalog", "OnProductSetAvailableUpdate", "seo", "\\Bitrix\\Seo\\Adv\\Auto", "checkQuantity");
 
 		UnRegisterModule("seo");
 

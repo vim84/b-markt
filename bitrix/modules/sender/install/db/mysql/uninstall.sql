@@ -14,3 +14,4 @@ DROP TABLE if exists b_sender_posting_click;
 DROP TABLE if exists b_sender_posting_unsub;
 DROP TABLE if exists b_sender_preset_template;
 DROP TABLE if exists b_sender_mailing_attachment;
+DROP TABLE if exists b_sender_mailing_trigger;

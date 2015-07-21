@@ -54,13 +54,13 @@ $arComponentParameters = array(
 			"PARENT" => "REPL_SETT",
 			"NAME" => GetMessage("SBP_PARAMETERS_REPL_SETT_DISCOUNT_XML_ID"),
 			"TYPE" => "STRING",
-			"DEFAULT" => "={#SENDER_CHAIN_CODE#}",
+			"DEFAULT" => "{#SENDER_CHAIN_CODE#}",
 		),
 		"COUPON_DESCRIPTION" => array(
 			"PARENT" => "REPL_SETT",
 			"NAME" => GetMessage("SBP_PARAMETERS_REPL_SETT_COUPON_DESCRIPTION"),
 			"TYPE" => "STRING",
-			"DEFAULT" => "={#EMAIL_TO#}",
+			"DEFAULT" => "{#EMAIL_TO#}",
 		),
 	),
 );

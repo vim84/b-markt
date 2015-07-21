@@ -1,5 +1,7 @@
 <?
+use Bitrix\Main\Context;
 use Bitrix\Main\Loader;
+use Bitrix\Main\Type\DateTime;
 use Bitrix\Currency\CurrencyTable;
 
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
@@ -34,16 +36,24 @@ $arParams["IBLOCK_ID"] = (int)$arParams["IBLOCK_ID"];
 $arParams["SECTION_ID"] = (int)$arParams["~SECTION_ID"];
 if($arParams["SECTION_ID"] > 0 && $arParams["SECTION_ID"]."" != $arParams["~SECTION_ID"])
 {
-	ShowError(GetMessage("CATALOG_SECTION_NOT_FOUND"));
-	@define("ERROR_404", "Y");
-	if($arParams["SET_STATUS_404"]==="Y")
-		CHTTP::SetStatus("404 Not Found");
+	if (CModule::IncludeModule("iblock"))
+	{
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("CATALOG_SECTION_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
+	}
 	return;
 }
 
 if (!isset($arParams["INCLUDE_SUBSECTIONS"]) || !in_array($arParams["INCLUDE_SUBSECTIONS"], array('Y', 'A', 'N')))
 	$arParams["INCLUDE_SUBSECTIONS"] = 'Y';
 $arParams["SHOW_ALL_WO_SECTION"] = $arParams["SHOW_ALL_WO_SECTION"]==="Y";
+$arParams["SET_LAST_MODIFIED"] = $arParams["SET_LAST_MODIFIED"]==="Y";
+$arParams["USE_MAIN_ELEMENT_SECTION"] = $arParams["USE_MAIN_ELEMENT_SECTION"]==="Y";
 
 if (empty($arParams["ELEMENT_SORT_FIELD"]))
 	$arParams["ELEMENT_SORT_FIELD"] = "sort";
@@ -64,6 +74,17 @@ else
 	$arrFilter = ${$arParams["FILTER_NAME"]};
 	if(!is_array($arrFilter))
 		$arrFilter = array();
+}
+
+if (empty($arParams["PAGER_PARAMS_NAME"]) || !preg_match("/^[A-Za-z_][A-Za-z01-9_]*$/", $arParams["PAGER_PARAMS_NAME"]))
+{
+	$pagerParameters = array();
+}
+else
+{
+	$pagerParameters = $GLOBALS[$arParams["PAGER_PARAMS_NAME"]];
+	if (!is_array($pagerParameters))
+		$pagerParameters = array();
 }
 
 $arParams["SECTION_URL"]=trim($arParams["SECTION_URL"]);
@@ -373,10 +394,11 @@ if (!$successfulAdd)
 	ShowError($strError);
 	return;
 }
+
 /*************************************************************************
 			Work with cache
 *************************************************************************/
-if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()), $arNavigation)))
+if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()), $arNavigation, $pagerParameters)))
 {
 	if(!Loader::includeModule("iblock"))
 	{
@@ -467,6 +489,19 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 		if($arResult)
 			$bSectionFound = true;
 	}
+	elseif(strlen($arParams["SECTION_CODE_PATH"]) > 0)
+	{
+		$sectionId = CIBlockFindTools::GetSectionIDByCodePath($arParams["IBLOCK_ID"], $arParams["SECTION_CODE_PATH"]);
+		if ($sectionId)
+		{
+			$arFilter["ID"]=$sectionId;
+			$rsSection = CIBlockSection::GetList(array(), $arFilter, false, $arSelect);
+			$rsSection->SetUrlTemplates("", $arParams["SECTION_URL"]);
+			$arResult = $rsSection->GetNext();
+			if($arResult)
+				$bSectionFound = true;
+		}
+	}
 	else
 	{
 		//Root section (no section filter)
@@ -480,10 +515,13 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 	if(!$bSectionFound)
 	{
 		$this->AbortResultCache();
-		ShowError(GetMessage("CATALOG_SECTION_NOT_FOUND"));
-		@define("ERROR_404", "Y");
-		if($arParams["SET_STATUS_404"]==="Y")
-			CHTTP::SetStatus("404 Not Found");
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("CATALOG_SECTION_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
 		return;
 	}
 	elseif($arResult["ID"] > 0 && $arParams["ADD_SECTIONS_CHAIN"])
@@ -710,8 +748,15 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 	//EXECUTE
 	$rsElements = CIBlockElement::GetList($arSort, array_merge($arrFilter, $arFilter), false, $arNavParams, $arSelect);
 	$rsElements->SetUrlTemplates($arParams["DETAIL_URL"]);
-	if($arParams["BY_LINK"]!=="Y" && !$arParams["SHOW_ALL_WO_SECTION"])
+	if(
+		$arParams["BY_LINK"]!=="Y"
+		&& !$arParams["SHOW_ALL_WO_SECTION"]
+		&& !$arParams["USE_MAIN_ELEMENT_SECTION"]
+	)
+	{
 		$rsElements->SetSectionContext($arResult);
+	}
+
 	$arResult["ITEMS"] = array();
 	$arMeasureMap = array();
 	$arElementLink = array();
@@ -785,13 +830,48 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 				$arMeasureMap[$arItem['CATALOG_MEASURE']][] = $intKey;
 			}
 		}
+		
+		if ($arParams["SET_LAST_MODIFIED"])
+		{
+			$time = DateTime::createFromUserTime($arItem["TIMESTAMP_X"]);
+			if (
+				!isset($arResult["ITEMS_TIMESTAMP_X"])
+				|| $time->getTimestamp() > $arResult["ITEMS_TIMESTAMP_X"]->getTimestamp()
+			)
+				$arResult["ITEMS_TIMESTAMP_X"] = $time;
+		}
+
 		$arResult["ITEMS"][$intKey] = $arItem;
 		$arResult["ELEMENTS"][$intKey] = $arItem["ID"];
 		$arElementLink[$arItem['ID']] = &$arResult["ITEMS"][$intKey];
 		$intKey++;
 	}
 	$arResult['MODULES'] = $arResultModules;
-	$arResult["NAV_STRING"] = $rsElements->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"], $this);
+
+	$navComponentParameters = array();
+	if ($arParams["PAGER_BASE_LINK_ENABLE"] === "Y")
+	{
+		$pagerBaseLink = trim($arParams["PAGER_BASE_LINK"]);
+		if ($pagerBaseLink === "")
+			$pagerBaseLink = $arResult["SECTION_PAGE_URL"];
+
+		if ($pagerParameters && isset($pagerParameters["BASE_LINK"]))
+		{
+			$pagerBaseLink = $pagerParameters["BASE_LINK"];
+			unset($pagerParameters["BASE_LINK"]);
+		}
+
+		$navComponentParameters["BASE_LINK"] = CHTTP::urlAddParams($pagerBaseLink, $pagerParameters, array("encode"=>true));
+	}
+
+	$arResult["NAV_STRING"] = $rsElements->GetPageNavStringEx(
+		$navComponentObject,
+		$arParams["PAGER_TITLE"],
+		$arParams["PAGER_TEMPLATE"],
+		$arParams["PAGER_SHOW_ALWAYS"],
+		$this,
+		$navComponentParameters
+	);
 	$arResult["NAV_CACHED_DATA"] = null;
 	$arResult["NAV_RESULT"] = $rsElements;
 	if (isset($arItem))
@@ -1145,6 +1225,7 @@ if($this->StartResultCache(false, array($arrFilter, ($arParams["CACHE_GROUPS"]==
 		"PATH",
 		"IBLOCK_SECTION_ID",
 		"IPROPERTY_VALUES",
+		"ITEMS_TIMESTAMP_X",
 	));
 
 	$this->IncludeComponentTemplate();
@@ -1289,6 +1370,11 @@ if ($arParams["ADD_SECTIONS_CHAIN"] && isset($arResult["PATH"]) && is_array($arR
 		else
 			$APPLICATION->AddChainItem($arPath["NAME"], $arPath["~SECTION_PAGE_URL"]);
 	}
+}
+
+if ($arParams["SET_LAST_MODIFIED"] && $arResult["ITEMS_TIMESTAMP_X"])
+{
+	Context::getCurrent()->getResponse()->setLastModified($arResult["ITEMS_TIMESTAMP_X"]);
 }
 
 return $arResult["ID"];

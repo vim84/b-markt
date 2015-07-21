@@ -406,7 +406,7 @@ class CIMChat
 				CIMMessenger::SpeedFileDelete($this->user_id, IM_SPEED_GROUP);
 				if (CModule::IncludeModule("pull"))
 				{
-					CPushManager::DeleteFromQueueBySubTag($this->user_id, 'IM_GROUP');
+					CPushManager::DeleteFromQueueBySubTag($this->user_id, 'IM_MESS');
 					CPullStack::AddByUser($this->user_id, Array(
 						'module_id' => 'im',
 						'command' => 'readMessageChat',
@@ -469,49 +469,73 @@ class CIMChat
 				$ssqlStatus = "";
 			}
 
-			if (!$bTimeZone)
-				CTimeZone::Disable();
-			$strSql ="
-				SELECT
-					M.ID,
-					M.CHAT_ID,
-					M.MESSAGE,
-					".$DB->DatetimeToTimestampFunction('M.DATE_CREATE')." DATE_CREATE,
-					M.AUTHOR_ID,
-					R1.STATUS R1_STATUS
-				FROM b_im_message M
-				INNER JOIN b_im_relation R1 ON M.ID > ".$ssqlLastId." AND M.CHAT_ID = R1.CHAT_ID AND R1.USER_ID != M.AUTHOR_ID
-				WHERE R1.USER_ID = ".$this->user_id." AND R1.MESSAGE_TYPE = '".IM_MESSAGE_GROUP."' ".$ssqlStatus."
-			";
-			if (!$bTimeZone)
-				CTimeZone::Enable();
-			$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+			$arRelations = Array();
+			if (strlen($ssqlStatus) > 0)
+			{
+				$strSql ="
+					SELECT
+						R1.USER_ID,
+						R1.CHAT_ID,
+						R1.LAST_ID
+					FROM
+						b_im_relation R1
+					WHERE
+						R1.USER_ID = ".$this->user_id." AND R1.MESSAGE_TYPE = '".IM_MESSAGE_GROUP."' ".$ssqlStatus."
+				";
+				$dbSubRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+				while ($arRes = $dbSubRes->Fetch())
+				{
+					$arRelations[] = $arRes;
+				}
+			}
 
 			$arMessageId = Array();
 			$arMessageChatId = Array();
 			$arLastMessage = Array();
 			$arMark = Array();
 			$arChat = Array();
-			$CCTP = new CTextParser();
-			$CCTP->MaxStringLen = 200;
-			$CCTP->allow = array("HTML" => "N", "ANCHOR" => $this->bHideLink? "N": "Y", "BIU" => "Y", "IMG" => "N", "QUOTE" => "N", "CODE" => "N", "FONT" => "N", "LIST" => "N", "SMILES" => $this->bHideLink? "N": "Y", "NL2BR" => "Y", "VIDEO" => "N", "TABLE" => "N", "CUT_ANCHOR" => "N", "ALIGN" => "N");
 
 			$arPrepareResult = Array();
 			$arFilteredResult = Array();
 
-			while ($arRes = $dbRes->Fetch())
+			if (!empty($arRelations))
 			{
-				$arPrepareResult[$arRes['CHAT_ID']][$arRes['ID']] = $arRes;
-			}
-			foreach ($arPrepareResult as $chatId => $arRes)
-			{
-				if (count($arPrepareResult[$chatId]) > 100)
+				if (!$bTimeZone)
+					CTimeZone::Disable();
+				$strSql = "
+					SELECT
+						M.ID,
+						M.CHAT_ID,
+						M.MESSAGE,
+						".$DB->DatetimeToTimestampFunction('M.DATE_CREATE')." DATE_CREATE,
+						M.AUTHOR_ID,
+						R1.STATUS R1_STATUS
+					FROM b_im_message M
+					INNER JOIN b_im_relation R1 ON M.ID > ".$ssqlLastId." AND M.CHAT_ID = R1.CHAT_ID AND R1.USER_ID != M.AUTHOR_ID
+					WHERE R1.USER_ID = ".$this->user_id." AND R1.MESSAGE_TYPE = '".IM_MESSAGE_GROUP."' ".$ssqlStatus."
+				";
+				if (!$bTimeZone)
+					CTimeZone::Enable();
+				$dbRes = $DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
+
+				$CCTP = new CTextParser();
+				$CCTP->MaxStringLen = 200;
+				$CCTP->allow = array("HTML" => "N", "ANCHOR" => $this->bHideLink ? "N" : "Y", "BIU" => "Y", "IMG" => "N", "QUOTE" => "N", "CODE" => "N", "FONT" => "N", "LIST" => "N", "SMILES" => $this->bHideLink ? "N" : "Y", "NL2BR" => "Y", "VIDEO" => "N", "TABLE" => "N", "CUT_ANCHOR" => "N", "ALIGN" => "N");
+
+				while ($arRes = $dbRes->Fetch())
 				{
-					$arPrepareResult[$chatId] = array_slice($arRes, -100, 100);
+					$arPrepareResult[$arRes['CHAT_ID']][$arRes['ID']] = $arRes;
 				}
-				$arFilteredResult = array_merge($arFilteredResult, $arPrepareResult[$chatId]);
+				foreach ($arPrepareResult as $chatId => $arRes)
+				{
+					if (count($arPrepareResult[$chatId]) > 100)
+					{
+						$arPrepareResult[$chatId] = array_slice($arRes, -100, 100);
+					}
+					$arFilteredResult = array_merge($arFilteredResult, $arPrepareResult[$chatId]);
+				}
+				unset($arPrepareResult);
 			}
-			unset($arPrepareResult);
 
 			foreach ($arFilteredResult as $arRes)
 			{
@@ -582,8 +606,16 @@ class CIMChat
 				}
 			}
 
-			foreach ($arMark as $chatId => $lastSendId)
-				CIMMessage::SetLastSendId($chatId, $this->user_id, $lastSendId);
+			if (!empty($arMessages))
+			{
+				foreach ($arMark as $chatId => $lastSendId)
+					CIMMessage::SetLastSendId($chatId, $this->user_id, $lastSendId);
+			}
+			else
+			{
+				foreach ($arRelations as $relation)
+					CIMMessage::SetLastId($relation['CHAT_ID'], $relation['USER_ID']);
+			}
 
 			if ($bGroupByChat)
 			{
@@ -835,7 +867,7 @@ class CIMChat
 					$arUsersName[$userId] = htmlspecialcharsback($arUsers[$userId]['name']);
 
 				CIMContactList::SetRecent($chatId, 0, true, $userId);
-				$strSql = "INSERT INTO b_im_relation (CHAT_ID, MESSAGE_TYPE, USER_ID) VALUES (".$chatId.",'".IM_MESSAGE_GROUP."',".$userId.")";
+				$strSql = "INSERT INTO b_im_relation (CHAT_ID, MESSAGE_TYPE, USER_ID, STATUS) VALUES (".$chatId.",'".IM_MESSAGE_GROUP."',".$userId.", ".IM_STATUS_READ.")";
 				$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 				CIMContactList::CleanChatCache($userId);

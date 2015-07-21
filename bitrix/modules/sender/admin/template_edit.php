@@ -103,10 +103,11 @@ if($ID>0)
 if($bVarsFromForm)
 	$DB->InitTableVarsForEdit("b_sender_preset_template", "", "str_");
 
-$templateListHtml = \Bitrix\Sender\Preset\Template::getTemplateListHtml();
-
 $APPLICATION->SetTitle(($ID>0? GetMessage("sender_tmpl_edit_title_edit").$ID : GetMessage("sender_tmpl_edit_title_add")));
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
+
+\CJSCore::Init(array("sender_admin"));
+$templateListHtml = \Bitrix\Sender\Preset\Template::getTemplateListHtml('tabControl_layout');
 
 $aMenu = array(
 	array(
@@ -172,7 +173,7 @@ $tabControl->BeginNextTab();
 		<tr class="hidden-when-show-template-list" <?=(empty($str_CONTENT) ? 'style="display: none;"' : '')?>>
 			<td><?echo GetMessage("sender_tmpl_edit_field_sel_templ")?></td>
 			<td>
-				<span id="TEMPLATE_SELECTED_TITILE"></span> <a class="sender-link-email" href="javascript: void(0);" onclick="ShowTemplateList();"><?echo GetMessage("sender_tmpl_edit_field_sel_templ_another")?></a>
+				<span class="sender-template-message-caption-container"></span> <a class="sender-link-email sender-template-message-caption-container-btn" href="javascript: void(0);"><?echo GetMessage("sender_tmpl_edit_field_sel_templ_another")?></a>
 			</td>
 		</tr>
 	<?endif;?>
@@ -180,7 +181,12 @@ $tabControl->BeginNextTab();
 	<tr class="adm-detail-required-field hidden-when-show-template-list" <?=(empty($str_CONTENT) ? 'style="display: none;"' : '')?>>
 		<td colspan="2" align="left">
 			<b><?=GetMessage("sender_tmpl_edit_field_message")?></b>
-			<?=\Bitrix\Sender\TemplateTable::initEditor(array('FIELD_VALUE' => $str_CONTENT, 'HAVE_USER_ACCESS' => $isUserHavePhpAccess, 'SHOW_SAVE_TEMPLATE' => false));?>
+			<?=\Bitrix\Sender\TemplateTable::initEditor(array(
+				'FIELD_NAME' => 'MESSAGE',
+				'FIELD_VALUE' => $str_CONTENT,
+				'HAVE_USER_ACCESS' => $isUserHavePhpAccess,
+				'SHOW_SAVE_TEMPLATE' => false
+			));?>
 			<input type="hidden" name="IS_TEMPLATE_LIST_SHOWN" id="IS_TEMPLATE_LIST_SHOWN" value="<?=(empty($str_CONTENT) ?"Y":"N")?>">
 		</td>
 	</tr>
@@ -204,20 +210,44 @@ $tabControl->End();
 ?>
 	<script>
 		BX.message({"SENDER_SHOW_TEMPLATE_LIST" : "<?=GetMessage('SENDER_SHOW_TEMPLATE_LIST')?>"});
-		function ShowTemplateList()
+		function ShowTemplateListL(bShow)
 		{
-			if(confirm(BX.message("SENDER_SHOW_TEMPLATE_LIST")))
+			var i, displayShow, displayHide, listShown;
+			if(bShow)
 			{
-				ChangeTemplateList('BASE');
-				var tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'hidden-when-show-template-list'}, true);
-				for (i in tmplTypeContList)
-					tmplTypeContList[i].style.display = 'none';
-
-				tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'show-when-show-template-list'}, true);
-				for (i in tmplTypeContList)
-					tmplTypeContList[i].style.display = 'table-row';
+				displayShow = 'none';
+				displayHide = 'table-row';
+				listShown = 'Y';
 			}
+			else
+			{
+				displayShow = '';
+				displayHide = 'none';
+				listShown = 'N';
+			}
+
+			var tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'hidden-when-show-template-list'}, true);
+			for (i in tmplTypeContList)
+				tmplTypeContList[i].style.display = displayShow;
+
+			tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'show-when-show-template-list'}, true);
+			for (i in tmplTypeContList)
+				tmplTypeContList[i].style.display = displayHide;
+
+			BX('IS_TEMPLATE_LIST_SHOWN').value = listShown;
 		}
+
+		var letterManager = new SenderLetterManager;
+		letterManager.onSetTemplate(function()
+		{
+			ShowTemplateListL(false);
+		});
+
+		letterManager.onShowTemplateList(function()
+		{
+			ShowTemplateListL(true);
+		});
+
 	</script>
 <?
 $tabControl->ShowWarnings("post_form", $message);

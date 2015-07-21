@@ -31,7 +31,7 @@ if(empty($step))
 	$step='mailing';
 if(empty($ACTIVE) || $ACTIVE!='Y')
 	$ACTIVE = 'N';
-
+$title_postfix = '';
 
 if($step=='mailing')
 {
@@ -43,7 +43,6 @@ if($step=='mailing')
 		{
 			$arFields = Array(
 				"ACTIVE"	=> ($ACTIVE <> "Y"? "N":"Y"),
-				"TRACK_CLICK"	=> ($TRACK_CLICK <> "Y"? "N":"Y"),
 				"SORT"		=> $SORT,
 				"IS_PUBLIC"	=> ($IS_PUBLIC <> "Y"? "N":"Y"),
 				"NAME"		=> $NAME,
@@ -78,7 +77,7 @@ if($step=='mailing')
 
 			$isPostedFormProcessed = true;
 
-			LocalRedirect('sender_mailing_wizard.php?step='.$step.'&MAILING_ID='.$MAILING_ID."&lang=".LANGUAGE_ID);
+			LocalRedirect('sender_mailing_wizard.php?IS_TRIGGER=N&step='.$step.'&MAILING_ID='.$MAILING_ID."&lang=".LANGUAGE_ID);
 		}
 		else
 		{
@@ -94,6 +93,7 @@ if($step=='mailing')
 	$arMailingList = array();
 	$groupDb = \Bitrix\Sender\MailingTable::getList(array(
 		'select' => array('NAME', 'ID'),
+		'filter' => array('IS_TRIGGER' => 'N'),
 		'order' => array('NAME' => 'ASC'),
 	));
 	while($arMailing = $groupDb->fetch())
@@ -193,7 +193,7 @@ if($step=='group')
 			}
 			else
 			{
-				LocalRedirect('sender_mailing_wizard.php?step='.$step.'&MAILING_ID='.$MAILING_ID."&lang=".LANGUAGE_ID);
+				LocalRedirect('sender_mailing_wizard.php?IS_TRIGGER=N&step='.$step.'&MAILING_ID='.$MAILING_ID."&lang=".LANGUAGE_ID);
 			}
 		}
 		else
@@ -235,7 +235,7 @@ if($step=='group')
 		$arAvailableConnectors[$connector->getId()] = array(
 			'ID' => $connector->getId(),
 			'NAME' => $connector->getName(),
-			'FORM' => $connector->getForm()
+			'FORM' => $connector->getForm().'<input type="hidden" name="'.$connector->getFieldName('bx_aux_hidden_field').'" value="0">'
 		);
 
 		if( array_key_exists($connector->getModuleId(), $arConnectorSettings) )
@@ -251,7 +251,7 @@ if($step=='group')
 					$arExistedConnectors[] = array(
 						'ID' => $connector->getId(),
 						'NAME' => $connector->getName(),
-						'FORM' => str_replace('%CONNECTOR_NUM%', $connectorIdCount, $connector->getForm()),
+						'FORM' => str_replace('%CONNECTOR_NUM%', $connectorIdCount, $connector->getForm().'<input type="hidden" name="'.$connector->getFieldName('bx_aux_hidden_field').'" value="0">'),
 						'COUNT' => $connector->getDataCount()
 					);
 
@@ -315,7 +315,7 @@ if($step=='mailing_group')
 		{
 			$step = 'chain';
 			$isPostedFormProcessed = true;
-			LocalRedirect('sender_mailing_wizard.php?step='.$step.'&MAILING_ID='.$MAILING_ID."&lang=".LANGUAGE_ID);
+			LocalRedirect('sender_mailing_wizard.php?IS_TRIGGER=N&step='.$step.'&MAILING_ID='.$MAILING_ID."&lang=".LANGUAGE_ID);
 		}
 	}
 	else
@@ -443,6 +443,7 @@ if($step=='chain')
 				}
 
 				//Brandnew
+				$arFiles = array();
 				if(is_array($_FILES["NEW_FILE"]))
 				{
 					foreach($_FILES["NEW_FILE"] as $attribute=>$files)
@@ -501,7 +502,7 @@ if($step=='chain')
 
 			$step = 'chain_send_type';
 			$isPostedFormProcessed = true;
-			LocalRedirect('sender_mailing_wizard.php?step='.$step.'&MAILING_ID='.$MAILING_ID."&MAILING_CHAIN_ID=".$MAILING_CHAIN_ID."&lang=".LANGUAGE_ID);
+			LocalRedirect('sender_mailing_wizard.php?IS_TRIGGER=N&step='.$step.'&MAILING_ID='.$MAILING_ID."&MAILING_CHAIN_ID=".$MAILING_CHAIN_ID."&lang=".LANGUAGE_ID);
 		}
 		else
 		{
@@ -527,7 +528,7 @@ if($step=='chain')
 		}
 	}
 
-	$templateListHtml = \Bitrix\Sender\Preset\Template::getTemplateListHtml();
+	$templateListHtml = \Bitrix\Sender\Preset\Template::getTemplateListHtml('tabControl_layout');
 }
 
 if($step=='chain_send_type')
@@ -631,16 +632,222 @@ if($step=='chain_send_type')
 	}
 }
 
+if($step=='trig_mailing')
+{
+	IncludeModuleLangFile(dirname(__FILE__)."/mailing_edit.php");
+
+	if($REQUEST_METHOD == "POST" && !$isPostedFormProcessed && check_bitrix_sessid())
+	{
+		$arError = array();
+
+		$arFields = array(
+			'IS_TRIGGER' => 'Y',
+			//"ACTIVE"	=> ($ACTIVE <> "Y"? "N":"Y"),
+			"SORT"		=> $SORT,
+			"IS_PUBLIC"	=> "N",
+			"NAME"		=> $NAME,
+			"DESCRIPTION"	=> $DESCRIPTION,
+			"SITE_ID" => $SITE_ID,
+			"EMAIL_FROM" => $EMAIL_FROM,
+		);
+
+
+		if(empty($EMAIL_FROM))
+			$arError[] = GetMessage("sender_chain_edit_error_email_from");
+
+		$chainList = array();
+		if(empty($arError) && !empty($MAILING_TEMPLATE_CODE))
+		{
+			$presetMailingList = \Bitrix\Sender\MailingTable::getPresetMailingList(array('CODE' => $MAILING_TEMPLATE_CODE));
+			$presetMailing = current($presetMailingList);
+			if(!empty($presetMailing))
+			{
+				$arFields['TRIGGER_FIELDS'] = array(
+					'START' => $presetMailing['TRIGGER']['START']['ENDPOINT'],
+					'END' => $presetMailing['TRIGGER']['END']['ENDPOINT'],
+				);
+
+				foreach($presetMailing['CHAIN'] as $chain)
+				{
+					$chain['EMAIL_FROM'] = $EMAIL_FROM;
+					$chain['CREATED_BY'] = $USER->GetID();
+					$chainList[] = $chain;
+				}
+
+				$result = new \Bitrix\Main\Entity\Result;
+				\Bitrix\Sender\MailingTable::checkFieldsChain($result, null, $chainList);
+				if(!$result->isSuccess())
+					$arError = array_merge($arError, $result->getErrorMessages());
+			}
+			else
+			{
+				$arError[] = GetMessage("sender_chain_edit_error_tmpl_no_found").' "' . $MAILING_TEMPLATE_CODE . '".';
+			}
+		}
+
+		if(empty($arError))
+		{
+			if($MAILING_ID > 0)
+			{
+				$updateDb = \Bitrix\Sender\MailingTable::update($MAILING_ID, $arFields);
+				if(!$updateDb->isSuccess())
+					$arError = array_merge($arError, $updateDb->getErrorMessages());
+			}
+			else
+			{
+				$arFields['ACTIVE'] = 'N';
+				$addDb = \Bitrix\Sender\MailingTable::add($arFields);
+				if($addDb->isSuccess())
+				{
+					$MAILING_ID = $addDb->getId();
+					$resultDb = \Bitrix\Sender\MailingTable::updateChain($MAILING_ID, $chainList);
+					$resultDb->isSuccess();
+				}
+				else
+					$arError = array_merge($arError, $addDb->getErrorMessages());
+			}
+		}
+
+		if(empty($arError))
+		{
+			$isPostedFormProcessed = true;
+			{
+				$step = 'trig_mailing_group';
+				LocalRedirect('sender_mailing_wizard.php?IS_TRIGGER=Y&step='.$step.'&MAILING_ID='.$MAILING_ID."&lang=".LANGUAGE_ID);
+			}
+		}
+		else
+		{
+
+		}
+
+		$DB->InitTableVarsForEdit("b_sender_mailing", "", "str_");
+	}
+	else
+	{
+		ClearVars();
+		$str_SORT = 100;
+		$rubric = new CDBResult(\Bitrix\Sender\MailingTable::getById($MAILING_ID));
+		if(!$rubric->ExtractFields("str_"))
+		{
+			$DB->InitTableVarsForEdit("b_sender_mailing", "", "str_");
+		}
+	}
+
+	if($MAILING_ID > 0)
+	{
+		$title_postfix = '_exist';
+	}
+
+	$presetMailingList = \Bitrix\Sender\MailingTable::getPresetMailingList();
+}
+
+
+if($step=='trig_mailing_group')
+{
+	IncludeModuleLangFile(dirname(__FILE__)."/mailing_edit.php");
+
+	$triggerList = \Bitrix\Sender\TriggerManager::getList();
+	$triggerListForJS = array();
+	foreach($triggerList as $trigger)
+	{
+		foreach(array('START', 'END') as $type)
+		{
+			if($type == 'END' && !$trigger->canBeTarget())
+			{
+				continue;
+			}
+
+			$triggerListForJS[$type][$trigger->getId()] = \Bitrix\Sender\TriggerSettings::getArrayFromTrigger($trigger);
+			$triggerListForJS[$type][$trigger->getId()]['ID'] = $trigger->getId();
+			$triggerListForJS[$type][$trigger->getId()]['NAME'] = $trigger->getName();
+
+			$trigger->setFieldFormName('post_form');
+			$trigger->setFieldPrefix('ENDPOINT['.$type.'][FIELDS]');
+			$triggerListForJS[$type][$trigger->getId()]['FORM'] = $trigger->getForm();
+		}
+	}
+
+	$triggerListExists = array('START' => null, 'END' => null);
+	$mailing = \Bitrix\Sender\MailingTable::getRowById($MAILING_ID);
+	if(!empty($mailing['TRIGGER_FIELDS']))
+	{
+		foreach($triggerListExists as $type => $value)
+		{
+			if(!is_array($mailing['TRIGGER_FIELDS'][$type])) continue;
+			$trigger = \Bitrix\Sender\TriggerManager::getOnce($mailing['TRIGGER_FIELDS'][$type]);
+			if ($trigger)
+			{
+				$triggerListExists[$type] = $mailing['TRIGGER_FIELDS'][$type] + $triggerListForJS[$type][$trigger->getId()];
+
+				$trigger->setFieldFormName('post_form');
+				$trigger->setFieldPrefix('ENDPOINT['.$type.'][FIELDS]');
+				$trigger->setFields($triggerListExists[$type]['FIELDS']);
+				$triggerListExists[$type]['FORM'] = $trigger->getForm();
+			}
+		}
+	}
+
+	if($REQUEST_METHOD == "POST" && !$isPostedFormProcessed && check_bitrix_sessid())
+	{
+		$arError = array();
+
+		$triggerListExists = array('START' => null, 'END' => null);
+		foreach($triggerListExists as $type => $value)
+		{
+			$trigger = \Bitrix\Sender\TriggerManager::getOnce($ENDPOINT[$type]);
+			if($trigger)
+			{
+				$triggerListExists[$type] = $ENDPOINT[$type] + \Bitrix\Sender\TriggerSettings::getArrayFromTrigger($trigger);
+			}
+		}
+
+		$updateDb = \Bitrix\Sender\MailingTable::update($MAILING_ID, array('TRIGGER_FIELDS' => $triggerListExists));
+		if(!$updateDb->isSuccess())
+			$arError = array_merge($arError, $updateDb->getErrorMessages());
+
+		if(empty($arError))
+		{
+			$isPostedFormProcessed = true;
+			LocalRedirect('/bitrix/admin/sender_mailing_trig_edit.php?ID=' . $MAILING_ID . "&lang=".LANGUAGE_ID);
+		}
+
+	}
+
+}
+
 if(!empty($arError))
 	$message = new CAdminMessage(implode("<br>", $arError));
 
 \CJSCore::Init(array("sender_admin"));
-$title = GetMessage("sender_wizard_step_".$step."_title");
+$title = GetMessage("sender_wizard_step_".$step.$title_postfix."_title");
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 ?>
 <div class="adm-email-master-container">
 	<div class="adm-white-container">
 		<div class="adm-email-master" id="sender_wizard_status">
+			<?if($_REQUEST['IS_TRIGGER'] == 'Y'):?>
+				<div class="adm-email-master-step adm-email-master-step-addmail sender-step-trig_mailing sender-step-passed-trig_mailing_group">
+					<div class="adm-email-master-step-divider"></div>
+					<div class="adm-email-master-step-icon"></div>
+					<div class="adm-email-master-step-title"><?=GetMessage("sender_wizard_status_trig_mailing")?></div>
+				</div>
+				<div class="adm-email-master-step adm-email-master-step-timingmail sender-step-trig_mailing_group">
+					<div class="adm-email-master-step-divider"></div>
+					<div class="adm-email-master-step-icon"></div>
+					<div class="adm-email-master-step-title"><?=GetMessage("sender_wizard_status_trig_mailing_group")?></div>
+				</div>
+				<div class="adm-email-master-step adm-email-master-step-addissue sender-step-chain">
+					<div class="adm-email-master-step-divider"></div>
+					<div class="adm-email-master-step-icon"></div>
+					<div class="adm-email-master-step-title"><?=GetMessage("sender_wizard_status_trig_chain")?></div>
+				</div>
+				<div class="adm-email-master-step adm-email-master-step-done">
+					<div class="adm-email-master-step-divider"></div>
+					<div class="adm-email-master-step-icon"></div>
+					<div class="adm-email-master-step-title"><?=GetMessage("sender_wizard_status_final")?></div>
+				</div>
+			<?else:?>
 			<div class="adm-email-master-step adm-email-master-step-addmail sender-step-mailing sender-step-passed-mailing_group sender-step-passed-group sender-step-passed-chain sender-step-passed-chain_send_type">
 				<div class="adm-email-master-step-divider"></div>
 				<div class="adm-email-master-step-icon"></div>
@@ -666,6 +873,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_aft
 				<div class="adm-email-master-step-icon"></div>
 				<div class="adm-email-master-step-title"><?=GetMessage("sender_wizard_status_final")?></div>
 			</div>
+			<?endif;?>
 		</div>
 	</div>
 
@@ -693,7 +901,7 @@ if(!empty($message))
 	<?else:?>
 	<h2 class="adm-white-container-title"><?=htmlspecialcharsbx($title)?></h2>
 	<?endif;?>
-	<form name="post_form" method="post" action="<?=$APPLICATION->GetCurPage()?>?lang=<?=LANGUAGE_ID?>" enctype="multipart/form-data">
+	<form name="post_form" method="post" action="<?=$APPLICATION->GetCurPage()?>?IS_TRIGGER=<?=($_REQUEST['IS_TRIGGER'] == 'Y' ? 'Y' : 'N')?>&lang=<?=LANGUAGE_ID?>" enctype="multipart/form-data">
 		<input type="hidden" id="step" name="step" value="<?=htmlspecialcharsbx($step)?>">
 		<input type="hidden" name="MAILING_ID" value="<?=$MAILING_ID?>">
 		<input type="hidden" name="MAILING_CHAIN_ID" value="<?=$MAILING_CHAIN_ID?>">
@@ -709,7 +917,496 @@ if(!empty($message))
 		</script>
 		<div>
 	<?
-	if($step=='mailing_group'):
+	if($step=='trig_mailing'):
+		$presetTypeList = array();
+		$presetMailingListForJS = array();
+		foreach($presetMailingList as $preset)
+		{
+			$preset['TYPE_ID'] = md5($preset['TYPE']);
+			$presetTypeList[$preset['TYPE_ID']] = $preset['TYPE'];
+			$presetMailingListForJS[$preset['CODE']] = $preset;
+		}
+
+		$presetTypeList = array_unique($presetTypeList);
+
+		$isShowPresetList = ($MAILING_ID > 0 || !empty($str_NAME) || empty($presetTypeList)) ? false : true;
+	?>
+		<script>
+			function SetSelectedPresetMailingType(obj, typeId)
+			{
+				var i, childList, easing, childEff;
+
+				childList = BX.findChildren(BX('sender_wizard_trig_mailing_tmpl'), {'className': 'sender-wizard-trig-mailing-tmpl-list-item'}, true);
+				for(i in childList)
+				{
+					if(!childList[i]) continue;
+					child = childList[i];
+
+					if(!typeId || BX.hasClass(child, typeId))
+					{
+						childEff = child;
+						easing = new BX.easing({
+							duration : 300,
+							start : { height : 0, opacity : 50 },
+							finish : { height : 100, opacity: 100 },
+							transition : BX.easing.transitions.quart,
+							step : function(state){
+								childEff.style.opacity = state.opacity/100;
+								childEff.style.display = 'block';
+							},
+							complete : function() {
+							}
+						});
+						easing.animate();
+					}
+					else
+					{
+						child.style.display = 'none';
+					}
+
+				}
+
+				childList = BX.findChildren(BX('sender_wizard_trig_mailing_tmpl'), {'className': 'sender-template-type-selector-button'}, true);
+				for(i in childList)
+				{
+					if(!childList[i]) continue;
+					child = childList[i];
+
+					if(BX.hasClass(child, 'sender-template-type-selector-button-selected'))
+						BX.removeClass(child, 'sender-template-type-selector-button-selected');
+				}
+
+				if(obj === null)
+					obj = BX.findChild(BX('sender_wizard_trig_mailing_tmpl'), {'className': 'sender-template-type-selector-button'}, true);
+
+				if(!BX.hasClass(obj, 'sender-template-type-selector-button-selected'))
+					BX.addClass(obj, 'sender-template-type-selector-button-selected');
+			}
+
+			function SetSelectedPresetMailing(code)
+			{
+				ShowButtonNext(true);
+				BX('sender_wizard_trig_mailing_tmpl').style.display = 'none';
+				BX('sender_wizard_trig_mailing').style.display = 'block';
+				if(code)
+				{
+					BX('MAILING_TEMPLATE_CODE').value = code;
+					BX('MAILING_TEMPLATE_NAME').innerHTML = presetMailingList[code].NAME;
+					BX('MAILING_TEMPLATE_NAME').innerHTML = presetMailingList[code].NAME;
+					BX('MAILING_NAME').value = presetMailingList[code].NAME;
+					BX('MAILING_DESCRIPTION').value = presetMailingList[code].DESC_USER;
+				}
+				else
+				{
+					BX('MAILING_TEMPLATE_CODE').value = '';
+					BX('MAILING_TEMPLATE_NAME').innerHTML = BX.message('sender_mailing_edit_field_preset_man');
+					BX('MAILING_NAME').value = '';
+					BX('MAILING_DESCRIPTION').value = '';
+				}
+			}
+
+			function ShowPresetMailingList()
+			{
+				BX('sender_wizard_trig_mailing_tmpl').style.display = 'block';
+				BX('sender_wizard_trig_mailing').style.display = 'none';
+				ShowButtonNext(false);
+			}
+			function ShowButtonNext(show)
+			{
+				if(show)
+					BX('sender_wizard_btn_cont').style.display = 'block';
+				else
+					BX('sender_wizard_btn_cont').style.display = 'none';
+			}
+
+			var presetMailingList = <?=CUtil::PhpToJSObject($presetMailingListForJS);?>;
+			BX.message({"sender_mailing_edit_field_preset_man" : "<?=GetMessage('sender_mailing_edit_field_preset_man')?>"});
+
+			<?if($isShowPresetList):?>
+				BX.ready(function(){
+					ShowButtonNext(false);
+				});
+			<?endif?>
+		</script>
+
+		<div id="sender_wizard_trig_mailing_tmpl" <?=(!$isShowPresetList ? 'style="display: none;"' : '')?>>
+			<p class="adm-detail-content-item-block-title"><?=GetMessage("sender_wizard_step_trig_template_title_sub");?></p>
+			<table>
+				<tr>
+					<td colspan="2" style="vertical-align: top;">
+						<div><h2><?=GetMessage("sender_mailing_edit_tmpl_add_manual")?></h2></div>
+						<div style="border-bottom: 1px solid rgb(224, 224, 224); padding: 0px 20px 25px 0px;">
+							<p>
+								<?=GetMessage("sender_mailing_edit_tmpl_add_manual_desc")?>
+							</p>
+							<div>
+								<a class="adm-btn adm-btn-save" href="javascript: SetSelectedPresetMailing('');">
+									<?=GetMessage("sender_mailing_edit_tmpl_btn_add")?>
+								</a>
+							</div>
+						</div>
+
+						<br>
+						<div><h2><?=GetMessage("sender_mailing_edit_tmpl_add_preset")?></div>
+						<br>
+					</td>
+				</tr>
+				<tr>
+					<td style="vertical-align: top;">
+						<?foreach($presetTypeList as $presetTypeId => $presetTypeName):?>
+							<div class="sender-template-type-selector">
+								<div class="sender-template-type-selector-title">
+									<?=htmlspecialcharsbx($presetTypeName)?>
+								</div>
+
+								<?foreach($presetMailingListForJS as $presetCode => $preset):
+									if($preset['TYPE_ID'] != $presetTypeId) continue;
+									?>
+									<div class="sender-template-type-selector-button" onclick="SetSelectedPresetMailingType(this, '<?=htmlspecialcharsbx($presetCode)?>')">
+										<span><?=htmlspecialcharsbx($preset['NAME'])?></span>
+									</div>
+								<?endforeach;?>
+							</div>
+						<?endforeach;?>
+					</td>
+
+					<td id="sender_wizard_trig_mailing_tmpl_list" style="width: 100%;vertical-align: top;">
+						<?
+						$firstPresetMailingCode = '';
+						foreach($presetMailingListForJS as $presetCode => $preset):
+							if(!$firstPresetMailingCode)
+							{
+								$firstPresetMailingCode = $presetCode;
+							}
+							?>
+							<div class="sender-wizard-trig-mailing-tmpl-list-item <?=htmlspecialcharsbx($presetCode)?>" style="display: none;">
+								<div class="sender-wizard-trig-mailing-tmpl-list-item-inner">
+									<div><h2><?=htmlspecialcharsbx($preset['NAME'])?></h2></div>
+									<div>
+										<div><b><?=GetMessage("sender_mailing_edit_tmpl_add_desc")?></b>:</div>
+										<br><?=htmlspecialcharsbx($preset['DESC'])?>
+									</div>
+									<div>
+										<br>
+										<a class="adm-btn adm-btn-grey" href="javascript: SetSelectedPresetMailing('<?=htmlspecialcharsbx($preset['CODE'])?>');"><?=GetMessage("sender_mailing_edit_tmpl_btn_sel")?></a>
+									</div>
+								</div>
+							</div>
+						<?endforeach;?>
+						<script>
+							SetSelectedPresetMailingType(null ,'<?=htmlspecialcharsbx($firstPresetMailingCode)?>');
+						</script>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div id="sender_wizard_trig_mailing" <?=($isShowPresetList ? 'style="display: none;"' : '')?>>
+			<p class="adm-detail-content-item-block-title"><?=GetMessage("sender_wizard_step_mailing_title_sub");?></p>
+			<table class="adm-detail-content-table edit-table">
+				<tr <?=(!$isShowPresetList ? 'style="display: none;"' : '')?>>
+					<td width="40%" class="adm-detail-valign-top"><?=GetMessage("sender_mailing_edit_field_preset")?>:</td>
+					<td width="60%" style="padding-top: 11px;">
+						<span id="MAILING_TEMPLATE_NAME"><?=GetMessage("sender_mailing_edit_field_preset_man")?></span> <a class="sender-link-email" href="javascript: ShowPresetMailingList();"><?echo GetMessage("sender_mailing_edit_btn_show_preset")?></a>
+						<input type="hidden" id="MAILING_TEMPLATE_CODE" name="MAILING_TEMPLATE_CODE" value="<?=htmlspecialcharsbx($MAILING_TEMPLATE_CODE)?>">
+					</td>
+				</tr>
+				<tr>
+					<td><?echo GetMessage("sender_mailing_edit_field_site")?></td>
+					<td><?echo CLang::SelectBox("SITE_ID", $str_SITE_ID);?></td>
+				</tr>
+				<tr class="adm-detail-required-field">
+					<td><?echo GetMessage("sender_mailing_edit_field_name")?>
+						<br/>
+						<span class="adm-fn"><?=GetMessage('sender_mailing_edit_field_name_desc')?></span>
+					</td>
+					<td><input type="text" id="MAILING_NAME" name="NAME" value="<?echo $str_NAME;?>" size="45" maxlength="100"></td>
+				</tr>
+				<tr class="adm-detail-required-field">
+					<td><?echo GetMessage("sender_mailing_edit_field_sort")?></td>
+					<td><input type="text" name="SORT" value="<?echo $str_SORT;?>" size="6"></td>
+				</tr>
+				<tr>
+					<td class="adm-detail-valign-top">
+						<?echo GetMessage("sender_mailing_edit_field_desc")?>
+						<br/>
+						<span class="adm-fn"><?=GetMessage('sender_mailing_edit_field_desc_desc')?></span>
+					</td>
+					<td><textarea class="typearea" id="MAILING_DESCRIPTION" name="DESCRIPTION" cols="45" rows="5" wrap="VIRTUAL" style="width:100%"><?echo $str_DESCRIPTION; ?></textarea></td>
+				</tr>
+				<tr class="adm-detail-required-field">
+					<td>
+						<?echo GetMessage("sender_chain_edit_field_email_from")?>
+						<br/>
+						<span class="adm-fn"><?=GetMessage('sender_chain_edit_field_email_from_desc')?></span>
+					</td>
+					<td>
+						<input type="text" id="EMAIL_FROM" name="EMAIL_FROM" value="<?=$str_EMAIL_FROM?>">
+					</td>
+				</tr>
+				<tr>
+					<td>&nbsp;</td>
+					<td>
+						<?
+						$arEmailFromList = \Bitrix\Sender\MailingChainTable::getEmailFromList();
+						?>
+						<?echo GetMessage("sender_mailing_edit_field_email_from_last")?>
+						<?foreach($arEmailFromList as $email):?>
+						<a class="sender-link-email" onclick="SetAddressToControl('EMAIL_FROM', '<?=CUtil::AddSlashes(htmlspecialcharsbx($email))?>')">
+							<?=htmlspecialcharsbx($email)?>
+							</a><?=(end($arEmailFromList)==$email ? '' : ',')?>
+						<?endforeach?>
+					</td>
+				</tr>
+
+			</table>
+		</div>
+
+		<br><br><br><br>
+	<?
+	elseif($step=='trig_mailing_group'):
+		?>
+		<script>
+			function SetTrigger(bEnd, id)
+			{
+				var fieldName = 'START';
+				if(bEnd)
+					fieldName = 'END';
+
+				var moduleId = BX('ENDPOINT_' + fieldName + '_MODULE_ID');
+				var code = BX('ENDPOINT_' + fieldName + '_CODE');
+				var form = BX('ENDPOINT_' + fieldName + '_FORM');
+				var isClosed = BX('ENDPOINT_' + fieldName + '_IS_CLOSED_TRIGGER');
+				var closedTime = BX('ENDPOINT_' + fieldName + '_CLOSED_TRIGGER_TIME');
+				var runForOldData = BX('ENDPOINT_' + fieldName + '_RUN_FOR_OLD_DATA_FORM');
+				var settingsButton = BX('ENDPOINT_' + fieldName + '_BUTTON');
+				var closedForm = BX('ENDPOINT_' + fieldName + '_CLOSED_FORM');
+				var settingsForm = BX('ENDPOINT_' + fieldName + '_SETTINGS');
+
+				if(id && triggerList[fieldName][id])
+				{
+					moduleId.value = triggerList[fieldName][id].MODULE_ID;
+					code.value = triggerList[fieldName][id].CODE;
+					form.innerHTML = triggerList[fieldName][id].FORM;
+					isClosed.value = triggerList[fieldName][id].IS_CLOSED_TRIGGER;
+					closedTime.value = triggerList[fieldName][id].CLOSED_TRIGGER_TIME;
+					canRunForOldData = triggerList[fieldName][id].CAN_RUN_FOR_OLD_DATA;
+
+					if(isClosed.value == 'Y')
+						closedForm.style.display = '';
+					else
+						closedForm.style.display = 'none';
+
+					if(isClosed.value == 'Y' || form.innerHTML.length > 0)
+						settingsForm.style.display = '';
+					else
+						settingsForm.style.display = 'none';
+
+					if(runForOldData)
+					{
+						if(canRunForOldData == 'Y')
+							runForOldData.style.display = '';
+						else
+							runForOldData.style.display = 'none';
+					}
+				}
+				else
+				{
+					moduleId.value = '';
+					code.value = '';
+					form.innerHTML = '';
+					isClosed.value = 'N';
+					//closedTime.value = '';
+
+					//settingsButton.style.display = 'none';
+					closedForm.style.display = 'none';
+					settingsForm.style.display = 'none';
+				}
+			}
+
+			function ToggleTriggerForm(id)
+			{
+				var item = BX(id);
+				if(item.style.display == 'none')
+					item.style.display = 'block';
+				else
+					item.style.display = 'none';
+			}
+
+			function ResetFieldWasRunForOldData()
+			{
+				var stateField = BX('ENDPOINT_START_WAS_RUN_FOR_OLD_DATA');
+				if(stateField)
+					stateField.value = 'N';
+
+				var stateForm = BX('ENDPOINT_START_RUN_FOR_OLD_DATA_RESET');
+				if(stateForm)
+					stateForm.style.display = 'none';
+			}
+
+			function ShowPersonalizeDescDialog(obj)
+			{
+				var popupWindow = BX.PopupWindowManager.create(
+					'sender-letter-container-time-dialog',
+					obj,
+					{
+						'darkMode': false,
+						'closeIcon': true,
+						'content': '<div style=\'padding: 10px; margin-right: 30px;\'><?=CUtil::AddSlashes(str_replace("\n", "<br>", GetMessage('sender_mailing_edit_field_trig_old_data_desc')))?></div>'
+					}
+				);
+				if(popupWindow)
+				{
+					popupWindow.setBindElement(obj);
+					popupWindow.show();
+				}
+			}
+
+			var triggerList = <?=CUtil::PhpToJSObject($triggerListForJS);?>;
+		</script>
+		<table class="adm-detail-content-table edit-table">
+			<tr>
+				<td colspan="2">
+					<div class="sender-mailing-group-container sender-mailing-group-add">
+						<span class="sender-mailing-group-container-title"><span><?=GetMessage('sender_mailing_edit_field_trig_start')?></span></span>
+						<span class="adm-white-container-p"><span><?=GetMessage('sender_mailing_edit_field_trig_start_caption')?></span></span>
+					</div>
+
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2">
+					<table class="sender-mailing-group">
+						<tr>
+							<td><b><?=GetMessage('sender_mailing_edit_field_trig_select')?></b> </td>
+							<td>
+								<select id="EVENT_START" name="EVENT_START" onchange="SetTrigger(false, this.value);">
+									<?foreach($triggerListForJS['START'] as $triggerId => $triggerParams):?>
+										<option
+											value="<?=htmlspecialcharsbx($triggerId)?>"
+											<?=($triggerListExists['START']['ID'] == $triggerId ? 'selected' : '')?>
+											><?=htmlspecialcharsbx($triggerParams['NAME'])?></option>
+									<?endforeach;?>
+								</select>
+								<input type="hidden" id="ENDPOINT_START_MODULE_ID" name="ENDPOINT[START][MODULE_ID]" value="<?=htmlspecialcharsbx($triggerListExists['START']['MODULE_ID'])?>">
+								<input type="hidden" id="ENDPOINT_START_CODE" name="ENDPOINT[START][CODE]" value="<?=htmlspecialcharsbx($triggerListExists['START']['CODE'])?>">
+								<input type="hidden" id="ENDPOINT_START_IS_CLOSED_TRIGGER" name="ENDPOINT[START][IS_CLOSED_TRIGGER]" value="<?=htmlspecialcharsbx($triggerListExists['START']['IS_CLOSED_TRIGGER'])?>">
+								<input type="hidden" id="ENDPOINT_START_WAS_RUN_FOR_OLD_DATA" name="ENDPOINT[START][WAS_RUN_FOR_OLD_DATA]" value="<?=($triggerListExists['START']['WAS_RUN_FOR_OLD_DATA']=='Y' ? 'Y' : 'N')?>">
+							</td>
+						</tr>
+						<tr>
+							<td></td>
+							<td>
+								<div id="ENDPOINT_START_SETTINGS" class="sender-mailing-container" style="<?=((!empty($triggerListExists['START']['FORM']) || $triggerListExists['START']['IS_CLOSED_TRIGGER'] == 'Y') ? '' : 'display: none;')?>">
+									<div id="ENDPOINT_START_CLOSED_FORM" style="<?=($triggerListExists['START']['IS_CLOSED_TRIGGER'] == 'Y' ? '' : 'display:none;')?>">
+										<?=GetMessage('sender_mailing_edit_field_trig_select_close_time')?>
+										<select id="ENDPOINT_START_CLOSED_TRIGGER_TIME" name="ENDPOINT[START][CLOSED_TRIGGER_TIME]">
+											<?
+											$timesOfDayHours = array('00', '30');
+											for($hour=0; $hour<24; $hour++):
+												$hourPrint = str_pad($hour, 2, "0", STR_PAD_LEFT);
+												foreach($timesOfDayHours as $timePartHour):
+													$hourFullPrint = $hourPrint.":".$timePartHour;
+													?>
+													<option value="<?=$hourFullPrint?>" <?=($hourFullPrint==$triggerListExists['START']['CLOSED_TRIGGER_TIME'] ? 'selected': '')?>><?=$hourFullPrint?></option>
+												<?
+												endforeach;
+											endfor;
+											?>
+										</select>
+									</div>
+									<div id="ENDPOINT_START_RUN_FOR_OLD_DATA_FORM" style="<?=($triggerListExists['START']['CAN_RUN_FOR_OLD_DATA'] == 'Y' ? '' : 'display:none;')?>">
+										<br>
+										<?=GetMessage('sender_mailing_edit_field_trig_old_data')?>
+										<?if($triggerListExists['START']['WAS_RUN_FOR_OLD_DATA'] == 'Y'):?>
+											<input type="hidden" id="ENDPOINT_START_RUN_FOR_OLD_DATA" name="ENDPOINT[START][RUN_FOR_OLD_DATA]" value="Y">
+											<span id="ENDPOINT_START_RUN_FOR_OLD_DATA_RESET" style="color: #878787;">
+												<?=GetMessage('sender_mailing_edit_field_trig_old_data_state')?>
+											</span>
+										<?else:?>
+											<input class="adm-designed-checkbox" type="checkbox" id="ENDPOINT_START_RUN_FOR_OLD_DATA" name="ENDPOINT[START][RUN_FOR_OLD_DATA]" value="Y" <?=($triggerListExists['START']['RUN_FOR_OLD_DATA']=='Y' ? 'checked' : '')?>>
+											<label for="ENDPOINT_START_RUN_FOR_OLD_DATA" class="adm-designed-checkbox-label"></label>
+										<?endif;?>
+										<span style="cursor: pointer;" class="hidden-when-show-template-list-info" onclick="ShowPersonalizeDescDialog(this);">&nbsp;</span>
+									</div>
+									<br>
+									<br>
+									<div id="ENDPOINT_START_FORM"><?=$triggerListExists['START']['FORM']?></div>
+								</div>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr><td colspan="2">&nbsp;</td></tr>
+			<tr>
+				<td colspan="2">
+					<div class="sender-mailing-group-container sender-mailing-group-ok">
+						<span class="sender-mailing-group-container-title"><span><?=GetMessage('sender_mailing_edit_field_trig_end')?></span></span>
+						<span class="adm-white-container-p"><span><?=GetMessage('sender_mailing_edit_field_trig_end_caption')?></span></span>
+					</div>
+
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2">
+					<table class="sender-mailing-group">
+						<tr>
+							<td><b><?=GetMessage('sender_mailing_edit_field_trig_select')?></b> </td>
+							<td>
+								<select id="EVENT_END" name="EVENT_END" onchange="SetTrigger(true, this.value);">
+									<option value=""><?=GetMessage('sender_mailing_edit_field_trig_none')?></option>
+									<?foreach($triggerListForJS['END'] as $triggerId => $triggerParams):?>
+										<option
+											value="<?=htmlspecialcharsbx($triggerId)?>"
+											<?=($triggerListExists['END']['ID'] == $triggerId ? 'selected' : '')?>
+											><?=htmlspecialcharsbx($triggerParams['NAME'])?></option>
+									<?endforeach;?>
+								</select>
+								<input type="hidden" id="ENDPOINT_END_MODULE_ID" name="ENDPOINT[END][MODULE_ID]" value="<?=htmlspecialcharsbx($triggerListExists['END']['MODULE_ID'])?>">
+								<input type="hidden" id="ENDPOINT_END_CODE" name="ENDPOINT[END][CODE]" value="<?=htmlspecialcharsbx($triggerListExists['END']['CODE'])?>">
+								<input type="hidden" id="ENDPOINT_END_IS_CLOSED_TRIGGER" name="ENDPOINT[END][IS_CLOSED_TRIGGER]" value="<?=htmlspecialcharsbx($triggerListExists['END']['IS_CLOSED_TRIGGER'])?>">
+							</td>
+						</tr>
+						<tr>
+							<td></td>
+							<td>
+								<div id="ENDPOINT_END_SETTINGS" class="sender-mailing-container" style="<?=((!empty($triggerListExists['END']['FORM']) || $triggerListExists['END']['IS_CLOSED_TRIGGER'] == 'Y') ? '' : 'display: none;')?>">
+									<div id="ENDPOINT_END_CLOSED_FORM" style="<?=($triggerListExists['END']['IS_CLOSED_TRIGGER'] == 'Y' ? '' : 'display:none;')?>">
+										<?=GetMessage('sender_mailing_edit_field_trig_select_close_time')?>
+										<select id="ENDPOINT_END_CLOSED_TRIGGER_TIME" name="ENDPOINT[END][CLOSED_TRIGGER_TIME]">
+											<?
+											$timesOfDayHours = array('00', '30');
+											for($hour=0; $hour<24; $hour++):
+												$hourPrint = str_pad($hour, 2, "0", STR_PAD_LEFT);
+												foreach($timesOfDayHours as $timePartHour):
+													$hourFullPrint = $hourPrint.":".$timePartHour;
+													?>
+													<option value="<?=$hourFullPrint?>" <?=($hourFullPrint==$triggerListExists['END']['CLOSED_TRIGGER_TIME'] ? 'selected': '')?>><?=$hourFullPrint?></option>
+												<?
+												endforeach;
+											endfor;
+											?>
+										</select>
+										<br>
+										<br>
+									</div>
+									<div id="ENDPOINT_END_FORM"><?=$triggerListExists['END']['FORM']?></div>
+								</div>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+		<?if(empty($mailing['TRIGGER_FIELDS'])):?>
+		<script>
+			SetTrigger(false, BX('EVENT_START').value);
+			SetTrigger(true, BX('EVENT_END').value);
+		</script>
+		<?endif;?>
+	<?
+	elseif($step=='mailing_group'):
 	?>
 
 		<?
@@ -764,7 +1461,7 @@ if(!empty($message))
 			function SenderWizardShowDlgGroup()
 			{
 				var dlgParams ={
-					'content_url':'sender_mailing_wizard.php?popup_create_group=Y&step=group&MAILING_ID=0&lang=ru',
+					'content_url':'sender_mailing_wizard.php?popup_create_group=Y&step=group&MAILING_ID=0&lang=<?=LANGUAGE_ID?>',
 					'content_post' : 'group_create=Y',
 					'width':'800',
 					'height':'600',
@@ -961,25 +1658,6 @@ if(!empty($message))
 
 		if(empty($templateListHtml) && empty($str_MESSAGE)) $str_MESSAGE = ' ';
 	?>
-		<script>
-			BX.message({"SENDER_SHOW_TEMPLATE_LIST" : "<?=GetMessage('SENDER_SHOW_TEMPLATE_LIST')?>"});
-			function ShowTemplateList()
-			{
-				if(confirm(BX.message("SENDER_SHOW_TEMPLATE_LIST")))
-				{
-					ChangeTemplateList('BASE');
-					var tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'hidden-when-show-template-list'}, true);
-					for (i in tmplTypeContList)
-						tmplTypeContList[i].style.display = 'none';
-
-					tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'show-when-show-template-list'}, true);
-					for (i in tmplTypeContList)
-						tmplTypeContList[i].style.display = 'table-row';
-
-					BX('IS_TEMPLATE_LIST_SHOWN').value = 'Y';
-				}
-			}
-		</script>
 		<table class="adm-detail-content-table edit-table" id="tabControl_layout">
 			<?if(!empty($templateListHtml)):?>
 				<tr class="show-when-show-template-list" <?=(!empty($str_MESSAGE) ? 'style="display: none;"' : '')?>>
@@ -996,7 +1674,7 @@ if(!empty($message))
 				<tr class="hidden-when-show-template-list" <?=(empty($str_MESSAGE) ? 'style="display: none;"' : '')?>>
 					<td><?echo GetMessage("sender_chain_edit_field_sel_templ")?></td>
 					<td>
-						<span class="hidden-when-show-template-list-name" id="TEMPLATE_SELECTED_TITILE"></span> <a class="sender-link-email" href="javascript: void(0);" onclick="ShowTemplateList();"><?echo GetMessage("sender_chain_edit_field_sel_templ_another")?></a>
+						<span class="hidden-when-show-template-list-name sender-template-message-caption-container"></span> <a class="sender-link-email sender-template-message-caption-container-btn" href="javascript: void(0);"><?echo GetMessage("sender_chain_edit_field_sel_templ_another")?></a>
 					</td>
 				</tr>
 			<?endif;?>
@@ -1015,9 +1693,9 @@ if(!empty($message))
 					?>
 					<?echo GetMessage("sender_chain_edit_field_subject_personalize")?>
 					<?foreach($arPersonalizeList as $arPersonalize):?>
-					<a class="sender-link-email" onclick="SetAddressToControl('SUBJECT', ' #<?=htmlspecialcharsbx($arPersonalize['CODE'])?>#', true)" title="<?=htmlspecialcharsbx($arPersonalize['DESC'])?>">
+					<a class="sender-link-email" onclick="SetAddressToControl('SUBJECT', ' #<?=htmlspecialcharsbx($arPersonalize['CODE'])?>#', true)" title="#<?=htmlspecialcharsbx($arPersonalize['CODE'])?># - <?=htmlspecialcharsbx($arPersonalize['DESC'])?>">
 						<?=htmlspecialcharsbx($arPersonalize['NAME'])?>
-						</a><?=(end($arPersonalizeList)===$arPersonalize ? '' : ',')?>
+					</a><?=(end($arPersonalizeList)===$arPersonalize ? '' : ',')?>
 					<?endforeach?>
 					<span style="cursor: pointer;" class="hidden-when-show-template-list-info" onclick="BX.PopupWindowManager.create('sender_personalize_help', this, {'darkMode': false, 'closeIcon': true, 'content': '<div style=\'margin: 7px;\'><?=GetMessage('sender_chain_edit_pers_help')?></span>'}).show();">&nbsp;</div>
 				</td>
@@ -1057,7 +1735,11 @@ if(!empty($message))
 				<td colspan="2" align="left">
 					<div class="adm-detail-content-item-block">
 						<span class="adm-detail-content-item-block-span"><?=GetMessage("sender_chain_edit_field_message")?></span>
-						<?=\Bitrix\Sender\TemplateTable::initEditor(array('FIELD_VALUE' => $str_MESSAGE, 'HAVE_USER_ACCESS' => $isUserHavePhpAccess));?>
+						<?=\Bitrix\Sender\TemplateTable::initEditor(array(
+							'FIELD_NAME' => 'MESSAGE',
+							'FIELD_VALUE' => $str_MESSAGE,
+							'HAVE_USER_ACCESS' => $isUserHavePhpAccess
+						));?>
 						<input type="hidden" name="IS_TEMPLATE_LIST_SHOWN" id="IS_TEMPLATE_LIST_SHOWN" value="<?=(empty($str_MESSAGE) ?"Y":"N")?>">
 					</div>
 				</td>
@@ -1075,28 +1757,85 @@ if(!empty($message))
 					$arInputControlValues = array();
 					foreach($arMailngChainAttachment as $arFile) $arInputControlValues["FILES[".$arFile["ID"]."]"] = $arFile["ID"];
 					\Bitrix\Main\Loader::includeModule("fileman");
-					echo CFileInput::ShowMultiple($arInputControlValues, "NEW_FILE[n#IND#]",
+
+					if (class_exists('\Bitrix\Main\UI\FileInput', true))
+					{
+						echo \Bitrix\Main\UI\FileInput::createInstance((
 						array(
-							"IMAGE" => "Y",
-							"PATH" => "Y",
-							"FILE_SIZE" => "Y",
-							"DIMENSIONS" => "Y",
-							"IMAGE_POPUP" => "Y",
-						),
-						false,
-						array(
-							'upload' => true,
-							'medialib' => true,
-							'file_dialog' => true,
-							'cloud' => true,
-							'del' => true,
-							'description' => false,
+							"name" => "NEW_FILE[n#IND#]",
+							"upload" => true,
+							"medialib" => true,
+							"fileDialog" => true,
+							"cloud" => true
 						)
-					);
+						))->show($arInputControlValues);
+					}
+					else
+					{
+						echo CFileInput::ShowMultiple($arInputControlValues, "NEW_FILE[n#IND#]",
+							array(
+								"IMAGE" => "Y",
+								"PATH" => "Y",
+								"FILE_SIZE" => "Y",
+								"DIMENSIONS" => "Y",
+								"IMAGE_POPUP" => "Y",
+							),
+							false,
+							array(
+								'upload' => true,
+								'medialib' => true,
+								'file_dialog' => true,
+								'cloud' => true,
+								'del' => true,
+								'description' => false,
+							)
+						);
+					}
 					?>
 				</td>
 			</tr>
 		</table>
+		<script>
+			BX.message({"SENDER_SHOW_TEMPLATE_LIST" : "<?=GetMessage('SENDER_SHOW_TEMPLATE_LIST')?>"});
+
+				function ShowTemplateListL(bShow)
+				{
+					var i, displayShow, displayHide, listShown;
+					if(bShow)
+					{
+						displayShow = 'none';
+						displayHide = 'table-row';
+						listShown = 'Y';
+					}
+					else
+					{
+						displayShow = '';
+						displayHide = 'none';
+						listShown = 'N';
+					}
+
+					var tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'hidden-when-show-template-list'}, true);
+					for (i in tmplTypeContList)
+						tmplTypeContList[i].style.display = displayShow;
+
+					tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'show-when-show-template-list'}, true);
+					for (i in tmplTypeContList)
+						tmplTypeContList[i].style.display = displayHide;
+
+					BX('IS_TEMPLATE_LIST_SHOWN').value = listShown;
+				}
+
+			var letterManager = new SenderLetterManager;
+			letterManager.onSetTemplate(function()
+			{
+				ShowTemplateListL(false);
+			});
+
+			letterManager.onShowTemplateList(function()
+			{
+				ShowTemplateListL(true);
+			});
+		</script>
 	<?
 	elseif($step=='chain_send_type'):
 	?>
@@ -1315,13 +2054,6 @@ if(!empty($message))
 						<td><textarea class="typearea" name="DESCRIPTION" cols="45" rows="5" wrap="VIRTUAL" style="width:100%"><?echo $str_DESCRIPTION; ?></textarea></td>
 					</tr>
 					<tr>
-						<td class="adm-detail-valign-top"><?echo GetMessage("sender_mailing_edit_field_track_click")?></td>
-						<td style="padding-top: 11px;">
-							<input class="adm-designed-checkbox" type="checkbox" id="TRACK_CLICK" name="TRACK_CLICK" value="Y"<?if($str_TRACK_CLICK == "Y") echo " checked"?>>
-							<label for="TRACK_CLICK" class="adm-designed-checkbox-label"></label>
-						</td>
-					</tr>
-					<tr>
 						<td><?echo GetMessage("sender_mailing_edit_field_is_public")?></td>
 						<td style="padding-top: 11px;">
 							<input class="adm-designed-checkbox" type="checkbox" id="IS_PUBLIC" name="IS_PUBLIC" value="Y"<?if($str_IS_PUBLIC != "N") echo " checked"?>>
@@ -1337,7 +2069,7 @@ if(!empty($message))
 		</div>
 		<?if(isset($popup_create_group) && $popup_create_group == 'Y'):?>
 		<?else:?>
-			<div class="sender-wizard-btn-cont">
+			<div class="sender-wizard-btn-cont" id="sender_wizard_btn_cont">
 			<?if($step=='chain_send_type'):?>
 				<a href="javascript: BX.submit(document.forms['post_form'])" class="adm-btn adm-btn-save"><?=GetMessage("sender_wizard_step_mailing_bnt_end")?></a>
 			<?else:?>

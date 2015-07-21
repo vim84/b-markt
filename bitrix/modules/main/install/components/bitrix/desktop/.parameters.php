@@ -150,6 +150,8 @@ foreach($arGadgets as $gd)
 		continue;
 	if ($gd["WEBDAV_ONLY"] == true && !IsModuleInstalled("webdav"))
 		continue;
+	if ($gd["DISK_ONLY"] == true && !IsModuleInstalled("disk"))
+		continue;
 	if ($gd["SUPPORT_ONLY"] == true && !IsModuleInstalled("support"))
 		continue;
 	if ($gd["WIKI_ONLY"] == true && !IsModuleInstalled("wiki"))

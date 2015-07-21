@@ -75,4 +75,3 @@ class CCatalogSKU extends CAllCatalogSKU
 		return $arResult;
 	}
 }
-?>

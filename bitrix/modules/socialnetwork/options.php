@@ -202,7 +202,6 @@ if (!IsModuleInstalled("intranet"))
 $arAllOptions = array(
 	array("allow_frields", GetMessage("SONET_ALLOW_FRIELDS"), "Y", Array("checkbox")),
 	array("allow_tooltip", GetMessage("SONET_ALLOW_TOOLTIP"), "Y", Array("checkbox")),
-	array("subject_path_template", GetMessage("SONET_SUBJECT_PATH_TEMPLATE"), "", Array("text", 40)),
 	array("group_path_template", GetMessage("SONET_GROUP_PATH_TEMPLATE"), "", Array("text", 40)),
 	array("messages_path", GetMessage("SONET_MESSAGES_PATH"), "/company/personal/messages/", Array("text", 40)),
 	array("tooltip_fields", GetMessage("SONET_TOOLTIP_FIELDS"), $arTooltipFieldsDefault, Array("select_fields", true, 7)),

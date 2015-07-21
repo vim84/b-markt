@@ -26,4 +26,8 @@ $MESS["MPF_BUTTON_SEND"] = "Send";
 $MESS["MPF_BUTTON_CANCEL"] = "Cancel";
 $MESS["MPF_SMILE_SET"] = "sets";
 $MESS["BLOG_LINK_SHOW_NEW"] = "Send message &hellip;";
+$MESS["MPF_SELECT_ATTACHMENTS"] = "Upload files and images";
+$MESS["MPF_DROP_ATTACHMENTS"] = "Drag files here to upload";
+$MESS["MPF_DRAG_ATTACHMENTS"] = "Drag files here";
+$MESS["MPF_DRAG_ATTACHMENTS2"] = "Upload files?";
 ?>

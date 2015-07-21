@@ -17,6 +17,7 @@ use Bitrix\Main\Text\Converter;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Seo\Engine;
 use Bitrix\Seo\Adv;
+use Bitrix\Seo\Service;
 
 
 Loc::loadMessages(dirname(__FILE__).'/../../main/tools.php');
@@ -43,18 +44,8 @@ if(!Main\Loader::includeModule('socialservices'))
 }
 
 $engine = new Engine\YandexDirect();
-
-$bNeedAuth = !$engine->getAuthSettings();
-
-try
-{
-	$currentUser = $engine->getCurrentUser();
-}
-catch(Exception $e)
-{
-	$currentUser = array();
-	$bReadOnly = true;
-}
+$currentUser = $engine->getCurrentUser();
+$bNeedAuth = !is_array($currentUser);
 
 $bReadOnly = $bNeedAuth;
 $bAllowUpdate = !$bNeedAuth;
@@ -121,7 +112,7 @@ if($bShowStats)
 	else
 	{
 		$statsDateStart = new Main\Type\Date();
-		$statsDateStart->add("-".Engine\YandexDirectLive::MAX_STAT_DAYS_DELTA." days");
+		$statsDateStart->add("-".Engine\YandexDirect::MAX_STAT_DAYS_DELTA." days");
 
 		$statsDateFinish = new Main\Type\Date();
 	}
@@ -347,6 +338,8 @@ if($request->isPost() && ($request["save"]<>'' || $request["apply"]<>'') && chec
 	$campaignSettings['EmailNotification']['SendWarn'] = $campaignSettings['EmailNotification']['SendWarn'] == 'Y';
 
 	$campaignSettings['MinusKeywords'] = preg_split("/[\\n,;]+\\s*/", $campaignSettings['MinusKeywords']);
+
+	$campaignSettings['MinusKeywords'] = array_map('trim', $campaignSettings['MinusKeywords']);
 
 	$campaignFields = array(
 		"SETTINGS" => $campaignSettings

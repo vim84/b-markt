@@ -145,7 +145,7 @@ class CCalendarWebService extends IWebService
 
 		$data->addChild($obNode = new CXMLCreator('RegionalSettings'));
 
-		//$obNode->addChild(CXMLCreator::createTagAttributed('Language', '1033'));
+		$obNode->addChild(CXMLCreator::createTagAttributed('Language', '1049'));
 		//$obNode->addChild(CXMLCreator::createTagAttributed('Locale', '1033'));
 		$obNode->addChild(CXMLCreator::createTagAttributed('AdvanceHijri', '0'));
 		$obNode->addChild(CXMLCreator::createTagAttributed('CalendarType', '0'));

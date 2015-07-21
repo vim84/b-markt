@@ -1,583 +1,3 @@
-if(typeof(BX.CrmParamBag) === "undefined")
-{
-	BX.CrmParamBag = function()
-	{
-		this._params = {};
-	};
-
-	BX.CrmParamBag.prototype =
-	{
-		initialize: function(params)
-		{
-			this._params = params ? params : {};
-		},
-		getParam: function(name, defaultvalue)
-		{
-			var p = this._params;
-			return typeof(p[name]) != "undefined" ? p[name] : defaultvalue;
-		},
-		setParam: function(name, value)
-		{
-			this._params[name] = value;
-		},
-		clear: function()
-		{
-			this._params = {};
-		}
-	};
-
-	BX.CrmParamBag.create = function(params)
-	{
-		var self = new BX.CrmParamBag();
-		self.initialize(params);
-		return self;
-	}
-}
-
-if(typeof(BX.CrmInterfaceGridManager) == 'undefined')
-{
-	// ownerType, gridId, formName, allRowsCheckBoxId, serviceUrl
-	BX.CrmInterfaceGridManager = function()
-	{
-		this._id = '';
-		this._settings = {};
-	};
-
-	BX.CrmInterfaceGridManager.prototype =
-	{
-		initialize: function(id, settings)
-		{
-			this._id = id;
-			this._settings = settings ? settings : {}
-
-			var form = this.getForm();
-			if(form)
-			{
-				BX.bind(form['apply'], 'click', BX.delegate(this._handleFormApplyButtonClick, this));
-			}
-
-			BX.ready(BX.delegate(this._bindOnSetFilterFields, this));
-		},
-		getId: function()
-		{
-			return this._id;
-		},
-		_bindOnSetFilterFields: function()
-		{
-			BX.addCustomEvent(
-				this.getGridJsObject(),
-				'AFTER_SET_FILTER_FIELDS',
-				BX.delegate(this._onSetFilterFields, this)
-			);
-
-			BX.addCustomEvent(
-				this.getGridJsObject(),
-				'AFTER_GET_FILTER_FIELDS',
-				BX.delegate(this._onGetFilterFields, this)
-			);
-		},
-		registerFilter: function(filter)
-		{
-			BX.addCustomEvent(
-				filter,
-				'AFTER_SET_FILTER_FIELDS',
-				BX.delegate(this._onSetFilterFields, this)
-			);
-
-			BX.addCustomEvent(
-				filter,
-				'AFTER_GET_FILTER_FIELDS',
-				BX.delegate(this._onGetFilterFields, this)
-			);
-		},
-		_onSetFilterFields: function(sender, form, fields)
-		{
-			var infos = this.getSetting('filterFields', null);
-			if(!BX.type.isArray(infos))
-			{
-				return;
-			}
-
-			var isSettingsContext = form.name.indexOf('flt_settings') === 0;
-
-			var count = infos.length;
-			var element = null;
-			var paramName = '';
-			for(var i = 0; i < count; i++)
-			{
-				var info = infos[i];
-				var id = BX.type.isNotEmptyString(info['id']) ? info['id'] : '';
-				var type = BX.type.isNotEmptyString(info['typeName']) ? info['typeName'].toUpperCase() : '';
-				var params = info['params'] ? info['params'] : {};
-
-				if(type === 'USER')
-				{
-					var data = params['data'] ? params['data'] : {};
-					this._setElementByFilter(
-						data[isSettingsContext ? 'settingsElementId' : 'elementId'],
-						data['paramName'],
-						fields
-					);
-
-					var search = params['search'] ? params['search'] : {};
-					this._setElementByFilter(
-						search[isSettingsContext ? 'settingsElementId' : 'elementId'],
-						search['paramName'],
-						fields
-					);
-				}
-			}
-		},
-		_setElementByFilter: function(elementId, paramName, filter)
-		{
-			var element = BX.type.isNotEmptyString(elementId) ? BX(elementId) : null;
-			if(BX.type.isElementNode(element))
-			{
-				element.value = BX.type.isNotEmptyString(paramName) && filter[paramName] ? filter[paramName] : '';
-			}
-		},
-		_onGetFilterFields: function(sender, form, fields)
-		{
-			var infos = this.getSetting('filterFields', null);
-			if(!BX.type.isArray(infos))
-			{
-				return;
-			}
-
-			var isSettingsContext = form.name.indexOf('flt_settings') === 0;
-			var count = infos.length;
-			for(var i = 0; i < count; i++)
-			{
-				var info = infos[i];
-				var id = BX.type.isNotEmptyString(info['id']) ? info['id'] : '';
-				var type = BX.type.isNotEmptyString(info['typeName']) ? info['typeName'].toUpperCase() : '';
-				var params = info['params'] ? info['params'] : {};
-
-				if(type === 'USER')
-				{
-					var data = params['data'] ? params['data'] : {};
-					this._setFilterByElement(
-						data[isSettingsContext ? 'settingsElementId' : 'elementId'],
-						data['paramName'],
-						fields
-					);
-
-					var search = params['search'] ? params['search'] : {};
-					this._setFilterByElement(
-						search[isSettingsContext ? 'settingsElementId' : 'elementId'],
-						search['paramName'],
-						fields
-					);
-				}
-			}
-		},
-		_setFilterByElement: function(elementId, paramName, filter)
-		{
-			var element = BX.type.isNotEmptyString(elementId) ? BX(elementId) : null;
-			if(BX.type.isElementNode(element) && BX.type.isNotEmptyString(paramName))
-			{
-				filter[paramName] = element.value;
-			}
-		},
-		getSetting: function (name, defaultval)
-		{
-			return typeof(this._settings[name]) != 'undefined' ? this._settings[name] : defaultval;
-		},
-		getOwnerType: function()
-		{
-			return this.getSetting('ownerType', '');
-		},
-		getForm: function()
-		{
-			return document.forms[this.getSetting('formName', '')];
-		},
-		getGrid: function()
-		{
-			return BX(this.getSetting('gridId', ''));
-		},
-		getGridJsObject: function()
-		{
-			var gridId = this.getSetting('gridId', '');
-			return BX.type.isNotEmptyString(gridId) ? window['bxGrid_' + gridId] : null;
-		},
-		getAllRowsCheckBox: function()
-		{
-			return BX(this.getSetting('allRowsCheckBoxId', ''));
-		},
-		getEditor: function()
-		{
-			var editorId = this.getSetting('activityEditorId', '');
-			return BX.CrmActivityEditor.items[editorId] ? BX.CrmActivityEditor.items[editorId] : null;
-		},
-		getServiceUrl: function()
-		{
-			return this.getSetting('serviceUrl', '/bitrix/components/bitrix/crm.activity.editor/ajax.php');
-		},
-		_loadCommunications: function(commType, ids, callback)
-		{
-			BX.ajax(
-				{
-					'url': this.getServiceUrl(),
-					'method': 'POST',
-					'dataType': 'json',
-					'data':
-					{
-						'ACTION' : 'GET_ENTITIES_DEFAULT_COMMUNICATIONS',
-						'COMMUNICATION_TYPE': commType,
-						'ENTITY_TYPE': this.getOwnerType(),
-						'ENTITY_IDS': ids,
-						'GRID_ID': this.getSetting('gridId', '')
-					},
-					onsuccess: function(data)
-					{
-						if(data && data['DATA'] && callback)
-						{
-							callback(data['DATA']);
-						}
-					},
-					onfailure: function(data)
-					{
-					}
-				}
-			);
-		},
-		_onEmailDataLoaded: function(data)
-		{
-			var settings = {};
-			if(data)
-			{
-				var items = BX.type.isArray(data['ITEMS']) ? data['ITEMS'] : [];
-				if(items.length > 0)
-				{
-					var entityType = data['ENTITY_TYPE'] ? data['ENTITY_TYPE'] : '';
-					var comms = settings['communications'] = [];
-					for(var i = 0; i < items.length; i++)
-					{
-						var item = items[i];
-						comms.push(
-							{
-								'type': 'EMAIL',
-								'entityTitle': '',
-								'entityType': entityType,
-								'entityId': item['entityId'],
-								'value': item['value']
-							}
-						);
-					}
-				}
-			}
-
-			this.addEmail(settings);
-		},
-		_onCallDataLoaded: function(data)
-		{
-			var settings = {};
-			if(data)
-			{
-				var items = BX.type.isArray(data['ITEMS']) ? data['ITEMS'] : [];
-				if(items.length > 0)
-				{
-					var entityType = data['ENTITY_TYPE'] ? data['ENTITY_TYPE'] : '';
-					var comms = settings['communications'] = [];
-					var item = items[0];
-					comms.push(
-						{
-							'type': 'PHONE',
-							'entityTitle': '',
-							'entityType': entityType,
-							'entityId': item['entityId'],
-							'value': item['value']
-						}
-					);
-					settings['ownerType'] = entityType;
-					settings['ownerID'] = item['entityId'];
-				}
-			}
-
-			this.addCall(settings);
-		},
-		_onMeetingDataLoaded: function(data)
-		{
-			var settings = {};
-			if(data)
-			{
-				var items = BX.type.isArray(data['ITEMS']) ? data['ITEMS'] : [];
-				if(items.length > 0)
-				{
-					var entityType = data['ENTITY_TYPE'] ? data['ENTITY_TYPE'] : '';
-					var comms = settings['communications'] = [];
-					var item = items[0];
-					comms.push(
-						{
-							'type': '',
-							'entityTitle': '',
-							'entityType': entityType,
-							'entityId': item['entityId'],
-							'value': item['value']
-						}
-					);
-					settings['ownerType'] = entityType;
-					settings['ownerID'] = item['entityId'];
-				}
-			}
-
-			this.addMeeting(settings);
-		},
-		_handleFormApplyButtonClick: function(e)
-		{
-			var form = this.getForm();
-			if(!form)
-			{
-				return true;
-			}
-
-			var selected = form.elements['action_button_' + this.getSetting('gridId', '')];
-			if(!selected)
-			{
-				return;
-			}
-
-			var value = selected.value;
-			if (value === 'subscribe')
-			{
-				var allRowsCheckBox = this.getAllRowsCheckBox();
-				var ids = [];
-				if(!(allRowsCheckBox && allRowsCheckBox.checked))
-				{
-					var checkboxes = BX.findChildren(
-						this.getGrid(),
-						{
-							'tagName': 'INPUT',
-							'attribute': { 'type': 'checkbox' }
-						},
-						true
-					);
-
-					if(checkboxes)
-					{
-						for(var i = 0; i < checkboxes.length; i++)
-						{
-							var checkbox = checkboxes[i];
-							if(checkbox.id.indexOf('ID') == 0 && checkbox.checked)
-							{
-								ids.push(checkbox.value);
-							}
-						}
-					}
-				}
-				this._loadCommunications('EMAIL', ids, BX.delegate(this._onEmailDataLoaded, this));
-				return BX.PreventDefault(e);
-			}
-
-			return true;
-		},
-		addEmail: function(settings)
-		{
-			var editor = this.getEditor();
-			if(!editor)
-			{
-				return;
-			}
-
-			settings = settings ? settings : {};
-			if(typeof(settings['ownerID']) !== 'undefined')
-			{
-				settings['ownerType'] = this.getOwnerType();
-			}
-
-			editor.addEmail(settings);
-		},
-		addCall: function(settings)
-		{
-			var editor = this.getEditor();
-			if(!editor)
-			{
-				return;
-			}
-
-			settings = settings ? settings : {};
-			if(typeof(settings['ownerID']) !== 'undefined')
-			{
-				settings['ownerType'] = this.getOwnerType();
-			}
-
-			editor.addCall(settings);
-		},
-		addMeeting: function(settings)
-		{
-			var editor = this.getEditor();
-			if(!editor)
-			{
-				return;
-			}
-
-			settings = settings ? settings : {};
-			if(typeof(settings['ownerID']) !== 'undefined')
-			{
-				settings['ownerType'] = this.getOwnerType();
-			}
-
-			editor.addMeeting(settings);
-		},
-		addTask: function(settings)
-		{
-			var editor = this.getEditor();
-			if(!editor)
-			{
-				return;
-			}
-
-			settings = settings ? settings : {};
-			if(typeof(settings['ownerID']) !== 'undefined')
-			{
-				settings['ownerType'] = this.getOwnerType();
-			}
-
-			editor.addTask(settings);
-		},
-		viewActivity: function(id, optopns)
-		{
-			var editor = this.getEditor();
-			if(editor)
-			{
-				editor.viewActivity(id, optopns);
-			}
-		}
-	};
-
-	BX.CrmInterfaceGridManager.items = {};
-	BX.CrmInterfaceGridManager.create = function(id, settings)
-	{
-		var self = new BX.CrmInterfaceGridManager();
-		self.initialize(id, settings);
-		this.items[id] = self;
-
-		BX.onCustomEvent(
-			this,
-			'CREATED',
-			[self]
-		);
-
-		return self;
-	};
-	BX.CrmInterfaceGridManager.addEmail = function(editorId, settings)
-	{
-		if(typeof(this.items[editorId]) !== 'undefined')
-		{
-			this.items[editorId].addEmail(settings);
-		}
-	};
-	BX.CrmInterfaceGridManager.addCall = function(editorId, settings)
-	{
-		if(typeof(this.items[editorId]) !== 'undefined')
-		{
-			this.items[editorId].addCall(settings);
-		}
-	};
-	BX.CrmInterfaceGridManager.addMeeting = function(editorId, settings)
-	{
-		if(typeof(this.items[editorId]) !== 'undefined')
-		{
-			this.items[editorId].addMeeting(settings);
-		}
-	};
-	BX.CrmInterfaceGridManager.addTask = function(editorId, settings)
-	{
-		if(typeof(this.items[editorId]) !== 'undefined')
-		{
-			this.items[editorId].addTask(settings);
-		}
-	};
-	BX.CrmInterfaceGridManager.viewActivity = function(editorId, id, optopns)
-	{
-		if(typeof(this.items[editorId]) !== 'undefined')
-		{
-			this.items[editorId].viewActivity(id, optopns);
-		}
-	};
-	BX.CrmInterfaceGridManager.showPopup = function(id, anchor, items)
-	{
-		BX.PopupMenu.show(
-			id,
-			anchor,
-			items,
-			{
-				offsetTop:0,
-				offsetLeft:-30
-			});
-	};
-	BX.CrmInterfaceGridManager.reloadGrid = function(gridId)
-	{
-		var grid = window['bxGrid_' + gridId];
-		if(!grid || !BX.type.isFunction(grid.Reload))
-		{
-			return false;
-		}
-
-		grid.Reload();
-		return true;
-	};
-	BX.CrmInterfaceGridManager.applyFilter = function(gridId, filterName)
-	{
-		var grid = window['bxGrid_' + gridId];
-		if(!grid || !BX.type.isFunction(grid.Reload))
-		{
-			return false;
-		}
-
-		grid.ApplyFilter(filterName);
-		return true;
-	};
-	BX.CrmInterfaceGridManager.clearFilter = function(gridId)
-	{
-		var grid = window['bxGrid_' + gridId];
-		if(!grid || !BX.type.isFunction(grid.ClearFilter))
-		{
-			return false;
-		}
-
-		grid.ClearFilter();
-		return true;
-	};
-	BX.CrmInterfaceGridManager.menus = {};
-	BX.CrmInterfaceGridManager.createMenu = function(menuId, items, zIndex)
-	{
-		zIndex = parseInt(zIndex);
-		var menu = new PopupMenu(menuId, !isNaN(zIndex) ? zIndex : 1010);
-		if(BX.type.isArray(items))
-		{
-			menu.settingsMenu = items;
-		}
-		this.menus[menuId] = menu;
-	};
-	BX.CrmInterfaceGridManager.showMenu = function(menuId, anchor)
-	{
-		var menu = this.menus[menuId];
-		if(typeof(menu) !== 'undefined')
-		{
-			menu.ShowMenu(anchor, menu.settingsMenu, false, false);
-		}
-	};
-	BX.CrmInterfaceGridManager.expandEllipsis = function(ellepsis)
-	{
-		if(!BX.type.isDomNode(ellepsis))
-		{
-			return false;
-		}
-
-	    var cut = BX.findNextSibling(ellepsis, { 'class': 'bx-crm-text-cut-on' });
-		if(cut)
-		{
-			BX.removeClass(cut, 'bx-crm-text-cut-on');
-			BX.addClass(cut, 'bx-crm-text-cut-off');
-			cut.style.display = '';
-		}
-
-		ellepsis.style.display = 'none';
-		return true;
-	};
-}
-
 if(typeof(BX.InterfaceGridFilter) === "undefined")
 {
 	BX.InterfaceGridFilter = function()
@@ -597,10 +17,12 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 		this._currentItemId = '';
 		this._activeItemId = '';
 		this._saveAsDlg = null;
-		this._manager = null;
+		this._enableProvider = true;
+		this._fieldProvider = null;
 		this._isFolded = false;
 		this._presetsDeleted = [];
 		this._saveVisibleFieldsTimeoutId = null;
+		this._closeOpen = null;
 	};
 
 	BX.InterfaceGridFilter.prototype =
@@ -608,7 +30,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 		initialize: function(id, settings)
 		{
 			this._id = BX.type.isNotEmptyString(id) ? id : "";
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._isApplied = this._settings.getParam("isApplied", false);
 			this._isFolded = this._settings.getParam("isFolded", true);
 			this._presetsDeleted = this._settings.getParam("presetsDeleted", []);
@@ -633,7 +55,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			var isActive = this._activeItemId === this._defaultItemId;
 			this._items[this._defaultItemId] = BX.InterfaceGridFilterItem.create(
 					this._defaultItemId,
-					BX.CrmParamBag.create(
+					BX.ParamBag.create(
 						{
 							"filter": this,
 							"info":
@@ -649,19 +71,14 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 
 			for(var itemId in this._itemInfos)
 			{
-				if(!this._itemInfos.hasOwnProperty(itemId))
+				if(!this._itemInfos.hasOwnProperty(itemId) || itemId === this._defaultItemId || this.isDeleletedPreset(itemId))
 				{
 					continue;
 				}
 
-				if(this.isDeleletedPreset(itemId))
-				{
-					continue; // is deleted
-				}
-
 				this._items[itemId] = BX.InterfaceGridFilterItem.create(
 					itemId,
-					BX.CrmParamBag.create(
+					BX.ParamBag.create(
 						{
 							"filter": this,
 							"info": this._itemInfos[itemId],
@@ -682,7 +99,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 				var f =
 					BX.InterfaceGridFilterField.create(
 						fieldId,
-						BX.CrmParamBag.create({ "filter": this, "info": this._fieldInfos[fieldId] })
+						BX.ParamBag.create({ "filter": this, "info": this._fieldInfos[fieldId] })
 					);
 
 				this._fields[fieldId] = f;
@@ -699,6 +116,13 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			BX.bind(this.getCancelButton(), 'click', BX.delegate(this._handleCancelButtonClick, this));
 			BX.bind(this.getAddFilterButton(), 'click', BX.delegate(this._handleSaveAsMenuItemClick, this));
 
+			this._closeOpen = new BX.InterfaceGridFilterCloseOpen(
+				this._settings.getParam("innerBlock", ""),
+				this._settings.getParam("mainBlock", ""),
+				this
+			);
+			this._closeOpen.initialize();
+
 			var switchBtn = this.getSwitchViewButton();
 			if(switchBtn)
 			{
@@ -706,29 +130,32 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 				BX.bind(switchBtn, 'click', BX.delegate(this._handleSwitchViewButtonClick, this));
 			}
 
-			this._manager = BX.CrmInterfaceGridManager.items[this.getGridId() + '_MANAGER'];
-			if(this._manager)
+			this._enableProvider = this._settings.getParam("enableProvider", false);
+			if(this._enableProvider)
 			{
-				this._initializeFieldControllers();
-			}
-			else
-			{
-				this._manager = null;
-				BX.addCustomEvent(
-					BX.CrmInterfaceGridManager,
-					'CREATED',
-					BX.delegate(this._onManagerCreated, this)
-				);
+				this._fieldProvider = BX.InterfaceFilterFieldInfoProvider.items[this.getGridId()];
+				if(this._fieldProvider)
+				{
+					this._initializeFieldControllers();
+				}
+				else
+				{
+					this._fieldProvider = null;
+					BX.addCustomEvent(
+						window,
+						"InterfaceFilterFieldInfoProviderCreate",
+						BX.delegate(this._onFieldInfoProviderCreated, this)
+					);
+				}
 			}
 		},
-		_onManagerCreated: function(manager)
+		_onFieldInfoProviderCreated: function(fieldProvider)
 		{
-			if(manager.getId() === this.getGridId() + '_MANAGER')
+			if(fieldProvider.getId() === this.getGridId())
 			{
-				this._manager = manager;
+				this._fieldProvider = fieldProvider;
+				this._initializeFieldControllers();
 			}
-
-			this._initializeFieldControllers();
 		},
 		_initializeFieldControllers: function()
 		{
@@ -815,12 +242,12 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 		},
 		getFieldInfo: function(fieldId)
 		{
-			if(!this._manager)
+			if(!this._fieldProvider)
 			{
 				return null;
 			}
 
-			var infos = this._manager.getSetting('filterFields', null);
+			var infos = this._fieldProvider.getFieldInfos();
 			if(!infos)
 			{
 				return null;
@@ -870,12 +297,12 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			BX.ajax.post(
 				this.getServiceUrl(),
 				{
-				"GRID_ID": this.getGridId(),
-				"filter_id": activeItem.getId(),
-				"action": "savefilter",
-				"name": activeItem.getName(),
-				'fields': this.getFieldParams(),
-				"rows": this.getVisibleFieldIds().join(",")
+					"GRID_ID": this.getGridId(),
+					"filter_id": activeItem.getId(),
+					"action": "savefilter",
+					"name": activeItem.getName(),
+					'fields': this.getFieldParams(),
+					"rows": this.getVisibleFieldIds().join(",")
 				},
 				callback
 			);
@@ -920,7 +347,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 
 			var d = BX.userOptions.delay;
 			BX.userOptions.delay = 100;
-			BX.userOptions.save("crm.interface.grid.filter", this.getId().toLowerCase(), "presetsDeleted", this._presetsDeleted.join(','));
+			BX.userOptions.save("main.interface.grid.filter", this.getId().toLowerCase(), "presetsDeleted", this._presetsDeleted.join(','));
 			BX.userOptions.delay = d;
 		},
 		requireFieldVisibilityChange: function(field)
@@ -985,7 +412,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 
 			var item = this._items[itemId] = BX.InterfaceGridFilterItem.create(
 				itemId,
-				BX.CrmParamBag.create({ "filter": this, "info": itemInfo, "isActive": false })
+				BX.ParamBag.create({ "filter": this, "info": itemInfo, "isActive": false })
 			);
 
 			item.setActive(true);
@@ -1031,13 +458,15 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			this._activeItemId = item.getId();
 			activeItem = this._items[this._activeItemId];
 
+			var wrapper = this._getWrapper();
 			if(activeItem.isCurrent())
 			{
-				BX.addClass(this._getWrapper(), "bx-current-filter");
+				if (this.isApplied())
+					BX.addClass(wrapper, "bx-current-filter");
 			}
 			else
 			{
-				BX.removeClass(this._getWrapper(), "bx-current-filter");
+				BX.removeClass(wrapper, "bx-current-filter");
 			}
 
 			this.setFieldParams(activeItem.getFieldParams());
@@ -1307,9 +736,16 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			}
 
 			this._isFolded = folded;
+
+			if (this._closeOpen)
+				this._closeOpen.toggle();
+
+			var mainWrapperBlock = BX(this._settings.getParam("mainBlock", ""));
 			if(folded)
 			{
 				BX.addClass(this._getWrapper(), "bx-filter-folded");
+				if (mainWrapperBlock)
+					mainWrapperBlock.style.height = "0";
 			}
 			else
 			{
@@ -1321,7 +757,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 				var activeItem = this._items[this._activeItemId];
 				if(activeItem)
 				{
-					activeItem.handleFilderFoldingChange(this);
+					activeItem.handleFilterFoldingChange(this);
 				}
 			}
 
@@ -1333,7 +769,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 
 			var d = BX.userOptions.delay;
 			BX.userOptions.delay = 100;
-			BX.userOptions.save("crm.interface.grid.filter", this.getId().toLowerCase(), "isFolded", (folded ? "Y" : "N"));
+			BX.userOptions.save("main.interface.grid.filter", this.getId().toLowerCase(), "isFolded", (folded ? "Y" : "N"));
 			BX.userOptions.delay = d;
 		},
 		_showDeleteButtons: function(show)
@@ -1365,7 +801,8 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 						"id": f.getId(),
 						"text": f.getName(),
 						"onchange": f.getToggleHandler(),
-						"checked": f.isVisible()
+						"checked": f.isVisible(),
+						"tag": "field"
 					}
 				);
 			}
@@ -1376,6 +813,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 					"text": this.getMessage('showAll'),
 					"onclick": BX.delegate(this._handleShowAllButtonClick, this),
 					"checked": false,
+					"tag": "command",
 					"allowToggle": false,
 					"separatorBefore": true
 				}
@@ -1387,6 +825,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 					"text": this.getMessage('hideAll'),
 					"onclick": BX.delegate(this._handleHideAllButtonClick, this),
 					"checked": false,
+					"tag": "command",
 					"allowToggle": false
 				}
 			);
@@ -1395,7 +834,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			var btnPos = BX.pos(btn);
 			this._addFieldOpener = BX.InterfaceGridFilterCheckListMenu.create(
 				this.getId() + "_ADD_FIELDS",
-				BX.CrmParamBag.create(
+				BX.ParamBag.create(
 					{
 						"allowToggle": true,
 						"items": menuItems,
@@ -1457,7 +896,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			var btnPos = BX.pos(btn);
 			this._settingsOpener = BX.InterfaceGridFilterCheckListMenu.create(
 				this.getId() + "_SETTINGS_" + this._activeItemId.toUpperCase(),
-				BX.CrmParamBag.create(
+				BX.ParamBag.create(
 					{
 						"allowToggle": false,
 						"items": menuItems,
@@ -1479,7 +918,6 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 				this.applyActive();
 				return;
 			}
-
 			var self = this;
 			this.saveActiveItem(function() { self.applyActive(); });
 		},
@@ -1489,15 +927,40 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 		},
 		_handleShowAllButtonClick: function(e)
 		{
+			if(this._addFieldOpener)
+			{
+				var items = this._addFieldOpener.getItemsByTag("field");
+				for(var i = 0; i < items.length; i++)
+				{
+					items[i].setChecked(true);
+				}
+			}
 			this.setFieldsVisible(true, {});
 		},
 		_handleHideAllButtonClick: function(e)
 		{
+			if(this._addFieldOpener)
+			{
+				var items = this._addFieldOpener.getItemsByTag("field");
+				for(var i = 1; i < items.length; i++)
+				{
+					items[i].setChecked(false);
+				}
+			}
 			this.setFieldsVisible(false, { "skipTop": 1 });
 		},
 		_handleSaveMenuItemClick: function(e)
 		{
-			this.saveActiveItem();
+			if(this._isApplied && this._currentItemId === this._activeItemId)
+			{
+				// We have to apply active filter again for enable saved filter after page refresh
+				var self = this;
+				this.saveActiveItem(function() { self.applyActive(); });
+			}
+			else
+			{
+				this.saveActiveItem();
+			}
 		},
 		_handleSaveAsMenuItemClick: function(e)
 		{
@@ -1505,7 +968,7 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 			{
 				this._saveAsDlg = BX.InterfaceGridFilterSaveAsDialog.create(
 					this.getId() + "_SAVE_AS",
-					BX.CrmParamBag.create(
+					BX.ParamBag.create(
 						{
 							"filter": this
 						}
@@ -1586,7 +1049,6 @@ if(typeof(BX.InterfaceGridFilter) === "undefined")
 		return self;
 	};
 }
-
 if(typeof(BX.InterfaceGridFilterItem) === "undefined")
 {
 	BX.InterfaceGridFilterItem = function()
@@ -1606,7 +1068,7 @@ if(typeof(BX.InterfaceGridFilterItem) === "undefined")
 		initialize: function(id, settings)
 		{
 			this._id = BX.type.isNotEmptyString(id) ? id : "";
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._filter = settings.getParam("filter", null);
 
 			this._info = settings.getParam("info", {});
@@ -1762,7 +1224,7 @@ if(typeof(BX.InterfaceGridFilterItem) === "undefined")
 				}
 			}
 		},
-		handleFilderFoldingChange: function(filter)
+		handleFilterFoldingChange: function(filter)
 		{
 			this._adjustStyle();
 		},
@@ -1791,7 +1253,6 @@ if(typeof(BX.InterfaceGridFilterItem) === "undefined")
 		return self;
 	}
 }
-
 if(typeof(BX.InterfaceGridFilterField) === "undefined")
 {
 	BX.InterfaceGridFilterField = function()
@@ -1812,7 +1273,7 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 		initialize: function(id, settings)
 		{
 			this._id = BX.type.isNotEmptyString(id) ? id : '';
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._filter = settings.getParam("filter", null);
 			this._container = BX(this._filter.getFieldContainerId(id));
 			this._delimiterContainer = BX(this._filter.getFieldDelimiterContainerId(id));
@@ -1833,7 +1294,7 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 			if(this.getType() === "date")
 			{
 				this._controller = BX.InterfaceGridFilterDate.create(
-					BX.CrmParamBag.create(
+					BX.ParamBag.create(
 						{
 							"containerId": this._filter.getFieldContainerId(id),
 							"formName": this._filter.getFormName(),
@@ -1858,10 +1319,31 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 			}
 
 			var info = this._filter.getFieldInfo(this._id);
-			if(info && info["typeName"] === "USER")
+			if(!info)
+			{
+				return;
+			}
+
+			if(info["typeName"] === "USER")
 			{
 				this._controller = BX.InterfaceGridFilterUser.create(
-					BX.CrmParamBag.create(
+					BX.ParamBag.create(
+						{
+							"containerId": this._filter.getFieldContainerId(this._id),
+							"info": info
+						}
+					)
+				);
+
+				if(this._controller)
+				{
+					this._controller.layout();
+				}
+			}
+			else if(info["typeName"] === "WIDGET_PERIOD")
+			{
+				this._controller = BX.InterfaceGridFilterWidgetPeriod.create(
+					BX.ParamBag.create(
 						{
 							"containerId": this._filter.getFieldContainerId(this._id),
 							"info": info
@@ -2046,6 +1528,7 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 				true
 			);
 
+			var changed = false;
 			for(var i = 0; i < elements.length; i++)
 			{
 				var el = elements[i];
@@ -2055,16 +1538,15 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 					continue;
 				}
 
-				var changed = false;
+				var elementChanged = false;
 				var v = typeof(params[name]) !== "undefined" ? params[name] : null;
 				switch(el.type.toLowerCase())
 				{
 					case 'select-one':
 					case 'text':
 					case 'textarea':
-					case 'hidden':
 						el.value = v !== null ? v : '';
-						changed = true;
+						elementChanged = true;
 						break;
 					case 'select-multiple':
 					{
@@ -2096,7 +1578,7 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 								el.options[0].selected = true;
 							}
 						}
-						changed = true;
+						elementChanged = true;
 						break;
 					}
 					case 'radio':
@@ -2104,20 +1586,35 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 						{
 							el.checked = v !== null ? v : false;
 						}
-						changed = true;
+						elementChanged = true;
 						break;
 				}
 
-				if(changed && BX.type.isFunction(el.onchange))
+
+				if(elementChanged)
 				{
-					try
+					if(!changed)
 					{
-						el.onchange();
+						changed = true;
 					}
-					catch(ex)
+
+					if(BX.type.isFunction(el.onchange))
 					{
+						try
+						{
+							el.onchange();
+						}
+						catch(ex)
+						{
+						}
 					}
 				}
+			}
+
+			if(changed && this._controller
+				&& BX.type.isFunction(this._controller.handleParamsChange))
+			{
+				this._controller.handleParamsChange();
 			}
 		}
 	};
@@ -2134,7 +1631,6 @@ if(typeof(BX.InterfaceGridFilterField) === "undefined")
 		return self;
 	}
 }
-
 if(typeof(BX.InterfaceGridFilterDate) === "undefined")
 {
 	BX.InterfaceGridFilterDate = function()
@@ -2147,7 +1643,7 @@ if(typeof(BX.InterfaceGridFilterDate) === "undefined")
 	{
 		initialize: function(settings)
 		{
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._container = BX(settings.getParam("containerId"));
 
 			var intervalSelect = BX.findChild(
@@ -2278,6 +1774,7 @@ if(typeof(BX.InterfaceGridFilterDate) === "undefined")
 			}
 
 			this._displayNode({ "tag": "DIV", "class": "bx-filter-date-days" }, showDays);
+			this._displayNode({ "tag": "DIV", "class": "bx-filter-date-days-suffix" }, showDays);
 			this._displayNode({ "tag": "DIV", "class": "bx-filter-date-from" }, showFrom);
 			this._displayNode({ "tag": "DIV", "class": "bx-filter-date-to" }, showTo);
 			this._displayNode({ "tag": "SPAN", "class": "bx-filter-calendar-separate" }, showHellip);
@@ -2289,6 +1786,10 @@ if(typeof(BX.InterfaceGridFilterDate) === "undefined")
 		trySetParams: function(params)
 		{
 			return false;
+		},
+		handleParamsChange: function()
+		{
+			this.layout();
 		}
 	};
 
@@ -2299,7 +1800,6 @@ if(typeof(BX.InterfaceGridFilterDate) === "undefined")
 		return self;
 	};
 }
-
 if(typeof(BX.InterfaceGridFilterUser) === "undefined")
 {
 	BX.InterfaceGridFilterUser = function()
@@ -2313,7 +1813,7 @@ if(typeof(BX.InterfaceGridFilterUser) === "undefined")
 	{
 		initialize: function(settings)
 		{
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._container = BX(settings.getParam("containerId"));
 			this._info = settings.getParam("info", null);
 		},
@@ -2356,7 +1856,198 @@ if(typeof(BX.InterfaceGridFilterUser) === "undefined")
 		return self;
 	};
 }
+if(typeof(BX.InterfaceGridFilterWidgetPeriod) === "undefined")
+{
+	BX.InterfaceGridFilterWidgetPeriod = function()
+	{
+		this._settings = null;
+		this._info = null;
+		this._container = null;
+		this._editor = null;
+		this._editorId = "";
+		this._elementId = "";
+		this._editorChangeListener = BX.delegate(this.onEditorChange, this);
+	};
+	BX.InterfaceGridFilterWidgetPeriod.prototype =
+	{
+		initialize: function(settings)
+		{
+			this._settings = settings ? settings : BX.ParamBag.create(null);
+			this._container = BX(settings.getParam("containerId"));
+			this._info = settings.getParam("info", null);
 
+			if(this._info)
+			{
+				this._editorId = this._info["params"]["editor"]["id"];
+				this._elementId = this._info["params"]["data"]["elementId"];
+			}
+			if(typeof(BX.CrmWidgetConfigPeriodEditor) !== "undefined")
+			{
+				if(typeof(BX.CrmWidgetConfigPeriodEditor.items[this._editorId]) !== "undefined")
+				{
+					this.setEditor(BX.CrmWidgetConfigPeriodEditor.items[this._editorId]);
+				}
+				else
+				{
+					BX.addCustomEvent(window, "CrmWidgetConfigPeriodEditorCreate", BX.delegate(this.onEditorCreate, this));
+				}
+			}
+		},
+		layout: function()
+		{
+		},
+		trySetParams: function(params)
+		{
+			var data = this._info["params"]["data"];
+			var value = params[data["paramName"]] ? params[data["paramName"]] : "";
+
+			if(this._editor)
+			{
+				this._editor.removeChangeListener(this._editorChangeListener);
+
+				var config = this.internalizeConfig(value);
+				this._editor.setPeriod(config["period"]);
+
+				if(BX.type.isNumber(config["year"]))
+				{
+					this._editor.setYear(config["year"]);
+				}
+
+				if(BX.type.isNumber(config["quarter"]))
+				{
+					this._editor.setQuarter(config["quarter"]);
+				}
+
+				if(BX.type.isNumber(config["month"]))
+				{
+					this._editor.setMonth(config["month"]);
+				}
+
+				this._editor.addChangeListener(this._editorChangeListener);
+			}
+
+			var element = BX(this._elementId);
+			if(BX.type.isElementNode(element))
+			{
+				element.value = value;
+			}
+
+			return true;
+		},
+		tryGetParams: function(params)
+		{
+			params[this._info["params"]["data"]["paramName"]] = this.getValue()
+			return true;
+		},
+		setEditor: function(editor)
+		{
+			if(this._editor)
+			{
+				this._editor.removeChangeListener(this._editorChangeListener);
+			}
+
+			this._editor = editor;
+
+			if(this._editor)
+			{
+				this._editor.addChangeListener(this._editorChangeListener);
+			}
+		},
+		getValue: function()
+		{
+			if(!this._editor)
+			{
+				return "";
+			}
+
+			return(
+				this.externalizeConfig(
+					{
+						period: this._editor.getPeriod(),
+						year: this._editor.getYear(),
+						quarter: this._editor.getQuarter(),
+						month: this._editor.getMonth()
+					}
+				)
+			);
+		},
+		internalizeConfig: function(str)
+		{
+			var d = new Date();
+			var curYear = d.getFullYear();
+			var curMonth = d.getMonth() + 1;
+			var curQuarter = curMonth >= 10 ? 4 : (curMonth >= 7 ? 3 : (curMonth >= 4 ? 2 : 1));
+
+			var result = { period: BX.CrmWidgetFilterPeriod.undefined };
+			var ary = str.split("-");
+
+			if(ary.length > 0)
+			{
+				result["period"] = ary[0];
+			}
+
+			if(result["period"] === BX.CrmWidgetFilterPeriod.year
+					|| result["period"] === BX.CrmWidgetFilterPeriod.quarter
+					|| result["period"] === BX.CrmWidgetFilterPeriod.month)
+			{
+				result["year"] = ary.length > 1 ? parseInt(ary[1]) : curYear;
+			}
+
+			if(result["period"] === BX.CrmWidgetFilterPeriod.quarter)
+			{
+				result["quarter"] = ary.length > 2 ? parseInt(ary[2]) : curQuarter;
+			}
+			else if(result["period"] === BX.CrmWidgetFilterPeriod.month)
+			{
+				result["month"] = ary.length > 2 ? parseInt(ary[2]) : curMonth;
+			}
+
+			return result;
+		},
+		externalizeConfig: function(config)
+		{
+			var period = config["period"];
+			var year = config["year"];
+			var quarter = config["quarter"];
+			var month = config["month"];
+
+			if(period === BX.CrmWidgetFilterPeriod.year)
+			{
+				return period + "-" + year;
+			}
+			else if(period === BX.CrmWidgetFilterPeriod.quarter)
+			{
+				return period + "-" + year + "-" + quarter;
+			}
+			else if(period === BX.CrmWidgetFilterPeriod.month)
+			{
+				return period + "-" + year + "-" + month;
+			}
+			return period;
+		},
+		onEditorCreate: function(sender)
+		{
+			if(this._editorId === sender.getId())
+			{
+				this.setEditor(sender);
+			}
+		},
+		onEditorChange: function(sender)
+		{
+			var element = BX(this._elementId);
+			if(BX.type.isElementNode(element))
+			{
+				element.value = this.getValue();
+			}
+		}
+	};
+	BX.InterfaceGridFilterWidgetPeriod.create = function(settings)
+	{
+		var self = new BX.InterfaceGridFilterWidgetPeriod();
+		self.initialize(settings);
+		return self;
+	};
+}
 if(typeof(BX.InterfaceGridFilterSaveAsDialog) === "undefined")
 {
 	BX.InterfaceGridFilterSaveAsDialog = function()
@@ -2374,7 +2065,7 @@ if(typeof(BX.InterfaceGridFilterSaveAsDialog) === "undefined")
 		initialize: function(id, settings)
 		{
 			this._id = id;
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._filter = settings.getParam("filter", null);
 		},
 		getId: function()
@@ -2524,7 +2215,6 @@ if(typeof(BX.InterfaceGridFilterSaveAsDialog) === "undefined")
 		return self;
 	};
 }
-
 if(typeof(BX.InterfaceGridFilterCheckListMenu) === "undefined")
 {
 	BX.InterfaceGridFilterCheckListMenu = function()
@@ -2544,7 +2234,7 @@ if(typeof(BX.InterfaceGridFilterCheckListMenu) === "undefined")
 		{
 			this._id = id;
 			this._menuId = this._id.toLowerCase();
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._filter = settings.getParam("filter", null);
 			this._allowToggle =  this.getSetting("allowToggle", true);
 			this._closeOnClick =  this.getSetting("closeOnClick", false);
@@ -2556,10 +2246,11 @@ if(typeof(BX.InterfaceGridFilterCheckListMenu) === "undefined")
 				this._items.push(
 					BX.InterfaceGridFilterCheckListMenuItem.create(
 						item["id"],
-						BX.CrmParamBag.create(
+						BX.ParamBag.create(
 							{
 								"text": BX.type.isString(item["text"]) ? item["text"] : "",
 								"checked": BX.type.isBoolean(item["checked"]) ? item["checked"] : false,
+								"tag": BX.type.isNotEmptyString(item["tag"]) ? item["tag"] : "",
 								"onchange": BX.type.isFunction(item["onchange"]) ? item["onchange"] : null,
 								"onclick": BX.type.isFunction(item["onclick"]) ? item["onclick"] : null,
 								"allowToggle": BX.type.isBoolean(item["allowToggle"]) ? item["allowToggle"] : this._allowToggle,
@@ -2617,6 +2308,19 @@ if(typeof(BX.InterfaceGridFilterCheckListMenu) === "undefined")
 				BX.PopupMenu.Data[this._menuId].popupWindow.close();
 			}
 		},
+		getItemsByTag: function(tag)
+		{
+			var result = [];
+			for(var i = 0; i < this._items.length; i++)
+			{
+				var item = this._items[i];
+				if(item.getTag() === tag)
+				{
+					result.push(item);
+				}
+			}
+			return result;
+		},
 		getContainer: function()
 		{
 			return BX("menu-popup-" + this.getId().toLowerCase());
@@ -2630,7 +2334,6 @@ if(typeof(BX.InterfaceGridFilterCheckListMenu) === "undefined")
 		return self;
 	};
 }
-
 if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 {
 	BX.InterfaceGridFilterCheckListMenuItem = function()
@@ -2639,6 +2342,7 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 		this._settings = null;
 		this._menu = null;
 		this._checked = false;
+		this._tag = "";
 		this._allowToggle = true;
 		this._closeOnClick = false;
 	};
@@ -2648,9 +2352,10 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 		initialize: function(id, settings)
 		{
 			this._id = id;
-			this._settings = settings ? settings : BX.CrmParamBag.create(null);
+			this._settings = settings ? settings : BX.ParamBag.create(null);
 			this._menu = settings.getParam("menu", null);
 			this._checked = settings.getParam("checked", false);
+			this._tag =  this.getSetting("tag", "");
 			this._allowToggle =  this.getSetting("allowToggle", true);
 			this._closeOnClick =  this.getSetting("closeOnClick", false);
 		},
@@ -2661,6 +2366,14 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 		getId: function()
 		{
 			return this._id;
+		},
+		getTag: function()
+		{
+			return this._tag;
+		},
+		setTag: function(tag)
+		{
+			this._tag = tag;
 		},
 		isChecked: function()
 		{
@@ -2676,6 +2389,25 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 
 			this._checked = checked;
 
+			var node = BX.findChild(
+				this._menu.getContainer(),
+				{ "tag":"A", "class": "crm-check-list-menu-item-" + this.getId().toLowerCase() },
+				true,
+				false
+			);
+
+			if(node)
+			{
+				if(checked)
+				{
+					BX.addClass(node,"menu-popup-item-checked");
+				}
+				else
+				{
+					BX.removeClass(node,"menu-popup-item-checked");
+				}
+			}
+
 			var handler = this.getSetting("onchange", null);
 			if(BX.type.isFunction(handler))
 			{
@@ -2687,6 +2419,10 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 				{
 				}
 			}
+		},
+		isTogglable: function()
+		{
+			return this._allowToggle;
 		},
 		toggle: function()
 		{
@@ -2707,7 +2443,7 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 			result.push(
 				{
 					"text": this.getSetting("text", this.getId()),
-					"className" : "tabbed-filter-popup-item" + (this.isChecked() ? " menu-popup-item-checked" : "") + " tabbed-check-list-menu-item-" + this.getId().toLowerCase(),
+					"className" : "crm-filter-popup-item" + (this.isChecked() ? " menu-popup-item-checked" : "") + " crm-check-list-menu-item-" + this.getId().toLowerCase(),
 					"href" : "#",
 					"onclick": BX.delegate(this._onClick, this)
 				}
@@ -2743,22 +2479,6 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 			}
 
 			this.toggle();
-
-			var node = BX.findChild(
-				this._menu.getContainer(),
-				{ "tag":"A", "class": "tabbed-check-list-menu-item-" + this.getId().toLowerCase() },
-				true,
-				false
-			);
-
-			if(this.isChecked())
-			{
-				BX.addClass(node,"menu-popup-item-checked");
-			}
-			else
-			{
-				BX.removeClass(node,"menu-popup-item-checked");
-			}
 		}
 	};
 
@@ -2769,4 +2489,266 @@ if(typeof(BX.InterfaceGridFilterCheckListMenuItem) === "undefined")
 		return self;
 	}
 }
+if(typeof(BX.InterfaceGridFilterCloseOpen) === "undefined")
+{
+	BX.InterfaceGridFilterCloseOpen = function(innerBlock, mainBlock, filter)
+	{
+		this.filter = filter;
+		this.innerBlock = BX(innerBlock);
+		this.mainBlock = BX(mainBlock);
+		this.isOpen = null;
+	};
 
+	BX.InterfaceGridFilterCloseOpen.prototype =
+	{
+		initialize: function()
+		{
+			this.isOpen = !this.filter.isFolded();
+		},
+		_easing: function(params)
+		{
+			var _self = this;
+			var easing = new BX.easing({
+				duration: 300,
+				start: {
+					height: params.start
+				},
+				finish: {
+					height: params.finish
+				},
+				transition: BX.easing.makeEaseOut(BX.easing.transitions.circ),
+				step: BX.delegate(this._step, this),
+				complete: BX.proxy(this._complete, this)
+			});
+			easing.animate()
+		},
+		toggle: function()
+		{
+			if(this.isOpen)
+			{
+				this._easing({
+					start : this.innerBlock.offsetHeight,
+					finish : 0
+				});
+				this.isOpen = false;
+
+			}
+			else {
+				this._easing({
+					start: this.mainBlock.offsetHeight,
+					finish: this.innerBlock.offsetHeight
+				});
+				this.isOpen = true;
+			}
+		},
+		_step: function(state)
+		{
+			this.mainBlock.style.height = state.height + 'px';
+		},
+		_complete: function ()
+		{
+			if (this.isOpen)
+				this.mainBlock.style.height = 'auto';
+		}
+	};
+}
+if(typeof(BX.InterfaceGridFilterNavigationBar) === "undefined")
+{
+	BX.InterfaceGridFilterNavigationBar = function()
+	{
+		this._id = "";
+		this._settings = null;
+		this._binding = null;
+		this._items = null;
+	};
+
+	BX.InterfaceGridFilterNavigationBar.prototype =
+	{
+		initialize: function(id, settings)
+		{
+			this._id = id;
+			this._settings = settings ? settings : BX.ParamBag.create(null);
+			this._binding = this.getSetting("binding", null);
+
+			this._items = [];
+			var items = this.getSetting("items", []);
+			for(var i = 0; i < items.length; i++)
+			{
+				var itemSettings = items[i];
+				var itemId = BX.type.isNotEmptyString(itemSettings["id"]) ? itemSettings["id"] : i;
+				itemSettings["parent"] = this;
+				this._items.push(
+					BX.InterfaceGridFilterNavigationBarItem.create(
+						itemId,
+						BX.ParamBag.create(itemSettings)
+					)
+				);
+			}
+		},
+		getId: function()
+		{
+			return this._id;
+		},
+		getSetting: function(name, defaultval)
+		{
+			return this._settings.getParam(name, defaultval);
+		},
+		getBinding: function()
+		{
+			return this._binding;
+		}
+	};
+
+	BX.InterfaceGridFilterNavigationBar.create = function(id, settings)
+	{
+		var self = new BX.InterfaceGridFilterNavigationBar();
+		self.initialize(id, settings);
+		return self;
+	};
+}
+if(typeof(BX.InterfaceGridFilterNavigationBarItem) === "undefined")
+{
+	BX.InterfaceGridFilterNavigationBarItem = function()
+	{
+		this._id = "";
+		this._settings = null;
+		this._parent = null;
+		this._button = null;
+		this._hint = null;
+		this._buttonHandler = BX.delegate(this.onButtonClick, this);
+	};
+
+	BX.InterfaceGridFilterNavigationBarItem.prototype =
+	{
+		initialize: function(id, settings)
+		{
+			this._id = id;
+			this._settings = settings ? settings : BX.ParamBag.create(null);
+
+			this._parent = this.getSetting("parent");
+			if(!this._parent)
+			{
+				throw "InterfaceGridFilterNavigationBarItem: The parameter 'parent' is not found.";
+			}
+
+			this._button = BX(this.getSetting("buttonId"));
+			if(!this._button)
+			{
+				throw "InterfaceGridFilterNavigationBarItem: The button element is not found.";
+			}
+			BX.bind(this._button, "click", this._buttonHandler);
+
+			if(this.getSetting("enableHint", true))
+			{
+				this.createHint(this.getSetting("hint", null));
+			}
+		},
+		getId: function()
+		{
+			return this._id;
+		},
+		getSetting: function(name, defaultval)
+		{
+			return this._settings.getParam(name, defaultval);
+		},
+		createHint: function(messages)
+		{
+			if(!messages)
+			{
+				return;
+			}
+
+			this._hint = BX.PopupWindowManager.create(this._id + "_hint",
+				this._button,
+				{
+					offsetTop : -8,
+					autoHide : true,
+					closeByEsc : false,
+					angle: { position: "bottom", offset: 24 },
+					events: { onPopupClose : BX.delegate(this.onHintClose, this) },
+					content : BX.create("DIV",
+						{
+							attrs: { className: "crm-popup-contents" },
+							children:
+							[
+								BX.create("SPAN",
+									{ attrs: { className: "crm-popup-title" }, text: messages["title"]  }
+								),
+								BX.create("P", { text: messages["content"] }),
+								BX.create("P",
+									{
+										children:
+										[
+											BX.create("A",
+												{
+													props: { href: "#" },
+													text: messages["disabling"],
+													events: { "click": BX.delegate(this.onDisableHint, this)  }
+												}
+											)
+										]
+									}
+								)
+							]
+						}
+					)
+				}
+			);
+			this._hint.show();
+		},
+		onButtonClick: function(e)
+		{
+			var url = this.getSetting("url", "");
+			if(url === "")
+			{
+				return;
+			}
+
+			var binding = this._parent.getBinding();
+			if(binding)
+			{
+				var category = BX.type.isNotEmptyString(binding["category"]) ? binding["category"] : "";
+				var name = BX.type.isNotEmptyString(binding["name"]) ? binding["name"] : "";
+				var key = BX.type.isNotEmptyString(binding["key"]) ? binding["key"] : "";
+
+				if(category !== "" && name !== "" && key !== "")
+				{
+					BX.userOptions.save(category, name, key, this._id, false);
+				}
+			}
+
+			setTimeout(function(){ window.location.href = url; }, 150);
+		},
+		onDisableHint: function(e)
+		{
+			if(this._hint)
+			{
+				this._hint.close();
+
+				BX.userOptions.save(
+					"main.interface.filter.navigation",
+					this._parent.getId().toLowerCase(),
+					"enable_" + this._id.toLowerCase() + "_hint",
+					"N",
+					false
+				);
+			}
+			return BX.PreventDefault(e);
+		},
+		onHintClose: function()
+		{
+			if(this._hint)
+			{
+				this._hint.destroy();
+				this._hint = null;
+			}
+		}
+	};
+
+	BX.InterfaceGridFilterNavigationBarItem.create = function(id, settings)
+	{
+		var self = new BX.InterfaceGridFilterNavigationBarItem();
+		self.initialize(id, settings);
+		return self;
+	};
+}

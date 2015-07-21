@@ -26,8 +26,11 @@ class Engine
 
 	public function __construct()
 	{
-		$dbEngine = SearchEngineTable::getByCode($this->engineId);
-		$this->engine = $dbEngine->fetch();
+		if(!$this->engine)
+		{
+			$this->engine = static::getEngine($this->engineId);
+		}
+
 		if(!is_array($this->engine))
 		{
 			throw new SystemException("Unknown search engine");
@@ -56,6 +59,11 @@ class Engine
 		return $this->engineSettings;
 	}
 
+	public function getClientId()
+	{
+		return $this->engine['CLIENT_ID'];
+	}
+
 	public function getAuthSettings()
 	{
 		return $this->engineSettings['AUTH'];
@@ -72,6 +80,12 @@ class Engine
 		SearchEngineTable::update($this->engine['ID'], array(
 			'SETTINGS' => serialize($this->engineSettings)
 		));
+	}
+
+	protected static function getEngine($engineId)
+	{
+		$dbEngine = SearchEngineTable::getByCode($engineId);
+		return $dbEngine->fetch();
 	}
 }
 

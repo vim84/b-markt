@@ -151,6 +151,7 @@ window.JCCatalogTopSection = function (arParams)
 
 		switch (this.productType)
 		{
+			case 0://no catalog
 			case 1://product
 			case 2://set
 				if (!!arParams.PRODUCT && 'object' === typeof(arParams.PRODUCT))
@@ -731,6 +732,7 @@ window.JCCatalogTopSection.prototype.SearchOfferPropIndex = function(strPropID, 
 		arShowValues = false,
 		i, j,
 		arCanBuyValues = [],
+		allValues = [],
 		index = -1,
 		arFilter = {},
 		tmpFilter = [];
@@ -770,6 +772,7 @@ window.JCCatalogTopSection.prototype.SearchOfferPropIndex = function(strPropID, 
 			{
 				return false;
 			}
+			allValues = [];
 			if (this.showAbsent)
 			{
 				arCanBuyValues = [];
@@ -778,10 +781,9 @@ window.JCCatalogTopSection.prototype.SearchOfferPropIndex = function(strPropID, 
 				for (j = 0; j < arShowValues.length; j++)
 				{
 					tmpFilter[strName] = arShowValues[j];
+					allValues[allValues.length] = arShowValues[j];
 					if (this.GetCanBuy(tmpFilter))
-					{
 						arCanBuyValues[arCanBuyValues.length] = arShowValues[j];
-					}
 				}
 			}
 			else
@@ -794,7 +796,10 @@ window.JCCatalogTopSection.prototype.SearchOfferPropIndex = function(strPropID, 
 			}
 			else
 			{
-				arFilter[strName] = arCanBuyValues[0];
+				if (this.showAbsent)
+					arFilter[strName] = (arCanBuyValues.length > 0 ? arCanBuyValues[0] : allValues[0]);
+				else
+					arFilter[strName] = arCanBuyValues[0];
 			}
 			this.UpdateRow(i, arFilter[strName], arShowValues, arCanBuyValues);
 		}
@@ -1231,6 +1236,7 @@ window.JCCatalogTopSection.prototype.Compare = function()
 	{
 		switch (this.productType)
 		{
+			case 0://no catalog
 			case 1://product
 			case 2://set
 				compareLink = this.compareData.compareUrl.replace('#ID#', this.product.id.toString());
@@ -1555,7 +1561,7 @@ window.JCCatalogTopSection.prototype.BasketResult = function(arResult)
 						);
 					break;
 			}
-			strContent = '<div style="width: 96%; margin: 10px 2%; text-align: center;"><img src="'+strPict+'" height="130"><p>'+this.product.name+'</p></div>';
+			strContent = '<div style="width: 96%; margin: 10px 2%; text-align: center;"><img src="'+strPict+'" height="130" style="max-height:130px"><p>'+this.product.name+'</p></div>';
 			if (this.showClosePopup)
 			{
 				buttons = [

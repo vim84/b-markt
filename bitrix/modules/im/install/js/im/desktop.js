@@ -48,6 +48,9 @@
 		this.tabRedrawTimeout = null;
 		this.userInfo = {id: 0, name: '', gender: 'M', avatar: '', profile: ''};
 
+		this.syncStatus = true;
+		this.syncCounter = 0;
+
 		/* sizes */
 		this.width = 914;
 		this.height = 454;
@@ -285,6 +288,11 @@
 	BX.desktop.prototype.ready = function ()
 	{
 		return this.apiReady;
+	}
+
+	BX.desktop.prototype.diskReady = function ()
+	{
+		return this.apiReady && typeof(BXFileStorage) != 'undefined';
 	}
 
 	BX.desktop.prototype.login = function (callback)
@@ -765,6 +773,38 @@
 		BXDesktopWindow.SetProperty("clientSize", { Width: document.body.offsetWidth, Height: document.body.offsetHeight});
 
 		return true;
+	}
+
+	BX.desktop.prototype.syncPause = function (status, immediate)
+	{
+		if (!this.diskReady() || !this.enableInVersion(29)) return false;
+
+		if (status)
+		{
+			this.syncCounter += 1;
+		}
+		else
+		{
+			this.syncCounter = this.syncCounter-1 <= 0? 0: this.syncCounter-1;
+		}
+
+		if (immediate && !status)
+		{
+			this.syncCounter = 0;
+		}
+
+		this.syncStatus = this.syncCounter <= 0;
+
+		BXFileStorage.SyncPause(!this.syncStatus);
+
+		BX.onCustomEvent(window, 'onDesktopSyncPause', [this.syncStatus]);
+
+		return true;
+	}
+
+	BX.desktop.prototype.getSyncPauseStatus = function ()
+	{
+		return this.syncStatus;
 	}
 
 	BX.desktop.prototype.windowCommand = function (windowTarget, command)

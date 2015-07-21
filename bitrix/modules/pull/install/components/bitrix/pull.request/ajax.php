@@ -19,16 +19,37 @@ header('Content-Type: application/x-javascript; charset='.LANG_CHARSET);
 if (!CModule::IncludeModule("pull"))
 {
 	echo CUtil::PhpToJsObject(Array('ERROR' => 'PULL_MODULE_IS_NOT_INSTALLED'));
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
+	CMain::FinalActions();
 	die();
 }
 
-$userId = intval($USER->GetID());
-if ($userId <= 0)
+
+if (!defined('PULL_USER_ID'))
 {
-	echo CUtil::PhpToJsObject(Array('ERROR' => 'AUTHORIZE_ERROR'));
-	require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
-	die();
+	if(!$USER->IsAuthorized())
+	{
+		$USER->LoginByCookies();
+	}
+
+	$userId = intval($USER->GetID());
+	if ($userId <= 0)
+	{
+		// TODO need change AUTHORIZE ERROR callbacks
+		//header("HTTP/1.0 401 Not Authorized");
+		//header("Content-Type: application/x-javascript");
+		//header("BX-Authorize: ".bitrix_sessid());
+
+		echo CUtil::PhpToJsObject(Array(
+			'ERROR' => 'AUTHORIZE_ERROR',
+			'BITRIX_SESSID' => bitrix_sessid()
+		));
+		CMain::FinalActions();
+		die();
+	}
+}
+else
+{
+	$userId = PULL_USER_ID;
 }
 
 if (check_bitrix_sessid())
@@ -81,5 +102,5 @@ else
 		'ERROR' => 'SESSION_ERROR'
 	));
 }
-require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
-?>
+CMain::FinalActions();
+die();

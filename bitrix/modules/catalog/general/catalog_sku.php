@@ -18,6 +18,7 @@ class CAllCatalogSKU
 	static protected $arProductCache = array();
 	static protected $arPropertyCache = array();
 	static protected $arIBlockCache = array();
+	static protected $parentCache = array();
 
 	public static function GetCatalogTypes($boolFull = false)
 	{
@@ -45,45 +46,58 @@ class CAllCatalogSKU
 		if ($intOfferID <= 0)
 			return false;
 
-		$intIBlockID = (int)$intIBlockID;
-		if ($intIBlockID <= 0)
+		if (!isset(self::$parentCache[$intOfferID]))
 		{
-			$intIBlockID = (int)CIBlockElement::GetIBlockByID($intOfferID);
-		}
-		if ($intIBlockID <= 0)
-			return false;
+			self::$parentCache[$intOfferID] = false;
+			$intIBlockID = (int)$intIBlockID;
+			if ($intIBlockID <= 0)
+				$intIBlockID = (int)CIBlockElement::GetIBlockByID($intOfferID);
 
-		if (!isset(self::$arOfferCache[$intIBlockID]))
-		{
-			$arSkuInfo = CCatalogSKU::GetInfoByOfferIBlock($intIBlockID);
-		}
-		else
-		{
-			$arSkuInfo = self::$arOfferCache[$intIBlockID];
-		}
-		if (empty($arSkuInfo) || empty($arSkuInfo['SKU_PROPERTY_ID']))
-			return false;
+			if ($intIBlockID <= 0)
+				return self::$parentCache[$intOfferID];
 
-		$rsItems = CIBlockElement::GetProperty(
-			$intIBlockID,
-			$intOfferID,
-			array(),
-			array('ID' => $arSkuInfo['SKU_PROPERTY_ID'])
-		);
-		if ($arItem = $rsItems->Fetch())
-		{
-			$arItem['VALUE'] = (int)$arItem['VALUE'];
-			if ($arItem['VALUE'] > 0)
+			if (!isset(self::$arOfferCache[$intIBlockID]))
+				$skuInfo = CCatalogSKU::GetInfoByOfferIBlock($intIBlockID);
+			else
+				$skuInfo = self::$arOfferCache[$intIBlockID];
+
+			if (empty($skuInfo) || empty($skuInfo['SKU_PROPERTY_ID']))
+				return self::$parentCache[$intOfferID];
+
+			$conn = Application::getConnection();
+			$helper = $conn->getSqlHelper();
+
+			if ($skuInfo['VERSION'] == 2)
 			{
-				return array(
-					'ID' => $arItem['VALUE'],
-					'IBLOCK_ID' => $arSkuInfo['PRODUCT_IBLOCK_ID'],
-					'OFFER_IBLOCK_ID' => $intIBlockID,
-					'SKU_PROPERTY_ID' => $arSkuInfo['SKU_PROPERTY_ID']
-				);
+				$productField = $helper->quote('PROPERTY_'.$skuInfo['SKU_PROPERTY_ID']);
+				$sqlQuery = 'select '.$productField.' as ID from '.$helper->quote('b_iblock_element_prop_s'.$skuInfo['IBLOCK_ID']).
+					' where '.$helper->quote('IBLOCK_ELEMENT_ID').' = '.$intOfferID;
 			}
+			else
+			{
+				$productField = $helper->quote('VALUE_NUM');
+				$sqlQuery = 'select '.$productField.' as ID from '.$helper->quote('b_iblock_element_property').
+					' where '.$helper->quote('IBLOCK_PROPERTY_ID').' = '.$skuInfo['SKU_PROPERTY_ID'].
+					' and '.$helper->quote('IBLOCK_ELEMENT_ID').' = '.$intOfferID;
+			}
+			unset($productField);
+			$parentIterator = $conn->query($sqlQuery);
+			if ($parent = $parentIterator->fetch())
+			{
+				$parent['ID'] = (int)$parent['ID'];
+				if ($parent['ID'] > 0)
+				{
+					self::$parentCache[$intOfferID] = array(
+						'ID' => $parent['ID'],
+						'IBLOCK_ID' => $skuInfo['PRODUCT_IBLOCK_ID'],
+						'OFFER_IBLOCK_ID' => $intIBlockID,
+						'SKU_PROPERTY_ID' => $skuInfo['SKU_PROPERTY_ID']
+					);
+				}
+			}
+			unset($parent, $parentIterator, $sqlQuery, $helper, $conn, $skuInfo);
 		}
-		return false;
+		return self::$parentCache[$intOfferID];
 	}
 
 	public static function GetInfoByOfferIBlock($intIBlockID)
@@ -233,9 +247,9 @@ class CAllCatalogSKU
 					$iblock['SKU_PROPERTY_ID'] = (int)$iblock['SKU_PROPERTY_ID'];
 					$iblock['VERSION'] = (int)$iblock['VERSION'];
 					$iblockSku[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
-					unset($iblock['VERSION']);
 					self::$arProductCache[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
 					self::$arOfferCache[$iblock['IBLOCK_ID']] = $iblock;
+					self::$arPropertyCache[$iblock['SKU_PROPERTY_ID']] = $iblock;
 					$iblockProduct[$iblock['PRODUCT_IBLOCK_ID']] = $iblockList[$iblock['PRODUCT_IBLOCK_ID']];
 				}
 				unset($iblock, $iblockIterator);
@@ -255,9 +269,9 @@ class CAllCatalogSKU
 				$iblock['SKU_PROPERTY_ID'] = (int)$iblock['SKU_PROPERTY_ID'];
 				$iblock['VERSION'] = (int)$iblock['VERSION'];
 				$iblockSku[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
-				unset($iblock['VERSION']);
 				self::$arProductCache[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
 				self::$arOfferCache[$iblock['IBLOCK_ID']] = $iblock;
+				self::$arPropertyCache[$iblock['SKU_PROPERTY_ID']] = $iblock;
 				$iblockProduct[$iblockID] = $productID;
 			}
 			unset($iblock, $iblockIterator);
@@ -356,6 +370,7 @@ class CAllCatalogSKU
 					$iblockSku[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
 					self::$arProductCache[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
 					self::$arOfferCache[$iblock['IBLOCK_ID']] = $iblock;
+					self::$arPropertyCache[$iblock['SKU_PROPERTY_ID']] = $iblock;
 					$offersIblock[] = $iblock['IBLOCK_ID'];
 					$iblockProduct[$iblock['PRODUCT_IBLOCK_ID']] = $iblockList[$iblock['PRODUCT_IBLOCK_ID']];
 				}
@@ -378,6 +393,7 @@ class CAllCatalogSKU
 				$iblockSku[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
 				self::$arProductCache[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
 				self::$arOfferCache[$iblock['IBLOCK_ID']] = $iblock;
+				self::$arPropertyCache[$iblock['SKU_PROPERTY_ID']] = $iblock;
 				$offersIblock[] = $iblock['IBLOCK_ID'];
 				$iblockProduct[$iblockID] = $productID;
 			}
@@ -513,6 +529,8 @@ class CAllCatalogSKU
 					$iblock['VERSION'] = (int)$iblock['VERSION'];
 					$iblockSku[$iblock['IBLOCK_ID']] = $iblock;
 					self::$arProductCache[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
+					self::$arOfferCache[$iblock['IBLOCK_ID']] = $iblock;
+					self::$arPropertyCache[$iblock['SKU_PROPERTY_ID']] = $iblock;
 					$iblockOffers[$iblock['IBLOCK_ID']] = $iblockList[$iblock['IBLOCK_ID']];
 				}
 				unset($iblock, $iblockIterator);
@@ -533,6 +551,8 @@ class CAllCatalogSKU
 				$iblock['VERSION'] = (int)$iblock['VERSION'];
 				$iblockSku[$iblock['IBLOCK_ID']] = $iblock;
 				self::$arProductCache[$iblock['PRODUCT_IBLOCK_ID']] = $iblock;
+				self::$arOfferCache[$iblock['IBLOCK_ID']] = $iblock;
+				self::$arPropertyCache[$iblock['SKU_PROPERTY_ID']] = $iblock;
 				$iblockOffers[$iblockID] = $offerID;
 			}
 			unset($iblock, $iblockIterator);

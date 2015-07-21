@@ -53,6 +53,35 @@ $arComponentParameters = array(
 		),
 	),
 	"PARAMETERS" => array(
+		"SEF_MODE" => array(),
+		"SEF_RULE" => array(
+			"VALUES" => array(
+				"SECTION_ID" => array(
+					"TEXT" => GetMessage("CP_BCSF_SECTION_ID"),
+					"TEMPLATE" => "#SECTION_ID#",
+					"PARAMETER_LINK" => "SECTION_ID",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_ID"]}',
+				),
+				"SECTION_CODE" => array(
+					"TEXT" => GetMessage("CP_BCSF_SECTION_CODE"),
+					"TEMPLATE" => "#SECTION_CODE#",
+					"PARAMETER_LINK" => "SECTION_CODE",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_CODE"]}',
+				),
+				"SECTION_CODE_PATH" => array(
+					"TEXT" => GetMessage("CP_BCSF_SECTION_CODE_PATH"),
+					"TEMPLATE" => "#SECTION_CODE_PATH#",
+					"PARAMETER_LINK" => "SECTION_CODE_PATH",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_CODE_PATH"]}',
+				),
+				"SMART_FILTER_PATH" => array(
+					"TEXT" => GetMessage("CP_BCSF_SMART_FILTER_PATH"),
+					"TEMPLATE" => "#SMART_FILTER_PATH#",
+					"PARAMETER_LINK" => "SMART_FILTER_PATH",
+					"PARAMETER_VALUE" => '={$_REQUEST["SMART_FILTER_PATH"]}',
+				),
+			),
+		),
 		"IBLOCK_TYPE" => array(
 			"PARENT" => "DATA_SOURCE",
 			"NAME" => GetMessage("CP_BCSF_IBLOCK_TYPE"),
@@ -115,6 +144,12 @@ $arComponentParameters = array(
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
+		"PAGER_PARAMS_NAME" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BCSF_PAGER_PARAMS_NAME"),
+			"TYPE" => "STRING",
+			"DEFAULT" => "arrPager"
+		),
 		"XML_EXPORT" => array(
 			"PARENT" => "XML_EXPORT",
 			"NAME" => GetMessage("CP_BCSF_XML_EXPORT"),
@@ -150,6 +185,21 @@ $arComponentParameters = array(
 		),
 	),
 );
+
+if ($arCurrentValues["SEF_MODE"] == "Y")
+{
+	$arComponentParameters["PARAMETERS"]["SECTION_CODE_PATH"] = array(
+		"NAME" => GetMessage("CP_BCSF_SECTION_CODE_PATH"),
+		"TYPE" => "STRING",
+		"DEFAULT" => "",
+	);
+	$arComponentParameters["PARAMETERS"]["SMART_FILTER_PATH"] = array(
+		"NAME" => GetMessage("CP_BCSF_SMART_FILTER_PATH"),
+		"TYPE" => "STRING",
+		"DEFAULT" => "",
+	);
+}
+
 if ($catalogIncluded)
 {
 	$arComponentParameters["PARAMETERS"]['HIDE_NOT_AVAILABLE'] = array(

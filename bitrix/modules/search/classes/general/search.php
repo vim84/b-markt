@@ -2066,7 +2066,7 @@ class CAllSearch extends CDBResult
 		}
 		elseif(array_key_exists("DATE_CHANGE", $arFields))
 		{
-			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH.MI.SS", CLang::GetDateFormat());
+			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH:MI:SS", CLang::GetDateFormat());
 		}
 
 		if(BX_SEARCH_VERSION > 1)
@@ -2511,7 +2511,7 @@ class CAllSearch extends CDBResult
 		}
 		elseif(array_key_exists("DATE_CHANGE", $arFields))
 		{
-			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH.MI.SS", CLang::GetDateFormat());
+			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH:MI:SS", CLang::GetDateFormat());
 		}
 
 		if(BX_SEARCH_VERSION > 1)

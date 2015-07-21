@@ -96,6 +96,7 @@ $arFilterFields = array(
 	"filter_active",
 	"filter_intext",
 	"filter_name",
+	"filter_code"
 );
 
 foreach($arProps as $prop)
@@ -118,8 +119,9 @@ $arFilter = array(
 	"ACTIVE" => $filter_active,
 	"EXTERNAL_ID" => $filter_external_id,
 	"?NAME" => $filter_name,
+	"?CODE" => $filter_code,
 	"?SEARCHABLE_CONTENT" => $filter_intext,
-	"SHOW_NEW" => "Y",
+	"SHOW_NEW" => "Y"
 );
 
 if($filter_iblock_id > 0)
@@ -505,6 +507,7 @@ if(is_array($arIBTYPE) && ($arIBTYPE["SECTIONS"] == "Y"))
 $arFindFields["act"] = GetMessage("IBLOCK_ELSEARCH_F_ACTIVE");
 $arFindFields["ext_id"] = GetMessage("IBLOCK_FIELD_EXTERNAL_ID");
 $arFindFields["tit"] = GetMessage("IBLOCK_ELSEARCH_F_TITLE");
+$arFindFields["code"] = GetMessage("IBLOCK_FIELD_CODE");
 $arFindFields["dsc"] = GetMessage("IBLOCK_ELSEARCH_F_DSC");
 
 foreach($arProps as $prop)
@@ -713,6 +716,12 @@ $oFilter->Begin();
 		</td>
 	</tr>
 	<tr>
+		<td nowrap><?echo GetMessage("IBLOCK_FIELD_CODE")?>:</td>
+		<td nowrap>
+			<input type="text" name="filter_code" value="<?echo htmlspecialcharsex($filter_code)?>" size="30">
+		</td>
+	</tr>
+	<tr>
 		<td nowrap><?echo GetMessage("IBLOCK_ELSEARCH_DESC")?></td>
 		<td nowrap>
 			<input type="text" name="filter_intext" size="50" value="<?echo htmlspecialcharsex($filter_intext)?>" size="30">&nbsp;<?=ShowFilterLogicHelp()?>
@@ -766,7 +775,7 @@ $oFilter->Buttons();
 <?
 $lAdmin->DisplayList();
 
-echo ShowError($strWarning);
+if ($strWarning != '')
+	ShowError($strWarning);
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_popup_admin.php");
-?>

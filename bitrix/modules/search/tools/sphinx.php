@@ -167,7 +167,7 @@ class CSearchSphinx extends CSearchFullText
 		}
 		elseif(array_key_exists("DATE_CHANGE", $arFields))
 		{
-			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH.MI.SS", CLang::GetDateFormat());
+			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH:MI:SS", CLang::GetDateFormat());
 		}
 
 		$DATE_FROM = intval(MakeTimeStamp($arFields["DATE_FROM"]));
@@ -280,7 +280,7 @@ class CSearchSphinx extends CSearchFullText
 		}
 		elseif(array_key_exists("DATE_CHANGE", $arFields))
 		{
-			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH.MI.SS", CLang::GetDateFormat());
+			$arFields["DATE_CHANGE"] = $DB->FormatDate($arFields["DATE_CHANGE"], "DD.MM.YYYY HH:MI:SS", CLang::GetDateFormat());
 		}
 
 		if (array_key_exists("DATE_CHANGE", $arFields))
@@ -509,7 +509,7 @@ class CSearchSphinx extends CSearchFullText
 		$this->errorText = "";
 		$this->errorNumber = 0;
 
-		$this->tags = "";
+		$this->tags = trim($arParams["TAGS"]);
 		if (is_array($aParamsEx) && !empty($aParamsEx))
 		{
 			$aParamsEx["LOGIC"] = "OR";
@@ -843,12 +843,13 @@ class CSearchSphinx extends CSearchFullText
 				break;
 			case "TAGS":
 				$arTags = explode(",", $val);
-				foreach($arTags as $i => $strTag)
+				foreach($arTags as $i => &$strTag)
 				{
 					$strTag = trim($strTag, " \n\r\t\"");
 					if ($strTag == "")
 						unset($arTags[$i]);
 				}
+				unset($strTag);
 
 				$arWhere = array_merge($arWhere, $this->filterField("tags", $arTags, $inSelect));
 				break;

@@ -286,9 +286,9 @@ $arComponentParameters = array(
 			"ADDITIONAL_VALUES" => "Y",
 		),
 		"SET_TITLE" => Array(),
-		"SET_STATUS_404" => Array(
+		"SET_LAST_MODIFIED" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BP_SET_STATUS_404"),
+			"NAME" => GetMessage("CP_BP_SET_LAST_MODIFIED"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
@@ -322,7 +322,17 @@ $arComponentParameters = array(
 		),
 	),
 );
-CIBlockParameters::AddPagerSettings($arComponentParameters, GetMessage("T_IBLOCK_DESC_PAGER_PHOTO"), true, true);
+
+CIBlockParameters::AddPagerSettings(
+	$arComponentParameters,
+	GetMessage("T_IBLOCK_DESC_PAGER_PHOTO"), //$pager_title
+	true, //$bDescNumbering
+	true, //$bShowAllParam
+	true, //$bBaseLink
+	$arCurrentValues["PAGER_BASE_LINK_ENABLE"]==="Y" //$bBaseLinkEnabled
+);
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues);
 
 if($arCurrentValues["USE_FILTER"]=="Y")
 {

@@ -179,4 +179,5 @@ $MESS["IBLOCK_XML2_BASE_UNIT_ADD_ERROR"] = "Error creating a new unit of measure
 $MESS["IBLOCK_XML2_EXTERNAL"] = "External";
 $MESS["IBLOCK_XML2_HBLOCK_NAME_IS_INVALID"] = "A dictionary name must start with an alphabetical character and can include only letters and digits.";
 $MESS["IBLOCK_XML2_MODULE_CATALOG_IS_ABSENT"] = "Commercial catalog module is not installed. You cannot import quotes and prices.";
+$MESS["IBLOCK_XML2_BX_CANONICAL_URL"] = "BitrixURLCanonical";
 ?>

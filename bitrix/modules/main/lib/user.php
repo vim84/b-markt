@@ -7,6 +7,7 @@
  */
 namespace Bitrix\Main;
 
+use Bitrix\Main\DB\SqlExpression;
 use Bitrix\Main\Entity;
 use Bitrix\Main\Localization\Loc;
 
@@ -197,6 +198,62 @@ class UserTable extends Entity\DataManager
 
 		$connection = Application::getConnection();
 		return $connection->queryScalar($sql);
+	}
+
+	public static function getUserGroupIds($userId)
+	{
+		$groups = array(2);
+
+		// anonymous groups
+		$result = GroupTable::getList(array(
+			'select' => array('ID'),
+			'filter' => array(
+				'=ANONYMOUS' => 'Y',
+				'=ACTIVE' => 'Y'
+			)
+		));
+
+		while ($row = $result->fetch())
+		{
+			$groups[] = $row['ID'];
+		}
+
+		// private groups
+		$nowTimeExpression = new SqlExpression(
+			static::getEntity()->getConnection()->getSqlHelper()->getCurrentDateTimeFunction()
+		);
+
+		$result = GroupTable::getList(array(
+			'select' => array('ID'),
+			'filter' => array(
+				'=UserGroup:GROUP.USER_ID' => $userId,
+				'=ACTIVE' => 'Y',
+				array(
+					'LOGIC' => 'OR',
+					'=UserGroup:GROUP.DATE_ACTIVE_FROM' => null,
+					'<=UserGroup:GROUP.DATE_ACTIVE_FROM' => $nowTimeExpression,
+				),
+				array(
+					'LOGIC' => 'OR',
+					'=UserGroup:GROUP.DATE_ACTIVE_TO' => null,
+					'>=UserGroup:GROUP.DATE_ACTIVE_TO' => $nowTimeExpression,
+				),
+				array(
+					'LOGIC' => 'OR',
+					'!=ANONYMOUS' => 'Y',
+					'=ANONYMOUS' => null
+				)
+			)
+		));
+
+		while ($row = $result->fetch())
+		{
+			$groups[] = $row['ID'];
+		}
+
+		sort($groups);
+
+		return array_unique($groups);
 	}
 
 	public static function add(array $data)

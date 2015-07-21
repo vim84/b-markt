@@ -103,7 +103,7 @@ BX.DD.dropFiles.prototype._dragEnter = function(e)
 {
 	BX.PreventDefault(e);
 	this._cancelLeave();
-	BX.onCustomEvent(this, 'dragEnter');
+	BX.onCustomEvent(this, 'dragEnter', [e]);
 	return true;
 }
 

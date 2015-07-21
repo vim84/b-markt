@@ -3,33 +3,18 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)die();
 
 CJSCore::Init(array('popup', 'date'));
 
-$gridManagerID = $arResult['GRID_ID'].'_MANAGER';
-$gridManagerCfg = array(
-	'ownerType' => 'LEAD',
-	'gridId' => $arResult['GRID_ID'],
-	'formName' => "form_{$arResult['GRID_ID']}",
-	'allRowsCheckBoxId' => "actallrows_{$arResult['GRID_ID']}",
-	'activityEditorId' => $activityEditorID,
-	'serviceUrl' => '/bitrix/components/bitrix/crm.activity.editor/ajax.php?siteID='.SITE_ID.'&'.bitrix_sessid_get(),
-	'filterFields' => array()
-);
-?>
-<script type="text/javascript">
-	BX.ready(
-		function()
-		{
-			var gridManager = BX.CrmInterfaceGridManager.create(
-				'<?= CUtil::JSEscape($gridManagerID) ?>',
-				<?= CUtil::PhpToJSObject($gridManagerCfg) ?>
-			);
-		}
-	);
-</script>
-<?
-
 $presets = isset($arParams['~FILTER_PRESETS']) ? $arParams['~FILTER_PRESETS'] : array();
-$savedItems = $arResult['OPTIONS']['filters'];
+$savedItems = isset($arResult['OPTIONS'])
+	&& isset($arResult['OPTIONS']['filters'])
+	&& is_array($arResult['OPTIONS']['filters'])
+	? $arResult['OPTIONS']['filters'] : array();
+
 //HACK: Setup filter omitted names (me be lost if preset changed by user)
+if(isset($savedItems['filter_default']))
+{
+	unset($savedItems['filter_default']);
+}
+
 foreach($savedItems as $itemKey => &$item)
 {
 	if(!isset($item['name']) && isset($presets[$itemKey]))
@@ -40,12 +25,12 @@ foreach($savedItems as $itemKey => &$item)
 }
 unset($item);
 
-$fields = $arParams['FILTER'];
-$values = $arResult['FILTER'];
+$fields = isset($arParams['FILTER']) ? $arParams['FILTER'] : array();
+$values = isset($arResult['FILTER']) ? $arResult['FILTER'] : array();
 
 $infos = array();
 //Visibility for default filter
-$visibilityMap = $arResult['FILTER_ROWS'];
+$visibilityMap = isset($arResult['FILTER_ROWS']) ? $arResult['FILTER_ROWS'] : array();
 
 $gridID = $arParams['GRID_ID'];
 $gridIDLc = strtolower($gridID);
@@ -73,6 +58,7 @@ $arParams['FILTER_INFO'] = isset($gridContext['FILTER_INFO']) ? $gridContext['FI
 $filterInfo = isset($arParams['FILTER_INFO']) ? $arParams['FILTER_INFO'] : array();
 $isFilterApplied = isset($filterInfo['IS_APPLIED']) ? $filterInfo['IS_APPLIED'] : false;
 $currentFilterID = isset($filterInfo['ID']) ? $filterInfo['ID'] : '';
+
 if($currentFilterID !== '' && isset($savedItems[$currentFilterID]))
 {
 	$currentFilter = $savedItems[$currentFilterID];
@@ -110,7 +96,7 @@ foreach($visibilityMap as $fieldVisibility)
 	}
 }
 
-$options = CUserOptions::GetOption('crm.interface.grid.filter', strtolower($filterID));
+$options = CUserOptions::GetOption('main.interface.grid.filter', strtolower($filterID));
 if(!$options)
 {
 	$options = array(
@@ -123,9 +109,9 @@ if(!$options)
 $isFilterFolded = $options['isFolded'] !== 'N';
 $presetsDeleted = isset($options['presetsDeleted']) ? explode(',', $options['presetsDeleted']) : array();
 
-if(!function_exists('__TabbedInterfaceFilterRenderField'))
+if(!function_exists('__InterfaceFilterRenderField'))
 {
-	function __TabbedInterfaceFilterRenderField(&$field, &$values, &$infos, $options = array())
+	function __InterfaceFilterRenderField(&$field, &$values, &$infos, $options = array())
 	{
 		if(!is_array($options))
 		{
@@ -185,10 +171,17 @@ if(!function_exists('__TabbedInterfaceFilterRenderField'))
 		{
 			case 'custom':
 				{
-					$wrapperClass = strpos($fieldID, 'UF_') === 0 ? 'bx-user-field-wrap' : 'bx-input-wrap';
-					echo '<div class="', $wrapperClass,'">',
-						isset($field['value']) ? $field['value'] : '',
-						'</div>';
+					$enableWrapper = isset($field["enableWrapper"]) ? $field["enableWrapper"] : true;
+
+					if($enableWrapper):
+						$wrapperClass = strpos($fieldID, 'UF_') === 0 ? 'bx-user-field-wrap' : 'bx-input-wrap';
+						echo '<div class="', $wrapperClass, '">';
+					endif;
+
+					echo isset($field['value']) ? $field['value'] : '';
+
+					if($enableWrapper)
+						echo '</div>';
 				}
 				break;
 			case 'checkbox':
@@ -243,7 +236,7 @@ if(!function_exists('__TabbedInterfaceFilterRenderField'))
 						$isSelected = $value[0] == '';
 						echo '<option value=""',
 							$isSelected ? ' selected="selected"' : '', '>',
-							htmlspecialcharsbx(GetMessage("CT_BMIF_INTERFACE_FILTER_LIST_VALUE_NOT_SELECTED")), '</option>';
+							htmlspecialcharsbx(GetMessage("INTERFACE_FILTER_LIST_VALUE_NOT_SELECTED")), '</option>';
 
 						foreach($opts as $k => $v)
 						{
@@ -282,6 +275,10 @@ if(!function_exists('__TabbedInterfaceFilterRenderField'))
 						' name="', htmlspecialcharsbx($dayInputID), '"',
 						' value="',  htmlspecialcharsbx($dateInputValue), '"',
 						'/></div>';
+
+					echo '<div class="bx-filter-date-days-suffix">',
+						GetMessage('INTERFACE_FILTER_DAYS_SUFFIX'),
+						'</div>';
 
 					$fromInputID = "{$fieldID}_from";
 					$fromInputValue = isset($values[$fromInputID]) ? $values[$fromInputID] : '';
@@ -358,48 +355,81 @@ if(!function_exists('__TabbedInterfaceFilterRenderField'))
 				{
 					echo '<div class="bx-input-wrap">',
 						'<input type="text" class="bx-input"',
-						' id="', $fieldIDEnc, '"',
-						' name="', $fieldIDEnc, '"',
-						' value="',  htmlspecialcharsbx($value), '"',
+						' id="', $fieldIDEnc, '" name="', $fieldIDEnc, '" value="',  htmlspecialcharsbx($value), '"',
 						$params, '/></div>';
 				}
 		}
 	}
 }
 
-if (isset($arParams['RENDER_FILTER_INTO_VIEW']))
-	$this->SetViewTarget($arParams['RENDER_FILTER_INTO_VIEW'], 100);
+$viewID = isset($arParams['RENDER_FILTER_INTO_VIEW']) ? $arParams['RENDER_FILTER_INTO_VIEW'] : '';
+if(is_string($viewID) && $viewID !== '')
+	$this->SetViewTarget($viewID, 100);
 
+$navigationBarID = "{$gridIDLc}_filter_bar";
+$navigationBar = isset($arParams['NAVIGATION_BAR']) && is_array($arParams['NAVIGATION_BAR']) ? $arParams['NAVIGATION_BAR'] : array();
+$navigationBarItems = isset($navigationBar['ITEMS']) ? $navigationBar['ITEMS'] : null;
+$navigationBarConfig = array('items' => array());
+if(isset($navigationBar['BINDING']))
+{
+	$navigationBarConfig['binding'] = $navigationBar['BINDING'];
+}
+$navigationBarOptions = CUserOptions::GetOption("main.interface.filter.navigation", $navigationBarID, array());
 $isHidden = isset($arParams['HIDE_FILTER']) ? $arParams['HIDE_FILTER'] : false;
 ?><form name="<?=htmlspecialcharsbx($formName)?>" action="" method="GET">
-<?
-foreach($arResult["GET_VARS"] as $var=>$value):
-	if(is_array($value)):
-		foreach($value as $k=>$v):
-			if(is_array($v))
-				continue;
-?>
-<input type="hidden" name="<?=htmlspecialcharsbx($var)?>[<?=htmlspecialcharsbx($k)?>]" value="<?=htmlspecialcharsbx($v)?>">
-<?
-		endforeach;
-	else:
-?>
-<input type="hidden" name="<?=htmlspecialcharsbx($var)?>" value="<?=htmlspecialcharsbx($value)?>">
-<?
-	endif;
-endforeach;
-?>
-	<div class="tabbed-main-wrap"<?=$isHidden ? ' style="display:none;"' : ''?>>
-		<div id="<?=htmlspecialcharsbx($containerID)?>" class="tabbed-filter-wrap">
-			<div class="bx-filter-wrap<?=$isFilterApplied ? ' bx-current-filter' : ''?><?=$isFilterFolded ? ' bx-filter-folded' : ''?>">
-				<table class="bx-filter-main-table">
+	<div class="crm-main-wrap-flat"<?=$isHidden ? ' style="display:none;"' : ''?>>
+		<div id="<?=htmlspecialcharsbx($containerID)?>" class="bx-filter-wrap">
+			<div class="bx-filter-wrap<?=$isFilterApplied ? ' bx-current-filter' : ''?><?=$isFilterFolded ? ' bx-filter-folded' : ''?>"><?
+				if(!empty($navigationBarItems)):
+					$barItemQty = 0;
+				?><div class="crm-filter-view"><?
+					foreach($navigationBarItems as &$barItem):
+						$barItemQty++;
+						$barItemID = isset($barItem['id']) ? $barItem['id'] : $barItemQty;
+						$barItemElementID = strtolower("{$gridID}_{$barItemID}");
+						$barItemUrl = isset($barItem['url']) ? $barItem['url'] : '';
+
+						$barItemConfig = array('id' => $barItemID, 'buttonId' => $barItemElementID, 'url' => $barItemUrl);
+						$barItemHintKey = "enable_{$barItemID}_hint";
+						$barItemConfig['enableHint'] = !isset($navigationBarOptions[$barItemHintKey])
+							|| $navigationBarOptions[$barItemHintKey] === 'Y';
+						if(isset($barItem['hint']))
+							$barItemConfig['hint'] = $barItem['hint'];
+
+						$navigationBarConfig['items'][] = $barItemConfig;
+
+						$barItemClassName = isset($barItem['icon']) ? 'crm-filter-view-'.$barItem['icon'] : '';
+						if(isset($barItem['active']) && $barItem['active']):
+							if($barItemClassName !== '')
+								$barItemClassName .= ' ';
+							$barItemClassName .= 'crm-filter-view-active';
+						endif;
+
+						echo '<div id = "', htmlspecialcharsbx($barItemElementID), '"';
+						if($barItemClassName !== '')
+							echo ' class = "', htmlspecialcharsbx($barItemClassName), '"';
+
+						echo '>';
+
+						if(isset($barItem['counter']) && $barItem['counter'] > 0):
+							echo '<span class="crm-filter-counter-wrap"><span class="crm-filter-counter">',
+								$barItem['counter'],
+								'</span></span>';
+						endif;
+
+						echo '</div>';
+					endforeach;
+					unset($navigationBarItem);?>
+				</div><?
+				endif;
+				?><table class="bx-filter-main-table">
 					<tr>
 						<td class="bx-filter-main-table-cell">
 							<div class="bx-filter-tabs-block" id="filter-tabs"><?
 								$isActive = !$isFilterFolded
 									? (!$isFilterApplied || $currentFilterID === '')
 									: ($isFilterApplied && $currentFilterID === '');
-								?><span id="<?=htmlspecialcharsbx("{$tabPrefix}filter_default")?>" class="bx-filter-tab<?=$isActive ? ' bx-filter-tab-active' : ''?><?=$isFilterApplied && $currentFilterID === '' ? ' bx-current-filter-tab' : ''?>"><?= GetMessage('CT_BMIF_INTERFACE_FILTER_CURRENT') ?></span><?
+								?><span id="<?=htmlspecialcharsbx("{$tabPrefix}filter_default")?>" class="bx-filter-tab<?=$isActive ? ' bx-filter-tab-active' : ''?><?=$isFilterApplied && $currentFilterID === '' ? ' bx-current-filter-tab' : ''?>"><?= GetMessage('INTERFACE_FILTER_CURRENT') ?></span><?
 								foreach($savedItems as $itemID => &$item):
 									if(!in_array($itemID, $presetsDeleted, true)):
 										$isActive = $isFilterApplied && $currentFilterID === $itemID;
@@ -407,7 +437,7 @@ endforeach;
 									endif;
 								endforeach;
 								unset($item);
-								?><span class="bx-filter-tab bx-filter-add-tab" title="<?=htmlspecialcharsbx(GetMessage('CT_BMIF_INTERFACE_FILTER_ADD'))?>"></span>
+								?><span class="bx-filter-tab bx-filter-add-tab" title="<?=htmlspecialcharsbx(GetMessage('INTERFACE_FILTER_ADD'))?>"></span>
 								<span class="bx-filter-switcher-tab">
 									<span class="bx-filter-switcher-tab-icon"></span>
 								</span>
@@ -417,56 +447,58 @@ endforeach;
 					</tr>
 					<tr>
 						<td class="bx-filter-main-table-cell">
-							<div class="bx-filter-content<?=$visibileFieldCount > 1 ? '' : ' bx-filter-content-first'?>">
-								<div class="bx-filter-content-table-wrap">
-									<table class="bx-filter-content-table"><?
-									foreach($fields as &$field):
-										$fieldID = $field['id'];
-										$fieldContainerID = "{$fieldContainerPrefix}{$fieldID}";
-										$delimiterContainerID = "{$fieldDelimiterContainerPrefix}{$fieldID}";
-										$isVisible = isset($visibilityMap[$fieldID]) ? $visibilityMap[$fieldID] : false;
-										?><tr class="bx-filter-item-row" id="<?=htmlspecialcharsbx($fieldContainerID)?>"<?=$isVisible ? '' : ' style="display:none;"'?>>
-											<td class="bx-filter-item-left"><?=htmlspecialcharsbx(isset($field['name']) ? $field['name'] : $fieldID)?>:</td>
-											<td class="bx-filter-item-center">
-												<div class="bx-filter-alignment">
-													<div class=" bx-filter-box-sizing"><?
-														__TabbedInterfaceFilterRenderField(
-															$field,
-															$values,
-															$infos,
-															array(
-																'IS_VISIBLE' => $isVisible,
-																'DATE_FILTER' => isset($arResult['DATE_FILTER']) ? $arResult['DATE_FILTER'] : null,
-																'FORM_NAME' => $formName,
-																'COMPONENT' => $component
-															)
-														);
-													?></div>
-												</div>
-											</td>
-											<td class="bx-filter-item-right">
-												<span class="bx-filter-item-delete"<?=$visibileFieldCount > 1 ? '' : ' style="display:none;"'?>></span>
-											</td>
-										</tr>
-										<tr id="<?=htmlspecialcharsbx($delimiterContainerID)?>"<?=$isVisible ? '' : ' style="display:none;"'?>>
-											<td class="delimiter" colspan="3">
-												<div class="empty"></div>
-											</td>
-										</tr><?
-									endforeach;
-									unset($field);
-									?></table>
-								</div>
-								<div class="bx-filter-bottom-separate"<?=$visibileFieldCount > 1 ? '' : ' style="display:none;"'?>></div>
-								<div class="bx-filter-bottom">
-									<input value="<?=htmlspecialcharsbx(GetMessage('CT_BMIF_INTERFACE_FILTER_FIND'))?>" name="set_filter" type="button"/>
-									<input value="<?=htmlspecialcharsbx(GetMessage('CT_BMIF_INTERFACE_FILTER_CANCEL'))?>" name="reset_filter" type="button"/>
-									<input value="" name="grid_filter_id" type="hidden"/>
-									<input value="" name="apply_filter" type="hidden"/>
-									<input value="" name="clear_filter" type="hidden"/>
-									<div class="bx-filter-setting-block">
-										<span class="bx-filter-setting" title="<?=htmlspecialcharsbx(GetMessage('CT_BMIF_INTERFACE_FILTER_SETTINGS'))?>"></span>
-										<span class="bx-filter-add-button" title="<?=htmlspecialcharsbx(GetMessage('CT_BMIF_INTERFACE_FILTER_ADD_FIELD'))?>"></span>
+							<div id="<?= $containerID ?>-block" class="bx-filter-content<?=$visibileFieldCount > 1 ? '' : ' bx-filter-content-first'?>"<?=$isFilterFolded ? ' style="height: 0;"' : ''?>>
+								<div id="<?= $containerID ?>-inner" class="bx-filter-content-inner">
+									<div class="bx-filter-content-table-wrap">
+										<table class="bx-filter-content-table"><?
+										foreach($fields as &$field):
+											$fieldID = $field['id'];
+											$fieldContainerID = "{$fieldContainerPrefix}{$fieldID}";
+											$delimiterContainerID = "{$fieldDelimiterContainerPrefix}{$fieldID}";
+											$isVisible = isset($visibilityMap[$fieldID]) ? $visibilityMap[$fieldID] : false;
+											?><tr class="bx-filter-item-row" id="<?=htmlspecialcharsbx($fieldContainerID)?>"<?=$isVisible ? '' : ' style="display:none;"'?>>
+												<td class="bx-filter-item-left"><?=htmlspecialcharsbx(isset($field['name']) ? $field['name'] : $fieldID)?>:</td>
+												<td class="bx-filter-item-center">
+													<div class="bx-filter-alignment">
+														<div class=" bx-filter-box-sizing"><?
+															__InterfaceFilterRenderField(
+																$field,
+																$values,
+																$infos,
+																array(
+																	'IS_VISIBLE' => $isVisible,
+																	'DATE_FILTER' => isset($arResult['DATE_FILTER']) ? $arResult['DATE_FILTER'] : null,
+																	'FORM_NAME' => $formName,
+																	'COMPONENT' => $component
+																)
+															);
+														?></div>
+													</div>
+												</td>
+												<td class="bx-filter-item-right">
+													<span class="bx-filter-item-delete"<?=$visibileFieldCount > 1 ? '' : ' style="display:none;"'?>></span>
+												</td>
+											</tr>
+											<tr id="<?=htmlspecialcharsbx($delimiterContainerID)?>"<?=$isVisible ? '' : ' style="display:none;"'?>>
+												<td class="delimiter" colspan="3">
+													<div class="empty"></div>
+												</td>
+											</tr><?
+										endforeach;
+										unset($field);
+										?></table>
+									</div>
+									<div class="bx-filter-bottom-separate"<?=$visibileFieldCount > 1 ? '' : ' style="display:none;"'?>></div>
+									<div class="bx-filter-bottom">
+										<input value="<?=htmlspecialcharsbx(GetMessage('INTERFACE_FILTER_FIND'))?>" name="set_filter" type="button"/>
+										<input value="<?=htmlspecialcharsbx(GetMessage('INTERFACE_FILTER_CANCEL'))?>" name="reset_filter" type="button"/>
+										<input value="" name="grid_filter_id" type="hidden"/>
+										<input value="" name="apply_filter" type="hidden"/>
+										<input value="" name="clear_filter" type="hidden"/>
+										<div class="bx-filter-setting-block">
+											<span class="bx-filter-setting" title="<?=htmlspecialcharsbx(GetMessage('INTERFACE_FILTER_SETTINGS'))?>"></span>
+											<span class="bx-filter-add-button" title="<?=htmlspecialcharsbx(GetMessage('INTERFACE_FILTER_ADD_FIELD'))?>"></span>
+										</div>
 									</div>
 								</div>
 							<div>
@@ -477,7 +509,7 @@ endforeach;
 		</div>
 	</div>
 </form><?
-if (isset($arParams['RENDER_FILTER_INTO_VIEW']))
+if(is_string($viewID))
 	$this->EndViewTarget();
 
 //Prepare default rows
@@ -503,45 +535,55 @@ if(!(is_string($filterRows) && $filterRows !== ''))
 			{
 				BX.InterfaceGridFilter.messages =
 					{
-						"showAll": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_SHOW_ALL")?>",
-						"hideAll": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_HIDE_ALL")?>",
-						"saveAs": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_SAVE_AS")?>",
-						"save": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_SAVE")?>",
-						"delete": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_DELETE")?>",
-						"saveAsDialogTitle": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_SAVE_AS_DIALOG_TITLE")?>",
-						"saveAsDialogFieldName": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_SAVE_AS_DIALOG_FIELD_NAME")?>",
-						"defaultFilterName": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_SAVE_AS_DIALOG_FIELD_NAME_DEFAULT")?>",
-						"buttonSave": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_SAVE")?>",
-						"buttonCancel": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_CANCEL")?>",
-						"buttonMinimize": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_MINIMIZE")?>",
-						"buttonMaximize": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_MAXIMIZE")?>",
-						"buttonDeleteField": "<?=GetMessageJS("CT_BMIF_INTERFACE_FILTER_DELETE_FIELD")?>"
+						"showAll": "<?=GetMessageJS("INTERFACE_FILTER_SHOW_ALL")?>",
+						"hideAll": "<?=GetMessageJS("INTERFACE_FILTER_HIDE_ALL")?>",
+						"saveAs": "<?=GetMessageJS("INTERFACE_FILTER_SAVE_AS")?>",
+						"save": "<?=GetMessageJS("INTERFACE_FILTER_SAVE")?>",
+						"delete": "<?=GetMessageJS("INTERFACE_FILTER_DELETE")?>",
+						"saveAsDialogTitle": "<?=GetMessageJS("INTERFACE_FILTER_SAVE_AS_DIALOG_TITLE")?>",
+						"saveAsDialogFieldName": "<?=GetMessageJS("INTERFACE_FILTER_SAVE_AS_DIALOG_FIELD_NAME")?>",
+						"defaultFilterName": "<?=GetMessageJS("INTERFACE_FILTER_SAVE_AS_DIALOG_FIELD_NAME_DEFAULT")?>",
+						"buttonSave": "<?=GetMessageJS("INTERFACE_FILTER_SAVE")?>",
+						"buttonCancel": "<?=GetMessageJS("INTERFACE_FILTER_CANCEL")?>",
+						"buttonMinimize": "<?=GetMessageJS("INTERFACE_FILTER_MINIMIZE")?>",
+						"buttonMaximize": "<?=GetMessageJS("INTERFACE_FILTER_MAXIMIZE")?>",
+						"buttonDeleteField": "<?=GetMessageJS("INTERFACE_FILTER_DELETE_FIELD")?>"
 					};
 
-				var filter = BX.InterfaceGridFilter.create(
-						"<?=CUtil::JSEscape($filterID)?>",
-						BX.CrmParamBag.create(
-								{
-									"gridId": "<?=CUtil::JSEscape($gridID)?>",
-									"serviceUrl": "<?='/bitrix/components/bitrix/main.interface.grid/settings.php?'.bitrix_sessid_get()?>",
-									"containerId": "<?=CUtil::JSEscape($containerID)?>",
-									"formName": "<?=CUtil::JSEscape($formName)?>",
-									"fieldContainerPrefix": "<?=CUtil::JSEscape($fieldContainerPrefix)?>",
-									"fieldDelimiterContainerPrefix": "<?=CUtil::JSEscape($fieldDelimiterContainerPrefix)?>",
-									"itemContainerPrefix": "<?=CUtil::JSEscape($tabPrefix)?>",
-									"currentTime": <?=(time() + date('Z') + CTimeZone::GetOffset())?>,
-									"fieldInfos": <?=CUtil::PhpToJSObject($infos)?>,
-									"itemInfos":<?=CUtil::PhpToJSObject($savedItems)?>,
-									"isApplied":<?=$isFilterApplied ? 'true' : 'false'?>,
-									"currentValues":<?=CUtil::PhpToJSObject($values)?>,
-									"currentItemId": "<?=CUtil::JSEscape($currentFilterID)?>",
-									"defaultItemId": "filter_default",
-									"defaultVisibleRows": "<?=$filterRows?>",
-									"isFolded": <?=$isFilterFolded ? 'true' : 'false'?>,
-									"presetsDeleted": <?=CUtil::PhpToJSObject($presetsDeleted)?>
-								}
-						)
-					);
+				BX.InterfaceGridFilter.create(
+					"<?=CUtil::JSEscape($filterID)?>",
+					BX.ParamBag.create(
+							{
+								"gridId": "<?=CUtil::JSEscape($gridID)?>",
+								"serviceUrl": "<?='/bitrix/components/bitrix/main.interface.grid/settings.php?'.bitrix_sessid_get()?>",
+								"containerId": "<?=CUtil::JSEscape($containerID)?>",
+								"mainBlock": "<?= $containerID ?>-block",
+								"innerBlock": "<?= $containerID ?>-inner",
+								"formName": "<?=CUtil::JSEscape($formName)?>",
+								"fieldContainerPrefix": "<?=CUtil::JSEscape($fieldContainerPrefix)?>",
+								"fieldDelimiterContainerPrefix": "<?=CUtil::JSEscape($fieldDelimiterContainerPrefix)?>",
+								"itemContainerPrefix": "<?=CUtil::JSEscape($tabPrefix)?>",
+								"currentTime": <?=(time() + date('Z') + CTimeZone::GetOffset())?>,
+								"fieldInfos": <?=CUtil::PhpToJSObject($infos)?>,
+								"itemInfos":<?=CUtil::PhpToJSObject($savedItems)?>,
+								"enableProvider": <?=isset($arParams['ENABLE_PROVIDER']) && $arParams['ENABLE_PROVIDER'] ? 'true' : 'false'?>,
+								"isApplied":<?=$isFilterApplied ? 'true' : 'false'?>,
+								"currentValues":<?=CUtil::PhpToJSObject($values)?>,
+								"currentItemId": "<?=CUtil::JSEscape($currentFilterID === '' ? 'filter_default' : $currentFilterID)?>",
+								"defaultItemId": "filter_default",
+								"defaultVisibleRows": "<?=$filterRows?>",
+								"isFolded": <?=$isFilterFolded ? 'true' : 'false'?>,
+								"presetsDeleted": <?=CUtil::PhpToJSObject($presetsDeleted)?>
+							}
+					)
+				);
+
+				<?if(!empty($navigationBarConfig['items'])):?>
+				BX.InterfaceGridFilterNavigationBar.create(
+					"<?=CUtil::JSEscape($navigationBarID)?>",
+					BX.ParamBag.create(<?=CUtil::PhpToJSObject($navigationBarConfig)?>)
+				);
+				<?endif;?>
 			}
 		);
 </script>

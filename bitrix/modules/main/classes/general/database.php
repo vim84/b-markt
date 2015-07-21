@@ -313,167 +313,54 @@ abstract class CAllDatabase
 		static $cache = array();
 		if (!isset($cache[$format]))
 		{
-			$f = str_replace("YYYY", "Y", $format);		// 1999
-			$f = str_replace("MMMM", "F", $f);		// January - December
-			$f = str_replace("MM", "m", $f);		// 01 - 12
-			$old_f = $f = str_replace("DD", "d", $f);	// 01 - 31
-			$f = str_replace("HH", "H", $f);		// 00 - 24
-			if ($old_f === $f)
-			{
-				$f = str_replace("H", "h", $f);		// 01 - 12
-			}
-			$f = str_replace("TT", "A", $f);		// AM - PM
-			$old_f = $f = str_replace("T", "a", $f);	// am - pm
-			$f = str_replace("GG", "G", $f);		// 0 - 24
-			if ($old_f === $f)
-			{
-				$f = str_replace("G", "g", $f);		// 1 - 12
-			}
-			$f = str_replace("MI", "i", $f);		// 00 - 59
-			$cache[$format] = str_replace("SS", "s", $f);		// 00 - 59
+			$cache[$format] = Main\Type\Date::convertFormatToPhp($format);
 		}
 		return $cache[$format];
 	}
 
 	function FormatDate($strDate, $format="DD.MM.YYYY HH:MI:SS", $new_format="DD.MM.YYYY HH:MI:SS")
 	{
-		$strDate = trim($strDate);
+		if (empty($strDate))
+			return false;
 
-		$new_format = str_replace("MI","I", strtoupper($new_format));
-		$new_format = preg_replace("/([DMYIHGST])\\1+/is", "\\1", $new_format);
-		$arParsedDate = ParseDateTime($strDate, $format);
+		if ($format===false && defined("FORMAT_DATETIME"))
+			$format = FORMAT_DATETIME;
 
-		if (!$arParsedDate) return false;
+		$fromPhpFormat = Main\Type\Date::convertFormatToPhp($format);
 
-		foreach ($arParsedDate as $k=>$v)
+		$time = false;
+		try
 		{
-			if(preg_match("/[^0-9]/", $v))
-				$arParsedDate[$k] = CDatabase::ForSql($v, 10);
-			else
-				$arParsedDate[$k] = intval($v);
+			$time = new Main\Type\DateTime($strDate, $fromPhpFormat);
+		}
+		catch(Main\ObjectException $e)
+		{
 		}
 
-		/*time hacks*/
-		if (isset($arParsedDate["H"]))
+		if ($time !== false)
 		{
-			$arParsedDate['HH'] = intval($arParsedDate["H"]);
-			unset($arParsedDate["H"]);
-		}
-		elseif (isset($arParsedDate["GG"]))
-		{
-			$arParsedDate['HH'] = intval($arParsedDate["GG"]);
-			unset($arParsedDate["GG"]);
-		}
-		elseif (isset($arParsedDate["G"]))
-		{
-			$arParsedDate['HH'] = intval($arParsedDate["G"]);
-			unset($arParsedDate["G"]);
-		}
-		if (isset($arParsedDate['TT']) || isset($arParsedDate['T']))
-		{
-			$middletime = $arParsedDate['TT'] ? $arParsedDate['TT'] : $arParsedDate['T'];
-			if (strcasecmp($middletime, 'pm')===0)
-			{
-				if ($arParsedDate['HH'] < 12)
-					$arParsedDate['HH'] += 12;
-			}
-			else
-			{
-				if ($arParsedDate['HH'] == 12)
-					$arParsedDate['HH'] = 0;
-			}
+			//Compatibility issue
+			$fixed_format = preg_replace(
+				array(
+					"/(?<!Y)Y(?!Y)/i",
+					"/(?<!M)M(?!M|I)/i",
+					"/(?<!D)D(?!D)/i",
+					"/(?<!H)H:I:S/i",
+				),
+				array(
+					"YYYY",
+					"MM",
+					"DD",
+					"HH:MI:SS",
+				),
+				strtoupper($new_format)
+			);
+			$toPhpFormat = Main\Type\Date::convertFormatToPhp($fixed_format);
 
-			if (isset($arParsedDate['TT']))
-			{
-				unset($arParsedDate['TT']);
-			}
-			else
-			{
-				unset($arParsedDate['T']);
-			}
+			return $time->format($toPhpFormat);
 		}
 
-		if (isset($arParsedDate["MMMM"]))
-		{
-			if (is_numeric($arParsedDate["MMMM"]))
-			{
-				$arParsedDate['MM'] = intval($arParsedDate["MMMM"]);
-			}
-			else
-			{
-				$arParsedDate['MM'] = GetNumMonth($arParsedDate["MMMM"]);
-				if (!$arParsedDate['MM'])
-					$arParsedDate['MM'] = intval(date('m', strtotime($arParsedDate["MMMM"])));
-			}
-		}
-		elseif (isset($arParsedDate["MM"]))
-		{
-			$arParsedDate['MM'] = intval($arParsedDate["MM"]);
-		}
-		elseif (isset($arParsedDate["M"]))
-		{
-			if (is_numeric($arParsedDate["M"]))
-			{
-				$arParsedDate['MM'] = intval($arParsedDate["M"]);
-			}
-			else
-			{
-				$arParsedDate['MM'] = GetNumMonth($arParsedDate["M"], true);
-				if (!$arParsedDate['MM'])
-					$arParsedDate['MM'] = intval(date('m', strtotime($arParsedDate["M"])));
-			}
-		}
-
-		if (isset($arParsedDate["YYYY"]))
-			$arParsedDate["YY"] = $arParsedDate["YYYY"];
-
-		if (intval($arParsedDate["DD"])<=0 || intval($arParsedDate["MM"])<=0 || intval($arParsedDate["YY"])<=0) return false;
-
-		$strResult = "";
-		if(intval($arParsedDate["YY"])>1970 && intval($arParsedDate["YY"])<2038)
-		{
-			$ux_time = mktime(
-					isset($arParsedDate["HH"])? intval($arParsedDate["HH"]): 0,
-					isset($arParsedDate["MI"])? intval($arParsedDate["MI"]): 0,
-					isset($arParsedDate["SS"])? intval($arParsedDate["SS"]): 0,
-					intval($arParsedDate["MM"]),
-					intval($arParsedDate["DD"]),
-					intval($arParsedDate["YY"])
-					);
-
-			$new_format_len = strlen($new_format);
-			for ($i=0; $i<$new_format_len; $i++)
-			{
-				$ch = substr($new_format, $i, 1);
-				if ($ch=="D") $strResult .= date("d", $ux_time);
-				elseif ($ch=="M") $strResult .= date("m", $ux_time);
-				elseif ($ch=="Y") $strResult .= date("Y", $ux_time);
-				elseif ($ch=="H") $strResult .= date("H", $ux_time);
-				elseif ($ch=="G") $strResult .= date("h", $ux_time);
-				elseif ($ch=="I") $strResult .= date("i", $ux_time);
-				elseif ($ch=="S") $strResult .= date("s", $ux_time);
-				elseif ($ch=="T") $strResult .= date("a", $ux_time);
-				else $strResult .= $ch;
-			}
-		}
-		else
-		{
-			if($arParsedDate["MM"]<1 || $arParsedDate["MM"]>12) $arParsedDate["MM"] = 1;
-			$new_format_len = strlen($new_format);
-			for ($i=0; $i<$new_format_len; $i++)
-			{
-				$ch = substr($new_format, $i, 1);
-				if ($ch=="D") $strResult .= str_pad($arParsedDate["DD"], 2, "0", STR_PAD_LEFT);
-				elseif ($ch=="M") $strResult .= str_pad($arParsedDate["MM"], 2, "0", STR_PAD_LEFT);
-				elseif ($ch=="Y") $strResult .= str_pad($arParsedDate["YY"], 4, "0", STR_PAD_LEFT);
-				elseif ($ch=="H") $strResult .= str_pad($arParsedDate["HH"], 2, "0", STR_PAD_LEFT);
-				elseif ($ch=="I") $strResult .= str_pad($arParsedDate["MI"], 2, "0", STR_PAD_LEFT);
-				elseif ($ch=="S") $strResult .= str_pad($arParsedDate["SS"], 2, "0", STR_PAD_LEFT);
-				else $strResult .= $ch;
-			}
-		}
-
-		return $strResult;
+		return false;
 	}
 
 	/**
@@ -1316,21 +1203,26 @@ abstract class CAllDBResult
 		return $this->GetPageNavStringEx($dummy, $navigationTitle, $templateName, $showAlways, $parentComponent);
 	}
 
-	function GetPageNavStringEx(&$navComponentObject, $navigationTitle, $templateName = "", $showAlways=false, $parentComponent=null)
+	function GetPageNavStringEx(&$navComponentObject, $navigationTitle, $templateName = "", $showAlways=false, $parentComponent=null, $componentParams = array())
 	{
 		/** @global CMain $APPLICATION */
 		global $APPLICATION;
 
 		ob_start();
 
-		$navComponentObject = $APPLICATION->IncludeComponent(
-			"bitrix:system.pagenavigation",
-			$templateName,
+		$params = array_merge(
 			array(
 				"NAV_TITLE"=> $navigationTitle,
 				"NAV_RESULT" => $this,
 				"SHOW_ALWAYS" => $showAlways
 			),
+			$componentParams
+		);
+
+		$navComponentObject = $APPLICATION->IncludeComponent(
+			"bitrix:system.pagenavigation",
+			$templateName,
+			$params,
 			$parentComponent,
 			array(
 				"HIDE_ICONS" => "Y"

@@ -2227,6 +2227,19 @@ $tabControl->BeginNextTab();
 			<?
 			switch($FIELD_ID)
 			{
+			case "IBLOCK_SECTION":
+				?>
+				<input type="hidden" name="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE][KEEP_IBLOCK_SECTION_ID]" value="N">
+				<input type="checkbox"
+					name="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE][KEEP_IBLOCK_SECTION_ID]"
+					id="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE][KEEP_IBLOCK_SECTION_ID]"
+					value="Y"
+					<?if ($arFields[$FIELD_ID]["DEFAULT_VALUE"]["KEEP_IBLOCK_SECTION_ID"] === "Y") echo 'checked="checked"'?>
+				/><label for="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE][KEEP_IBLOCK_SECTION_ID]">
+				<?echo GetMessage("IB_E_FIELD_IBLOCK_SECTION_KEEP_IBLOCK_SECTION_ID")?>
+				</label>
+				<?
+				break;
 			case "ACTIVE":
 				?>
 				<select name="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE]" height="1">
@@ -2263,10 +2276,38 @@ $tabControl->BeginNextTab();
 			case "DETAIL_TEXT_TYPE":
 			case "PREVIEW_TEXT_TYPE":
 				?>
-				<select name="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE]" height="1">
-					<option value="text" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="text") echo "selected"?>>text</option>
-					<option value="html" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="html") echo "selected"?>>html</option>
-				</select>
+				<div class="adm-list">
+				<div class="adm-list-item">
+					<select name="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE]" height="1">
+						<option value="text" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="text") echo "selected"?>>text</option>
+						<option value="html" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="html") echo "selected"?>>html</option>
+					</select>
+				</div>
+				<div class="adm-list-item">
+					<div class="adm-list-control">
+						<input
+							type="hidden"
+							value="N"
+							name="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+						>
+						<input
+							type="checkbox"
+							value="Y"
+							id="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+							name="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+							<?
+							if($arFields[$FIELD_ID."_ALLOW_CHANGE"]["DEFAULT_VALUE"]!=="N")
+								echo "checked";
+							?>
+						>
+					</div>
+					<div class="adm-list-label">
+						<label
+							for="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+						><?echo GetMessage("IB_E_FIELD_TEXT_TYPE_ALLOW_CHANGE")?></label>
+					</div>
+				</div>
+				</div>
 				<?
 				break;
 			case "DETAIL_TEXT":
@@ -3298,10 +3339,38 @@ $tabControl->BeginNextTab();
 				break;
 			case "SECTION_DESCRIPTION_TYPE":
 				?>
-				<select name="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE]" height="1">
-					<option value="text" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="text") echo "selected"?>>text</option>
-					<option value="html" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="html") echo "selected"?>>html</option>
-				</select>
+				<div class="adm-list">
+				<div class="adm-list-item">
+					<select name="FIELDS[<?echo $FIELD_ID?>][DEFAULT_VALUE]" height="1">
+						<option value="text" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="text") echo "selected"?>>text</option>
+						<option value="html" <?if($arFields[$FIELD_ID]["DEFAULT_VALUE"]==="html") echo "selected"?>>html</option>
+					</select>
+				</div>
+				<div class="adm-list-item">
+					<div class="adm-list-control">
+						<input
+							type="hidden"
+							value="N"
+							name="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+						>
+						<input
+							type="checkbox"
+							value="Y"
+							id="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+							name="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+							<?
+							if($arFields[$FIELD_ID."_ALLOW_CHANGE"]["DEFAULT_VALUE"]!=="N")
+								echo "checked";
+							?>
+						>
+					</div>
+					<div class="adm-list-label">
+						<label
+							for="FIELDS[<?echo $FIELD_ID?>_ALLOW_CHANGE][DEFAULT_VALUE]"
+						><?echo GetMessage("IB_E_FIELD_TEXT_TYPE_ALLOW_CHANGE")?></label>
+					</div>
+				</div>
+				</div>
 				<?
 				break;
 			case "SECTION_DESCRIPTION":

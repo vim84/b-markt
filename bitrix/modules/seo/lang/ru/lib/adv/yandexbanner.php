@@ -1,6 +1,8 @@
 <?php
 $MESS["ADV_CAMPAIGN_ENTITY_CAMPAIGN_ID_FIELD"] = "ID кампании";
 $MESS["ADV_CAMPAIGN_ENTITY_GROUP_ID_FIELD"] = "ID группы";
+$MESS["ADV_CAMPAIGN_ENTITY_AUTO_QUANTITY_OFF_FIELD"] = "Автоотключение при окончании товара";
+$MESS["ADV_CAMPAIGN_ENTITY_AUTO_QUANTITY_ON_FIELD"] = "Автовключение при появлении товара";
 $MESS["SEO_BANNER_ERROR_NO_NAME"] = "Не указан заголовок объявления";
 $MESS["SEO_BANNER_ERROR_NO_TEXT"] = "Не указан текст объявления";
 $MESS["SEO_BANNER_ERROR_LONG_NAME"] = "Длина заголовка объявления не должна превышать #MAX# символа";

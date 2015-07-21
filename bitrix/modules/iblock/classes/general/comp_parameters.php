@@ -709,7 +709,7 @@ class CIBlockParameters
 		);
 	}
 
-	public static function AddPagerSettings(&$arComponentParameters, $pager_title, $bDescNumbering=true, $bShowAllParam=false)
+	public static function AddPagerSettings(&$arComponentParameters, $pager_title, $bDescNumbering=true, $bShowAllParam=false, $bBaseLink=false, $bBaseLinkEnabled=false)
 	{
 		$arHiddenTemplates = array(
 			'js' => true
@@ -826,6 +826,84 @@ class CIBlockParameters
 				"NAME" => Loc::getMessage("T_IBLOCK_DESC_SHOW_ALL"),
 				"TYPE" => "CHECKBOX",
 				"DEFAULT" => "N"
+			);
+		}
+
+		if($bBaseLink)
+		{
+			$arComponentParameters["PARAMETERS"]["PAGER_BASE_LINK_ENABLE"] = Array(
+				"PARENT" => "PAGER_SETTINGS",
+				"NAME" => Loc::getMessage("T_IBLOCK_DESC_BASE_LINK_ENABLE"),
+				"TYPE" => "CHECKBOX",
+				"REFRESH" => "Y",
+				"DEFAULT" => "N",
+			);
+			if($bBaseLinkEnabled)
+			{
+				$arComponentParameters["PARAMETERS"]["PAGER_BASE_LINK"] = Array(
+					"PARENT" => "PAGER_SETTINGS",
+					"NAME" => Loc::getMessage("T_IBLOCK_DESC_BASE_LINK"),
+					"TYPE" => "STRING",
+					"DEFAULT" => ""
+				);
+				$arComponentParameters["PARAMETERS"]["PAGER_PARAMS_NAME"] = Array(
+					"PARENT" => "PAGER_SETTINGS",
+					"NAME" => Loc::getMessage("T_IBLOCK_DESC_PARAMS_NAME"),
+					"TYPE" => "STRING",
+					"DEFAULT" => "arrPager"
+				);
+			}
+		}
+	}
+
+	public static function Add404Settings(&$arComponentParameters, $arCurrentValues, $bStatus = true, $bPage = true)
+	{
+		if (!isset($arComponentParameters['GROUPS']))
+			$arComponentParameters['GROUPS'] = array();
+		$arComponentParameters["GROUPS"]["404_SETTINGS"] = array(
+			"NAME" => Loc::getMessage("IB_COMPLIB_PARAMETER_GROUP_404_SETTINGS"),
+		);
+
+		if ($bStatus)
+		{
+			$arComponentParameters["PARAMETERS"]["SET_STATUS_404"] = array(
+				"PARENT" => "404_SETTINGS",
+				"NAME" => Loc::getMessage("IB_COMPLIB_PARAMETER_SET_STATUS_404"),
+				"TYPE" => "CHECKBOX",
+				"DEFAULT" => "N",
+			);
+		}
+
+		if ($bPage)
+		{
+			$arComponentParameters["PARAMETERS"]["SHOW_404"] = array(
+				"PARENT" => "404_SETTINGS",
+				"NAME" => Loc::getMessage("IB_COMPLIB_PARAMETER_SHOW_404"),
+				"TYPE" => "CHECKBOX",
+				"DEFAULT" => "N",
+				"REFRESH" => "Y",
+			);
+		}
+
+		if ($arCurrentValues["SHOW_404"] === "Y")
+		{
+			if ($bPage)
+			{
+				$arComponentParameters["PARAMETERS"]["FILE_404"] = array(
+					"PARENT" => "404_SETTINGS",
+					"NAME" => Loc::getMessage("IB_COMPLIB_PARAMETER_FILE_404"),
+					"TYPE" => "STRING",
+					"DEFAULT" => "",
+				);
+			}
+		}
+		else
+		{
+			$arComponentParameters["PARAMETERS"]["MESSAGE_404"] = array(
+				"PARENT" => "404_SETTINGS",
+				"NAME" => Loc::getMessage("IB_COMPLIB_PARAMETER_MESSAGE_404"),
+				"TYPE" => "STRING",
+				"DEFAULT" => "",
 			);
 		}
 	}

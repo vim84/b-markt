@@ -209,9 +209,15 @@ $lAdmin->AddHeaders(array(
 
 $arText_HTML = Array("text"=>GetMessage("MAIN_TEXT"), "html"=>GetMessage("MAIN_HTML"));
 $arEventTypes = Array();
-$rsType = CEventType::GetListEx(array(), array(), array("LID"=>LANG, "type" => "type"));
-while($arType = $rsType->Fetch())
-	$arEventTypes[$arType["EVENT_NAME"]] = $arType["NAME"];
+$eventTypeDb = \Bitrix\Main\Mail\Internal\EventTypeTable::getList(array(
+	'select' => array('EVENT_NAME', 'NAME'),
+	'filter' => array('LID' => LANGUAGE_ID),
+	'order' => array('EVENT_NAME' => 'ASC')
+));
+while($eventType = $eventTypeDb->fetch())
+{
+	$arEventTypes[$eventType["EVENT_NAME"]] = '[' . $eventType["EVENT_NAME"] . '] ' . $eventType["NAME"];
+}
 
 // Body
 while($arRes = $rsData->NavNext(true, "f_"))

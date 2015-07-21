@@ -27,10 +27,10 @@ $MESS["IBLOCK_SECTION_ID"] = "Section ID";
 $MESS["IBLOCK_SECTION_CODE"] = "Section code";
 $MESS["T_IBLOCK_DESC_ADD_SECTIONS_CHAIN"] = "Add Section name to breadcrumb navigation";
 $MESS["T_IBLOCK_DESC_CHECK_DATES"] = "Show only currently active elements";
-$MESS["CP_BNL_SET_STATUS_404"] = "Set 404 status if no element or section was found";
 $MESS["CP_BNL_CACHE_GROUPS"] = "Respect Access Permissions";
 $MESS["CP_BNL_INCLUDE_SUBSECTIONS"] = "Show elements from subsections";
 $MESS["CP_BNL_SET_META_KEYWORDS"] = "Set page keywords";
 $MESS["CP_BNL_SET_META_DESCRIPTION"] = "Set page description";
 $MESS["CP_BNL_SET_BROWSER_TITLE"] = "Set browser window title";
+$MESS["CP_BNL_SET_LAST_MODIFIED"] = "Set page last modified date to response header";
 ?>

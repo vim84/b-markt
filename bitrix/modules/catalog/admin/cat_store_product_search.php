@@ -380,7 +380,7 @@ $lid = htmlspecialcharsbx($_REQUEST["LID"]);
 if(strlen($lid) <= 0)
 	$lid = false;
 
-$func_name = preg_replace("/[^a-zA-Z0-9_-]/is", "", $_REQUEST["func_name"]);
+$func_name = preg_replace("/[^a-zA-Z0-9_\-\.]/is", "", $_REQUEST["func_name"]);
 $caller = htmlspecialcharsbx($_REQUEST['caller']);
 $buyerId = intval($USER->GetID());
 $sTableID = "tbl_product_search";

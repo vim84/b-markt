@@ -2,6 +2,7 @@
 
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Iblock;
 use Bitrix\Catalog;
 
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
@@ -58,9 +59,14 @@ class ProductSearchComponent extends \CBitrixComponent
 			return false;
 		if (!isset(static::$sectionsNamesCache[$ID]))
 		{
-			$rsSection = \CIBlockSection::GetList(array(), array("ID" => $ID), false, array("ID", "IBLOCK_ID", "NAME"));
-			$section = $rsSection->Fetch();
-			static::$sectionsNamesCache[$ID] = $section? $section['NAME'] : '';
+			static::$sectionsNamesCache[$ID] = '';
+			$sectionsIterator = Iblock\SectionTable::getList(array(
+				'select' => array('ID', 'NAME'),
+				'filter' => array('=ID' => $ID)
+			));
+			if ($section = $sectionsIterator->fetch())
+				static::$sectionsNamesCache[$ID] = $section['NAME'];
+			unset($section, $sectionsIterator);
 		}
 		return static::$sectionsNamesCache[$ID];
 	}
@@ -84,9 +90,14 @@ class ProductSearchComponent extends \CBitrixComponent
 		if (!isset($res[$linkIblockId]))
 		{
 			$res[$linkIblockId] = array();
-			$sections = \CIBlockSection::GetTreeList(Array("IBLOCK_ID" => $linkIblockId));
-			while ($row = $sections->Fetch())
-				$res[$linkIblockId][] = $row;
+			$sectionsIterator = Iblock\SectionTable::getList(array(
+				'select' => array('*'),
+				'filter' => array('=IBLOCK_ID' => $linkIblockId),
+				'order' => array('LEFT_MARGIN' => 'ASC')
+			));
+			while ($section = $sectionsIterator->fetch())
+				$res[$linkIblockId][] = $section;
+			unset($section, $sectionsIterator);
 			if ($obCache->StartDataCache())
 				$obCache->EndDataCache($res);
 		}
@@ -107,7 +118,7 @@ class ProductSearchComponent extends \CBitrixComponent
 			unset($_REQUEST['mode']);
 		}
 
-		$params['LID'] = isset($_REQUEST["LID"]) ? htmlspecialcharsbx($_REQUEST["LID"]) : '';
+		$params['LID'] = isset($_REQUEST['LID']) ? htmlspecialcharsbx($_REQUEST['LID']) : '';
 		if ($params['LID'] == '')
 			$params['LID'] = false;
 		$params['func_name'] = isset($_REQUEST["func_name"]) ? preg_replace("/[^a-zA-Z0-9_\.]/is", "", $_REQUEST["func_name"]) : '';
@@ -131,12 +142,12 @@ class ProductSearchComponent extends \CBitrixComponent
 		if (isset($_REQUEST['QUERY']))
 			$_REQUEST['QUERY'] = \CUtil::ConvertToLangCharset($_REQUEST['QUERY']);
 
-		$this->simpleSearch = \Bitrix\Main\Config\Option::get('catalog', 'product_form_simple_search', 'Y') == 'Y';
+		$this->simpleSearch = (string)\Bitrix\Main\Config\Option::get('catalog', 'product_form_simple_search') == 'Y';
 
 		if (isset($params['CHECK_PERMISSIONS']) && $params['CHECK_PERMISSIONS'] == 'N')
 			$this->checkPermissions = false;
 
-		$userOptions = \CUserOptions::getOption("catalog", self::TABLE_ID_PREFIX . '_' . $params['caller'], false, $this->getUserId());
+		$userOptions = \CUserOptions::getOption('catalog', self::TABLE_ID_PREFIX . '_' . $params['caller'], false, $this->getUserId());
 		if (is_array($userOptions))
 		{
 			if (!$params['IBLOCK_ID'])
@@ -211,18 +222,22 @@ class ProductSearchComponent extends \CBitrixComponent
 			return true;
 
 		if (!($USER->CanDoOperation('catalog_read')))
-			$APPLICATION->AuthForm(Loc::getMessage("ACCESS_DENIED"));
+		{
+			$APPLICATION->AuthForm(Loc::getMessage('ACCESS_DENIED'));
+			return false;
+		}
+		return true;
 	}
 
 	protected function loadModules()
 	{
-		Main\Loader::includeModule("catalog");
-		Main\Loader::includeModule("search");
-		Main\Loader::includeModule("fileman");
+		Main\Loader::includeModule('catalog');
+		Main\Loader::includeModule('search');
+		Main\Loader::includeModule('fileman');
 		Loc::loadMessages(__FILE__);
 	}
 
-	protected function getMixedList($arOrder = array("SORT" => "ASC"), $arFilter = array(), $bIncCnt = false, $arSelectedFields = false)
+	protected function getMixedList($arOrder = array('SORT' => 'ASC'), $arFilter = array(), $bIncCnt = false, $arSelectedFields = false)
 	{
 		$arResult = array();
 		$notFound = false;
@@ -310,7 +325,7 @@ class ProductSearchComponent extends \CBitrixComponent
 				unset($arElementFilter["SECTION_ID"]);
 
 			if (!is_array($arSelectedFields))
-				$arSelectedFields = Array("ID", "IBLOCK_ID", "IBLOCK_SECTION_ID", "ACTIVE", "SORT", "NAME",
+				$arSelectedFields = array("ID", "IBLOCK_ID", "IBLOCK_SECTION_ID", "ACTIVE", "SORT", "NAME",
 					"PREVIEW_PICTURE", "PREVIEW_TEXT", "PREVIEW_TEXT_TYPE", "DETAIL_PICTURE", "DETAIL_TEXT", "DETAIL_TEXT_TYPE",
 					"SHOW_COUNTER", "SHOW_COUNTER_START", "CODE", "EXTERNAL_ID"
 				);
@@ -422,7 +437,7 @@ class ProductSearchComponent extends \CBitrixComponent
 								$property["PROPERTY_TYPE"] === "L" ? $property["VALUE_ENUM"] : $property["VALUE"];
 						}
 						$mxValues = '';
-						if ('E' == $property['PROPERTY_TYPE'])
+						if ($property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_ELEMENT)
 						{
 							if (!empty($property['LINK_ELEMENT_VALUE']))
 							{
@@ -431,7 +446,7 @@ class ProductSearchComponent extends \CBitrixComponent
 									$mxValues[] = $arTempo['NAME'] . ' [' . $arTempo['ID'] . ']';
 							}
 						}
-						elseif ('G' == $property['PROPERTY_TYPE'])
+						elseif ($property['PROPERTY_TYPE'] == Iblock\PropertyTable::TYPE_SECTION)
 						{
 							if (!empty($property['LINK_SECTION_VALUE']))
 							{
@@ -489,10 +504,10 @@ class ProductSearchComponent extends \CBitrixComponent
 
 		if (!empty($arProductIds))
 		{
-			$dbCatalogProduct = \CCatalogProduct::GetList(array(), array("ID" => $arProductIds));
+			$dbCatalogProduct = \CCatalogProduct::GetList(array(), array('@ID' => $arProductIds));
 			while ($arCatalogProduct = $dbCatalogProduct->fetch())
 			{
-				$arItemsResult[$arCatalogProduct["ID"]]['PRODUCT'] = $arCatalogProduct;
+				$arItemsResult[$arCatalogProduct['ID']]['PRODUCT'] = $arCatalogProduct;
 			}
 
 			$offersExistsIds =  \CCatalogSKU::getExistOffers($arProductIds, $this->getIblockId());
@@ -509,15 +524,11 @@ class ProductSearchComponent extends \CBitrixComponent
 				{
 					$arItem = &$arItemsResult[$id];
 					if ($bExists)
-					{
 						$arItem['SKU_ITEMS'] = $this->getProductSku($arItem);
-					}
 					else
-					{
 						$noOffersIds[] = $id;
-					}
-
 				}
+				unset($id, $bExists);
 			}
 
 			if (!empty($noOffersIds))
@@ -525,7 +536,7 @@ class ProductSearchComponent extends \CBitrixComponent
 				$priceIds = $this->getVisiblePrices();
 				foreach ($priceIds as $priceId)
 				{
-					$dbPrice = \CPrice::GetList(array(), array('PRODUCT_ID' => $noOffersIds, 'CATALOG_GROUP_ID' => $priceId),
+					$dbPrice = \CPrice::GetListEx(array(), array('PRODUCT_ID' => $noOffersIds, 'CATALOG_GROUP_ID' => $priceId),
 						false, false, array('PRODUCT_ID', 'PRICE', 'CURRENCY'));
 					while ($arPrice = $dbPrice->fetch())
 					{
@@ -575,7 +586,7 @@ class ProductSearchComponent extends \CBitrixComponent
 				$priceIds = $this->getVisiblePrices();
 				foreach ($priceIds as $id)
 				{
-					$dbPrice = \CPrice::getList(array(), array('PRODUCT_ID' => $ids, 'CATALOG_GROUP_ID' => $id), false, false, array('PRODUCT_ID', 'PRICE', 'CURRENCY'));
+					$dbPrice = \CPrice::getListEx(array(), array('PRODUCT_ID' => $ids, 'CATALOG_GROUP_ID' => $id), false, false, array('PRODUCT_ID', 'PRICE', 'CURRENCY'));
 					while ($arPrice = $dbPrice->fetch())
 					{
 						$result[$id][$arPrice["PRODUCT_ID"]] = array('PRICE' => $arPrice['PRICE'], 'CURRENCY' => $arPrice['CURRENCY']);
@@ -676,7 +687,7 @@ class ProductSearchComponent extends \CBitrixComponent
 		if ($this->simpleSearch)
 			return false;
 		$iblock = $this->getIblock();
-		if ($iblock['INDEX_ELEMENT']!='Y'||$iblock['INDEX_SECTION']!='Y')
+		if ($iblock['INDEX_ELEMENT'] != 'Y' || $iblock['INDEX_SECTION'] != 'Y')
 			return false;
 		return true;
 	}
@@ -716,6 +727,7 @@ class ProductSearchComponent extends \CBitrixComponent
 			$this->includeComponentTemplate('error');
 			exit;
 		}
+		return true;
 	}
 
 	protected function getFilterFields()

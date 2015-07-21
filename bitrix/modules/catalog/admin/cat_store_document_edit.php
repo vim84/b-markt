@@ -58,19 +58,19 @@ if($rsCount <= 0)
 	$arSitesShop = $arSitesTmp;
 	$rsCount = count($arSitesShop);
 }
+
 $rsContractors = CCatalogContractor::GetList();
 $arContractors = array();
 while($arContractor = $rsContractors->Fetch())
-{
 	$arContractors[] = $arContractor;
-}
+unset($arContractor, $rsContractors);
+
 $arMeasureCode = $arResult = array();
 $arStores = array();
 $rsStores = CCatalogStore::GetList(array(), array("ACTIVE" => "Y"));
 while($arStore = $rsStores->GetNext())
-{
 	$arStores[$arStore["ID"]] = $arStore;
-}
+unset($arStore, $rsStores);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !$bReadOnly && check_bitrix_sessid())
 {
@@ -90,21 +90,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 			"MODIFIED_BY" => $userId,
 			"COMMENTARY" => $_REQUEST["CAT_DOC_COMMENTARY"],
 		);
-		if($contractorId > 0)
+		if ($contractorId > 0)
 			$arGeneral["CONTRACTOR_ID"] = $contractorId;
-		if($currency != '')
+		if ($currency != '')
 			$arGeneral["CURRENCY"] = $currency;
-		if(strlen($_REQUEST["CAT_DOCUMENT_SUM"]) > 0)
-			$arGeneral["TOTAL"] = doubleval($_REQUEST["CAT_DOCUMENT_SUM"]);
+		if (isset($_REQUEST["CAT_DOCUMENT_SUM"]))
+			$arGeneral["TOTAL"] = (float)$_REQUEST["CAT_DOCUMENT_SUM"];
 
-		if($ID > 0)
+		if ($ID > 0)
 		{
 			unset($arGeneral['CREATED_BY']);
 			if(CCatalogDocs::update($ID, $arGeneral))
 				$docId = $ID;
 		}
 		else
+		{
 			$ID = $docId = CCatalogDocs::add($arGeneral);
+		}
 		if($ID > 0)
 		{
 			$dbElement = CCatalogStoreDocsElement::getList(array(), array("DOC_ID" => $ID), false, false, array("ID"));
@@ -116,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 					CCatalogStoreDocsBarcode::delete($arDocsBarcode["ID"]);
 			}
 		}
-		if(isset($_POST["PRODUCT"]) && is_array($_POST["PRODUCT"]) && $docId)
+		if (isset($_POST["PRODUCT"]) && is_array($_POST["PRODUCT"]) && $docId)
 		{
 			$arProducts = ($_POST["PRODUCT"]);
 			foreach($arProducts as $key => $val)
@@ -124,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 				$storeTo = $val["STORE_TO"];
 				$storeFrom = $val["STORE_FROM"];
 
-				$arAdditional = Array(
+				$arAdditional = array(
 					"AMOUNT" => $val["AMOUNT"],
 					"ELEMENT_ID" => $val["PRODUCT_ID"],
 					"PURCHASING_PRICE" => $val["PURCHASING_PRICE"],
@@ -135,14 +137,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 				);
 
 				$docElementId = CCatalogStoreDocsElement::add($arAdditional);
-				if($docElementId && isset($val["BARCODE"]))
+				if ($docElementId && isset($val["BARCODE"]))
 				{
 					$arBarcode = array();
 					if(!empty($val["BARCODE"]))
-					{
 						$arBarcode = explode(', ', $val["BARCODE"]);
-					}
-					if(!empty($arBarcode))
+
+					if (!empty($arBarcode))
 					{
 						foreach($arBarcode as $barCode)
 						{
@@ -153,10 +154,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 			}
 		}
 
-		if($_REQUEST["save_document"] && $docId)
-		{
+		if ($_REQUEST["save_document"] && $docId)
 			LocalRedirect("/bitrix/admin/cat_store_document_edit.php?lang=".LANGUAGE_ID."&ID=".$docId.GetFilterParams("filter_", false));
-		}
 	}
 
 	if ($_REQUEST["save_and_conduct"] || $_REQUEST["cancellation"])
@@ -164,16 +163,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 		$result = false;
 		$DB->StartTransaction();
 
-		if($_REQUEST["save_and_conduct"])
-		{
+		if ($_REQUEST["save_and_conduct"])
 			$result = CCatalogDocs::conductDocument($ID, $userId);
-		}
 		elseif($_REQUEST["cancellation"])
-		{
 			$result = CCatalogDocs::cancellationDocument($ID, $userId);
-		}
 
-		if($result == true)
+		if ($result)
 			$DB->Commit();
 		else
 			$DB->Rollback();
@@ -188,14 +183,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && strlen($_REQUEST["Update"]) > 0 && !
 			require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 			$strError = $ex->GetString();
 			if(!empty($result) && is_array($result))
-			{
 				$strError .= CCatalogStoreControlUtil::showErrorProduct($result);
-			}
 			CAdminMessage::ShowMessage($strError);
 			$bVarsFromForm = true;
 		}
 		else
+		{
 			LocalRedirect("/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID.GetFilterParams("filter_", false));
+		}
 	}
 }
 ClearVars();
@@ -214,7 +209,9 @@ if($ID > 0)
 
 	$dbResult = CCatalogDocs::getList(array(),array('ID' => $ID), false, false, $arSelect);
 	if (!$dbResult->ExtractFields("str_"))
+	{
 		$ID = 0;
+	}
 	else
 	{
 		$docType = $str_DOC_TYPE;
@@ -224,12 +221,10 @@ if($ID > 0)
 
 $requiredFields = CCatalogStoreControlUtil::getFields($docType);
 if(!$requiredFields || $_REQUEST["dontsave"])
-{
 	LocalRedirect("/bitrix/admin/cat_store_document_list.php?lang=".LANGUAGE_ID.GetFilterParams("filter_", false));
-}
 
 $sTableID = "b_catalog_store_docs_".$docType;
-$oSort = new CAdminSorting($sTableID, "ID", "asc");
+$oSort = new CAdminSorting($sTableID, "ID", "ASC");
 $lAdmin = new CAdminList($sTableID, $oSort);
 
 $isDocumentConduct = false;
@@ -241,16 +236,17 @@ if($ID > 0 || isset($_REQUEST["AJAX_MODE"]))
 		$dbDocument = CCatalogDocs::getList(array(), array("ID" => $ID), false, false, array("DOC_TYPE", "SITE_ID", "CONTRACTOR_ID", "CURRENCY", "TOTAL", "STATUS"));
 		if($arDocument = $dbDocument->Fetch())
 		{
-			$isDocumentConduct = ($arDocument["STATUS"] == 'Y') ? true : false;
+			$isDocumentConduct = ($arDocument["STATUS"] == 'Y');
 			$arAllDocumentElement = array();
 			foreach($arDocument as $key => $value)
-			{
 				$arResult[$key] = $value;
-			}
+			unset($key, $value);
+
 			$arResult["DATE_DOCUMENT"] = 'now';
 			$arResult["CREATED_BY"] = $arResult["MODIFIED_BY"] = $USER->GetID();
 			$bReadOnly = ($arDocument["STATUS"] == 'Y') ? true : $bReadOnly;
 		}
+		unset($arDocument, $dbDocument);
 	}
 	if (isset($_REQUEST["AJAX_MODE"]))
 	{
@@ -308,27 +304,39 @@ if($ID > 0 || isset($_REQUEST["AJAX_MODE"]))
 		);
 		while($arElement = $dbElement->Fetch())
 		{
-			$arAjaxElementInfo[$arElement["ID"]]["IS_MULTIPLY_BARCODE"] = $arElement["BARCODE_MULTI"];
-			$arAjaxElementInfo[$arElement["ID"]]["RESERVED"] = $arElement["QUANTITY_RESERVED"];
-			$arAjaxElementInfo[$arElement["ID"]]["PURCHASING_PRICE"] = $arElement["PURCHASING_PRICE"];
-			$arAjaxElementInfo[$arElement["ID"]]["PURCHASING_CURRENCY"] = $arElement["PURCHASING_CURRENCY"];
+			$arAjaxElementInfo[$arElement['ID']] = array(
+				"IS_MULTIPLY_BARCODE" => $arElement["BARCODE_MULTI"],
+				"RESERVED" => $arElement["QUANTITY_RESERVED"],
+				"PURCHASING_PRICE" => $arElement["PURCHASING_PRICE"],
+				"PURCHASING_CURRENCY" => $arElement["PURCHASING_CURRENCY"]
+			);
 		}
-		foreach($arElements as &$arAjaxElement)
+		if (!empty($arElements))
 		{
-			$arAjaxElement["ELEMENT_ID"] = $arAjaxElement["PRODUCT_ID"];
-			if($arAjaxElement["SELECTED_BARCODE"] == '')
-				$arAjaxElement["SELECTED_BARCODE"] = $arAjaxElement["BARCODE"];
-			$arAjaxElement["BARCODE"] = array($arAjaxElement["BARCODE"]);
-			$arAjaxElement["IS_MULTIPLY_BARCODE"] = $arAjaxElementInfo[$arAjaxElement["PRODUCT_ID"]]["IS_MULTIPLY_BARCODE"];
-			$arAjaxElement["RESERVED"] = $arAjaxElementInfo[$arAjaxElement["PRODUCT_ID"]]["RESERVED"];
-			if (0 < doubleval($arAjaxElementInfo[$arAjaxElement["PRODUCT_ID"]]["PURCHASING_PRICE"]))
+			foreach ($arElements as &$arAjaxElement)
 			{
-				$arAjaxElement["PURCHASING_PRICE"] = $arAjaxElementInfo[$arAjaxElement["PRODUCT_ID"]]["PURCHASING_PRICE"];
-				$arAjaxElement["PURCHASING_CURRENCY"] = $arAjaxElementInfo[$arAjaxElement["PRODUCT_ID"]]["PURCHASING_CURRENCY"];
+				$elementId = $arAjaxElement["PRODUCT_ID"];
+				$arAjaxElement["ELEMENT_ID"] = $arAjaxElement["PRODUCT_ID"];
+				if ($arAjaxElement["SELECTED_BARCODE"] == '')
+					$arAjaxElement["SELECTED_BARCODE"] = $arAjaxElement["BARCODE"];
+				$arAjaxElement["BARCODE"] = array($arAjaxElement["BARCODE"]);
+				if (!empty($arAjaxElementInfo[$elementId]))
+				{
+					$arAjaxElement["IS_MULTIPLY_BARCODE"] = $arAjaxElementInfo[$elementId]["IS_MULTIPLY_BARCODE"];
+					$arAjaxElement["RESERVED"] = $arAjaxElementInfo[$elementId]["RESERVED"];
+					if (
+						(float)$arAjaxElement['PURCHASING_PRICE'] <= 0
+						&& (float)$arAjaxElementInfo[$elementId]["PURCHASING_PRICE"] > 0
+					)
+					{
+						$arAjaxElement["PURCHASING_PRICE"] = $arAjaxElementInfo[$elementId]["PURCHASING_PRICE"];
+						$arAjaxElement["PURCHASING_CURRENCY"] = $arAjaxElementInfo[$elementId]["PURCHASING_CURRENCY"];
+					}
+				}
+				unset($elementId);
 			}
-		}
-		if (isset($arAjaxElement))
 			unset($arAjaxElement);
+		}
 
 		$arAllDocumentElement = $arElements;
 	}
@@ -402,7 +410,10 @@ if(!$bReadOnly)
 			"ONCLICK" => "addProductSearch(1);",
 		),
 		array(
-			"HTML" => GetMessage("CAT_DOC_LINK_FIND", array("#LINK#" => "<a href=\"javascript:void(0);\" onClick=\"findBarcodeDivHider()\">".GetMessage('CAT_DOC_BARCODE_FIND_LINK')."</a>")),
+			"HTML" => GetMessage(
+				"CAT_DOC_LINK_FIND",
+				array("#LINK#" => '<a href="javascript:void(0);" onClick="findBarcodeDivHider()">'.GetMessage('CAT_DOC_BARCODE_FIND_LINK').'</a>')
+			),
 		),
 		array(
 			"HTML" => '<div id="cat_barcode_find_div" style="display: none;">'.
@@ -430,7 +441,7 @@ if(isset($requiredFields["RESERVED"]))
 	$arHeaders[] = array(
 		"id" => "RESERVED",
 		"content" => GetMessage("CAT_DOC_PRODUCT_RESERVED"),
-		"default" => ($requiredFields["RESERVED"]["required"] == 'Y') ? true : false
+		"default" => ($requiredFields["RESERVED"]["required"] == 'Y')
 	);
 }
 if(isset($requiredFields["AMOUNT"]))
@@ -491,12 +502,12 @@ if(is_array($arResult["ELEMENT"]))
 	foreach($arResult["ELEMENT"] as $code => $value)
 	{
 		$storesTo = $storesFrom = '';
-		$isMultiply = 'Y' == $value["IS_MULTIPLY_BARCODE"];
+		$isMultiply = ('Y' == $value["IS_MULTIPLY_BARCODE"]);
 		$arProductInfo = CCatalogStoreControlUtil::getProductInfo($value["ELEMENT_ID"]);
 		if(is_array($arProductInfo))
 			$value = array_merge($value, $arProductInfo);
 
-		$arRes['ID'] = intval($code);
+		$arRes['ID'] = (int)$code;
 		$maxId = ($arRes['ID'] > $maxId) ? $arRes['ID'] : $maxId;
 		foreach($arStores as $key => $val)
 		{
@@ -613,16 +624,14 @@ $TAB_TITLE = GetMessage("CAT_DOC_".$docType);
 if($ID > 0)
 {
 	if($bReadOnly)
-	{
 		$APPLICATION->SetTitle(str_replace("#ID#", $ID, GetMessage("CAT_DOC_TITLE_VIEW")).". ".$TAB_TITLE.".");
-	}
 	else
-	{
 		$APPLICATION->SetTitle(str_replace("#ID#", $ID, GetMessage("CAT_DOC_TITLE_EDIT")).". ".$TAB_TITLE.".");
-	}
 }
 else
+{
 	$APPLICATION->SetTitle(GetMessage("CAT_DOC_NEW").". ".$TAB_TITLE);
+}
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 CJSCore::Init(array('file_input', 'currency'));

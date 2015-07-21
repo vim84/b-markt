@@ -603,6 +603,7 @@ if (!function_exists('__SLGetLogRecord'))
 				"photo_photo" => array("PHOTO", "PH", "FORUM|COMMENT"),
 				"sonet" => array("SOCNET", "SC", ""),
 				"calendar" => array("EVENT", "EV", ""),
+				"lists_new_element" => array("WF", "WF", ""),
 			);
 
 			if (

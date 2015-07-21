@@ -75,9 +75,12 @@ $MESS["T_IBLOCK_DESC_ADD_ELEMENT_CHAIN"] = "Включать название э
 $MESS["T_IBLOCK_DESC_NEWS_NAME"] = "Выводить название элемента";
 $MESS["F_SHOW_LINK_TO_FORUM"] = "Показать ссылку на форум";
 $MESS["T_IBLOCK_DESC_CHECK_DATES"] = "Показывать только активные на данный момент элементы";
-$MESS["CP_BN_SET_STATUS_404"] = "Устанавливать статус 404, если не найдены элемент или раздел";
 $MESS["CP_BN_DETAIL_PAGER_SHOW_ALL"] = "Показывать ссылку \"Все\"";
 $MESS["CP_BN_BROWSER_TITLE"] = "Установить заголовок окна браузера из свойства";
 $MESS["CP_BN_CACHE_GROUPS"] = "Учитывать права доступа";
 $MESS["CP_BN_DETAIL_SET_CANONICAL_URL"] = "Устанавливать канонический URL";
+$MESS["CP_BN_SET_LAST_MODIFIED"] = "Устанавливать в заголовках ответа время модификации страницы";
+$MESS["CP_BN_DISPLAY_AS_RATING"] = "В качестве рейтинга показывать";
+$MESS["CP_BN_AVERAGE"] = "Среднее значение";
+$MESS["CP_BN_RATING"] = "Рейтинг";
 ?>

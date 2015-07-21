@@ -119,6 +119,8 @@ final class Frame
 		}
 
 		self::replaceSessid($data["static"]);
+		Asset::getInstance()->moveJsToBody($data["static"]);
+
 		$data["md5"] = md5($data["static"]);
 
 		return $data;
@@ -289,8 +291,13 @@ final class Frame
 	}
 
 	/**
+	 *
+	 * Returns true if $originalContent was modified
 	 * @param $originalContent
 	 * @param $compositeContent
+	 *
+	 * @return bool
+	 * @internal
 	 */
 	public function endBuffering(&$originalContent, $compositeContent)
 	{
@@ -299,9 +306,10 @@ final class Frame
 			if ($this->compositeWasInjected === false && self::isAjaxRequest())
 			{
 				$originalContent = $this->getAjaxError("not_injected");
+				return true;
 			}
 
-			return;
+			return false;
 		}
 
 		if (function_exists("getmoduleevents"))
@@ -316,15 +324,20 @@ final class Frame
 		if (self::isAjaxRequest())
 		{
 			$originalContent = $compositeContent;
+			return true;
 		}
 		elseif (self::getUseHTMLCache())
 		{
 			$originalContent = $this->replaceInjections($originalContent);
+			return false;
 		}
 		elseif (self::getUseAppCache())
 		{
 			$originalContent = $compositeContent;
+			return true;
 		}
+
+		return false;
 	}
 
 	/**
@@ -379,8 +392,6 @@ final class Frame
 				{
 					$staticHTMLCache->delete();
 				}
-
-				$dividedData["static"] = $this->replaceInjections($content);
 			}
 			else
 			{
@@ -464,11 +475,6 @@ final class Frame
 				),
 				$content
 			);
-		}
-
-		if ($this->injectedJS && isset($this->injectedJS["start"]))
-		{
-			$content = str_replace($this->injectedJS["start"], "", $content);
 		}
 
 		return $content;
@@ -590,7 +596,7 @@ final class Frame
 	 *
 	 * @return boolean
 	 */
-	public function getUseAppCache()
+	public static function getUseAppCache()
 	{
 		$appCache = AppCacheManifest::getInstance();
 		return $appCache->isEnabled();
@@ -722,7 +728,7 @@ JS;
 
 		return array(
 			"start" => '<style type="text/css">'.str_replace(array("\n", "\t"), "", self::getInjectedCSS())."</style>\n".
-						'<script type="text/javascript">'.str_replace(array("\n", "\t"), "", $inlineJS)."</script>"
+						'<script type="text/javascript" data-skip-moving="true">'.str_replace(array("\n", "\t"), "", $inlineJS)."</script>"
 		);
 	}
 

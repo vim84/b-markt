@@ -203,30 +203,47 @@ $arComponentParameters = array(
 	),
 	"PARAMETERS" => array(
 		"VARIABLE_ALIASES" => array(
-			"SECTION_ID" => array("NAME" => GetMessage("SECTION_ID_DESC")),
-			"ELEMENT_ID" => array("NAME" => GetMessage("ELEMENT_ID_DESC")),
+			"ELEMENT_ID" => array(
+				"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_ELEMENT_ID"),
+			),
+			"SECTION_ID" => array(
+				"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_SECTION_ID"),
+			),
 		),
 		"AJAX_MODE" => array(),
 		"SEF_MODE" => array(
 			"sections" => array(
 				"NAME" => GetMessage("SECTIONS_TOP_PAGE"),
 				"DEFAULT" => "",
-				"VARIABLES" => array(),
+				"VARIABLES" => array(
+				),
 			),
 			"section" => array(
 				"NAME" => GetMessage("SECTION_PAGE"),
 				"DEFAULT" => "#SECTION_ID#/",
-				"VARIABLES" => array("SECTION_ID"=>"SID"),
+				"VARIABLES" => array(
+					"SECTION_ID",
+					"SECTION_CODE",
+					"SECTION_CODE_PATH",
+				),
 			),
 			"element" => array(
 				"NAME" => GetMessage("DETAIL_PAGE"),
 				"DEFAULT" => "#SECTION_ID#/#ELEMENT_ID#/",
-				"VARIABLES" => array("ELEMENT_ID"=>"EID"),
+				"VARIABLES" => array(
+					"ELEMENT_ID",
+					"ELEMENT_CODE",
+					"SECTION_ID",
+					"SECTION_CODE",
+					"SECTION_CODE_PATH",
+				),
 			),
 			"compare" => array(
 				"NAME" => GetMessage("COMPARE_PAGE"),
 				"DEFAULT" => "compare.php?action=#ACTION_CODE#",
-				"VARIABLES" => array("action"=>"action"),
+				"VARIABLES" => array(
+					"action",
+				),
 			),
 		),
 		"IBLOCK_TYPE" => array(
@@ -347,6 +364,12 @@ $arComponentParameters = array(
 			),
 			"DEFAULT" => "Y",
 		),
+		"USE_MAIN_ELEMENT_SECTION" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BC_USE_MAIN_ELEMENT_SECTION"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
 		"LIST_META_KEYWORDS" => array(
 			"PARENT" => "LIST_SETTINGS",
 			"NAME" => GetMessage("CP_BC_LIST_META_KEYWORDS"),
@@ -440,9 +463,9 @@ $arComponentParameters = array(
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "Y",
 		),
-		"SET_STATUS_404" => array(
+		"SET_LAST_MODIFIED" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BC_SET_STATUS_404"),
+			"NAME" => GetMessage("CP_BC_SET_LAST_MODIFIED"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
@@ -604,7 +627,58 @@ $arComponentParameters = array(
 		),
 	),
 );
-CIBlockParameters::AddPagerSettings($arComponentParameters, GetMessage("T_IBLOCK_DESC_PAGER_CATALOG"), true, true);
+
+CIBlockParameters::AddPagerSettings(
+	$arComponentParameters,
+	GetMessage("T_IBLOCK_DESC_PAGER_CATALOG"), //$pager_title
+	true, //$bDescNumbering
+	true, //$bShowAllParam
+	true, //$bBaseLink
+	$arCurrentValues["PAGER_BASE_LINK_ENABLE"]==="Y" //$bBaseLinkEnabled
+);
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues);
+
+if($arCurrentValues["SEF_MODE"]=="Y")
+{
+	$arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"] = array();
+	$arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"]["ELEMENT_ID"] = array(
+		"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_ELEMENT_ID"),
+		"TEMPLATE" => "#ELEMENT_ID#",
+	);
+	$arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"]["ELEMENT_CODE"] = array(
+		"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_ELEMENT_CODE"),
+		"TEMPLATE" => "#ELEMENT_CODE#",
+	);
+	$arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"]["SECTION_ID"] = array(
+		"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_SECTION_ID"),
+		"TEMPLATE" => "#SECTION_ID#",
+	);
+	$arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"]["SECTION_CODE"] = array(
+		"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_SECTION_CODE"),
+		"TEMPLATE" => "#SECTION_CODE#",
+	);
+	$arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"]["SECTION_CODE_PATH"] = array(
+		"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_SECTION_CODE_PATH"),
+		"TEMPLATE" => "#SECTION_CODE_PATH#",
+	);
+	$arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"]["SMART_FILTER_PATH"] = array(
+		"NAME" => GetMessage("CP_BC_VARIABLE_ALIASES_SMART_FILTER_PATH"),
+		"TEMPLATE" => "#SMART_FILTER_PATH#",
+	);
+
+	$smartBase = ($arCurrentValues["SEF_URL_TEMPLATES"]["section"]? $arCurrentValues["SEF_URL_TEMPLATES"]["section"]: "#SECTION_ID#/");
+	$arComponentParameters["PARAMETERS"]["SEF_MODE"]["smart_filter"] = array(
+		"NAME" => GetMessage("CP_BC_SEF_MODE_SMART_FILTER"),
+		"DEFAULT" => $smartBase."filter/#SMART_FILTER_PATH#/apply/",
+		"VARIABLES" => array(
+			"SECTION_ID",
+			"SECTION_CODE",
+			"SECTION_CODE_PATH",
+			"SMART_FILTER_PATH",
+		),
+	);
+}
 
 if($arCurrentValues["USE_COMPARE"]=="Y")
 {

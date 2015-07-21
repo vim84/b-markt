@@ -217,13 +217,13 @@ class ElementTable extends Main\Entity\DataManager
 			),
 			'WF_PARENT_ELEMENT' => new Main\Entity\ReferenceField(
 				'WF_PARENT_ELEMENT',
-				'Bitrix\Iblock\IblockElement',
+				'Bitrix\Iblock\Element',
 				array('=this.WF_PARENT_ELEMENT_ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			),
 			'IBLOCK_SECTION' => new Main\Entity\ReferenceField(
 				'IBLOCK_SECTION',
-				'Bitrix\Iblock\IblockSection',
+				'Bitrix\Iblock\Section',
 				array('=this.IBLOCK_SECTION_ID' => 'ref.ID'),
 				array('join_type' => 'LEFT')
 			),

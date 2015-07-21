@@ -32,4 +32,8 @@ $MESS["CONTACT_ADM_BTN_CONT"] = "Продолжить";
 
 $MESS["SENDER_CONTACT_LIST_EDIT"] = "Редактировать списки";
 $MESS["SENDER_CONTACT_LIST_EDIT_TITLE"] = "Перейти к редактированию или удалению списков";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD"] = "Добавить или импортировать";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD_LIST"] = "Добавить вручную один адрес или список";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD_FILE"] = "Добавить файл с адресами";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD_PULL"] = "Импортировать из источников(пользователи, веб-формы и прочее)";
 ?>

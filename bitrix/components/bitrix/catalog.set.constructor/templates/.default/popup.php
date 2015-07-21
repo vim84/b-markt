@@ -6,11 +6,10 @@ define("NO_AGENT_STATISTIC", true);
 
 if (isset($_REQUEST['site_id']) && !empty($_REQUEST['site_id']))
 {
-	$strSiteID = (string)$_REQUEST['site_id'];
-	if (preg_match('/^[a-z0-9_]{2}$/i', $strSiteID) === 1)
-	{
-		define('SITE_ID', $strSiteID);
-	}
+	if (!is_string($_REQUEST['site_id']))
+		die();
+	if (preg_match('/^[a-z0-9_]{2}$/i', $_REQUEST['site_id']) === 1)
+		define('SITE_ID', $_REQUEST['site_id']);
 }
 else
 {

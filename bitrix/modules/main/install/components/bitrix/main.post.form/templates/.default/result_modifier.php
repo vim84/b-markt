@@ -117,4 +117,19 @@ $arParams["IMAGE"] = array("WIDTH" => 90, "HEIGHT" => 90);
 /********************************************************************
 				/Input params
  ********************************************************************/
+
+if (
+	IsModuleInstalled("extranet")
+	&& strlen(COption::GetOptionString("extranet", "extranet_site")) > 0
+)
+{
+	$arResult["EXTRANET_ROOT"] = array(
+		"EX" => array (
+		'id' => 'EX',
+		'entityId' => 'EX',
+		'name' => GetMessage("MPF_EXTRANET_ROOT"),
+		'parent' => 'DR0',
+	  )
+	);
+}
 ?>

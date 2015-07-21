@@ -27,4 +27,6 @@ $MESS["IM_MESSAGE_LIKE"] = "I like your message \"#MESSAGE#\" you made in chat \
 $MESS["IM_MESSAGE_LIKE_PRIVATE"] = "I like your message \"#MESSAGE#\" in our conversation.";
 $MESS["IM_MESSAGE_FILE"] = "File";
 $MESS["IM_MESSAGE_FILE_DOWN"] = "Download:";
+$MESS["IM_QUOTE"] = "Quote";
+$MESS["IM_PUSH_GROUP_TITLE"] = "#USER# for #GROUP#";
 ?>

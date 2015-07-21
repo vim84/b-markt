@@ -519,7 +519,7 @@ window.SBPETabs.prototype = {
 			{
 				menuItemsLists.push({
 					tabId : id,
-					text : tabs[i].getAttribute("data-name"),
+					text : BX.util.htmlspecialchars(tabs[i].getAttribute("data-name")),
 					className : "feed-add-post-form-" + id,
 					onclick : createOnclickLists(
 						id,
@@ -552,7 +552,7 @@ window.SBPETabs.prototype = {
 		for (var i = 0; i < tabs.length; i++)
 		{
 			menuItemsLists.push({
-				text : tabs[i].getAttribute("data-name"),
+				text : BX.util.htmlspecialchars(tabs[i].getAttribute("data-name")),
 				className : "feed-add-post-form-lists-default-"+tabs[i].getAttribute("data-key"),
 				onclick : tabs[i].getAttribute("data-onclick")
 			});
@@ -647,120 +647,13 @@ window.BXfpGratMedalSelectCallback = function(item, type)
 	);
 
 	BX('feed-add-post-'+type+'-input').value = '';
-	BXfpGratMedalLinkName(type == 'grat' ? window["BXSocNetLogGratFormName"] : window["BXSocNetLogMedalFormName"], type);
-};
 
-window.BXfpGratUnSelectCallback = function(item/*, type, search*/)
-{
-	BXfpGratMedalUnSelectCallback(item, 'grat');
-};
-
-window.BXfpMedalUnSelectCallback = function(item/*, type, search*/)
-{
-	BXfpGratMedalUnSelectCallback(item, 'medal');
-};
-
-window.BXfpGratMedalUnSelectCallback = function(item, type)
-{
-	var elements = BX.findChildren(BX('feed-add-post-'+type+'-item'), {attribute: {'data-id': ''+item.id+''}}, true);
-	if (elements != null)
-	{
-		for (var j = 0; j < elements.length; j++)
-			BX.remove(elements[j]);
-	}
-	BX('feed-add-post-'+type+'-input').value = '';
-	BXfpGratMedalLinkName((type == 'grat' ? window["BXSocNetLogGratFormName"] : window["BXSocNetLogMedalFormName"]), type);
-};
-
-window.BXfpGratMedalLinkName = function(name, type)
-{
-	if (type != 'grat')
-		type = 'medal';
-
-	if (BX.SocNetLogDestination.getSelectedCount(name) <= 0)
-		BX('bx-'+type+'-tag').innerHTML = BX.message("BX_FPGRATMEDAL_LINK_1");
-	else
-		BX('bx-'+type+'-tag').innerHTML = BX.message("BX_FPGRATMEDAL_LINK_2");
-};
-
-window.BXfpGratOpenDialogCallback = function()
-{
-	BX.style(BX('feed-add-post-grat-input-box'), 'display', 'inline-block');
-	BX.style(BX('bx-grat-tag'), 'display', 'none');
-	BX.focus(BX('feed-add-post-grat-input'));
-};
-
-window.BXfpGratCloseDialogCallback = function()
-{
-	if (!BX.SocNetLogDestination.isOpenSearch() && BX('feed-add-post-grat-input').value.length <= 0)
-	{
-		BX.style(BX('feed-add-post-grat-input-box'), 'display', 'none');
-		BX.style(BX('bx-grat-tag'), 'display', 'inline-block');
-		BXfpdDisableBackspace();
-	}
-};
-
-window.BXfpGratCloseSearchCallback = function()
-{
-	if (!BX.SocNetLogDestination.isOpenSearch() && BX('feed-add-post-grat-input').value.length > 0)
-	{
-		BX.style(BX('feed-add-post-grat-input-box'), 'display', 'none');
-		BX.style(BX('bx-grat-tag'), 'display', 'inline-block');
-		BX('feed-add-post-grat-input').value = '';
-		BXfpdDisableBackspace();
-	}
-
-};
-/**
- * @return boolean
- */
-window.BXfpGratSearchBefore = function(event)
-{
-	if (event.keyCode == 8 && BX('feed-add-post-grat-input').value.length <= 0)
-	{
-		BX.SocNetLogDestination.sendEvent = false;
-		BX.SocNetLogDestination.deleteLastItem(window["BXSocNetLogGratFormName"]);
-	}
-
-	return true;
-};
-/**
- * @return boolean
- */
-window.BXfpGratSearch = function(event)
-{
-	if(event.keyCode == 16 || event.keyCode == 17 || event.keyCode == 18)
-		return false;
-
-	if (event.keyCode == 13)
-	{
-		BX.SocNetLogDestination.selectFirstSearchItem(window["BXSocNetLogGratFormName"]);
-		return true;
-	}
-	if (event.keyCode == 27)
-	{
-		BX('feed-add-post-grat-input').value = '';
-		BX.style(BX('bx-grat-tag'), 'display', 'inline');
-	}
-	else
-	{
-		BX.SocNetLogDestination.search(BX('feed-add-post-grat-input').value, true, window["BXSocNetLogGratFormName"]);
-	}
-
-	if (!BX.SocNetLogDestination.isOpenDialog() && BX('feed-add-post-grat-input').value.length <= 0)
-	{
-		BX.SocNetLogDestination.openDialog(window["BXSocNetLogGratFormName"]);
-	}
-	else
-	{
-		if (BX.SocNetLogDestination.sendEvent && BX.SocNetLogDestination.isOpenDialog())
-			BX.SocNetLogDestination.closeDialog();
-	}
-	if (event.keyCode == 8)
-	{
-		BX.SocNetLogDestination.sendEvent = true;
-	}
-	return true;
+	BX.SocNetLogDestination.BXfpSetLinkName({
+		formName: (type == 'grat' ? window["BXSocNetLogGratFormName"] : window["BXSocNetLogMedalFormName"]),
+		tagInputName: 'bx-' + type + '-tag',
+		tagLink1: BX.message('BX_FPGRATMEDAL_LINK_1'),
+		tagLink2: BX.message('BX_FPGRATMEDAL_LINK_2')
+	});
 };
 
 if (!!BX.SocNetGratSelector)

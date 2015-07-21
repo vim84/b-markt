@@ -145,12 +145,9 @@ if (
 		)
 		{
 			$arRedirectSite = CSocNetLogComponent::GetSiteByDepartmentId($arCurrentUser["UF_DEPARTMENT"]);
-			if (!$arRedirectSite)
+			if ($arRedirectSite["LID"] == SITE_ID)
 			{
-				$arRedirectSite = array(
-					"LID" => SITE_ID,
-					"SERVER_NAME" => SITE_SERVER_NAME
-				);
+				$arRedirectSite = false;
 			}
 		}
 	}
@@ -526,7 +523,21 @@ if ($arParams["SEF_MODE"] == "Y")
 			|| substr($tmpVal, 0, strlen($arParams["SEF_FOLDER"])) !== $arParams["SEF_FOLDER"]
 		)
 	)
+	{
 		COption::SetOptionString("socialnetwork", "workgroups_list_page", $arResult["PATH_TO_GROUP_SEARCH"], false, SITE_ID);
+	}
+
+	$tmpVal = COption::GetOptionString("socialnetwork", "subject_path_template", false, SITE_ID);
+	if (
+		$arParams["SEF_FOLDER"]
+		&& (
+			!$tmpVal
+			|| substr($tmpVal, 0, strlen($arParams["SEF_FOLDER"])) !== $arParams["SEF_FOLDER"]
+		)
+	)
+	{
+		COption::SetOptionString("socialnetwork", "subject_path_template", $arResult["PATH_TO_GROUP_SEARCH_SUBJECT"], false, SITE_ID);
+	}
 }
 else
 {
@@ -599,6 +610,18 @@ if ($arRedirectSite)
 {
 	if ($arParams["SEF_MODE"] == "Y")
 	{
+		if(is_array($arVariables))
+		{
+			foreach($arVariables as $i => $variable)
+			{
+				if(!is_string($variable))
+				{
+					unset($arVariables[$i]);
+				}
+			}
+		}
+		unset($variable);
+
 		$url =
 			(
 				strlen(trim($arRedirectSite["SERVER_NAME"])) > 0

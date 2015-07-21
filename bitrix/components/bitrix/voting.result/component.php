@@ -148,7 +148,8 @@ elseif (CModule::IncludeModule("vote"))
 			$arResult["LAST_VOTE"] = ($arResult["LAST_VOTE"] === false ? $arAnswer["LAST_VOTE"] : $arResult["LAST_VOTE"]);
 			$arResult["LAST_VOTE"] = min($arResult["LAST_VOTE"], $arAnswer["LAST_VOTE"]);
 			$arAnswer["PERCENT"] = $arAnswer["PERCENT2"] = $arAnswer["PERCENT3"];
-			if ($counterSum > 0) {
+			if ($counterSum > 0)
+			{
 				$arAnswer["PERCENT"] = $arAnswer["PERCENT2"] = $arAnswer["PERCENT3"] = $percentage = ($arAnswer["COUNTER"]*100/$counter);
 				if (is_float($percentage))
 				{
@@ -171,7 +172,8 @@ elseif (CModule::IncludeModule("vote"))
 		$var = ($sum1 == 100 ? 1 : ($sum2 == 100 ? 2 : 3));
 		if ($var > 1)
 		{
-			foreach ($arQuestion["ANSWERS"] as $aID => $arAnswer) {
+			foreach ($arQuestion["ANSWERS"] as $aID => $arAnswer)
+			{
 				$arQuestion["ANSWERS"][$aID]["PERCENT"] = $arQuestion["ANSWERS"][$aID]["PERCENT".$var];
 			}
 		}

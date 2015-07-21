@@ -830,6 +830,28 @@ class CBitrixComponent
 
 						\Bitrix\Main\Data\StaticHtmlCache::applyComponentFrameMode($context);
 					}
+
+					if (isset($templateCachedData["externalCss"]))
+					{
+						foreach ($templateCachedData["externalCss"] as $cssPath)
+						{
+							$APPLICATION->SetAdditionalCSS($cssPath);
+							//Check if parent component exists and plug css it to it's "collection"
+							if($this->__parent)
+								$this->__parent->addChildCSS($cssPath);
+						}
+					}
+
+					if (isset($templateCachedData["externalJs"]))
+					{
+						foreach ($templateCachedData["externalJs"] as $jsPath)
+						{
+							$APPLICATION->AddHeadScript($jsPath);
+							//Check if parent component exists and plug js it to it's "collection"
+							if($this->__parent)
+								$this->__parent->addChildJS($jsPath);
+						}
+					}
 				}
 
 				if ($templateCachedData["__editButtons"])

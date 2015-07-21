@@ -423,6 +423,7 @@ class CAllIMContactList
 				$arUsers[$userId]['birthday'] = $bIntranetEnable? CIntranetUtils::IsToday($arUsers[$userId]['birthday']): false;
 				$arUsers[$userId]['status'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['status']: 'offline';
 				$arUsers[$userId]['idle'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['idle']: 0;
+				$arUsers[$userId]['mobileLastDate'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['mobileLastDate']: 0;
 			}
 
 			//uasort($ar, create_function('$a, $b', 'if($a["stamp"] < $b["stamp"]) return 1; elseif($a["stamp"] > $b["stamp"]) return -1; else return 0;'));
@@ -563,6 +564,7 @@ class CAllIMContactList
 			{
 				$arUsers[$userId]['status'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['status']: 'offline';
 				$arUsers[$userId]['idle'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['idle']: 0;
+				$arUsers[$userId]['mobileLastDate'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['mobileLastDate']: 0;
 			}
 		}
 
@@ -786,6 +788,7 @@ class CAllIMContactList
 					{
 						$arCacheResult['users'][$userId]['status'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['status']: 'offline';
 						$arCacheResult['users'][$userId]['idle'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['idle']: 0;
+						$arCacheResult['users'][$userId]['mobileLastDate'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['mobileLastDate']: 0;
 					}
 
 					if ($getHrPhoto && !isset($arCacheResult['hrphoto']))
@@ -919,6 +922,7 @@ class CAllIMContactList
 			$arUsers[$userId]['birthday'] = $bIntranetEnable? CIntranetUtils::IsToday($arUsers[$userId]['birthday']): false;
 			$arUsers[$userId]['status'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['status']: 'offline';
 			$arUsers[$userId]['idle'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['idle']: 0;
+			$arUsers[$userId]['mobileLastDate'] = isset($arOnline['users'][$userId])? $arOnline['users'][$userId]['mobileLastDate']: 0;
 		}
 
 		$result = array('users' => $arUsers, 'hrphoto' => $arHrPhoto, 'userInGroup' => $arUserInGroup, 'woUserInGroup' => $arWoUserInGroup, 'phones' => $arPhones, 'source' => $arSource);
@@ -1276,6 +1280,7 @@ class CAllIMContactList
 			$arRecent[$key]['USER']['birthday'] = $bIntranetEnable? CIntranetUtils::IsToday($value['USER']['birthday']): false;
 			$arRecent[$key]['USER']['status'] = isset($arOnline['users'][$value['USER']['id']])? $arOnline['users'][$value['USER']['id']]['status']: 'offline';
 			$arRecent[$key]['USER']['idle'] = isset($arOnline['users'][$value['USER']['id']])? $arOnline['users'][$value['USER']['id']]['idle']: 0;
+			$arRecent[$key]['USER']['mobileLastDate'] = isset($arOnline['users'][$value['USER']['id']])? $arOnline['users'][$value['USER']['id']]['mobileLastDate']: 0;
 		}
 
 		if ($bLoadUnreadMessage)

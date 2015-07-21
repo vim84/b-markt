@@ -4,6 +4,7 @@ namespace Bitrix\Main\Page;
 use Bitrix\Main;
 use Bitrix\Main\IO;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\Text\String;
 
 class AssetMode
 {
@@ -67,6 +68,8 @@ class Asset
 	private $headString = false;
 	private $headScript = false;
 	private $bodyScript = false;
+
+	private $moveJsToBody = null;
 
 	private $siteTemplateID = '';
 	private $templatePath = '';
@@ -589,7 +592,7 @@ class Asset
 		}
 
 		$res = '';
-		if($location == AssetLocation::AFTER_CSS)
+		if($location == AssetLocation::AFTER_CSS && \CJSCore::IsInited())
 		{
 			$res = "<script type=\"text/javascript\">if(!window.BX)window.BX={message:function(mess){if(typeof mess=='object') for(var i in mess) BX.message[i]=mess[i]; return true;}};</script>\n";
 		}
@@ -764,12 +767,12 @@ class Asset
 	 */
 	public function moveJs($module = '')
 	{
-		if(empty($module))
+		if (empty($module) || $module === "main")
 		{
 			return;
 		}
 
-		if(array_key_exists($module, $this->moduleInfo['JS']))
+		if (array_key_exists($module, $this->moduleInfo['JS']))
 		{
 			$this->moduleInfo['JS'][$module]['BODY'] = true;
 		}
@@ -778,6 +781,153 @@ class Asset
 			$this->moduleInfo['JS'][$module] = array('MODULE_ID' => $module, 'FILES_INFO' => false, 'BODY' => true);
 		}
 	}
+
+	/**
+	 *
+	 * Enables or disables the moving all of scripts to the body.
+	 * @param bool $flag
+	 */
+	public function setJsToBody($flag)
+	{
+		$this->moveJsToBody = (bool)$flag;
+	}
+
+	protected function getJsToBody()
+	{
+		if($this->moveJsToBody === null)
+		{
+			$this->moveJsToBody = Option::get("main", "move_js_to_body") === "Y" && (!defined("ADMIN_SECTION") || ADMIN_SECTION !== true);
+		}
+		return $this->moveJsToBody;
+	}
+
+	/**
+	 *
+	 * Moves all of scripts in front of </body>
+	 * @param string $content
+	 *
+	 * @internal
+	 */
+	public function moveJsToBody(&$content)
+	{
+		if (!$this->getJsToBody())
+		{
+			return;
+		}
+
+		$js = "";
+		$offset = 0;
+		$newContent = "";
+		$areas = $this->getScriptAreas($content);
+		foreach ($areas as $area)
+		{
+			if (String::getBinaryStrpos($area->attrs, "data-skip-moving") !== false || !self::isValidScriptType($area->attrs))
+			{
+				continue;
+			}
+
+			$js .= String::getBinarySubstring($content, $area->openTagStart, $area->closingTagEnd - $area->openTagStart);
+			$newContent .= String::getBinarySubstring($content, $offset, $area->openTagStart - $offset);
+			$offset = $area->closingTagEnd;
+		}
+
+		if ($js === "")
+		{
+			return;
+		}
+
+		$newContent .= String::getBinarySubstring($content, $offset);
+		$bodyEnd = String::getBinaryStrripos($newContent, "</body>");
+		if ($bodyEnd === false)
+		{
+			$content = $newContent.$js;
+		}
+		else
+		{
+			$content = substr_replace($newContent, $js, $bodyEnd, 0);
+		}
+	}
+
+	/**
+	 *
+	 * Returns positions of <script>...</script> elements
+	 * @param $content
+	 * @return array
+	 */
+	private function getScriptAreas($content)
+	{
+		$openTag = "<script";
+		$closingTag = "</script";
+		$ending = ">";
+
+		$offset = 0;
+		$areas = array();
+		$content = String::getBinaryStrtolower($content);
+		while (($openTagStart = String::getBinaryStrpos($content, $openTag, $offset)) !== false)
+		{
+			$endingPos = String::getBinaryStrpos($content, $ending, $openTagStart);
+			if ($endingPos === false)
+			{
+				break;
+			}
+
+			$attrsStart = $openTagStart + strlen($openTag);
+			$attrs = String::getBinarySubstring($content, $attrsStart, $endingPos - $attrsStart);
+			$openTagEnd = $endingPos + strlen($ending);
+
+			$realClosingTag = $closingTag.$ending;
+			$closingTagStart = String::getBinaryStrpos($content, $realClosingTag, $openTagEnd);
+			if ($closingTagStart === false)
+			{
+				$offset = $openTagEnd;
+				continue;
+			}
+
+			$closingTagEnd = $closingTagStart + strlen($realClosingTag);
+			while (isset($content[$closingTagEnd]) && $content[$closingTagEnd] === "\n")
+			{
+				$closingTagEnd++;
+			}
+
+			$area = new \stdClass();
+			$area->attrs = $attrs;
+			$area->openTagStart = $openTagStart;
+			$area->openTagEnd = $openTagEnd;
+			$area->closingTagStart = $closingTagStart;
+			$area->closingTagEnd = $closingTagEnd;
+			$areas[] = $area;
+
+			$offset = $closingTagEnd;
+		}
+
+		return $areas;
+	}
+
+	public function canMoveJsToBody()
+	{
+		return
+			$this->getJsToBody() &&
+			!Main\Application::getInstance()->getContext()->getRequest()->isAjaxRequest() &&
+			!defined("BX_BUFFER_SHUTDOWN");
+	}
+
+	/**
+	 *
+	 * Returns true if <script> has valid mime type
+	 * @param $attrs
+	 * @return bool
+	 */
+	private static function isValidScriptType($attrs)
+	{
+		if ($attrs === "" || !preg_match("/type\\s*=\\s*(['\"]?)(.*?)\\1/i", $attrs, $match))
+		{
+			return true;
+		}
+
+		$type = strtolower($match[2]);
+		return $type === "" || $type === "text/javascript" || $type === "application/javascript";
+	}
+
 
 	/**
 	 * Replace path to includes in line
@@ -1563,6 +1713,11 @@ class Asset
 	private function showFilesList()
 	{
 		$res = '';
+		if (!\CJSCore::IsInited())
+		{
+			return $res;
+		}
+
 		if(!empty($this->assetList['JS']))
 		{
 			$assetList = array();
@@ -2015,7 +2170,7 @@ class Asset
 							$arFilesInfo['CUR_IE_CNT']++;
 							$arIEContent[$arFilesInfo['CUR_IE_CNT']] .= $assetContent;
 						}
-						$newContent .= "\n\n".$assetContent;
+						$newContent .= "\n".$assetContent;
 					}
 					else
 					{
@@ -2174,9 +2329,12 @@ class Asset
 		}
 
 		$arF = array();
-		foreach ($arFilesInfo['FILES'] as $key => $time)
+		if(is_array($arFilesInfo['FILES']))
 		{
-			$arF[] = str_replace($documentRoot, '', $key).'?'.$time;
+			foreach ($arFilesInfo['FILES'] as $key => $time)
+			{
+				$arF[] = str_replace($documentRoot, '', $key).'?'.$time;
+			}
 		}
 		unset($arFile, $arFilesInfo);
 		return array('RESULT' => $res, 'FILES' => $arF);
@@ -2191,23 +2349,23 @@ class Asset
 	{
 		$sourceMapName = "";
 
-		$length = \CUtil::BinStrlen($content);
+		$length = String::getBinaryLength($content);
 		$position = $length > 512 ? $length - 512 : 0;
-		$lastLine = \CUtil::BinStrpos($content, self::SOURCE_MAP_TAG, $position);
+		$lastLine = String::getBinaryStrpos($content, self::SOURCE_MAP_TAG, $position);
 		if ($lastLine !== false)
 		{
 			$nameStart = $lastLine + strlen(self::SOURCE_MAP_TAG);
-			if (($newLinePos = \CUtil::BinStrpos($content, "\n", $nameStart)) !== false)
+			if (($newLinePos = String::getBinaryStrpos($content, "\n", $nameStart)) !== false)
 			{
-				$sourceMapName = \CUtil::BinSubstr($content, $nameStart, $newLinePos - $nameStart);
+				$sourceMapName = String::getBinarySubstring($content, $nameStart, $newLinePos - $nameStart);
 			}
 			else
 			{
-				$sourceMapName = \CUtil::BinSubstr($content, $nameStart);
+				$sourceMapName = String::getBinarySubstring($content, $nameStart);
 			}
 
 			$sourceMapName = trim($sourceMapName);
-			$content = \CUtil::BinSubstr($content, 0, $lastLine);
+			$content = String::getBinarySubstring($content, 0, $lastLine);
 		}
 
 		return $sourceMapName;
@@ -2224,20 +2382,20 @@ class Asset
 		$line = 0;
 
 		$arResult = array();
-		while (($newLinePos = \CUtil::BinStrpos($content, "\n", $offset)) !== false)
+		while (($newLinePos = String::getBinaryStrpos($content, "\n", $offset)) !== false)
 		{
 			$line++;
 			$offset = $newLinePos + 1;
-			if (\CUtil::BinSubstr($content, $offset, strlen(self::HEADER_START_TAG)) === self::HEADER_START_TAG)
+			if (String::getBinarySubstring($content, $offset, strlen(self::HEADER_START_TAG)) === self::HEADER_START_TAG)
 			{
-				$endingPos = \CUtil::BinStrpos($content, self::HEADER_END_TAG, $offset);
+				$endingPos = String::getBinaryStrpos($content, self::HEADER_END_TAG, $offset);
 				if ($endingPos === false)
 				{
 					break;
 				}
 
 				$startData = $offset + strlen(self::HEADER_START_TAG);
-				$data = unserialize(\CUtil::BinSubstr($content, $startData, $endingPos - $startData));
+				$data = unserialize(String::getBinarySubstring($content, $startData, $endingPos - $startData));
 
 				if (is_array($data))
 				{

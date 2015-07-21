@@ -782,8 +782,7 @@ class CAllIBlockSection
 		foreach (GetModuleEvents("iblock", "OnAfterIBlockSectionAdd", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arFields));
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$GLOBALS["CACHE_MANAGER"]->ClearByTag("iblock_id_".$arIBlock["ID"]);
+		CIBlock::clearIblockTagCache($arIBlock['ID']);
 
 		return $Result;
 	}
@@ -795,7 +794,7 @@ class CAllIBlockSection
 	{
 		global $USER, $DB, $APPLICATION;
 
-		$ID = intval($ID);
+		$ID = (int)$ID;
 
 		$db_record = CIBlockSection::GetList(Array(), Array("ID"=>$ID, "CHECK_PERMISSIONS"=>"N"));
 		if(!($db_record = $db_record->Fetch()))
@@ -1443,8 +1442,7 @@ class CAllIBlockSection
 		foreach (GetModuleEvents("iblock", "OnAfterIBlockSectionUpdate", true) as $arEvent)
 			ExecuteModuleEventEx($arEvent, array(&$arFields));
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$GLOBALS["CACHE_MANAGER"]->ClearByTag("iblock_id_".$arIBlock["ID"]);
+		CIBlock::clearIblockTagCache($arIBlock['ID']);
 
 		return $Result;
 	}
@@ -1456,7 +1454,7 @@ class CAllIBlockSection
 	{
 		$err_mess = "FILE: ".__FILE__."<br>LINE: ";
 		global $DB, $APPLICATION, $USER;
-		$ID = IntVal($ID);
+		$ID = (int)$ID;
 
 		$APPLICATION->ResetException();
 		foreach (GetModuleEvents("iblock", "OnBeforeIBlockSectionDelete", true) as $arEvent)
@@ -1688,8 +1686,7 @@ class CAllIBlockSection
 				foreach (GetModuleEvents("iblock", "OnAfterIBlockSectionDelete", true) as $arEvent)
 					ExecuteModuleEventEx($arEvent, array($s));
 
-				if(defined("BX_COMP_MANAGED_CACHE"))
-					$GLOBALS["CACHE_MANAGER"]->ClearByTag("iblock_id_".$s["IBLOCK_ID"]);
+				CIBlock::clearIblockTagCache($s['IBLOCK_ID']);
 			}
 
 			return $res;
@@ -2524,7 +2521,7 @@ class CAllIBlockSection
 			");
 		}
 	}
-	
+
 	public static function getSectionCodePath($sectionId)
 	{
 		if (!array_key_exists($sectionId, self::$arSectionPathCache))

@@ -277,6 +277,8 @@ class CIMMessenger
 						$arPullTo['push_app_id'] = 'Bitrix24';
 						$arPullTo['push_text'] = preg_replace("/\[s\].*?\[\/s\]/i", "", $pushText);
 						$arPullTo['push_text'] = preg_replace("/\[[bui]\](.*?)\[\/[bui]\]/i", "$1", $arPullTo['push_text']);
+						$arPullTo['push_text'] = preg_replace("/\[PCH=([0-9]{1,})\](.*?)\[\/PCH\]/i", "$2", $arPullTo['push_text']);
+						$arPullTo['push_text'] = preg_replace("/\[USER=([0-9]{1,})\](.*?)\[\/USER\]/i", "$2", $arPullTo['push_text']);
 						$arPullTo['push_text'] = preg_replace("/------------------------------------------------------(.*)------------------------------------------------------/mi", " [".GetMessage('IM_QUOTE')."] ", str_replace(array("#BR#"), Array(" "), $arPullTo['push_text']));
 
 						CPullStack::AddByUser($arParams['TO_USER_ID'], $arPullTo);
@@ -413,6 +415,48 @@ class CIMMessenger
 							'FILES' => $arFields['FILES'],
 						)),
 					);
+
+					$pushText = '';
+					if (CPullOptions::GetPushStatus() && (!isset($arFields['PUSH']) || $arFields['PUSH'] == 'Y'))
+					{
+						if ($arFields['SYSTEM'] == 'Y')
+						{
+							$pushText = substr(htmlspecialcharsback($chatTitle), 0, 32).': '.$arParams['MESSAGE'];
+						}
+						else
+						{
+							$arSelect = Array("ID", "LAST_NAME", "NAME", "LOGIN", "SECOND_NAME");
+							$dbUsers = CUser::GetList(($sort_by = false), ($dummy=''), array('ID' => $arParams['FROM_USER_ID']), array('FIELDS' => $arSelect));
+							if ($arUser = $dbUsers->GetNext(true, false))
+							{
+								$sName = CUser::FormatName(CSite::GetNameFormat(false), $arUser, true, false);
+								$pushText = GetMessage('IM_PUSH_GROUP_TITLE', Array('#USER#' => $sName, '#GROUP#' => substr(htmlspecialcharsback($chatTitle), 0, 32))).': '.$arParams['MESSAGE'];
+							}
+						}
+
+						if (count($arFields['FILES']) > 0 && strlen($pushText) < 200 && strlen($pushText) > 0)
+						{
+							foreach ($arFields['FILES'] as $file)
+							{
+								$file = " [".GetMessage('IM_MESSAGE_FILE').": ".$file['name']."]";
+								if (strlen($pushText.$file) > 200)
+									break;
+
+								$pushText = trim($pushText).$file;
+							}
+						}
+					}
+
+					$arPullTo['push_params'] = 'IM_CHAT_'.$chatId;
+					$arPullTo['push_tag'] = 'IM_CHAT_'.$chatId;
+					$arPullTo['push_sub_tag'] = 'IM_MESS';
+					$arPullTo['push_app_id'] = 'Bitrix24';
+					$arPullTo['push_text'] = preg_replace("/\[s\].*?\[\/s\]/i", "", $pushText);
+					$arPullTo['push_text'] = preg_replace("/\[[bui]\](.*?)\[\/[bui]\]/i", "$1", $arPullTo['push_text']);
+					$arPullTo['push_text'] = preg_replace("/\[USER=([0-9]{1,})\](.*?)\[\/USER\]/i", "$2", $arPullTo['push_text']);
+					$arPullTo['push_text'] = preg_replace("/\[PCH=([0-9]{1,})\](.*?)\[\/PCH\]/i", "$2", $arPullTo['push_text']);
+					$arPullTo['push_text'] = preg_replace("/------------------------------------------------------(.*)------------------------------------------------------/mi", " [".GetMessage('IM_QUOTE')."] ", str_replace(array("#BR#"), Array(" "), $arPullTo['push_text']));
+
 					$arPullFrom = $arPullTo;
 					unset($arPullFrom['push_text']);
 
@@ -423,18 +467,19 @@ class CIMMessenger
 							CPullStack::AddByUser($arParams['FROM_USER_ID'], $arPullFrom);
 							CPushManager::DeleteFromQueueBySubTag($arParams['FROM_USER_ID'], 'IM_MESS');
 						}
-					}
-
-					$usersForBadges = Array();
-					foreach ($arRel as $rel)
-					{
-						if ($rel['USER_ID'] != $arParams['FROM_USER_ID'])
+						else
 						{
-							CPullStack::AddByUser($rel['USER_ID'], $arPullTo);
-							$usersForBadges[] = $rel['USER_ID'];
+							$arPullUser = $arPullTo;
+							if ($rel['NOTIFY_BLOCK'] == 'Y')
+							{
+								unset($arPullUser['push_text']);
+							}
+
+							CPullStack::AddByUser($rel['USER_ID'], $arPullUser);
+							//$usersForBadges[] = $rel['USER_ID'];
 						}
 					}
-					self::SendBadges($usersForBadges);
+					//self::SendBadges($usersForBadges);
 				}
 				foreach(GetModuleEvents("im", "OnAfterMessagesAdd", true) as $arEvent)
 					ExecuteModuleEventEx($arEvent, array(intval($messageID), $arFields));
@@ -603,8 +648,6 @@ class CIMMessenger
 			$GLOBALS["APPLICATION"]->ThrowException(GetMessage("IM_ERROR_MESSAGE_TYPE"), "MESSAGE_TYPE");
 			return false;
 		}
-
-		return false;
 	}
 
 	public static function CheckPossibilityUpdateMessage($id)
@@ -833,6 +876,10 @@ class CIMMessenger
 			$CCTP->allow = array("HTML" => "N", "ANCHOR" => "N", "BIU" => "N", "IMG" => "N", "QUOTE" => "N", "CODE" => "N", "FONT" => "N", "LIST" => "N", "SMILES" => "N", "NL2BR" => "Y", "VIDEO" => "N", "TABLE" => "N", "CUT_ANCHOR" => "N", "ALIGN" => "N");
 
 			$message['MESSAGE'] = str_replace('<br />', ' ', $CCTP->convertText($message['MESSAGE']));
+			$message['MESSAGE'] = preg_replace("/\[s\].*?\[\/s\]/i", "", $message['MESSAGE']);
+			$message['MESSAGE'] = preg_replace("/\[[bui]\](.*?)\[\/[bui]\]/i", "$1", $message['MESSAGE']);
+			$message['MESSAGE'] = preg_replace("/\[USER=([0-9]{1,})\](.*?)\[\/USER\]/i", "$2", $message['MESSAGE']);
+			$message['MESSAGE'] = preg_replace("/------------------------------------------------------(.*)------------------------------------------------------/mi", " [".GetMessage('IM_QUOTE')."] ", str_replace(array("#BR#"), Array(" "), $message['MESSAGE']));
 
 			if (count($message['FILES']) > 0 && strlen($message['MESSAGE']) < 200)
 			{
@@ -848,6 +895,10 @@ class CIMMessenger
 			}
 
 			$isChat = $chat && strlen($chat['TITLE']) > 0;
+
+			$dot = strlen($message['MESSAGE'])>=200? '...': '';
+			$message['MESSAGE'] = substr($message['MESSAGE'], 0, 199).$dot;
+			$message['MESSAGE'] = strlen($message['MESSAGE'])>0? $message['MESSAGE']: '-';
 
 			$arMessageFields = array(
 				"MESSAGE_TYPE" => IM_MESSAGE_SYSTEM,
@@ -1058,13 +1109,22 @@ class CIMMessenger
 		return IsModuleInstalled('voximplant') && IsModuleInstalled('pull') && CPullOptions::GetNginxStatus() && (!IsModuleInstalled('extranet') || CModule::IncludeModule('extranet') && CExtranet::IsIntranetUser());
 	}
 
-	public static function CheckDesktopStatusOnline()
+	public static function CheckDesktopStatusOnline($userId = null)
 	{
+		global $USER;
+
+		if (is_null($userId))
+			$userId = $USER->GetId();
+
+		$userId = intval($userId);
+		if ($userId <= 0)
+			return false;
+
 		$maxDate = 120;
 		if (CModule::IncludeModule('pull') && CPullOptions::GetNginxStatus())
 			$maxDate = self::GetSessionLifeTime();
 
-		$LastActivityDate = CUserOptions::GetOption('im', 'DesktopLastActivityDate');
+		$LastActivityDate = CUserOptions::GetOption('im', 'DesktopLastActivityDate', 0, $userId);
 		if (intval($LastActivityDate)+($maxDate*2)+60 > time())
 			return true;
 		else
@@ -1356,7 +1416,7 @@ class CIMMessenger
 						'countNotify' : ".intval($arTemplate['NOTIFY']['countNotify']).",
 						'loadNotify' : ".($arTemplate['NOTIFY']['loadNotify']? 'true': 'false').",
 
-						'recent': ".CUtil::PhpToJSObject($arTemplate['RECENT']).",
+						'recent': ".(empty($arTemplate['RECENT']) && $arTemplate['RECENT'] !== false? '[]': CUtil::PhpToJSObject($arTemplate['RECENT'])).",
 						'users': ".(empty($arTemplate['CONTACT_LIST']['users'])? '{}': CUtil::PhpToJSObject($arTemplate['CONTACT_LIST']['users'])).",
 						'groups': ".(empty($arTemplate['CONTACT_LIST']['groups'])? '{}': CUtil::PhpToJSObject($arTemplate['CONTACT_LIST']['groups'])).",
 						'userInGroup': ".(empty($arTemplate['CONTACT_LIST']['userInGroup'])? '{}': CUtil::PhpToJSObject($arTemplate['CONTACT_LIST']['userInGroup'])).",
@@ -1481,7 +1541,7 @@ class CIMMessenger
 					'countNotify' : ".intval($arTemplate['NOTIFY']['countNotify']).",
 					'loadNotify' : ".($arTemplate['NOTIFY']['loadNotify']? 'true': 'false').",
 
-					'recent': ".(empty($arTemplate['RECENT'])? '{}': CUtil::PhpToJSObject($arTemplate['RECENT'])).",
+					'recent': ".(empty($arTemplate['RECENT']) && $arTemplate['RECENT'] !== false? '[]': CUtil::PhpToJSObject($arTemplate['RECENT'])).",
 					'users': ".(empty($arTemplate['CONTACT_LIST']['users'])? '{}': CUtil::PhpToJSObject($arTemplate['CONTACT_LIST']['users'])).",
 					'groups': ".(empty($arTemplate['CONTACT_LIST']['groups'])? '{}': CUtil::PhpToJSObject($arTemplate['CONTACT_LIST']['groups'])).",
 					'userInGroup': ".(empty($arTemplate['CONTACT_LIST']['userInGroup'])? '{}': CUtil::PhpToJSObject($arTemplate['CONTACT_LIST']['userInGroup'])).",

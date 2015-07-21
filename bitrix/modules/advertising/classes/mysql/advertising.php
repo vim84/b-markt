@@ -635,6 +635,9 @@ class CAdvBanner extends CAdvBanner_all
 				$rows = $DB->Update("b_adv_banner",$arFields,"WHERE ID = $BANNER_ID",$err_mess.__LINE__);
 				if (intval($rows)>0)
 				{
+					foreach (getModuleEvents('advertising', 'onBannerClick', true) as $arEvent)
+						executeModuleEventEx($arEvent, array($BANNER_ID, $arFields));
+
 					// счетчик по дням
 					$strSql = "
 						UPDATE b_adv_banner_2_day SET

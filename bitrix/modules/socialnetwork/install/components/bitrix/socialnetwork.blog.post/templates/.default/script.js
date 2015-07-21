@@ -620,14 +620,6 @@ function __blogPostSetFollow(log_id)
 	}
 })(window);
 
-window.BXfpdPostSetLinkName = function(name)
-{
-	if (BX.SocNetLogDestination.getSelectedCount(name) <= 0)
-		BX('bx-destination-tag-post').innerHTML = BX.message("BX_FPD_LINK_1");
-	else
-		BX('bx-destination-tag-post').innerHTML = BX.message("BX_FPD_LINK_2");
-}
-
 window.BXfpdPostSelectCallback = function(item, type, search)
 {
 	if(!BX.findChild(BX('feed-add-post-destination-item-post'), { attr : { 'data-id' : item.id }}, false, false))
@@ -679,114 +671,13 @@ window.BXfpdPostSelectCallback = function(item, type, search)
 	}
 
 	BX('feed-add-post-destination-input-post').value = '';
-	BXfpdPostSetLinkName(BXSocNetLogDestinationFormNamePost);
-}
 
-// remove block
-window.BXfpdPostUnSelectCallback = function(item, type, search)
-{
-	var elements = BX.findChildren(BX('feed-add-post-destination-item-post'), {attribute: {'data-id': ''+item.id+''}}, true);
-	if (elements != null)
-	{
-		for (var j = 0; j < elements.length; j++)
-		{
-			if(!BX.hasClass(elements[j], 'feed-add-post-destination-undelete'))
-				BX.remove(elements[j]);
-		}
-	}
-	BX('feed-add-post-destination-input-post').value = '';
-	BXfpdPostSetLinkName(BXSocNetLogDestinationFormNamePost);
-}
-window.BXfpdPostOpenDialogCallback = function()
-{
-	BX.style(BX('feed-add-post-destination-input-box-post'), 'display', 'inline-block');
-	BX.style(BX('bx-destination-tag-post'), 'display', 'none');
-	BX.focus(BX('feed-add-post-destination-input-post'));
-}
-
-window.BXfpdPostCloseDialogCallback = function()
-{
-	if (!BX.SocNetLogDestination.isOpenSearch() && BX('feed-add-post-destination-input-post').value.length <= 0)
-	{
-		BX.style(BX('feed-add-post-destination-input-box-post'), 'display', 'none');
-		BX.style(BX('bx-destination-tag-post'), 'display', 'inline-block');
-		BXfpdPostDisableBackspace();
-	}
-}
-
-window.BXfpdPostCloseSearchCallback = function()
-{
-	if (!BX.SocNetLogDestination.isOpenSearch() && BX('feed-add-post-destination-input-post').value.length > 0)
-	{
-		BX.style(BX('feed-add-post-destination-input-box-post'), 'display', 'none');
-		BX.style(BX('bx-destination-tag-post'), 'display', 'inline-block');
-		BX('feed-add-post-destination-input-post').value = '';
-		BXfpdPostDisableBackspace();
-	}
-
-}
-window.BXfpdPostDisableBackspace = function(event)
-{
-	if (BX.SocNetLogDestination.backspaceDisable || BX.SocNetLogDestination.backspaceDisable != null)
-		BX.unbind(window, 'keydown', BX.SocNetLogDestination.backspaceDisable);
-
-	BX.bind(window, 'keydown', BX.SocNetLogDestination.backspaceDisable = function(event){
-		if (event.keyCode == 8)
-		{
-			BX.PreventDefault(event);
-			return false;
-		}
+	BX.SocNetLogDestination.BXfpSetLinkName({
+		formName: window.BXSocNetLogDestinationFormNamePost,
+		tagInputName: 'bx-destination-tag-post',
+		tagLink1: BX.message('BX_FPD_LINK_1'),
+		tagLink2: BX.message('BX_FPD_LINK_2')
 	});
-	setTimeout(function(){
-		BX.unbind(window, 'keydown', BX.SocNetLogDestination.backspaceDisable);
-		BX.SocNetLogDestination.backspaceDisable = null;
-	}, 5000);
-}
-
-window.BXfpdPostSearchBefore = function(event)
-{
-	if (event.keyCode == 8 && BX('feed-add-post-destination-input-post').value.length <= 0)
-	{
-		BX.SocNetLogDestination.sendEvent = false;
-		BX.SocNetLogDestination.deleteLastItem(BXSocNetLogDestinationFormNamePost);
-	}
-
-	return true;
-}
-window.BXfpdPostSearch = function(event)
-{
-	if (event.keyCode == 16 || event.keyCode == 17 || event.keyCode == 18 || event.keyCode == 20 || event.keyCode == 244 || event.keyCode == 224 || event.keyCode == 91)
-		return false;
-
-	if (event.keyCode == 13)
-	{
-		BX.SocNetLogDestination.selectFirstSearchItem(BXSocNetLogDestinationFormNamePost);
-		return true;
-	}
-	if (event.keyCode == 27)
-	{
-		BX('feed-add-post-destination-input-post').value = '';
-		BX.style(BX('bx-destination-tag-post'), 'display', 'inline');
-	}
-	else
-	{
-		BX.SocNetLogDestination.search(BX('feed-add-post-destination-input-post').value, true, BXSocNetLogDestinationFormNamePost);
-	}
-
-	if (!BX.SocNetLogDestination.isOpenDialog() && BX('feed-add-post-destination-input-post').value.length <= 0)
-	{
-		BX.SocNetLogDestination.openDialog(BXSocNetLogDestinationFormNamePost);
-	}
-	else
-	{
-		if (BX.SocNetLogDestination.sendEvent && BX.SocNetLogDestination.isOpenDialog())
-			BX.SocNetLogDestination.closeDialog();
-	}
-	if (event.keyCode == 8)
-	{
-		BX.SocNetLogDestination.sendEvent = true;
-	}
-	return true;
 }
 
 window.BXfpdPostClear = function()
@@ -800,7 +691,13 @@ window.BXfpdPostClear = function()
 		}
 	}
 	BX('feed-add-post-destination-input-post').value = '';
-	BXfpdPostSetLinkName(BXSocNetLogDestinationFormNamePost);
+
+	BX.SocNetLogDestination.BXfpSetLinkName({
+		formName: window.BXSocNetLogDestinationFormNamePost,
+		tagInputName: 'bx-destination-tag-post',
+		tagLink1: BX.message('BX_FPD_LINK_1'),
+		tagLink2: BX.message('BX_FPD_LINK_2')
+	});
 }
 
 window.showSharing = function(postId, userId)

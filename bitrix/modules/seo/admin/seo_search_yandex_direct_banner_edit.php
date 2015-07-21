@@ -43,20 +43,8 @@ if(!Main\Loader::includeModule('socialservices'))
 }
 
 $engine = new Engine\YandexDirect();
-
-$bNeedAuth = !$engine->getAuthSettings();
-
-$message = null;
-
-try
-{
-	$currentUser = $engine->getCurrentUser();
-}
-catch(Exception $e)
-{
-	$currentUser = null;
-	$bNeedAuth = true;
-}
+$currentUser = $engine->getCurrentUser();
+$bNeedAuth = !is_array($currentUser);
 
 $bReadOnly = $bNeedAuth;
 $bAllowUpdate = !$bNeedAuth;
@@ -71,6 +59,8 @@ $back_url = isset($request["back_url"]) ? $request["back_url"] : '';
 $campaignId = intval($request["campaign"]);
 $elementId = intval($request["element"]);
 $ID = intval($request["ID"]);
+
+$message = null;
 
 if($ID > 0)
 {
@@ -138,6 +128,7 @@ elseif(!in_array($campaign["SETTINGS"]['Strategy']['StrategyName'], Adv\YandexCa
 }
 
 $bShowStats = $ID > 0 && $bAllowUpdate;
+$bShowAuto = $ID > 0 && $bAllowUpdate && IsModuleInstalled("catalog");
 
 if($ID <= 0)
 {
@@ -168,7 +159,6 @@ if($ID <= 0)
 
 	$banner['SETTINGS']['Href'] .= strpos($banner['SETTINGS']['Href'], "?") >= 0 ? '?' : '&';
 	$banner['SETTINGS']['Href'] .= AdvSession::URL_PARAM_CAMPAIGN.'='.AdvSession::URL_PARAM_CAMPAIGN_VALUE.'&'.AdvSession::URL_PARAM_BANNER.'='.AdvSession::URL_PARAM_BANNER_VALUE;
-
 }
 
 $banner["SETTINGS"]["Geo"] = explode(",", $banner["SETTINGS"]["Geo"]);
@@ -191,6 +181,15 @@ $aTabs = array(
 		"TITLE" => Loc::getMessage("SEO_BANNER_TAB_KEYWORDS_TITLE"),
 	),
 );
+
+if($ID > 0 && $bShowAuto)
+{
+	$aTabs[] = array(
+		"DIV" => "edit_auto",
+		"TAB" => Loc::getMessage("SEO_BANNER_TAB_AUTO"),
+		"TITLE" => Loc::getMessage("SEO_BANNER_TAB_AUTO_TITLE"),
+	);
+}
 
 if($ID > 0 && $bShowStats)
 {
@@ -234,6 +233,16 @@ if(!$bReadOnly && $request->isPost() && ($request["save"]<>'' || $request["apply
 		"CAMPAIGN_ID" => $campaignId,
 		"SETTINGS" => $bannerSettings
 	);
+
+	if($bShowAuto && $banner["AUTO_QUANTITY_OFF"] != Adv\YandexBannerTable::MARKED)
+	{
+		$bannerFields["AUTO_QUANTITY_OFF"] = $request["AUTO_QUANTITY_OFF"] == Adv\YandexBannerTable::ACTIVE ? Adv\YandexBannerTable::ACTIVE : Adv\YandexBannerTable::INACTIVE;
+	}
+
+	if($bShowAuto && $banner["AUTO_QUANTITY_ON"] != Adv\YandexBannerTable::MARKED)
+	{
+		$bannerFields["AUTO_QUANTITY_ON"] = $request["AUTO_QUANTITY_ON"] == Adv\YandexBannerTable::ACTIVE ? Adv\YandexBannerTable::ACTIVE : Adv\YandexBannerTable::INACTIVE;
+	}
 
 	if($ID > 0)
 	{
@@ -373,7 +382,27 @@ if(!defined('BX_PUBLIC_MODE') || !BX_PUBLIC_MODE)
 $context = new CAdminContextMenu($aMenu);
 $context->Show();
 
-if ($message)
+if(!$message && $bShowAuto)
+{
+	if($banner["AUTO_QUANTITY_OFF"] == Adv\YandexBannerTable::MARKED)
+	{
+		$message = new CAdminMessage(array(
+			"TYPE" => "ERROR",
+			"MESSAGE" => Loc::getMessage("SEO_BANNER_AUTO_QUANTITY_OFF_D"),
+			"DETAILS" => Loc::getMessage("SEO_BANNER_AUTO_QUANTITY_OFF_D_DETAILS"),
+		));
+	}
+	elseif($banner["AUTO_QUANTITY_ON"] == Adv\YandexBannerTable::MARKED)
+	{
+		$message = new CAdminMessage(array(
+			"TYPE" => "OK",
+			"MESSAGE" => Loc::getMessage("SEO_BANNER_AUTO_QUANTITY_ON_D"),
+			"DETAILS" => Loc::getMessage("SEO_BANNER_AUTO_QUANTITY_ON_D_DETAILS"),
+		));
+	}
+}
+
+if($message)
 {
 	echo $message->Show();
 }
@@ -521,9 +550,11 @@ echo EndNote();
 		</td>
 	</tr>
 <?
+
 if(($ID > 0 || $elementId > 0) && Main\Loader::includeModule('iblock'))
 {
 ?>
+	<tr class="heading"><td colspan="4"><?=Loc::getMessage("SEO_BANNER_SALE_SECTION")?></td></tr>
 	<tr>
 		<td valign="top"><?=Loc::getMessage("SEO_BANNER_LINKS")?>:</td>
 		<td valign="top" colspan="3">
@@ -586,15 +617,29 @@ if(($ID > 0 || $elementId > 0) && Main\Loader::includeModule('iblock'))
 		<td></td>
 		<td colspan="3">
 			<input type="hidden" id="new_link_container[]" onchange="createLink(this.value, '<?=Adv\LinkTable::TYPE_IBLOCK_ELEMENT?>')">
-			<a href="javascript:void(0)" onclick="BX.util.popup('/bitrix/admin/iblock_element_search.php?lang=ru&n=new_link_container', 1000, 700);"><?=Loc::getMessage('SEO_BANNER_LINK_CREATE_ITEM')?></a>
+			<a href="javascript:void(0)" onclick="BX.util.popup('/bitrix/admin/iblock_element_search.php?lang=ru&n=new_link_container', 1000, 700);"><?=Loc::getMessage('SEO_BANNER_LINK_CREATE_ITEM')?></a><br />
 		</td>
 	</tr>
+<?
+if($bShowAuto):
+?>
+	<tr>
+		<td colspan=4" align="center">
+
+			<?=BeginNote().Loc::getMessage("SEO_BANNER_AUTO_HINT").EndNote();?>
+
+		</td>
+	</tr>
+<?
+endif;
+?>
 	<script>
 		function createLink(linkId, linkType)
 		{
 			BX.ajax.loadJSON('/bitrix/tools/seo_yandex_direct.php?action=link_create&banner=<?=$ID?>&link='+linkId+'&link_type='+linkType+'&get_list_html=2&sessid='+BX.bitrix_sessid(), function(res)
 			{
 				BX('adv_link_list').innerHTML = res.list_html;
+				BX.onCustomEvent("OnSeoYandexDirectLinksChange", [BX('adv_link_list')]);
 			});
 		}
 	</script>
@@ -852,7 +897,7 @@ echo implode('</div>', $regionsOutput).'</div>';
 					}
 				}
 			}
-		};
+		}
 
 
 		function drawAll(id, bParentChecked, drawRes, valueRes)
@@ -1447,6 +1492,63 @@ foreach($banner["SETTINGS"]["Phrases"] as $phraseData)
 </script>
 
 <?
+// Auto tab
+if($bShowAuto)
+{
+	$tabControl->BeginNextTab();
+
+?>
+<tr>
+	<td colspan="2" align="center"><?= BeginNote().Loc::getMessage("SEO_BANNER_AUTO_HINT").EndNote();?></td>
+</tr>
+<tr>
+	<td width="60%">
+		<label for="AUTO_QUANTITY_OFF"><?= Loc::getMessage("SEO_BANNER_AUTO_QUANTITY_OFF");?></label>
+	</td>
+	<td width="40%">
+		<input type="hidden" name="AUTO_QUANTITY_OFF" value="<?=Adv\YandexBannerTable::INACTIVE?>">
+		<input type="checkbox" name="AUTO_QUANTITY_OFF" id="AUTO_QUANTITY_OFF" value="<?=Adv\YandexBannerTable::ACTIVE?>"<?=$banner["AUTO_QUANTITY_OFF"] == Adv\YandexBannerTable::ACTIVE || $banner["AUTO_QUANTITY_OFF"] == Adv\YandexBannerTable::MARKED ? ' checked="checked"' : ''?>>
+		<label for="AUTO_QUANTITY_OFF"><?= Loc::getMessage("MAIN_YES");?></label>
+	</td>
+</tr><tr>
+	<td width="60%">
+		<label for="AUTO_QUANTITY_ON"><?= Loc::getMessage("SEO_BANNER_AUTO_QUANTITY_ON");?></label>
+	</td>
+	<td width="40%">
+		<input type="hidden" name="AUTO_QUANTITY_ON" value="<?=Adv\YandexBannerTable::INACTIVE?>">
+		<input type="checkbox" name="AUTO_QUANTITY_ON" id="AUTO_QUANTITY_ON" value="<?=Adv\YandexBannerTable::ACTIVE?>"<?=$banner["AUTO_QUANTITY_ON"] == Adv\YandexBannerTable::ACTIVE || $banner["AUTO_QUANTITY_ON"] == Adv\YandexBannerTable::MARKED ? ' checked="checked"' : ''?>>
+		<label for="AUTO_QUANTITY_ON"><?= Loc::getMessage("MAIN_YES");?></label>
+	</td>
+</tr>
+<script>
+BX.addCustomEvent("OnSeoYandexDirectLinksChange", BX.defer(function(el){
+	var disabled = true;
+	var c = BX.firstChild(el);
+	if(c && c.tagName == 'DIV')
+	{
+		var c1 = BX.nextSibling(c);
+		if(!c1 || c1.tagName != "DIV")
+		{
+			disabled = false;
+		}
+	}
+
+	BX('AUTO_QUANTITY_OFF').disabled = disabled;
+	BX('AUTO_QUANTITY_ON').disabled = disabled;
+
+	if(disabled)
+	{
+		window.tabControl.DisableTab("edit_auto");
+	}
+	else
+	{
+		window.tabControl.EnableTab("edit_auto");
+	}
+}));
+</script>
+<?
+}
+
 if($bShowStats)
 {
 	$tabControl->BeginNextTab();
@@ -1454,7 +1556,7 @@ if($bShowStats)
 	CJSCore::Init(array('amcharts_serial'));
 
 	$dateStart = new Main\Type\Date();
-	$dateStart->add("-".Engine\YandexDirectLive::MAX_STAT_DAYS_DELTA." days");
+	$dateStart->add("-".Engine\YandexDirect::MAX_STAT_DAYS_DELTA." days");
 
 	$dateFinish = new Main\Type\Date();
 
@@ -1811,4 +1913,14 @@ endif;
 ?>
 </form>
 <?
+if($ID > 0):
+?>
+<script>
+	BX.ready(function(){
+		BX.onCustomEvent("OnSeoYandexDirectLinksChange", [BX('adv_link_list')]);
+	});
+</script>
+<?
+endif;
+
 require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/epilog_admin.php");

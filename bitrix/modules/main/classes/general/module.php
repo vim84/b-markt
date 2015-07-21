@@ -339,6 +339,12 @@ function GetModuleEvents($MODULE_ID, $MESSAGE_ID, $bReturnArray = false)
 	$eventManager = \Bitrix\Main\EventManager::getInstance();
 	$arrResult = $eventManager->findEventHandlers($MODULE_ID, $MESSAGE_ID);
 
+	foreach($arrResult as $k => $event)
+	{
+		$arrResult[$k]['FROM_MODULE_ID'] = $MODULE_ID;
+		$arrResult[$k]['MESSAGE_ID'] = $MESSAGE_ID;
+	}
+
 	if($bReturnArray)
 	{
 		return $arrResult;
@@ -407,6 +413,10 @@ function ExecuteModuleEvent($arEvent, $param1=NULL, $param2=NULL, $param3=NULL, 
 	for($i = $CNT_PREDEF + 1; $i < $nArgs; $i++)
 		$args[] = func_get_arg($i);
 
+	//TODO: Возможно заменить на EventManager::getInstance()->getLastEvent();
+	global $BX_MODULE_EVENT_LAST;
+	$BX_MODULE_EVENT_LAST = $arEvent;
+
 	if(is_set($arEvent, "CALLBACK"))
 	{
 		$resmod = call_user_func_array($arEvent["CALLBACK"], $args);
@@ -453,6 +463,10 @@ function ExecuteModuleEventEx($arEvent, $arParams = array())
 
 	if(array_key_exists("CALLBACK", $arEvent))
 	{
+		//TODO: Возможно заменить на EventManager::getInstance()->getLastEvent();
+		global $BX_MODULE_EVENT_LAST;
+		$BX_MODULE_EVENT_LAST = $arEvent;
+
 		if(isset($arEvent["TO_METHOD_ARG"]) && is_array($arEvent["TO_METHOD_ARG"]) && count($arEvent["TO_METHOD_ARG"]))
 			$args = array_merge($arEvent["TO_METHOD_ARG"], $arParams);
 		else
@@ -462,6 +476,10 @@ function ExecuteModuleEventEx($arEvent, $arParams = array())
 	}
 	elseif($arEvent["TO_CLASS"] != "" && $arEvent["TO_METHOD"] != "")
 	{
+		//TODO: Возможно заменить на EventManager::getInstance()->getLastEvent();
+		global $BX_MODULE_EVENT_LAST;
+		$BX_MODULE_EVENT_LAST = $arEvent;
+
 		if(is_array($arEvent["TO_METHOD_ARG"]) && count($arEvent["TO_METHOD_ARG"]))
 			$args = array_merge($arEvent["TO_METHOD_ARG"], $arParams);
 		else

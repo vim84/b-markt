@@ -27,4 +27,6 @@ $MESS["IM_MESSAGE_LIKE"] = "Мне нравится ваше сообщение 
 $MESS["IM_MESSAGE_LIKE_PRIVATE"] = "Мне нравится ваше сообщение \"#MESSAGE#\" в нашем диалоге.";
 $MESS["IM_MESSAGE_FILE"] = "Файл";
 $MESS["IM_MESSAGE_FILE_DOWN"] = "Скачать файл:";
+$MESS["IM_QUOTE"] = "Цитата";
+$MESS["IM_PUSH_GROUP_TITLE"] = "#USER# для #GROUP#";
 ?>

@@ -85,6 +85,13 @@ $arComponentParameters = array(
 			"",
 			"URL_TEMPLATES"
 		),
+		"DETAIL_URL" => CIBlockParameters::GetPathTemplateParam(
+			"DETAIL",
+			"DETAIL_URL",
+			GetMessage("CP_BND_DETAIL_URL"),
+			"",
+			"URL_TEMPLATES"
+		),
 		"SET_TITLE" => array(),
 		"SET_CANONICAL_URL" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
@@ -140,9 +147,9 @@ $arComponentParameters = array(
 			"VALUES" => array_merge(array("-"=>" "),$arProperty_LNS),
 			"HIDDEN" => (isset($arCurrentValues['SET_META_DESCRIPTION']) && $arCurrentValues['SET_META_DESCRIPTION'] == 'N' ? 'Y' : 'N')
 		),
-		"SET_STATUS_404" => array(
+		"SET_LAST_MODIFIED" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BND_SET_STATUS_404"),
+			"NAME" => GetMessage("CP_BND_SET_LAST_MODIFIED"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
@@ -189,9 +196,18 @@ $arComponentParameters = array(
 		),
 	),
 );
-CIBlockParameters::AddPagerSettings($arComponentParameters, GetMessage("T_IBLOCK_DESC_PAGER_PAGE"), false, true);
+
+CIBlockParameters::AddPagerSettings(
+	$arComponentParameters,
+	GetMessage("T_IBLOCK_DESC_PAGER_PAGE"), //$pager_title
+	false, //$bDescNumbering
+	true, //$bShowAllParam
+	true, //$bBaseLink
+	$arCurrentValues["PAGER_BASE_LINK_ENABLE"]==="Y" //$bBaseLinkEnabled
+);
 unset($arComponentParameters["PARAMETERS"]["PAGER_SHOW_ALWAYS"]);
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues);
 
 if($arCurrentValues["USE_PERMISSIONS"]!="Y")
 	unset($arComponentParameters["PARAMETERS"]["GROUP_PERMISSIONS"]);
-?>

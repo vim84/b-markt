@@ -18,4 +18,5 @@ $MESS["LM_CREATE_SONETGROUP_TITLE"] = "No group with such name exists. Do you wa
 $MESS["LM_CREATE_SONETGROUP_BUTTON_CREATE"] = "Create";
 $MESS["LM_CREATE_SONETGROUP_BUTTON_CANCEL"] = "Cancel";
 $MESS["LM_EMPTY_LIST"] = "There are no items";
+$MESS["LM_POPUP_WAITER_TEXT"] = "Searching for additional results...";
 ?>

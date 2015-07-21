@@ -182,7 +182,7 @@ RatingLike.Vote = function(likeId, voteAction)
 				if (
 					typeof (oMSL) != 'undefined'
 					&& typeof (oMSL.logId) != 'undefined'
-					&& parseInt(oMSL.logId) > 0
+					&& oMSL.logId
 				)
 				{
 					app.onCustomEvent('onLogEntryRatingLike', {

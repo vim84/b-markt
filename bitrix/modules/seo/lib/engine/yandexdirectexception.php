@@ -7,13 +7,20 @@ class YandexDirectException extends SystemException
 {
 	public function __construct(array $queryResult, \Exception $previous = null)
 	{
-		$errorMessage = $queryResult['error_str'];
-		if(strlen($errorMessage) > 0 && strlen($queryResult['error_detail']) > 0)
+		$errorMessage = $queryResult['error'];
+		if(strlen($errorMessage) > 0 && strlen($queryResult['error_description']) > 0)
 		{
 			$errorMessage .= ": ";
 		}
-		$errorMessage .= $queryResult['error_detail'];
+		$errorMessage .= $queryResult['error_description'];
 
-		parent::__construct($errorMessage, $queryResult['error_code']);
+		if(intval($queryResult['error']) > 0)
+		{
+			parent::__construct($errorMessage, intval($queryResult['error']));
+		}
+		else
+		{
+			parent::__construct($errorMessage);
+		}
 	}
 }

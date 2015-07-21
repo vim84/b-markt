@@ -67,10 +67,17 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 			// if property is property with code like '123'
 			$propertyNameValue = null;
 			$propertyEmailValue = null;
-			if(is_numeric($propertyEmailId))
+			if($propertyEmailId)
 			{
-				$propertyEmailId = "PROPERTY_" . $propertyEmailId;
-				$propertyEmailValue = $propertyEmailId."_VALUE";
+				if(is_numeric($propertyEmailId))
+				{
+					$propertyEmailId = "PROPERTY_" . $propertyEmailId;
+					$propertyEmailValue = $propertyEmailId."_VALUE";
+				}
+				else
+				{
+					$propertyEmailValue = $propertyEmailId;
+				}
 			}
 			$selectFields = array($propertyEmailValue);
 
@@ -80,6 +87,10 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 				{
 					$propertyNameId = "PROPERTY_" . $propertyNameId;
 					$propertyNameValue = $propertyNameId . "_VALUE";
+				}
+				else
+				{
+					$propertyNameValue = $propertyNameId;
 				}
 
 				$selectFields[] = $propertyNameValue;
@@ -144,15 +155,6 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 		));
 		while($iblockFields = $iblockFieldsDb->fetch())
 		{
-			// add default value
-			if(!array_key_exists($iblockFields['IBLOCK_ID'], $propertyList))
-			{
-				$propertyList[$iblockFields['IBLOCK_ID']][] = array(
-					'ID' => '',
-					'NAME' => Loc::getMessage('sender_connector_iblock_field_select')
-				);
-			}
-
 			// add property
 			$propertyList[$iblockFields['IBLOCK_ID']][] = array(
 				'ID' => $iblockFields['ID'],
@@ -161,6 +163,36 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 
 			// add property link to iblock
 			$propertyToIblock[$iblockFields['ID']] = $iblockFields['IBLOCK_ID'];
+		}
+
+
+		$fieldList = static::getIblockFieldList();
+		// add default value
+		$fieldList = array_merge(
+			array(array('ID' => '', 'NAME' => Loc::getMessage('sender_connector_iblock_field_select'))),
+			$fieldList
+		);
+		foreach($iblockList as $iblock)
+		{
+			if(!$iblock['ID'])
+			{
+				continue;
+			}
+
+			if(!isset($propertyList[$iblock['ID']]) || !is_array($propertyList[$iblock['ID']]))
+			{
+				$propertyList[$iblock['ID']] = array();
+			}
+			else
+			{
+				// add delimiter between fields and properties
+				$propertyList[$iblock['ID']] = array_merge(
+					array(array('ID' => '------',	'NAME' => '-----------------', 'DISABLED' => true)),
+					$propertyList[$iblock['ID']]
+				);
+			}
+
+			$propertyList[$iblock['ID']] = array_merge($fieldList, $propertyList[$iblock['ID']]);
 		}
 
 
@@ -186,14 +218,19 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 		{
 			$propSet = $propertyList[$propertyToIblock[$this->getFieldValue('PROPERTY_NAME', 0)]];
 		}
+		elseif(array_key_exists($this->getFieldValue('IBLOCK', 0), $propertyList))
+		{
+			$propSet = $propertyList[$this->getFieldValue('IBLOCK')];
+		}
 		else
 		{
 			$propSet = $propertyList[''];
 		}
 		foreach($propSet as $property)
 		{
-			$inputSelected = ($property['ID'] == $this->getFieldValue('PROPERTY_NAME') ? 'selected' : '');
-			$iblockPropertyNameInput .= '<option value="'.$property['ID'].'" '.$inputSelected.'>';
+			$inputSelected = $property['ID'] == $this->getFieldValue('PROPERTY_NAME') ? 'selected' : '';
+			$inputDisabled = (isset($property['DISABLED']) && $property['DISABLED']) ? 'disabled' : '';
+			$iblockPropertyNameInput .= '<option value="'.$property['ID'].'" '.$inputSelected.' '.$inputDisabled.'>';
 			$iblockPropertyNameInput .= htmlspecialcharsbx($property['NAME']);
 			$iblockPropertyNameInput .= '</option>';
 		}
@@ -208,6 +245,10 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 		{
 			$propSet = $propertyList[$propertyToIblock[$this->getFieldValue('PROPERTY_EMAIL', 0)]];
 		}
+		elseif(array_key_exists($this->getFieldValue('IBLOCK', 0), $propertyList))
+		{
+			$propSet = $propertyList[$this->getFieldValue('IBLOCK')];
+		}
 		else
 		{
 			$propSet = $propertyList[''];
@@ -215,7 +256,8 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 		foreach($propSet as $property)
 		{
 			$inputSelected = ($property['ID'] == $this->getFieldValue('PROPERTY_EMAIL') ? 'selected' : '');
-			$iblockPropertyEmailInput .= '<option value="'.$property['ID'].'" '.$inputSelected.'>';
+			$inputDisabled = (isset($property['DISABLED']) && $property['DISABLED']) ? 'disabled' : '';
+			$iblockPropertyEmailInput .= '<option value="'.$property['ID'].'" '.$inputSelected.' '.$inputDisabled.'>';
 			$iblockPropertyEmailInput .= htmlspecialcharsbx($property['NAME']);
 			$iblockPropertyEmailInput .= '</option>';
 		}
@@ -248,7 +290,13 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 				{
 					var optionName = propList[i]['NAME'];
 					var optionValue = propList[i]['ID'];
-					iblockProperty.options.add(new Option(optionName, optionValue));
+					var optionDisabled = propList[i]['DISABLED'];
+					var newOption = new Option(optionName, optionValue);
+					if(optionDisabled)
+					{
+						newOption.disabled = true;
+					}
+					iblockProperty.options.add(newOption);
 				}
 
 			}
@@ -279,6 +327,24 @@ class SenderConnectorIblock extends \Bitrix\Sender\Connector
 			'.$jsScript.'
 		';
 	}
+
+	protected static function getIblockFieldList()
+	{
+		$fieldCodeList = array('NAME', 'CODE', 'PREVIEW_TEXT', 'DETAIL_TEXT');
+
+		$resultList = array();
+		$entity = ElementTable::getEntity();
+		foreach($fieldCodeList as $fieldCode)
+		{
+			$field = $entity->getField($fieldCode);
+			$resultList[] = array(
+				'ID' => $fieldCode,
+				'NAME' => $field->getTitle()
+			);
+		}
+
+		return $resultList;
+	}
 }
 
 class CDBResultSenderConnector extends \CDBResult
@@ -296,18 +362,35 @@ class CDBResultSenderConnector extends \CDBResult
 		if($fields)
 		{
 			$keysForUnset = array();
-			if ($this->senderConnectorFieldName && isset($fields[$this->senderConnectorFieldName."_VALUE"]))
+			if ($this->senderConnectorFieldName)
 			{
-				$fields['NAME'] = $fields[$this->senderConnectorFieldName."_VALUE"];
-				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE";
-				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE"."_ID";
+				if(isset($fields[$this->senderConnectorFieldName."_VALUE"]))
+				{
+					$fields['NAME'] = $fields[$this->senderConnectorFieldName."_VALUE"];
+					$keysForUnset[] = $this->senderConnectorFieldName."_VALUE";
+					$keysForUnset[] = $this->senderConnectorFieldName."_VALUE"."_ID";
+				}
+				elseif(isset($fields[$this->senderConnectorFieldName]))
+				{
+					$fields['NAME'] = $fields[$this->senderConnectorFieldName];
+					if($this->senderConnectorFieldName != 'NAME')
+						$keysForUnset[] = $this->senderConnectorFieldName;
+				}
 			}
 
-			if ($this->senderConnectorFieldEmail && isset($fields[$this->senderConnectorFieldEmail."_VALUE"]))
+			if ($this->senderConnectorFieldEmail)
 			{
-				$fields['EMAIL'] = $fields[$this->senderConnectorFieldEmail."_VALUE"];
-				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE";
-				$keysForUnset[] = $this->senderConnectorFieldName."_VALUE"."_ID";
+				if(isset($fields[$this->senderConnectorFieldEmail."_VALUE"]))
+				{
+					$fields['EMAIL'] = $fields[$this->senderConnectorFieldEmail."_VALUE"];
+					$keysForUnset[] = $this->senderConnectorFieldEmail."_VALUE";
+					$keysForUnset[] = $this->senderConnectorFieldEmail."_VALUE"."_ID";
+				}
+				elseif(isset($fields[$this->senderConnectorFieldEmail]))
+				{
+					$fields['EMAIL'] = $fields[$this->senderConnectorFieldEmail];
+					$keysForUnset[] = $this->senderConnectorFieldEmail;
+				}
 			}
 
 			if (count($keysForUnset)>0)

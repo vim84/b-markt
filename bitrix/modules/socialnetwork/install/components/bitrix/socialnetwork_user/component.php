@@ -165,12 +165,9 @@ if (
 		)
 		{
 			$arRedirectSite = CSocNetLogComponent::GetSiteByDepartmentId($arCurrentUser["UF_DEPARTMENT"]);
-			if (!$arRedirectSite)
+			if ($arRedirectSite["LID"] == SITE_ID)
 			{
-				$arRedirectSite = array(
-					"LID" => SITE_ID,
-					"SERVER_NAME" => SITE_SERVER_NAME
-				);
+				$arRedirectSite = false;
 			}
 		}
 	}
@@ -636,6 +633,18 @@ if ($arRedirectSite)
 {
 	if ($arParams["SEF_MODE"] == "Y")
 	{
+		if(is_array($arVariables))
+		{
+			foreach($arVariables as $i => $variable)
+			{
+				if(!is_string($variable))
+				{
+					unset($arVariables[$i]);
+				}
+			}
+		}
+		unset($variable);
+
 		$url =
 			(
 				strlen(trim($arRedirectSite["SERVER_NAME"])) > 0

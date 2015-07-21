@@ -318,6 +318,8 @@ class ListTable extends Entity\DataManager
 			),
 			'CODE' => array(
 				'data_type' => 'string',
+				'validation' => array(__CLASS__, 'validateCode'),
+				'title' => Loc::getMessage('SENDER_ENTITY_LIST_FIELD_TITLE_CODE'),
 			),
 			'NAME' => array(
 				'data_type' => 'string',
@@ -334,6 +336,18 @@ class ListTable extends Entity\DataManager
 				'data_type' => 'Bitrix\Sender\ContactListTable',
 				'reference' => array('=this.ID' => 'ref.LIST_ID'),
 			),
+		);
+	}
+
+	/**
+	 * Returns validators for CODE field.
+	 *
+	 * @return array
+	 */
+	public static function validateCode()
+	{
+		return array(
+			new Entity\Validator\Length(null, 60),
 		);
 	}
 

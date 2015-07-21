@@ -13,13 +13,18 @@ use Bitrix\Seo\IEngine;
 use Bitrix\Main\Text;
 
 // to use Yandex.Direct Sandbox
-// define('YANDEX_DIRECT_LIVE_API_URL', "https://api-sandbox.direct.yandex.ru/live/v4/json/");
+define('YANDEX_DIRECT_LIVE_API_URL', "https://api-sandbox.direct.yandex.ru/live/v4/json/");
 
 if(!defined('YANDEX_DIRECT_LIVE_API_URL'))
 {
 	define('YANDEX_DIRECT_LIVE_API_URL', 'https://api.direct.yandex.ru/live/v4/json/');
 }
 
+/**
+ * Class YandexDirectLive
+ *
+ * @deprecated
+ */
 class YandexDirectLive extends Engine\YandexDirect implements IEngine
 {
 	const API_URL = YANDEX_DIRECT_LIVE_API_URL;

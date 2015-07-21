@@ -116,7 +116,6 @@ if ($arEvent)
 			if (defined("BX_COMP_MANAGED_CACHE"))
 			{
 				$GLOBALS["CACHE_MANAGER"]->StartTagCache($cache_path);
-				$GLOBALS["CACHE_MANAGER"]->RegisterTag("SONET_LOG_".$arParams["LOG_ID"]);
 			}
 
 			$arFilter = array(
@@ -164,7 +163,6 @@ if ($arEvent)
 				if (defined("BX_COMP_MANAGED_CACHE"))
 				{
 					$GLOBALS["CACHE_MANAGER"]->RegisterTag("USER_NAME_".intval($arComments["USER_ID"]));
-					$GLOBALS["CACHE_MANAGER"]->RegisterTag("SONET_LOG_COMMENT_".intval($arComments["ID"]));
 				}
 
 				$arComments["UF"] = $arUFMeta;

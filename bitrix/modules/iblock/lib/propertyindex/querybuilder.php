@@ -356,6 +356,25 @@ class QueryBuilder
 			}
 			elseif (
 				$this->options["PRICE_FILTER"]
+				&& preg_match("/^(><)CATALOG_PRICE_(\\d+)\$/i", $filterKey, $keyDetails)
+				&& is_array($filterValue)
+			)
+			{
+				$priceId = $keyDetails[2];
+				$value = $filterValue;
+				$facetId = $this->storage->priceIdToFacetId($priceId);
+				$doubleValueMin = doubleval($value[0]);
+				$doubleValueMax = doubleval($value[1]);
+				$where[] = array(
+					"TYPE" => Storage::PRICE,
+					"OP" => $keyDetails[1],
+					"FACET_ID" => $facetId,
+					"VALUES" => array($doubleValueMin, $doubleValueMax),
+				);
+				$toUnset[] = array(&$filter, $filterKey);
+			}
+			elseif (
+				$this->options["PRICE_FILTER"]
 				&& is_numeric($filterKey)
 				&& is_array($filterValue) && count($filterValue) === 3
 				&& isset($filterValue["LOGIC"]) && $filterValue["LOGIC"] === "OR"
@@ -373,6 +392,30 @@ class QueryBuilder
 					"OP" => $keyDetails[1],
 					"FACET_ID" => $facetId,
 					"VALUES" => array($doubleValue),
+				);
+				$toUnset[] = array(&$filter, $filterKey);
+				$toUnset[] = array(&$filter, "CATALOG_SHOP_QUANTITY_1");
+			}
+			elseif (
+				$this->options["PRICE_FILTER"]
+				&& is_numeric($filterKey)
+				&& is_array($filterValue) && count($filterValue) === 3
+				&& isset($filterValue["LOGIC"]) && $filterValue["LOGIC"] === "OR"
+				&& isset($filterValue["=ID"]) && is_object($filterValue["=ID"])
+				&& preg_match("/^(><)CATALOG_PRICE_(\\d+)\$/i", key($filterValue[0][0]), $keyDetails)
+				&& is_array(current($filterValue[0][0]))
+			)
+			{
+				$priceId = $keyDetails[2];
+				$value = current($filterValue[0][0]);
+				$facetId = $this->storage->priceIdToFacetId($priceId);
+				$doubleValueMin = doubleval($value[0]);
+				$doubleValueMax = doubleval($value[1]);
+				$where[] = array(
+					"TYPE" => Storage::PRICE,
+					"OP" => $keyDetails[1],
+					"FACET_ID" => $facetId,
+					"VALUES" => array($doubleValueMin, $doubleValueMax),
 				);
 				$toUnset[] = array(&$filter, $filterKey);
 				$toUnset[] = array(&$filter, "CATALOG_SHOP_QUANTITY_1");

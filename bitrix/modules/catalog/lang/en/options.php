@@ -98,10 +98,6 @@ $MESS["CAT_ENABLE_RESERVATION"] = "Enable reservations";
 $MESS["CAT_ENABLE_RESERVATION_HINT"] = "This setting defines the default reservation behavior for all products whose \"Enable stock tracking\" option is set to \"default\".";
 $MESS["CAT_PRODUCT_QUANTITY_DECREASE"] = "Decrease product stock:";
 $MESS["CAT_PRODUCT_RESERVED"] = "Reserve items:";
-$MESS["CAT_PRODUCT_RESERVE_1_ORDER"] = "When ordering";
-$MESS["CAT_PRODUCT_RESERVE_2_PAYMENT"] = "Upon payment";
-$MESS["CAT_PRODUCT_RESERVE_3_DELIVERY"] = "Upon shipment release";
-$MESS["CAT_PRODUCT_RESERVE_4_DEDUCTION"] = "Upon actual shipment";
 $MESS["CAT_RESERVATION_CLEAR_PERIOD"] = "Days to keep reservation:";
 $MESS["CAT_STORE"] = "Inventory control";
 $MESS["CAT_ALLOW_CAN_BUY_ZERO"] = "Make out-of-stock items available for purchase";
@@ -148,4 +144,5 @@ $MESS["CAT_DISCOUNT_PERCENT_FROM_BASE_PRICE_YES"] = "Yes";
 $MESS["CAT_DISCOUNT_PERCENT_FROM_BASE_PRICE_NO"] = "No";
 $MESS["CAT_DISCOUNT_PERCENT_FROM_BASE_SALE"] = "Change on the e-Store module settings page";
 $MESS["CAT_SIMPLE_SEARCH"] = "Force text search filter in product select form";
+$MESS["BX_CAT_RESERVE_CONDITION_EMPTY"] = "unassigned";
 ?>

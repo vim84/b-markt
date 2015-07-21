@@ -646,6 +646,7 @@ function GetDirList($path, &$arDirs, &$arFiles, $arFilter=array(), $sort=array()
 
 	$dir = $io->GetDirectory($abs_path);
 	$arChildren = $dir->GetChildren();
+	$arExtension = array("php"=>1, "html"=>1, "php3"=>1, "php4"=>1, "php5"=>1, "php6"=>1, "phtml"=>1, "htm"=>1);
 	foreach ($arChildren as $child)
 	{
 		$arFile = array();
@@ -671,6 +672,10 @@ function GetDirList($path, &$arDirs, &$arFiles, $arFilter=array(), $sort=array()
 			}
 			else
 			{
+				$ext = CFileMan::GetFileTypeEx($file);
+				if(!isset($arExtension[$ext]))
+					continue;
+
 				if($file=='.section.php')
 					continue;
 

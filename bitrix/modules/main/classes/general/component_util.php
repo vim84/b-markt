@@ -487,6 +487,7 @@ class CComponentUtil
 				$arComponentParameters["GROUPS"][$arParamKeys[$i]]["SORT"] = 1000+$i;
 		}
 
+		$arVariableAliasesSettings = null;
 		$arParamKeys = array_keys($arComponentParameters["PARAMETERS"]);
 		for ($i = 0, $cnt = count($arParamKeys); $i < $cnt; $i++)
 		{
@@ -614,6 +615,9 @@ class CComponentUtil
 
 				if (is_array($arSEFModeSettings) && count($arSEFModeSettings) > 0)
 				{
+					if (!isset($arVariableAliasesSettings))
+						$arVariableAliasesSettings = $arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"];
+
 					foreach ($arSEFModeSettings as $templateKey => $arTemplateValue)
 					{
 						$arComponentParameters["PARAMETERS"]["SEF_URL_TEMPLATES_".$templateKey] = array(
@@ -627,11 +631,20 @@ class CComponentUtil
 							"VARIABLES" => array(),
 						);
 
-						$arVariableAliasesSettings = $arComponentParameters["PARAMETERS"]["VARIABLE_ALIASES"];
 						if (is_array($arVariableAliasesSettings) && count($arVariableAliasesSettings) > 0)
 						{
 							foreach ($arTemplateValue["VARIABLES"] as $variable)
+							{
+								if ($arVariableAliasesSettings[$variable]["TEMPLATE"])
+								{
+									$arComponentParameters["PARAMETERS"]["SEF_URL_TEMPLATES_".$templateKey]["TYPE"] = "TEMPLATES";
+									$arComponentParameters["PARAMETERS"]["SEF_URL_TEMPLATES_".$templateKey]["VALUES"][$variable] = array(
+										"TEXT" => $arVariableAliasesSettings[$variable]["NAME"],
+										"TEMPLATE" => $arVariableAliasesSettings[$variable]["TEMPLATE"],
+									);
+								}
 								$arComponentParameters["PARAMETERS"]["SEF_URL_TEMPLATES_".$templateKey]["VARIABLES"]["#".$variable."#"] = $arVariableAliasesSettings[$variable]["NAME"];
+							}
 						}
 					}
 				}

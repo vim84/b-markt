@@ -126,24 +126,20 @@ class Tracking
 
 		$event = new Event("main", "OnMailEventSubscriptionList", array($arData['FIELDS']), $filter);
 		$event->send();
-
-		if($event->getResults())
+		foreach ($event->getResults() as $eventResult)
 		{
-			foreach ($event->getResults() as $eventResult)
+			if ($eventResult->getType() == EventResult::ERROR)
 			{
-				if ($eventResult->getType() == EventResult::ERROR)
-				{
-					return false;
-				}
+				return false;
+			}
 
-				$subscriptionList = $eventResult->getParameters();
-				if($subscriptionList && is_array($subscriptionList['LIST']))
-				{
-					$arSubscription = array_merge(
-						$arSubscription,
-						array($eventResult->getModuleId() => $subscriptionList['LIST'])
-					);
-				}
+			$subscriptionList = $eventResult->getParameters();
+			if($subscriptionList && is_array($subscriptionList['LIST']))
+			{
+				$arSubscription = array_merge(
+					$arSubscription,
+					array($eventResult->getModuleId() => $subscriptionList['LIST'])
+				);
 			}
 		}
 
@@ -163,15 +159,11 @@ class Tracking
 
 		$event = new Event("main", "OnMailEventSubscriptionEnable", array($arData['FIELDS']), array($arData['MODULE_ID']));
 		$event->send();
-
-		if($event->getResults())
+		foreach ($event->getResults() as $eventResult)
 		{
-			foreach ($event->getResults() as $eventResult)
+			if ($eventResult->getType() == EventResult::ERROR)
 			{
-				if ($eventResult->getType() == EventResult::ERROR)
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 
@@ -188,15 +180,11 @@ class Tracking
 
 		$event = new Event("main", "OnMailEventSubscriptionDisable", array($arData['FIELDS']), array($arData['MODULE_ID']));
 		$event->send();
-
-		if($event->getResults())
+		foreach ($event->getResults() as $eventResult)
 		{
-			foreach ($event->getResults() as $eventResult)
+			if ($eventResult->getType() == EventResult::ERROR)
 			{
-				if ($eventResult->getType() == EventResult::ERROR)
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 
@@ -216,15 +204,11 @@ class Tracking
 
 		$event = new \Bitrix\Main\Event("main", "OnMailEventMailClick", array($arData['FIELDS']), $filter);
 		$event->send();
-
-		if($event->getResults())
+		foreach ($event->getResults() as $eventResult)
 		{
-			foreach ($event->getResults() as $eventResult)
+			if ($eventResult->getType() == \Bitrix\Main\EventResult::ERROR)
 			{
-				if ($eventResult->getType() == \Bitrix\Main\EventResult::ERROR)
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 
@@ -244,15 +228,11 @@ class Tracking
 
 		$event = new \Bitrix\Main\Event("main", "OnMailEventMailRead", array($arData['FIELDS']), $filter);
 		$event->send();
-
-		if($event->getResults())
+		foreach ($event->getResults() as $eventResult)
 		{
-			foreach ($event->getResults() as $eventResult)
+			if ($eventResult->getType() == \Bitrix\Main\EventResult::ERROR)
 			{
-				if ($eventResult->getType() == \Bitrix\Main\EventResult::ERROR)
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 

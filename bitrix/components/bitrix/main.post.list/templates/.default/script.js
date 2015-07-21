@@ -40,6 +40,7 @@
 						ENTITY_XML_ID : this.ENTITY_XML_ID,
 						MODE : "PUSH&PULL",
 						sessid : BX.bitrix_sessid(),
+						sign : params["sign"],
 						"PATH_TO_USER" : params["params"]["PATH_TO_USER"],
 						"AVATAR_SIZE" : params["params"]["AVATAR_SIZE"],
 						"NAME_TEMPLATE" : params["params"]["NAME_TEMPLATE"],
@@ -82,6 +83,13 @@
 			for (var ii = 0; ii < nodes.length; ii++)
 			{
 				BX.bind(nodes[ii], "mouseup", this.quote.show);
+			}
+			// dnd
+			var dnd = BX('record-' + this.ENTITY_XML_ID + '-switcher');
+			if (dnd && !dnd.bxDndIsBound)
+			{
+				dnd.bxDndIsBound = "Y";
+				BX.bind(dnd, "dragenter", BX.delegate(this.reply, this));
 			}
 		}
 
@@ -304,7 +312,7 @@
 		reply : function(node)
 		{
 			safeEditingCurrentObj = safeEditing;
-			if (!!node)
+			if (BX.type.isElementNode(node))
 				BX.onCustomEvent(window, 'OnUCUserReply', [this.ENTITY_XML_ID, node.getAttribute("bx-mpl-author-id"), node.getAttribute("bx-mpl-author-name"), safeEditingCurrentObj]);
 			else
 				BX.onCustomEvent(window, 'OnUCUserReply', [this.ENTITY_XML_ID, undefined, undefined, safeEditingCurrentObj]);

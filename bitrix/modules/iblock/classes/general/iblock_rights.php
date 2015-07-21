@@ -531,8 +531,7 @@ class CIBlockRights
 		if ($bCleanUp)
 			$obStorage->CleanUp();
 
-		if(defined("BX_COMP_MANAGED_CACHE"))
-			$GLOBALS["CACHE_MANAGER"]->ClearByTag("iblock_id_".$this->IBLOCK_ID);
+		CIBlock::clearIblockTagCache($this->IBLOCK_ID);
 
 		return true;
 	}

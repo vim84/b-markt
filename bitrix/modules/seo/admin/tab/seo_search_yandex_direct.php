@@ -23,17 +23,8 @@ use Bitrix\Seo\Adv;
 Loc::loadMessages(dirname(__FILE__).'/../seo_adv.php');
 
 $engine = new Engine\YandexDirect();
-$bNeedAuth = !$engine->getAuthSettings();
-
-try
-{
-	$currentUser = $engine->getCurrentUser();
-}
-catch(Exception $e)
-{
-	$currentUser = null;
-	$bNeedAuth = true;
-}
+$currentUser = $engine->getCurrentUser();
+$bNeedAuth = !is_array($currentUser);
 
 if($bNeedAuth)
 {

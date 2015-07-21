@@ -143,7 +143,7 @@ class CAllCatalogProduct
 			$arFields["QUANTITY"] = doubleval($arFields["QUANTITY"]);
 		if (is_set($arFields, "QUANTITY_RESERVED") || $ACTION=="ADD")
 			$arFields["QUANTITY_RESERVED"] = doubleval($arFields["QUANTITY_RESERVED"]);
-		if (is_set($arFields["OLD_QUANTITY"]))
+		if (is_set($arFields, "OLD_QUANTITY"))
 			$arFields["OLD_QUANTITY"] = doubleval($arFields["OLD_QUANTITY"]);
 		if (is_set($arFields, "WEIGHT") || $ACTION=="ADD")
 			$arFields["WEIGHT"] = doubleval($arFields["WEIGHT"]);

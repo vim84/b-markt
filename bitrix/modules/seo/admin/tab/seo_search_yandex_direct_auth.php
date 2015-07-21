@@ -9,70 +9,122 @@
  */
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 
+use Bitrix\Main\Context;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Text\Converter;
+use Bitrix\Seo\Service;
 
-$request = Bitrix\Main\Context::getCurrent()->getRequest();
+$authAction = "";
+$request = Context::getCurrent()->getRequest();
 
-if(
-	$request->isPost() && isset($request['CODE']) && check_bitrix_sessid())
+echo BeginNote();
+if(!Service::isRegistered())
 {
-	try
-	{
-		$engine->getAuth($request['CODE']);
-		LocalRedirect($APPLICATION->GetCurPageParam('oauth=yes', array('CODE', 'oauth')));
-	}
-	catch (Exception $e)
-	{
-		$message = new CAdminMessage(Loc::getMessage('SEO_ERROR_GET_ACCESS', array("#ERROR_TEXT#" => $e->getMessage())));
-		echo $message->Show();
-	}
-}
-
+	$authAction = "registerClient();";
 ?>
-
-<?=BeginNote();?>
-	<div id="auth_button" style="<?=$bNeedAuth ? 'display:block' : 'display:none'?>;">
-		<p><?=Loc::getMessage('SEO_AUTH_HINT')?></p>
-		<input type=button onclick="makeAuth()" value="<?=Loc::getMessage('SEO_AUTH_YANDEX')?>" />
-	</div>
-	<div id="auth_code" style="display: none;">
-		<form name="auth_code_form" action="<?=Converter::getHtmlConverter()->encode($APPLICATION->getCurPageParam("", array("CODE", "oauth")))?>" method="POST"><?=bitrix_sessid_post();?><?=Loc::getMessage('SEO_AUTH_CODE')?>: <input type="text" name="CODE" style="width: 200px;" /> <input type="submit" name="send_code" value="<?=Loc::getMessage('SEO_AUTH_CODE_SUBMIT')?>"></form></div>
+	<input type=button onclick="<?=$authAction?>" value="<?=Loc::getMessage('SEO_YANDEX_REGISTER')?>"
+ id="seo_authorize_btn" />
 <?
-if(!$bNeedAuth)
+}
+elseif(!Service::isAuthorized())
 {
-	if(is_array($currentUser))
+	$authAction = "authorizeClient();";
+?>
+	<input type=button onclick="<?=$authAction?>" value="<?=Loc::getMessage('SEO_AUTH_YANDEX')?>"
+ id="seo_authorize_btn" />
+<?
+}
+else
+{
+	$authInfo = Service::getAuth($engine->getCode());
+	if(!$authInfo)
 	{
-		?>
-		<div id="auth_result" class="seo-auth-result">
-			<b><?=Loc::getMessage('SEO_AUTH_CURRENT')?>:</b><div style="width: 300px; padding: 10px 0 0 0;">
-				<?=Converter::getHtmlConverter()->encode($currentUser['real_name'].' ('.$currentUser['display_name'].')')?><br />
-				<a href="javascript:void(0)" onclick="makeNewAuth()"><?=Loc::getMessage('SEO_AUTH_CANCEL')?></a>
-				<div style="clear: both;"></div>
-			</div>
-		</div>
-	<?
+		$authorizeUrl = Service::getAuthorizeLink($engine->getCode());
+?>
+		<input type=button onclick="authorizeUser('<?= $authorizeUrl ?>')" value="<?= Loc::getMessage('SEO_AUTH_YANDEX') ?>" id="seo_authorize_btn"/>
+<?
+	}
+	else
+	{
+		$currentUser = $authInfo['user'];
+?>
+<div id="auth_result" class="seo-auth-result">
+	<b><?=Loc::getMessage('SEO_AUTH_CURRENT')?>:</b><div style="width: 300px; padding: 10px 0 0 0;">
+		<?=Converter::getHtmlConverter()->encode($currentUser['real_name'].' ('.$currentUser['display_name'].')')?><br />
+		<a href="javascript:void(0)" onclick="makeNewAuth()"><?=Loc::getMessage('SEO_AUTH_CANCEL')?></a>
+		<div style="clear: both;"></div>
+	</div>
+</div>
+<?
 	}
 }
+echo EndNote();
 ?>
-<?=EndNote();?>
 
 <script type="text/javascript">
 	function makeNewAuth()
 	{
 		BX.showWait(BX('auth_result'));
 		BX.ajax.loadJSON('/bitrix/tools/seo_yandex_direct.php?action=nullify_auth&sessid=' + BX.bitrix_sessid(), function(){
-			window.lastSeoResult = null;
-			BX.closeWait(BX('auth_result'));
-			BX('auth_result').style.display = 'none';
-			BX('auth_button').style.display = 'block';
+			window.location.reload();
 		});
 	}
 
-	function makeAuth()
+	function registerClient()
 	{
-		BX('auth_button').style.display = 'none';
-		BX('auth_code').style.display = 'block';
-		BX.util.popup('<?=CUtil::JSEscape($engine->getAuthUrl())?>', 700, 500);
+		BX('seo_authorize_btn').disabled = true;
+
+		BX('seo_authorize_btn').value = '<?=CUtil::JSEscape(Loc::getMessage("SEO_YANDEX_REGISTER_RPOGRESS"))?>';
+
+		BX.ajax.loadJSON('/bitrix/tools/seo_yandex_direct.php?action=register&sessid=' + BX.bitrix_sessid(), function(result)
+		{
+			if(result['result'])
+			{
+				authorizeClient();
+			}
+			else if(result["error"])
+			{
+				alert('<?=CUtil::JSEscape(Loc::getMessage("SEO_ERROR"))?> : ' + result['error']['message']);
+				BX('seo_authorize_btn').value = '<?=CUtil::JSEscape(Loc::getMessage('SEO_YANDEX_REGISTER'))?>';
+			}
+		});
 	}
+
+	function authorizeClient()
+	{
+		BX('seo_authorize_btn').value = '<?=CUtil::JSEscape(Loc::getMessage("SEO_YANDEX_AUTH_RPOGRESS"))?>';
+
+		BX.ajax.loadJSON('/bitrix/tools/seo_yandex_direct.php?action=authorize&sessid=' + BX.bitrix_sessid(), function(result)
+		{
+			if(result["location"])
+			{
+//				BX('seo_authorize_btn').value = '<?=CUtil::JSEscape(Loc::getMessage("SEO_YANDEX_AUTH_CONFIRM_RPOGRESS"))?>';
+
+				BX.ajax.loadJSON(result["location"], function(r)
+				{
+					if(r['result'] == "ok")
+					{
+						BX.reload();
+					}
+					else if(r['error'])
+					{
+						alert('<?=CUtil::JSEscape(Loc::getMessage("SEO_ERROR"))?> ' + r['error'] + ': ' + r['error_description']);
+						BX('seo_authorize_btn').value = '<?=CUtil::JSEscape(Loc::getMessage('SEO_AUTH_YANDEX'))?>';
+					}
+				})
+			}
+		});
+	}
+
+	function authorizeUser(url)
+	{
+		BX.util.popup(url, 680, 600);
+	}
+
+<?
+if($request["auth"] && $authAction != "")
+{
+	echo $authAction;
+}
+?>
 </script>

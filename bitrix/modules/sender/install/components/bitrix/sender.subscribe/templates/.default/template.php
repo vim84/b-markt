@@ -11,9 +11,9 @@
 /** @var string $componentPath */
 /** @var CBitrixComponent $component */
 
-$buttonId = rand(1,1000);
+$buttonId = $this->randString();
 ?>
-<div class="bx_subscribe_container"  id="sender-subscribe">
+<div class="bx-subscribe"  id="sender-subscribe">
 <?
 $frame = $this->createFrame("sender-subscribe", false)->begin();
 ?>
@@ -50,15 +50,41 @@ $frame = $this->createFrame("sender-subscribe", false)->begin();
 		</script>
 	<?endif;?>
 
-	<form method="post" action="<?=$arResult["FORM_ACTION"]?>" onsubmit="BX('bx_subscribe_btn_<?=$buttonId?>').disabled=true;">
+	<script>
+		BX.ready(function()
+		{
+			BX.bind(BX("bx_subscribe_btn_<?=$buttonId?>"), 'click', function() {
+				setTimeout(mailSender, 250);
+				return false;
+			});
+		});
+
+		function mailSender()
+		{
+			setTimeout(function() {
+				var btn = BX("bx_subscribe_btn_<?=$buttonId?>");
+				if(btn)
+				{
+					var btn_span = btn.querySelector("span");
+					var btn_subscribe_width = btn_span.style.width;
+					BX.addClass(btn, "send");
+					btn_span.outterHTML = "<span><i class='fa fa-check'></i> <?=GetMessage("subscr_form_button_sent")?></span>";
+					if(btn_subscribe_width)
+						btn.querySelector("span").style["min-width"] = btn_subscribe_width+"px";
+				}
+			}, 400);
+		}
+	</script>
+
+	<form role="form" method="post" action="<?=$arResult["FORM_ACTION"]?>"  onsubmit="BX('bx_subscribe_btn_<?=$buttonId?>').disabled=true;">
 		<?=bitrix_sessid_post()?>
 		<input type="hidden" name="sender_subscription" value="add">
 
-		<div class="bx_subscribe_input_container">
-			<input type="text" name="SENDER_SUBSCRIBE_EMAIL" value="<?=$arResult["EMAIL"]?>" title="<?=GetMessage("subscr_form_email_title")?>">
+		<div class="bx-input-group">
+			<input class="bx-form-control" type="email" name="SENDER_SUBSCRIBE_EMAIL" value="<?=$arResult["EMAIL"]?>" title="<?=GetMessage("subscr_form_email_title")?>">
 		</div>
 		<?if(count($arResult["RUBRICS"])>0):?>
-			<div class="bx_subscribe_title_desc"><?=GetMessage("subscr_form_title_desc")?></div>
+			<div class="bx-subscribe-desc"><?=GetMessage("subscr_form_title_desc")?></div>
 		<?endif;?>
 		<?foreach($arResult["RUBRICS"] as $itemID => $itemValue):?>
 		<div class="bx_subscribe_checkbox_container">
@@ -67,10 +93,9 @@ $frame = $this->createFrame("sender-subscribe", false)->begin();
 		</div>
 		<?endforeach;?>
 		<div class="bx_subscribe_submit_container">
-			<button id="bx_subscribe_btn_<?=$buttonId?>"><span><?=GetMessage("subscr_form_button")?></span><span class="icon"></span></button>
+			<button class="btn btn-subscribe" id="bx_subscribe_btn_<?=$buttonId?>"><span><?=GetMessage("subscr_form_button")?></span></button>
 		</div>
 	</form>
-
 <?
 $frame->beginStub();
 ?>
@@ -107,15 +132,41 @@ $frame->beginStub();
 		</script>
 	<?endif;?>
 
-	<form method="post" action="<?=$arResult["FORM_ACTION"]?>" onsubmit="BX('bx_subscribe_btn_<?=$buttonId?>').disabled=true;">
+	<script>
+		BX.ready(function()
+		{
+			BX.bind(BX("bx_subscribe_btn_<?=$buttonId?>"), 'click', function() {
+				setTimeout(mailSender, 250);
+				return false;
+			});
+		});
+
+		function mailSender()
+		{
+			setTimeout(function() {
+				var btn = BX("bx_subscribe_btn_<?=$buttonId?>");
+				if(btn)
+				{
+					var btn_span = btn.querySelector("span");
+					var btn_subscribe_width = btn_span.style.width;
+					BX.addClass(btn, "send");
+					btn_span.outterHTML = "<span><i class='fa fa-check'></i> <?=GetMessage("subscr_form_button_sent")?></span>";
+					if(btn_subscribe_width)
+						btn.querySelector("span").style["min-width"] = btn_subscribe_width+"px";
+				}
+			}, 400);
+		}
+	</script>
+
+	<form role="form" method="post" action="<?=$arResult["FORM_ACTION"]?>"  onsubmit="BX('bx_subscribe_btn_<?=$buttonId?>').disabled=true;">
 		<?=bitrix_sessid_post()?>
 		<input type="hidden" name="sender_subscription" value="add">
 
-		<div class="bx_subscribe_input_container">
-			<input type="text" name="SENDER_SUBSCRIBE_EMAIL" value="" title="<?=GetMessage("subscr_form_email_title")?>">
+		<div class="bx-input-group">
+			<input class="bx-form-control" type="email" name="SENDER_SUBSCRIBE_EMAIL" value="" title="<?=GetMessage("subscr_form_email_title")?>">
 		</div>
 		<?if(count($arResult["RUBRICS"])>0):?>
-			<div class="bx_subscribe_title_desc"><?=GetMessage("subscr_form_title_desc")?></div>
+			<div class="bx-subscribe-desc"><?=GetMessage("subscr_form_title_desc")?></div>
 		<?endif;?>
 		<?foreach($arResult["RUBRICS"] as $itemID => $itemValue):?>
 			<div class="bx_subscribe_checkbox_container">
@@ -124,7 +175,7 @@ $frame->beginStub();
 			</div>
 		<?endforeach;?>
 		<div class="bx_subscribe_submit_container">
-			<button id="bx_subscribe_btn_<?=$buttonId?>"><span><?=GetMessage("subscr_form_button")?></span><span class="icon"></span></button>
+			<button class="btn btn-subscribe" id="bx_subscribe_btn_<?=$buttonId?>"><span><?=GetMessage("subscr_form_button")?></span></button>
 		</div>
 	</form>
 <?

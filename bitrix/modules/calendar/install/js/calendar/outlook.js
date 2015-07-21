@@ -43,13 +43,19 @@ var jsOutlookUtils = {
 		return out;
 	},
 
-	Sync: function(type, base_url, list_url, list_prefix, list_name, guid)
+	Sync: function(type, base_url, list_url, list_prefix, list_name, guid, port)
 	{
 		var
 			maxLinkLen = 500,
-			maxNameLen = 20;
+			maxNameLen = 20,
+			host = window.location.host;
 
-		base_url = window.location.protocol + "//" + window.location.host + base_url;
+		if(!!port)
+		{
+			host = host.replace(/:\d+/, '') + ':' + port;
+		}
+
+		base_url = window.location.protocol + "//" + host + base_url;
 		guid = guid.replace(/{/g, '%7B').replace(/}/g, '%7D').replace(/-/g, '%2D');
 
 		var link = "stssync://sts/?ver=1.1"
@@ -76,8 +82,8 @@ var jsOutlookUtils = {
 		}
 
 		link += names;
-		
+
 		try {window.location.href = link;}
 		catch (e) {}
 	}
-}
+};

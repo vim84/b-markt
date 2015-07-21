@@ -14,5 +14,8 @@ $MESS["VOTE_ALREADY_VOTE"] = "You can not take part in this poll twice.";
 $MESS["VOTE_ACCESS_DENIED"] = "Access denied for this poll.";
 $MESS["V_NOTIFY_MESSAGE"] = "Voted in the poll #VOTE_TITLE#.";
 $MESS["V_NOTIFY_MESSAGE_HREF"] = "Voted in the poll <a href=\"#VOTE_URL#\">#VOTE_TITLE#</a>.";
-$MESS["V_NOTIFY_MESSAGE_OUT_HREF"] = "Voted in the poll \"#VOTE_TITLE#\" (#VOTE_URL#).";
+$MESS["V_NOTIFY_MESSAGE_OUT_HREF"] = "Voted in the poll \"#VOTE_TITLE#\" (#VOTE_URL#)";
+$MESS["V_NOTIFY_MESSAGE_F"] = "Voted in the poll \"#VOTE_TITLE#\".";
+$MESS["V_NOTIFY_MESSAGE_HREF_F"] = "Voted in the poll <a href=\"#VOTE_URL#\">#VOTE_TITLE#</a>.";
+$MESS["V_NOTIFY_MESSAGE_OUT_HREF_F"] = "Voted in the poll \"#VOTE_TITLE#\" (#VOTE_URL#)";
 ?>

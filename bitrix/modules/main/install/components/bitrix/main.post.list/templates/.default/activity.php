@@ -6,20 +6,38 @@ define("NO_AGENT_CHECK", true);
 define("DisableEventsCheck", true);
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
-
+/**
+ * Bitrix vars
+ * @global CUser $GLOBALS["USER"]
+ * @global CMain $APPLICATION
+ * @var array $arParams
+ */
+$arParams = array();
 $arParams["AVATAR_SIZE"] = intval($_REQUEST["AVATAR_SIZE"]);
 $arParams["AVATAR_SIZE"] = ($arParams["AVATAR_SIZE"] > 0 ? $arParams["AVATAR_SIZE"] : 42);
 $arParams["NAME_TEMPLATE"] = (!!$_REQUEST["NAME_TEMPLATE"] ? $_REQUEST["NAME_TEMPLATE"] : CSite::GetNameFormat());
 $arParams["SHOW_LOGIN"] = ($_REQUEST["SHOW_LOGIN"] == "Y" ? "Y" : "N");
+$sign = (new \Bitrix\Main\Security\Sign\Signer());
+$arParams["SIGN"] = $sign->unsign($_REQUEST["sign"], "main.post.list");
 
-$arResult = array();
-if (check_bitrix_sessid() && $_REQUEST["MODE"] == "PUSH&PULL" &&
-	$GLOBALS["USER"]->IsAuthorized() && !!$_REQUEST["ENTITY_XML_ID"] &&
-	is_array($_SESSION["UC"]) && array_key_exists($_REQUEST["ENTITY_XML_ID"], $_SESSION["UC"]) &&
-	(time() - $_SESSION["UC"][$_REQUEST["ENTITY_XML_ID"]]["ACTIVITY"] > 10) &&
+if (!is_array($_SESSION["UC_LAST_ACTIVITY"]))
+	$_SESSION["UC_LAST_ACTIVITY"] = array(
+		"TIME" => 0,
+		"ENTITY_XML_ID" => $_REQUEST["ENTITY_XML_ID"]
+	);
+
+if ( check_bitrix_sessid() &&
+	$_REQUEST["MODE"] == "PUSH&PULL" &&
+	$GLOBALS["USER"]->IsAuthorized() &&
+	$arParams["SIGN"] == $_REQUEST["ENTITY_XML_ID"] &&
+	(
+		$_SESSION["UC_ACTIVITY"]["ENTITY_XML_ID"] != $_REQUEST["ENTITY_XML_ID"] ||
+		(time() - $_SESSION["UC_ACTIVITY"]["TIME"]) > 10
+	) &&
 	CModule::IncludeModule("pull") && CPullOptions::GetNginxStatus())
 {
-	$_SESSION["UC"][$_REQUEST["ENTITY_XML_ID"]]["ACTIVITY"] = time();
+	$_SESSION["UC_ACTIVITY"]["TIME"] = time();
+	$_SESSION["UC_ACTIVITY"]["ENTITY_XML_ID"] = $_REQUEST["ENTITY_XML_ID"];
 
 	$dbUser = CUser::GetList(($sort_by = Array('ID'=>'desc')), ($dummy=''), Array("ID" => $GLOBALS["USER"]->GetId()),
 		Array("FIELDS" => Array("ID", "LAST_NAME", "NAME", "SECOND_NAME", "LOGIN", "PERSONAL_PHOTO", "PERSONAL_GENDER")));

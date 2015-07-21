@@ -146,9 +146,9 @@ $arComponentParameters = array(
 			"VALUES" => array_merge(Array("-"=>" ", "NAME" => GetMessage("IBLOCK_FIELD_NAME")), $arProperty_LNS),
 		),
 		"SET_TITLE" => Array(),
-		"SET_STATUS_404" => Array(
+		"SET_LAST_MODIFIED" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BPD_SET_STATUS_404"),
+			"NAME" => GetMessage("CP_BPD_SET_LAST_MODIFIED"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
@@ -161,4 +161,5 @@ $arComponentParameters = array(
 		),
 	),
 );
-?>
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues);

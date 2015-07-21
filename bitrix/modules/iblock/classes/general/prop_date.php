@@ -9,7 +9,9 @@ class CIBlockPropertyDate
 	public static function ConvertToDB($arProperty, $value)
 	{
 		if (strlen($value["VALUE"])>0)
+		{
 			$value["VALUE"] = CDatabase::FormatDate($value["VALUE"], CLang::GetDateFormat("SHORT"), "YYYY-MM-DD");
+		}
 
 		return $value;
 	}
@@ -17,7 +19,9 @@ class CIBlockPropertyDate
 	public static function ConvertFromDB($arProperty, $value)
 	{
 		if(strlen($value["VALUE"])>0)
+		{
 			$value["VALUE"] = CDatabase::FormatDate($value["VALUE"], "YYYY-MM-DD", CLang::GetDateFormat("SHORT"));
+		}
 
 		return $value;
 	}

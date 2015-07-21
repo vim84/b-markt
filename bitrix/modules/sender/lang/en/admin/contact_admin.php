@@ -29,4 +29,8 @@ $MESS["SENDER_CONTACT_ADM_FILTER_WITHOUT"] = "(not in list)";
 $MESS["rub_f_subscribed"] = "Subscribed";
 $MESS["SENDER_CONTACT_LIST_EDIT"] = "Edit lists";
 $MESS["SENDER_CONTACT_LIST_EDIT_TITLE"] = "Edit or delete lists";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD"] = "Add or import";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD_LIST"] = "Add one address or multiple addresses manually";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD_FILE"] = "Add a file containing addresses";
+$MESS["SENDER_CONTACT_LIST_BUTTON_ADD_PULL"] = "Import from other sources (users, web forms etc.)";
 ?>

@@ -16,4 +16,7 @@ $MESS["CP_BCSF_SECTION_DESCRIPTION"] = "Описание";
 $MESS["CP_BCSF_HIDE_NOT_AVAILABLE"] = "Не отображать товары, которых нет на складах";
 $MESS["CP_BCSF_CONVERT_CURRENCY"] = "Показывать цены в одной валюте";
 $MESS["CP_BCSF_CURRENCY_ID"] = "Валюта, в которую будут сконвертированы цены";
+$MESS["CP_BCSF_SMART_FILTER_PATH"] = "Блок ЧПУ умного фильтра";
+$MESS["CP_BCSF_SECTION_CODE_PATH"] = "Путь из символьных кодов раздела";
+$MESS["CP_BCSF_PAGER_PARAMS_NAME"] = "Имя массива с переменными для построения ссылок в постраничной навигации";
 ?>

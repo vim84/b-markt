@@ -7,7 +7,7 @@ if (is_array($arResult['VALUE']) && count($arResult['VALUE']) > 0)
 
 	$arValue = array();
 	$dbRes = CIBlockElement::GetList(array('SORT' => 'DESC', 'NAME'=>'ASC'), array('ID' => $arResult['VALUE']), false);
-	while ($arRes = $dbRes->Fetch())
+	while ($arRes = $dbRes->GetNext())
 	{
 		$arValue[$arRes['ID']] = $arRes['NAME'];
 	}

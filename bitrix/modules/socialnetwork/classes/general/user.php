@@ -253,7 +253,7 @@ class CAllSocNetUser
 					{
 						$arModuleAdmins[$ar["U_ID"]] = array(
 							"USER_ID" => $ar["U_ID"],
-						    "DATE_FROM_TS" => $ar["UG_DATE_FROM_TS"],
+							"DATE_FROM_TS" => $ar["UG_DATE_FROM_TS"],
 							"DATE_TO_TS" => $ar["UG_DATE_TO_TS"]
 						);
 					}
@@ -391,17 +391,21 @@ class CAllSocNetUser
 					$arUser[] = $s;
 			}
 
-			if (count($arUser) <= 0 && strlen($email) > 0):
-				$arFilter = array
-					(
-						"ACTIVE" => "Y",
-						"EMAIL" => $email,
-					);
+			if (
+				count($arUser) <= 0
+				&& strlen($email) > 0
+			)
+			{
+				$arFilter = array(
+					"ACTIVE" => "Y",
+					"EMAIL" => $email,
+				);
 				$dbUsers = CUser::GetList(($by="id"), ($order="asc"), $arFilter);
-			else:
+			}
+			else
+			{
 				$dbUsers = CUser::SearchUserByName($arUser, $email);
-			endif;
-
+			}
 		}
 
 		if ($dbUsers)

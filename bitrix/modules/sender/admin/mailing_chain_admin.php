@@ -22,6 +22,21 @@ $ID = intval($_REQUEST["ID"]);
 
 if($_REQUEST["action"]=="send_to_me" && check_bitrix_sessid() && $POST_RIGHT>="W")
 {
+	$arResult = array();
+	$isChainNotFound = true;
+	$sendException = null;
+	$filter = array();
+
+	if(isset($_REQUEST["IS_TRIGGER"]) && $_REQUEST["IS_TRIGGER"] == 'Y')
+	{
+		$filter['=MAILING_ID'] = $MAILING_ID;
+		$filter['=IS_TRIGGER'] = 'Y';
+	}
+	else
+	{
+		$filter['=ID'] = $ID;
+	}
+
 	require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_js.php");
 
 	$adminMessage = new CAdminMessage('');
@@ -29,14 +44,17 @@ if($_REQUEST["action"]=="send_to_me" && check_bitrix_sessid() && $POST_RIGHT>="W
 	$sendToMeAddr = $_POST["send_to_me_addr"];
 	$sendToMeAddr = explode(",", $sendToMeAddr);
 
-	$arResult = array();
-
-	$mailingChain = MailingChainTable::getRowById(array('ID'=> $ID));
-
-	if($mailingChain)
+	try
 	{
-		try
+		$mailingChainDb = MailingChainTable::getList(array(
+			'select' => array('ID'),
+			'filter' => $filter,
+			'order' => array('TIME_SHIFT' => 'ASC', 'ID' => 'ASC')
+		));
+
+		while($mailingChain = $mailingChainDb->fetch())
 		{
+			$isChainNotFound = false;
 			foreach($sendToMeAddr as $address)
 			{
 				$address = trim($address);
@@ -50,24 +68,34 @@ if($_REQUEST["action"]=="send_to_me" && check_bitrix_sessid() && $POST_RIGHT>="W
 					}
 				}
 			}
+		}
 
-			if(!empty($arResult))
-				$adminMessage->ShowNote(GetMessage("sender_mailing_chain_adm_test_send_success").implode(', ', $arResult));
-			else
-				$adminMessage->ShowMessage(GetMessage("sender_mailing_chain_adm_test_send_empty"));
-		}
-		catch(Exception $e)
-		{
-			$adminMessage->ShowMessage($e->getMessage());
-		}
+	}
+	catch(Exception $e)
+	{
+		$sendException = $e;
+	}
+
+	if($isChainNotFound)
+	{
+		$adminMessage->ShowMessage(GetMessage("MAILING_ADM_POST_NOT_FOUND"));
+	}
+	elseif($sendException)
+	{
+		$adminMessage->ShowMessage($sendException->getMessage());
 	}
 	else
 	{
-		$adminMessage->ShowMessage(GetMessage("MAILING_ADM_POST_NOT_FOUND"));
+		$arResult = array_unique($arResult);
+		if(!empty($arResult))
+			$adminMessage->ShowNote(GetMessage("sender_mailing_chain_adm_test_send_success").implode(', ', $arResult));
+		else
+			$adminMessage->ShowMessage(GetMessage("sender_mailing_chain_adm_test_send_empty"));
 	}
 
 	require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_admin_js.php");
 }
+
 
 if($_REQUEST["action"]=="js_send" && check_bitrix_sessid() && $POST_RIGHT>="W")
 {

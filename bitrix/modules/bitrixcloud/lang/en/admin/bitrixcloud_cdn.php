@@ -18,9 +18,11 @@ $MESS["BCL_SITES_ERROR"] = "Web Accelerator must be enabled for at least one web
 $MESS["BCL_DOMAIN_ERROR"] = "The website URL is required.";
 $MESS["BCL_EXTENDED_TAB"] = "Extended";
 $MESS["BCL_EXTENDED_TAB_TITLE"] = "Extended settings";
-$MESS["BCL_SERVER_URL"] = "Source website URL (containing CSS, scripts, images etc. for use by CDN)";
 $MESS["BCL_KERNEL"] = "Website template (recommended)";
 $MESS["BCL_KERNEL_NOTE"] = "Improves website speed. Does not affect SEO.";
 $MESS["BCL_UPLOAD"] = "Website content";
 $MESS["BCL_CONTENT_NOTE"] = "Improves image download speed.";
+$MESS["BCL_OPTIMIZE"] = "Optimize resources";
+$MESS["BCL_SERVER_DOMAIN_NAME"] = "Domain name of the website to load resources from (CSS, JS, images etc.)";
+$MESS["BCL_HTTPS"] = "Site uses HTTPS";
 ?>

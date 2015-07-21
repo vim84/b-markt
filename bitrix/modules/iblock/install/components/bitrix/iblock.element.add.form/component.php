@@ -287,7 +287,7 @@ if ($bAllowAccess)
 	}
 	elseif ($arParams["MAX_USER_ENTRIES"] > 0 && $USER->GetID())
 	{
-		$rsIBlockElements = CIBlockElement::GetList(array("SORT" => "ASC"), $arFilter);
+		$rsIBlockElements = CIBlockElement::GetList(array(), $arFilter, false, false, array('ID'));
 		$elements_count = $rsIBlockElements->SelectedRowsCount();
 		if ($elements_count >= $arParams["MAX_USER_ENTRIES"])
 		{

@@ -10,8 +10,9 @@
 /** @var string $templateFolder */
 /** @var string $componentPath */
 /** @var CBitrixComponent $component */
-$this->setFrameMode(true);
 
+$this->setFrameMode(true);
+$this->addExternalCss("/bitrix/css/main/bootstrap.css");
 ?><?$APPLICATION->IncludeComponent(
 	"bitrix:catalog.section.list",
 	"",

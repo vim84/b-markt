@@ -980,8 +980,8 @@ class CTopPanel
 				CUtil::InitJSCore(array('window', 'ajax', 'admin'), true)
 				.$adminPage->ShowScript()
 				.'
-<script type="text/javascript" src="/bitrix/js/main/public_tools.js'.'?'.filemtime($_SERVER["DOCUMENT_ROOT"].'/bitrix/js/main/public_tools.js').'"></script>
-<link rel="stylesheet" type="text/css" href="'.ADMIN_THEMES_PATH.'/'.ADMIN_THEME_ID.'/pubstyles.css'.'?'.filemtime($_SERVER["DOCUMENT_ROOT"].ADMIN_THEMES_PATH.'/'.ADMIN_THEME_ID.'/pubstyles.css').'" />
+<script type="text/javascript" src="'.CUtil::GetAdditionalFileURL('/bitrix/js/main/public_tools.js', true).'"></script>
+<link rel="stylesheet" type="text/css" href="'.CUtil::GetAdditionalFileURL(ADMIN_THEMES_PATH.'/'.ADMIN_THEME_ID.'/pubstyles.css', true).'" />
 ';
 		}
 		return null;

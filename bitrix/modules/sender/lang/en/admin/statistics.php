@@ -30,4 +30,8 @@ $MESS["sender_stat_graphperiod_cnt_unsub"] = "Unsubscribed";
 $MESS["POST_U_YES"] = "Yes";
 $MESS["POST_U_NO"] = "No";
 $MESS["MAIN_ALL"] = "(all)";
+$MESS["sender_stat_click_title"] = "15 most popular links";
+$MESS["sender_stat_click_cnt"] = "Quantity";
+$MESS["sender_stat_click_link"] = "Link";
+$MESS["sender_stat_click_no_data"] = "No data.";
 ?>

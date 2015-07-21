@@ -309,9 +309,9 @@ $arComponentParameters = array(
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "Y",
 		),
-		"SET_STATUS_404" => Array(
+		"SET_LAST_MODIFIED" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BN_SET_STATUS_404"),
+			"NAME" => GetMessage("CP_BN_SET_LAST_MODIFIED"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
@@ -364,7 +364,17 @@ $arComponentParameters = array(
 		),
 	),
 );
-CIBlockParameters::AddPagerSettings($arComponentParameters, GetMessage("T_IBLOCK_DESC_PAGER_NEWS"), true, true);
+
+CIBlockParameters::AddPagerSettings(
+	$arComponentParameters,
+	GetMessage("T_IBLOCK_DESC_PAGER_NEWS"), //$pager_title
+	true, //$bDescNumbering
+	true, //$bShowAllParam
+	true, //$bBaseLink
+	$arCurrentValues["PAGER_BASE_LINK_ENABLE"]==="Y" //$bBaseLinkEnabled
+);
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues);
 
 if($arCurrentValues["USE_FILTER"]=="Y")
 {
@@ -436,6 +446,15 @@ if($arCurrentValues["USE_RATING"]=="Y")
 		"MULTIPLE" => "Y",
 		"DEFAULT" => array("1","2","3","4","5"),
 		"ADDITIONAL_VALUES" => "Y",
+	);
+	$arComponentParameters["PARAMETERS"]["DISPLAY_AS_RATING"] = array(
+		"NAME" => GetMessage("CP_BN_DISPLAY_AS_RATING"),
+		"TYPE" => "LIST",
+		"VALUES" => array(
+			"rating" => GetMessage("CP_BN_RATING"),
+			"vote_avg" => GetMessage("CP_BN_AVERAGE"),
+		),
+		"DEFAULT" => "rating",
 	);
 }
 if($arCurrentValues["USE_CATEGORIES"]=="Y")

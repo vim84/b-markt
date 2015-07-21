@@ -45,6 +45,16 @@ class AdvSession
 		}
 	}
 
+	public static function isSession()
+	{
+		return isset($_SESSION['SEO_ADV']);
+	}
+
+	public static function getSession()
+	{
+		return $_SESSION['SEO_ADV'];
+	}
+
 	public static function onOrderSave($orderId, $orderFields, $orderData, $isNew)
 	{
 		if($isNew)

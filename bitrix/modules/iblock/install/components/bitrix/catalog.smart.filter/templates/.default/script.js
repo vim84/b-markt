@@ -1,4 +1,4 @@
-function JCSmartFilter(ajaxURL, viewMode)
+function JCSmartFilter(ajaxURL, viewMode, params)
 {
 	this.ajaxURL = ajaxURL;
 	this.form = null;
@@ -6,6 +6,15 @@ function JCSmartFilter(ajaxURL, viewMode)
 	this.cacheKey = '';
 	this.cache = [];
 	this.viewMode = viewMode;
+	if (params && params.SEF_SET_FILTER_URL)
+	{
+		this.bindUrlToButton('set_filter', params.SEF_SET_FILTER_URL);
+		this.sef = true;
+	}
+	if (params && params.SEF_DEL_FILTER_URL)
+	{
+		this.bindUrlToButton('del_filter', params.SEF_DEL_FILTER_URL);
+	}
 }
 
 JCSmartFilter.prototype.keyup = function(input)
@@ -65,6 +74,12 @@ JCSmartFilter.prototype.reload = function(input)
 		}
 		else
 		{
+			if (this.sef)
+			{
+				var set_filter = BX('set_filter');
+				set_filter.disabled = true;
+			}
+
 			this.curFilterinput = input;
 			BX.ajax.loadJSON(
 				this.ajaxURL,
@@ -85,14 +100,20 @@ JCSmartFilter.prototype.updateItem = function (PID, arItem)
 
 		if (trackBar && arItem.VALUES)
 		{
-			if (arItem.VALUES.MIN && arItem.VALUES.MIN.FILTERED_VALUE)
+			if (arItem.VALUES.MIN)
 			{
-				trackBar.setMinFilteredValue(arItem.VALUES.MIN.FILTERED_VALUE);
+				if (arItem.VALUES.MIN.FILTERED_VALUE)
+					trackBar.setMinFilteredValue(arItem.VALUES.MIN.FILTERED_VALUE);
+				else
+					trackBar.setMinFilteredValue(arItem.VALUES.MIN.VALUE);
 			}
 
-			if (arItem.VALUES.MAX && arItem.VALUES.MAX.FILTERED_VALUE)
+			if (arItem.VALUES.MAX)
 			{
-				trackBar.setMaxFilteredValue(arItem.VALUES.MAX.FILTERED_VALUE);
+				if (arItem.VALUES.MAX.FILTERED_VALUE)
+					trackBar.setMaxFilteredValue(arItem.VALUES.MAX.FILTERED_VALUE);
+				else
+					trackBar.setMaxFilteredValue(arItem.VALUES.MAX.VALUE);
 			}
 		}
 	}
@@ -182,14 +203,25 @@ JCSmartFilter.prototype.postHandler = function (result, fromCache)
 				{
 					modef.style.display = 'inline-block';
 				}
-				if (this.viewMode == "vertical")
+
+				if (this.viewMode == "VERTICAL")
 				{
-					curProp = BX.findChild(BX.findParent(this.curFilterinput, {'class':'bx_filter_parameters_box'}), {'class':'bx_filter_container_modef'}, true, false);
+					curProp = BX.findChild(BX.findParent(this.curFilterinput, {'class':'bx-filter-parameters-box'}), {'class':'bx_filter_container_modef'}, true, false);
 					curProp.appendChild(modef);
+				}
+
+				if (result.SEF_SET_FILTER_URL)
+				{
+					this.bindUrlToButton('set_filter', result.SEF_SET_FILTER_URL);
 				}
 			}
 		}
+	}
 
+	if (this.sef)
+	{
+		var set_filter = BX('set_filter');
+		set_filter.disabled = false;
 	}
 
 	if (!fromCache && this.cacheKey !== '')
@@ -197,6 +229,30 @@ JCSmartFilter.prototype.postHandler = function (result, fromCache)
 		this.cache[this.cacheKey] = result;
 	}
 	this.cacheKey = '';
+};
+
+JCSmartFilter.prototype.bindUrlToButton = function (buttonId, url)
+{
+	var button = BX(buttonId);
+	if (button)
+	{
+		var proxy = function(j, func)
+		{
+			return function()
+			{
+				return func(j);
+			}
+		};
+
+		if (button.type == 'submit')
+			button.type = 'button';
+
+		BX.bind(button, 'click', proxy(url, function(url)
+		{
+			window.location.href = url;
+			return false;
+		}));
+	}
 };
 
 JCSmartFilter.prototype.gatherInputsValues = function (values, elements)
@@ -286,13 +342,13 @@ JCSmartFilter.prototype.values2post = function (values)
 
 JCSmartFilter.prototype.hideFilterProps = function(element)
 {
-	var easing;
-	var obj = element.parentNode;
-	var filterBlock = BX.findChild(obj, {className:"bx_filter_block"}, true, false);
+	var obj = element.parentNode,
+		filterBlock = obj.querySelector("[data-role='bx_filter_block']"),
+		propAngle = obj.querySelector("[data-role='prop_angle']");
 
-	if(BX.hasClass(obj, "active"))
+	if(BX.hasClass(obj, "bx-active"))
 	{
-		easing = new BX.easing({
+		new BX.easing({
 			duration : 300,
 			start : { opacity: 1,  height: filterBlock.offsetHeight },
 			finish : { opacity: 0, height:0 },
@@ -303,10 +359,12 @@ JCSmartFilter.prototype.hideFilterProps = function(element)
 			},
 			complete : function() {
 				filterBlock.setAttribute("style", "");
-				BX.removeClass(obj, "active");
+				BX.removeClass(obj, "bx-active");
 			}
-		});
-		easing.animate();
+		}).animate();
+
+		BX.addClass(propAngle, "fa-angle-down");
+		BX.removeClass(propAngle, "fa-angle-up");
 	}
 	else
 	{
@@ -317,7 +375,7 @@ JCSmartFilter.prototype.hideFilterProps = function(element)
 		var obj_children_height = filterBlock.offsetHeight;
 		filterBlock.style.height = 0;
 
-		easing = new BX.easing({
+		new BX.easing({
 			duration : 300,
 			start : { opacity: 0,  height: 0 },
 			finish : { opacity: 1, height: obj_children_height },
@@ -328,9 +386,11 @@ JCSmartFilter.prototype.hideFilterProps = function(element)
 			},
 			complete : function() {
 			}
-		});
-		easing.animate();
-		BX.addClass(obj, "active");
+		}).animate();
+
+		BX.addClass(obj, "bx-active");
+		BX.removeClass(propAngle, "fa-angle-down");
+		BX.addClass(propAngle, "fa-angle-up");
 	}
 };
 
@@ -352,7 +412,7 @@ JCSmartFilter.prototype.selectDropDownItem = function(element, controlId)
 {
 	this.keyup(BX(controlId));
 
-	var wrapContainer = BX.findParent(BX(controlId), {className:"bx_filter_select_container"}, false);
+	var wrapContainer = BX.findParent(BX(controlId), {className:"bx-filter-select-container"}, false);
 
 	var currentOption = wrapContainer.querySelector('[data-role="currentOption"]');
 	currentOption.innerHTML = element.innerHTML;
@@ -603,7 +663,7 @@ BX.Iblock.SmartFilter = (function()
 
 	SmartFilter.prototype.makeLeftSliderMove = function(recountPrice)
 	{
-		recountPrice = (recountPrice === false) ? false : true;
+		recountPrice = (recountPrice !== false);
 
 		this.leftSlider.style.left = this.leftPercent + "%";
 		this.colorUnavailableActive.style.left = this.leftPercent + "%";
@@ -704,7 +764,7 @@ BX.Iblock.SmartFilter = (function()
 
 	SmartFilter.prototype.makeRightSliderMove = function(recountPrice)
 	{
-		recountPrice = (recountPrice === false) ? false : true;
+		recountPrice = (recountPrice !== false);
 
 		this.rightSlider.style.right = this.rightPercent + "%";
 		this.colorUnavailableActive.style.right = this.rightPercent + "%";

@@ -29,7 +29,6 @@ if($REQUEST_METHOD == "POST" && ($save!="" || $apply!="") && $POST_RIGHT=="W" &&
 	$NAME = trim($NAME);
 	$arFields = Array(
 		"ACTIVE"	=> ($ACTIVE <> "Y"? "N":"Y"),
-		"TRACK_CLICK"	=> ($TRACK_CLICK <> "Y"? "N":"Y"),
 		"SORT"		=> $SORT,
 		"IS_PUBLIC"	=> ($IS_PUBLIC <> "Y"? "N":"Y"),
 		"NAME"		=> $NAME,
@@ -162,6 +161,7 @@ if($bVarsFromForm)
 $APPLICATION->SetTitle(($ID>0? GetMessage("sender_mailing_edit_title_edit").$ID : GetMessage("sender_mailing_edit_title_new")));
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 
+
 $aMenu = array(
 	array(
 		"TEXT"=>GetMessage("sender_mailing_edit_list"),
@@ -235,10 +235,6 @@ $tabControl->BeginNextTab();
 	<tr>
 		<td class="adm-detail-valign-top"><?echo GetMessage("sender_mailing_edit_field_desc")?></td>
 		<td><textarea class="typearea" name="DESCRIPTION" cols="45" rows="5" wrap="VIRTUAL" style="width:100%"><?echo $str_DESCRIPTION; ?></textarea></td>
-	</tr>
-	<tr>
-		<td><?echo GetMessage("sender_mailing_edit_field_track_click")?></td>
-		<td><input type="checkbox" name="TRACK_CLICK" value="Y"<?if($str_TRACK_CLICK == "Y") echo " checked"?>></td>
 	</tr>
 	<tr>
 		<td><?echo GetMessage("sender_mailing_edit_field_is_public")?></td>

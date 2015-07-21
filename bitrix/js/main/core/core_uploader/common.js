@@ -73,6 +73,7 @@
 		},
 		isImage : function(name, type, size)
 		{
+			size = BX.type.isNumber(size) ? size : (BX.type.isNotEmptyString(size) && !(/[\D]+/gi.test(size)) ? parseInt(size) : null);
 			return (
 				(type === null || (type || '').indexOf("image/") === 0) &&
 				(size === null || (size < 20 * 1024 * 1024)) &&
@@ -98,39 +99,52 @@
 			}
 			else
 			{
-				resizeType = (sourceImageWidth > 0 && sourceImageHeight > 0 ? resizeType : "inscribed");
-				if (resizeType == "circumscribed")
+				if (!BX.type.isNotEmptyString(resizeType))
 				{
-					BX.DoNothing(); // TODO other scale types
+					resizeType = "inscribed";
+				}
+
+
+				var ResizeCoeff, iResizeCoeff;
+
+				if (resizeType.indexOf("proportional") >= 0)
+				{
+					width = Math.max(sourceImageWidth, sourceImageHeight);
+					height = Math.min(sourceImageWidth, sourceImageHeight);
 				}
 				else
 				{
-					if (resizeType == "proportional")
-					{
-						width = Math.max(sourceImageWidth, sourceImageHeight);
-						height = Math.min(sourceImageWidth, sourceImageHeight);
-					}
-					else
-					{
-						width = sourceImageWidth;
-						height = sourceImageHeight;
-					}
-
-					var ResizeCoeff = {
-						width : (width > 0 ? arSize["width"] / width : 1),
-						height: (height > 0 ? arSize["height"] / height : 1)},
-						iResizeCoeff = Math.min(ResizeCoeff["width"], ResizeCoeff["height"]);
-					iResizeCoeff = ((0 < iResizeCoeff) && (iResizeCoeff < 1) ? iResizeCoeff : 1);
-					res.bNeedCreatePicture = (iResizeCoeff != 1);
-					res.coeff = iResizeCoeff;
-					res.destin["width"] = Math.max(1, parseInt(iResizeCoeff * sourceImageWidth));
-					res.destin["height"] = Math.max(1, parseInt(iResizeCoeff * sourceImageHeight));
-
-					res.source["x"] = 0;
-					res.source["y"] = 0;
-					res.source["width"] = sourceImageWidth;
-					res.source["height"] = sourceImageHeight;
+					width = sourceImageWidth;
+					height = sourceImageHeight;
 				}
+
+				if (resizeType == "circumscribed")
+				{
+					ResizeCoeff = {
+						width : (width > 0 ? arSize["width"] / width : 1),
+						height: (height > 0 ? arSize["height"] / height : 1)};
+
+					iResizeCoeff = Math.max(ResizeCoeff["width"], ResizeCoeff["height"], 1);
+				}
+				else
+				{
+					ResizeCoeff = {
+						width : (width > 0 ? arSize["width"] / width : 1),
+						height: (height > 0 ? arSize["height"] / height : 1)};
+
+					iResizeCoeff = Math.min(ResizeCoeff["width"], ResizeCoeff["height"], 1);
+					iResizeCoeff = (0 < iResizeCoeff ? iResizeCoeff : 1);
+				}
+
+				res.bNeedCreatePicture = (iResizeCoeff != 1);
+				res.coeff = iResizeCoeff;
+				res.destin["width"] = Math.max(1, parseInt(iResizeCoeff * sourceImageWidth));
+				res.destin["height"] = Math.max(1, parseInt(iResizeCoeff * sourceImageHeight));
+
+				res.source["x"] = 0;
+				res.source["y"] = 0;
+				res.source["width"] = sourceImageWidth;
+				res.source["height"] = sourceImageHeight;
 			}
 			return res;
 		},
@@ -415,6 +429,34 @@
 			}
 		}
 	};
+	BX.UploaderUtils.slice = function(file, start, end)
+	{
+		var blob = null;
+		if('mozSlice' in file)
+			blob = file.mozSlice(start, end);
+		else if ('webkitSlice' in file)
+			blob = file.webkitSlice(start, end);
+		else if ('slice' in file)
+			blob = file.slice(start, end);
+		else
+			blob = file.Slice(start, end, file.type);
+		return blob;
+	};
+	BX.UploaderUtils.readFile = function (file, callback, method)
+	{
+		if (window["FileReader"])
+		{
+			var fileReader = new FileReader();
+			fileReader.onload = fileReader.onerror = callback;
+			method = (method || 'readAsDataURL');
+			if (fileReader[method])
+			{
+				fileReader[method](file);
+				return fileReader;
+			}
+		}
+		return false;
+	};
 	BX.UploaderUtils.Hash.prototype = {
 		getIds : function()
 		{
@@ -422,10 +464,16 @@
 		},
 		getQueue : function(id)
 		{
+			id += '';
 			return BX.util.array_search(id, this.order);
+		},
+		getByOrder : function(order)
+		{
+			return this.getItem(this.order[order]);
 		},
 		removeItem : function(in_key)
 		{
+			in_key += '';
 			var tmp_value, number;
 			if (typeof(this.items[in_key]) != 'undefined') {
 				tmp_value = this.items[in_key];
@@ -440,11 +488,13 @@
 		},
 
 		getItem : function(in_key) {
+			in_key += '';
 			return this.items[in_key];
 		},
 
 		unshiftItem : function(in_key, in_value)
 		{
+			in_key += '';
 			if (typeof(in_value) != 'undefined')
 			{
 				if (typeof(this.items[in_key]) == 'undefined')
@@ -458,6 +508,7 @@
 		},
 		setItem : function(in_key, in_value)
 		{
+			in_key += '';
 			if (typeof(in_value) != 'undefined')
 			{
 				if (typeof(this.items[in_key]) == 'undefined')
@@ -472,10 +523,12 @@
 
 		hasItem : function(in_key)
 		{
+			in_key += '';
 			return typeof(this.items[in_key]) != 'undefined';
 		},
 		insertBeforeItem : function(in_key, in_value, after_key)
 		{
+			in_key += '';
 			if (typeof(in_value) != 'undefined')
 			{
 				if (typeof(this.items[in_key]) == 'undefined')

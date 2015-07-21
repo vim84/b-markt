@@ -894,7 +894,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 
 		$dbOrderProps = CSaleOrderPropsValue::GetOrderProps($this->dbResult["ID"]);
 		$iGroup = -1;
-		while ($arOrderProps = $dbOrderProps->Fetch())
+		while ($arOrderProps = $dbOrderProps->GetNext())
 		{
 			if (empty($this->arParams["PROP_".$this->dbResult["PERSON_TYPE_ID"]]) || !in_array($arOrderProps["ORDER_PROPS_ID"], $this->arParams["PROP_".$this->dbResult["PERSON_TYPE_ID"]]))
 			{
@@ -1009,7 +1009,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 			);
 
 			$dbOrder = CSaleOrder::GetList($sort, $filter);
-			$arOrder = $dbOrder->Fetch();
+			$arOrder = $dbOrder->GetNext();
 		}
 
 		if (empty($arOrder))
@@ -1030,7 +1030,7 @@ class CBitrixPersonalOrderDetailComponent extends CBitrixComponent
 	protected function obtainDataUser()
 	{
 		$dbUser = CUser::GetByID($this->dbResult["USER_ID"]);
-		if ($arUser = $dbUser->Fetch())
+		if ($arUser = $dbUser->GetNext())
 			$this->dbResult["USER"] = $arUser;
 	}
 

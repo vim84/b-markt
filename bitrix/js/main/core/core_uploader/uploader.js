@@ -119,6 +119,7 @@
 				var queueFields = (!!params["queueFields"] ? params["queueFields"] : {});
 				queueFields["placeHolder"] = BX(queueFields["placeHolder"] || params["placeHolder"]);
 				queueFields["showImage"] = (queueFields["showImage"] || params["showImage"]);
+				queueFields["sortItems"] = (queueFields["sortItems"] || params["sortItems"]);
 				queueFields["thumb"] = (queueFields["thumb"] || params["thumb"]);
 				this.queue = new BX.UploaderQueue(queueFields, this.limits, this);
 
@@ -152,6 +153,22 @@
 				BX.onCustomEvent(window, "onUploaderIsInited", [this.id, this]);
 				this.uploads = new BX.UploaderUtils.Hash();
 				this.upload = null;
+				if (this.params["bindBeforeUnload"] === false)
+				{
+					this.__beforeunload = BX.delegate(this.terminate, this);
+				}
+				else
+				{
+					this.__beforeunload = BX.delegate(function(e) {
+						if (this.uploads && this.uploads.length > 0)
+						{
+							var confirmationMessage = BX.message("UPLOADER_UPLOADING_ONBEFOREUNLOAD");
+							(e || window.event).returnValue = confirmationMessage;
+							return confirmationMessage;
+						}
+					}, this);
+				}
+				BX.bind(window, 'beforeunload', this.__beforeunload);
 			}
 		}
 	};
@@ -160,11 +177,6 @@
 		init : function(fileInput)
 		{
 			this.log('input is initialized');
-			if(!this.__beforeunload)
-			{
-				this.__beforeunload = BX.delegate(function(){ this.terminate(); }, this);
-				BX.bind(window, 'beforeunload', this.__beforeunload);
-			}
 			if (BX(fileInput))
 			{
 				if (fileInput == this.fileInput && !this.form)
@@ -203,7 +215,22 @@
 				if (dropZone && dropZone.supported() && BX.ajax.FormData.isSupported()) {
 					dropZone.f = {
 						dropFiles : BX.delegate(this.onChange, this),
-						dragEnter : function() { BX.addClass(dropZone.DIV, "bxu-file-input-over"); },
+						dragEnter : function(e) {
+							var isFileTransfer = false;
+							if (e && e["dataTransfer"] && e["dataTransfer"]["types"])
+							{
+								for (var i = 0; i < e["dataTransfer"]["types"].length; i++)
+								{
+									if (e["dataTransfer"]["types"][i] == "Files")
+									{
+										isFileTransfer = true;
+										break;
+									}
+								}
+							}
+							if (isFileTransfer)
+								BX.addClass(dropZone.DIV, "bxu-file-input-over");
+						},
 						dragLeave : function() { BX.removeClass(dropZone.DIV, "bxu-file-input-over"); }
 					};
 					BX.addCustomEvent(dropZone, 'dropFiles', dropZone.f.dropFiles);
@@ -243,19 +270,16 @@
 				for (var i=0, f; i < files.length; i++)
 				{
 					f = files[i];
-
 					if (BX(f) && f.value)
 					{
-						ext = (f.name.value || '').split('.').pop();
-						type = '';
+						ext = (f.value.name || '').split('.').pop();
 					}
 					else
 					{
-						ext = (f.name || '').split('.').pop();
-						type = f.type;
+						ext = (f['name'] || f['tmp_url'] || '').split('.').pop();
 					}
 					ext = (BX.type.isNotEmptyString(ext) ? ext : '').toLowerCase();
-					type = (BX.type.isNotEmptyString(type) ? type : '').toLowerCase();
+					type = (BX.type.isNotEmptyString(f['type']) ? f['type'] : '').toLowerCase();
 
 					if (
 						(
@@ -576,6 +600,10 @@
 		{
 			return this.queue.items;
 		},
+		restoreItems : function()
+		{
+			this.queue.restoreFiles.apply(this.queue, arguments);
+		},
 		clear : function()
 		{
 			var item;
@@ -607,6 +635,12 @@
 						this.previews.removeItem(queue[ii]);
 					}
 				}
+			}, this));
+		}
+		else
+		{
+			BX.addCustomEvent(this, "onFileIsUploaded", BX.delegate(function(id, item, data) {
+				this.dealWithFile(item, data);
 			}, this));
 		}
 		this.streams = new BX.UploaderStreams(1, this);
@@ -692,6 +726,39 @@
 		}
 		return false;
 	};
+	BX.UploaderSimple.prototype.dealWithFile = function(item, data)
+	{
+		var file;
+		if (data &&
+			data["status"] == "uploaded" &&
+			data["hash"] &&
+			data["file"] &&
+			data["file"]["files"] &&
+			data["file"]["files"]["default"])
+		{
+			file = data["file"]["files"]["default"];
+		}
+		if (file)
+		{
+			item.file = {
+				"name" : file["name"],
+				"~name" : file["~name"],
+				size : parseInt(file["size"]),
+				type : file["type"],
+				id : item.id,
+				hash : data["hash"],
+				copy : "default",
+				url : file["url"],
+				uploadStatus : statuses.done
+			};
+			item.nonProcessRun = true;
+			BX.onCustomEvent(item, "onFileHasGotPreview", [item.id, item]);
+		}
+		else
+		{
+			BX.onCustomEvent(item, "onFileHasNotGotPreview", [item.id, item]);
+		}
+	};
 	BX.UploaderSimple.prototype.onFileNeedsPreviewCallback = function(pack, data)
 	{
 		if (!(data && data["files"]))
@@ -702,37 +769,11 @@
 		this.log('onFileNeedsPreviewCallback');
 		this.onFileNeedsPreview();
 
-		var item, file;
+		var item;
 		while((item = pack.result.getFirst()) && !!item)
 		{
 			pack.result.removeItem(item.id);
-			file = false;
-			if (data["files"][item.id] &&
-				data["files"][item.id]["status"] == "uploaded" &&
-				data["files"][item.id]["hash"] &&
-				data["files"][item.id]["file"] &&
-				data["files"][item.id]["file"]["files"] &&
-				data["files"][item.id]["file"]["files"]["default"])
-			{
-				file = data["files"][item.id]["file"]["files"]["default"];
-				item.file = {
-					"name" : file["name"],
-					"~name" : file["~name"],
-					size : parseInt(file["size"]),
-					type : file["type"],
-					id : item.id,
-					hash : data["files"][item.id]["hash"],
-					copy : "default",
-					url : file["url"],
-					uploadStatus : statuses.done
-				};
-				item.nonProcessRun = true;
-				BX.onCustomEvent(item, "onFileHasGotPreview", [item.id, item]);
-			}
-			else
-			{
-				BX.onCustomEvent(item, "onFileHasNotGotPreview", [item.id, item]);
-			}
+			this.dealWithFile(item, data["files"][item.id]);
 		}
 	};
 	BX.UploaderSimple.prototype.onFileNeedsPreview = function()
@@ -933,7 +974,7 @@
 			else if (item["uploadStatus"] == statuses.done || item["uploadStatus"] == statuses.error)
 				return item["uploadStatus"];
 
-			var count = (this.limits["phpMaxFileUploads"] - this.post.filesCount),
+			var count = (this.limits["phpMaxFileUploads"] - this.post.filesCount - (stream.filesCount || 0)),
 				size = (this.limits["phpPostMaxSize"] - stream.filesSize - stream.postSize),
 				filesSize = (this.limits["phpPostSize"] - stream.filesSize),
 				blob, file, data = {files : []}, tmp, error, callback, cf;
@@ -946,9 +987,9 @@
 					if (error === '')
 					{
 						data.props = item.getProps();
-						if (item["restored"] == "Y")
+						if (item["restored"])
 						{
-							data.props["restored"] = "Y";
+							data.props["restored"] = item["restored"];
 							delete item["restored"];
 						}
 						callback.push(BX.proxy(function() {
@@ -1268,11 +1309,11 @@
 			}
 			else if (this.limits["phpPostSize"] > settings.phpPostMinSize)
 			{
-				sugestedSize = Math.max(Math.ceil(this.limits["phpPostSize"] / 2), settings.phpPostMinSize);
+				sugestedSize = Math.ceil(this.limits["phpPostSize"] / 2);
 			}
 			if (sugestedSize > 0 && sugestedSize !== this.limits["phpPostSize"])
 			{
-				this.limits["phpPostSize"] = sugestedSize;
+				this.limits["phpPostSize"] = Math.max(sugestedSize, settings.phpPostMinSize);
 				result = true;
 			}
 			return result;
@@ -1573,7 +1614,7 @@
 					}
 					else
 					{
-						this.onfailure(data);
+						this.onfailure("processing", data);
 					}
 				}, this) );
 				this.onprogress(90);
@@ -1600,7 +1641,7 @@
 			}
 			else
 			{
-				this.onfailure(null);
+				this.onfailure("empty", null);
 			}
 		},
 		onsuccess : function(data)
@@ -1620,9 +1661,21 @@
 			}
 			BX.onCustomEvent(this, 'onrelease', [this]);
 		},
-		onfailure : function(data)
+		onfailure : function(status, e)
 		{
-			var d = new Date();
+			var d = new Date(), data = (e && e["data"] ? BX.parseJSON(e["data"], {}) : "");
+
+			if (BX.message("bxUploaderLog") === "Y" && status === "processing")
+			{
+				BX.ajax.post(
+					"/bitrix/tools/upload.php?action=error",
+					{
+						sessid : BX.bitrix_sessid(),
+						path : window.location.pathname,
+						data : e["data"]
+					}
+				);
+			}
 			this.xhr.finishTime = d.getTime();
 			BX.onCustomEvent(this, 'onfailure', [this, data]);
 			BX.onCustomEvent(this, 'onrelease', [this]);

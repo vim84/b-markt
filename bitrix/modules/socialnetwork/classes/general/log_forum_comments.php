@@ -169,6 +169,7 @@ class CSocNetForumComments
 				$entityType,
 				$entityId,
 				array(
+					"LOG_ID" => $log_id,
 					"USER_ID" => $arMessage["AUTHOR_ID"],
 					"MESSAGE_ID" => $messageId,
 					"MESSAGE" => $sText,

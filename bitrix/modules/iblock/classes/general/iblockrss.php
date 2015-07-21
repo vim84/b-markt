@@ -334,16 +334,23 @@ class CAllIBlockRSS
 		echo "<rss version=\"2.0\"";
 		echo ">\n";
 
-		$dbr = CIBlock::GetList(array(), array(
-			"type" => $TYPE,
-			"LID" => $LANG,
-			"ACTIVE" => "Y",
-			"ID" => $ID,
+		$dbr = CIBlockType::GetList(array(), array(
+			"=ID" => $TYPE,
 		));
-		$arIBlock = $dbr->Fetch();
-		if ($arIBlock && ($arIBlock["RSS_ACTIVE"] == "Y"))
+		$arType = $dbr->Fetch();
+		if ($arType && ($arType["IN_RSS"] == "Y"))
 		{
-			echo CIBlockRSS::GetRSSText($arIBlock, $LIMIT_NUM, $LIMIT_DAY, $yandex);
+			$dbr = CIBlock::GetList(array(), array(
+				"type" => $TYPE,
+				"LID" => $LANG,
+				"ACTIVE" => "Y",
+				"ID" => $ID,
+			));
+			$arIBlock = $dbr->Fetch();
+			if ($arIBlock && ($arIBlock["RSS_ACTIVE"] == "Y"))
+			{
+				echo CIBlockRSS::GetRSSText($arIBlock, $LIMIT_NUM, $LIMIT_DAY, $yandex);
+			}
 		}
 
 		echo "</rss>\n";

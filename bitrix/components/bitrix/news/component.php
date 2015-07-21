@@ -120,7 +120,7 @@ if($arParams["SEF_MODE"] == "Y")
 	)
 		$b404 = true;
 
-	if($b404 && $arParams["SET_STATUS_404"]==="Y")
+	if($b404 && CModule::IncludeModule('iblock'))
 	{
 		$folder404 = str_replace("\\", "/", $arParams["SEF_FOLDER"]);
 		if ($folder404 != "/")
@@ -128,8 +128,16 @@ if($arParams["SEF_MODE"] == "Y")
 		if (substr($folder404, -1) == "/")
 			$folder404 .= "index.php";
 
-			if($folder404 != $APPLICATION->GetCurPage(true))
-			CHTTP::SetStatus("404 Not Found");
+		if ($folder404 != $APPLICATION->GetCurPage(true))
+		{
+			\Bitrix\Iblock\Component\Tools::process404(
+				""
+				,($arParams["SET_STATUS_404"] === "Y")
+				,($arParams["SET_STATUS_404"] === "Y")
+				,($arParams["SHOW_404"] === "Y")
+				,$arParams["FILE_404"]
+			);
+		}
 	}
 
 	CComponentEngine::InitComponentVariables($componentPage, $arComponentVariables, $arVariableAliases, $arVariables);

@@ -36,4 +36,11 @@ $MESS["IM_MENU_MESS_DEL"] = "Delete";
 $MESS["IM_MENU_MESS_DEL_CONFIRM"] = "Are You Sure You Want to Delete This Message?";
 $MESS["IM_MENU_MESS_DEL_YES"] = "Yes";
 $MESS["IM_MENU_MESS_DEL_NO"] = "No";
+$MESS["IM_NM_MESSAGE_1"] = "New messages (#COUNT#)";
+$MESS["IM_NM_MESSAGE_2"] = "You have unread messages from #USERS#";
+$MESS["IM_NM_NOTIFY_1"] = "New notifications (#COUNT#)";
+$MESS["IM_NM_NOTIFY_2"] = "You have unread notifications from #USERS#";
+$MESS["IM_NM_NOTIFY_3"] = "You have new notifications";
+$MESS["IM_CHAT_MUTE_ON"] = "Enable notifications";
+$MESS["IM_CHAT_MUTE_OFF"] = "Disable notifications";
 ?>

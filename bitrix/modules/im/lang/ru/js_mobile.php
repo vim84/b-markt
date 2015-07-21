@@ -36,4 +36,11 @@ $MESS["IM_MENU_MESS_DEL"] = "Удалить";
 $MESS["IM_MENU_MESS_DEL_CONFIRM"] = "Вы уверены, что хотите удалить это сообщение?";
 $MESS["IM_MENU_MESS_DEL_YES"] = "Да";
 $MESS["IM_MENU_MESS_DEL_NO"] = "Нет";
+$MESS["IM_NM_MESSAGE_1"] = "Новые сообщения (#COUNT#)";
+$MESS["IM_NM_MESSAGE_2"] = "У вас есть непрочитанные сообщения от #USERS#";
+$MESS["IM_NM_NOTIFY_1"] = "Новые уведомления (#COUNT#)";
+$MESS["IM_NM_NOTIFY_2"] = "У вас есть непрочитанные уведомления от #USERS#";
+$MESS["IM_NM_NOTIFY_3"] = "У вас есть непрочитанные уведомления";
+$MESS["IM_CHAT_MUTE_ON"] = "Включить уведомления";
+$MESS["IM_CHAT_MUTE_OFF"] = "Отключить уведомления";
 ?>

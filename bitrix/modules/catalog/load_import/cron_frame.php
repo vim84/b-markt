@@ -20,7 +20,7 @@ else
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 
-if (!defined(LANGUAGE_ID) || preg_match('/^[a-z]{2}$/i', LANGUAGE_ID) !== 1)
+if (!defined('LANGUAGE_ID') || preg_match('/^[a-z]{2}$/i', LANGUAGE_ID) !== 1)
 	die('Language id is absent - defined site is bad');
 
 set_time_limit(0);

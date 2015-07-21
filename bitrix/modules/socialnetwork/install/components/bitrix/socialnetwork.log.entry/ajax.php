@@ -830,6 +830,8 @@ if(CModule::IncludeModule("socialnetwork"))
 										"forum" => array("FORUM", "FM", "FORUM|COMMENT"),
 										"photo_photo" => array("PHOTO", "PH", "FORUM|COMMENT"),
 										"sonet" => array("SOCNET", "SC", ""),
+										"calendar" => array("EVENT", "EV", ""),
+										"lists_new_element" => array("WF", "WF", "FORUM|COMMENT"),
 									);
 
 									if (
@@ -840,6 +842,15 @@ if(CModule::IncludeModule("socialnetwork"))
 									)
 									{
 										$entity_xml_id = "TASK_".$arActivity["ASSOCIATED_ENTITY_ID"];
+									}
+									elseif (
+										$arLog["ENTITY_TYPE"] == "WF"
+										&& $arLog["SOURCE_ID"] > 0
+										&& CModule::IncludeModule('bizproc')
+										&& ($workflowId = \CBPStateService::getWorkflowByIntegerId($arLog["SOURCE_ID"]))
+									)
+									{
+										$entity_xml_id = "WF_".$workflowId;
 									}
 									elseif (
 										array_key_exists($arLog["EVENT_ID"], $entities_xml_id) 
@@ -1089,7 +1100,6 @@ if(CModule::IncludeModule("socialnetwork"))
 				if (defined("BX_COMP_MANAGED_CACHE"))
 				{
 					$GLOBALS["CACHE_MANAGER"]->StartTagCache($cache_path);
-					$GLOBALS["CACHE_MANAGER"]->RegisterTag("SONET_LOG_".$log_tmp_id);
 				}
 
 				$arFilter = array("LOG_ID" => $log_tmp_id);
@@ -1121,7 +1131,6 @@ if(CModule::IncludeModule("socialnetwork"))
 					if (defined("BX_COMP_MANAGED_CACHE"))
 					{
 						$GLOBALS["CACHE_MANAGER"]->RegisterTag("USER_NAME_".intval($arComments["USER_ID"]));
-						$GLOBALS["CACHE_MANAGER"]->RegisterTag("SONET_LOG_COMMENT_".intval($arComments["ID"]));
 					}
 
 					$arComments["UF"] = $arUFMeta;

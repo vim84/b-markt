@@ -29,14 +29,14 @@
 		context : null,
 		getContext : function()
 		{
-			if (!this.context)
+			if (!this.context && this.getCanvas()["getContext"])
 				this.context = this.getCanvas().getContext('2d');
 			return this.context;
 		},
 		reader : null,
 		getReader : function()
 		{
-			if (!this.reader)
+			if (!this.reader && window["FileReader"])
 				this.reader = new FileReader();
 			return this.reader;
 		},
@@ -102,7 +102,7 @@
 			{
 				image.src = window["URL"]["createObjectURL"](file);
 			}
-			else
+			else if (this.getReader() !== null)
 			{
 				this.__readerOnLoad = BX.delegate(function(e) {
 					image.src = e.target.result;
@@ -192,7 +192,7 @@
 
 	BX.UploaderFile = function (file, params, limits, caller)
 	{
-		this.dialogName = "BX.UploaderFile";
+		this.dialogName = (this.dialogName ? this.dialogName : "BX.UploaderFile");
 		this.file = file;
 		this.id = (file['id'] || 'file' + BX.UploaderUtils.getId());
 		this.name = file.name;
@@ -215,7 +215,9 @@
 		this.preview = '<span id="' + this.id + 'Canvas" class="bx-bxu-canvas"></span>';
 		this.nameWithoutExt = (this.name.lastIndexOf('.') > 0 ? this.name.substr(0, this.name.lastIndexOf('.')) : this.name);
 		this.ext = this.name.substr(this.nameWithoutExt.length + 1);
-		this.size = BX.UploaderUtils.getFormattedSize(file.size, 0);
+		this.size = '';
+		if (file.size)
+			this.size = BX.UploaderUtils.getFormattedSize(file.size, 0);
 		this.type = file.type;
 		this.status = statuses["new"];
 		this.limits = limits;
@@ -321,7 +323,7 @@
 			var res, patt = [], repl = [], tmp;
 			while ((res = /#(.+?)#/gi.exec(template)) && !!res)
 			{
-				if (this[res[1]])
+				if (this[res[1]] !== undefined)
 					template = template.replace(res[0], this[res[1]]);
 				else
 				{
@@ -576,13 +578,13 @@
 	};
 	BX.UploaderImage = function(file, params, limits, caller)
 	{
-		BX.UploaderImage.superclass.constructor.apply(this, arguments);
 		this.dialogName = "BX.UploaderImage";
+		BX.UploaderImage.superclass.constructor.apply(this, arguments);
 		this.isImage = true;
 		this.copies = new BX.UploaderUtils.Hash();
 		this.caller = caller;
 
-		if (!this.isNode)
+		if (!this.isNode && BX.Uploader.getInstanceName() == "BX.Uploader")
 		{
 			if (!!params["copies"])
 			{
@@ -658,6 +660,9 @@
 			result = BX.create("IMG", props);
 		}
 
+		BX.onCustomEvent(this, "onFileCanvasIsLoaded", [this.id, this, this.caller, image]);
+		BX.onCustomEvent(this.caller, "onFileCanvasIsLoaded", [this.id, this, this.caller, image]);
+
 		if (BX(this.id + 'Canvas'))
 			BX(this.id + 'Canvas').appendChild(result);
 
@@ -721,19 +726,22 @@
 			this.log('is initialized as an image without preview');
 			if (this.caller.queue.placeHolder)
 			{
-				this._onFileHasGotPreview = BX.delegate(function(id, item){
-					if (id == this.id)
-					{
-						var img = new Image();
-						BX.bind(img, 'load', BX.proxy(function(){
-							img = this.makePreviewImageWork(img);
-							BX.onCustomEvent(this, "onFileHasPreview", [item.id, item, img]);
-							img = null;
-						}, this));
-						img.src = item.file.url;
-						BX.removeCustomEvent(this, "onFileHasGotPreview", this._onFileHasGotPreview);
-						BX.removeCustomEvent(this, "onFileHasNotGotPreview", this._onFileHasNotGotPreview);
-					}
+				this._onFileHasGotPreview = BX.delegate(function(id, item) {
+
+					BX.removeCustomEvent(this, "onFileHasGotPreview", this._onFileHasGotPreview);
+					BX.removeCustomEvent(this, "onFileHasNotGotPreview", this._onFileHasNotGotPreview);
+
+					this._makePreviewImageLoadHandler = BX.delegate(function(image){
+						image = this.makePreviewImageWork(image);
+						BX.onCustomEvent(this, "onFileHasPreview", [item.id, item, image]);
+						delete this._makePreviewImageLoadHandler;
+						delete this._makePreviewImageFailedHandler;
+					}, this);
+					this._makePreviewImageFailedHandler = BX.delegate(function(image){
+						delete this._makePreviewImageLoadHandler;
+						delete this._makePreviewImageFailedHandler;
+					}, this);
+					prvw.push({tmp_url : item.file.url}, this._makePreviewImageLoadHandler, this._makePreviewImageFailedHandler);
 				}, this);
 				this._onFileHasNotGotPreview = BX.delegate(function(id){
 					if (id == this.id)

@@ -79,7 +79,7 @@ if($ID <= 0)
 		$ID = intval($arPosting['MAILING_CHAIN_ID']);
 }
 
-
+$statClickList = array();
 $arStatDeliveried = array();
 if($ID > 0)
 {
@@ -190,6 +190,27 @@ if($ID > 0)
 
 		}
 	}
+
+	if(!empty($arPosting))
+	{
+		$statClickDb = \Bitrix\Sender\PostingClickTable::getList(array(
+			'select' => array(
+				'URL', 'CNT'
+			),
+			'filter' => array('POSTING_ID' => $arPosting['ID']),
+			'runtime' => array(
+				new \Bitrix\Main\Entity\ExpressionField('CNT', 'COUNT(%s)', 'ID'),
+			),
+			'group' => array('URL'),
+			'order' => array('CNT' => 'DESC'),
+			'limit' => 15
+		));
+
+		while($statClick = $statClickDb->fetch())
+		{
+			$statClickList[] = $statClick;
+		}
+	}
 }
 
 $strError = "";
@@ -287,7 +308,9 @@ else:
 			<div id="chartdiv" class="sender-stat-graph"></div>
 			<div class="container-fluid"></div>
 		</div>
+
 	</div>
+
 	<script>
 		<?
 		$postingDataProvider = array();
@@ -363,6 +386,8 @@ else:
 			});
 		});
 	</script>
+
+
 	<?if(!empty($arPostingReiterateList)):?>
 	<div  class="sender-stat-reiterate-cont">
 		<div class="sender-stat-reiterate-head"><?=GetMessage("sender_stat_graphperiod")?></div>
@@ -432,6 +457,31 @@ else:
 		});
 	</script>
 	<?endif;?>
+
+	<div  class="sender-stat-reiterate-cont" style="margin-top: 0px;">
+		<div class="sender-stat-reiterate-head"><?=GetMessage("sender_stat_click_title")?></div>
+		<div class="" style="width: 90%;">
+			<br>
+			<table width="100%" class="list-table">
+				<tbody><tr class="heading">
+					<td align="left" width="20%"><?=GetMessage("sender_stat_click_cnt")?></td>
+					<td style="text-align: left !important;"><?=GetMessage("sender_stat_click_link")?></td>
+				</tr>
+				<?foreach($statClickList as $clickItem):?>
+					<tr>
+						<td align="left"><?=htmlspecialcharsbx($clickItem['CNT'])?></td>
+						<td align="left"><a href="<?=htmlspecialcharsbx($clickItem['URL'])?>"><?=htmlspecialcharsbx($clickItem['URL'])?></a></td>
+					</tr>
+				<?endforeach?>
+				<?if(count($statClickList) <= 0):?>
+					<tr>
+						<td colspan="2" align="left"><?=GetMessage("sender_stat_click_no_data")?></td>
+					</tr>
+				<?endif;?>
+				</tbody>
+			</table>
+		</div>
+	</div>
 </div>
 <?
 endif;

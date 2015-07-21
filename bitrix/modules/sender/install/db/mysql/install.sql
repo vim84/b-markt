@@ -2,7 +2,7 @@ CREATE TABLE b_sender_list
 (
   ID		int(11)		NOT NULL auto_increment,
   NAME		VARCHAR(100)	NULL,
-  CODE		VARCHAR(30)	NULL,
+  CODE		VARCHAR(60)	NULL,
   SORT		int(11)		DEFAULT 100 NOT NULL,
   PRIMARY KEY (ID)
 );
@@ -55,6 +55,9 @@ CREATE TABLE b_sender_mailing
   SORT		int(11)		DEFAULT 100 NOT NULL,
   IS_PUBLIC CHAR(1) DEFAULT 'Y' NOT NULL,
 	TRACK_CLICK		CHAR(1)		DEFAULT 'N' NOT NULL,
+  TRIGGER_FIELDS TEXT NULL,
+  EMAIL_FROM VARCHAR(255) NULL,
+  IS_TRIGGER char(1) default 'N'  NOT NULL,
 	PRIMARY KEY (ID)
 );
 CREATE TABLE b_sender_mailing_chain
@@ -64,6 +67,10 @@ CREATE TABLE b_sender_mailing_chain
   STATUS		CHAR(1)		NOT NULL,
   POSTING_ID	INT(11) NULL,
   CREATED_BY	INT(11) NULL,
+  PARENT_ID int(11) NULL,
+  IS_TRIGGER char(1) default 'N'  NOT NULL,
+  DATE_INSERT DATETIME NULL,
+  TIME_SHIFT int(11) default 0 NOT NULL,
   LAST_EXECUTED	datetime	NULL,
   AUTO_SEND_TIME	datetime	NULL,
 	EMAIL_FROM varchar(255) not null,
@@ -116,6 +123,9 @@ CREATE TABLE b_sender_posting_recipient
   EMAIL		VARCHAR(255)	NULL,
   PHONE		VARCHAR(20)	NULL,
   USER_ID INT(11) NULL,
+  DATE_DENY DATETIME  NULL,
+  FIELDS VARCHAR(2000) NULL,
+  ROOT_ID int(11) NULL,
 	PRIMARY KEY (ID)
 );
 CREATE INDEX IX_SENDER_POSTING_RECIP_STATUS on b_sender_posting_recipient(STATUS, POSTING_ID);
@@ -165,4 +175,12 @@ CREATE TABLE b_sender_mailing_attachment
   CHAIN_ID int(18) not null,
   FILE_ID int(18) not null,
   PRIMARY KEY (CHAIN_ID, FILE_ID)
+);
+CREATE TABLE b_sender_mailing_trigger
+(
+  MAILING_CHAIN_ID int(11) not null,
+  IS_TYPE_START int(1) default 1 not null,
+  NAME VARCHAR(255) NULL,
+  EVENT VARCHAR(255) NOT NULL,
+  ENDPOINT VARCHAR(2000) NOT NULL
 );

@@ -10,7 +10,8 @@ class CAllPullWatch
 	{
 		global $DB, $CACHE_MANAGER;
 
-		if (intval($userId) <= 0 && strlen($tag) <= 0)
+		$userId = intval($userId);
+		if ($userId == 0 || strlen($tag) <= 0)
 			return false;
 
 		$arResult = $CACHE_MANAGER->Read(3600, $cache_id="b_pw_".$userId, "b_pull_watch");
@@ -59,10 +60,15 @@ class CAllPullWatch
 		if (empty(self::$arUpdate) && empty(self::$arInsert))
 			return false;
 
-		if ($userId <= 0)
+		if (defined('PULL_USER_ID'))
+			$userId = PULL_USER_ID;
+
+		$userId = intval($userId);
+
+		if ($userId === 0)
 			$userId = $USER->GetId();
 
-		if ($userId <= 0)
+		if ($userId === 0)
 			return false;
 		
 		$arChannel = CPullChannel::Get($userId);
@@ -126,7 +132,7 @@ class CAllPullWatch
 	{
 		global $DB, $CACHE_MANAGER;
 
-		if (intval($userId) <= 0 && strlen($tag) <= 0)
+		if (intval($userId) == 0 || strlen($tag) <= 0)
 			return false;
 
 		$strSql = "SELECT ID FROM b_pull_watch WHERE USER_ID = ".intval($userId)." AND TAG = '".$DB->ForSQL($tag)."'";

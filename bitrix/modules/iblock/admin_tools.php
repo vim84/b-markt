@@ -289,7 +289,24 @@ function _ShowFilePropertyField($name, $property_fields, $values, $max_file_size
 				$inputName[$name."[".$key."]"] = $val;
 		}
 
-		if($historyId > 0)
+		if (class_exists('\Bitrix\Main\UI\FileInput', true))
+		{
+			echo \Bitrix\Main\UI\FileInput::createInstance((
+				array(
+					"name" => $name."[n#IND#]",
+					"description" => $property_fields["WITH_DESCRIPTION"]=="Y"
+				) + ($historyId > 0 ? array(
+					"delete" => false,
+					"edit" => false
+				) : array(
+					"upload" => true,
+					"medialib" => true,
+					"fileDialog" => true,
+					"cloud" => true
+				))
+			))->show($inputName);
+		}
+		else if($historyId > 0)
 			echo CFileInput::ShowMultiple($inputName, $name."[n#IND#]", array(
 				"IMAGE" => "Y",
 				"PATH" => "Y",

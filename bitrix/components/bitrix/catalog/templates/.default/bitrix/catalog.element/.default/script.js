@@ -1846,6 +1846,8 @@ window.JCCatalogElement.prototype.SelectOfferProp = function()
 
 	if (!!target && target.hasAttribute('data-treevalue'))
 	{
+		if (typeof(document.activeElement) === 'object')
+			document.activeElement.blur();
 		strTreeValue = target.getAttribute('data-treevalue');
 		arTreeItem = strTreeValue.split('_');
 		this.SearchOfferPropIndex(arTreeItem[0], arTreeItem[1]);
@@ -1866,6 +1868,7 @@ window.JCCatalogElement.prototype.SearchOfferPropIndex = function(strPropID, str
 	var strName = '',
 		arShowValues = false,
 		arCanBuyValues = [],
+		allValues = [],
 		index = -1,
 		i, j,
 		arFilter = {},
@@ -1897,6 +1900,7 @@ window.JCCatalogElement.prototype.SearchOfferPropIndex = function(strPropID, str
 			{
 				break;
 			}
+			allValues = [];
 			if (this.config.showAbsent)
 			{
 				arCanBuyValues = [];
@@ -1905,10 +1909,9 @@ window.JCCatalogElement.prototype.SearchOfferPropIndex = function(strPropID, str
 				for (j = 0; j < arShowValues.length; j++)
 				{
 					tmpFilter[strName] = arShowValues[j];
+					allValues[allValues.length] = arShowValues[j];
 					if (this.GetCanBuy(tmpFilter))
-					{
 						arCanBuyValues[arCanBuyValues.length] = arShowValues[j];
-					}
 				}
 			}
 			else
@@ -1921,7 +1924,10 @@ window.JCCatalogElement.prototype.SearchOfferPropIndex = function(strPropID, str
 			}
 			else
 			{
-				arFilter[strName] = arCanBuyValues[0];
+				if (this.config.showAbsent)
+					arFilter[strName] = (arCanBuyValues.length > 0 ? arCanBuyValues[0] : allValues[0]);
+				else
+					arFilter[strName] = arCanBuyValues[0];
 			}
 			this.UpdateRow(i, arFilter[strName], arShowValues, arCanBuyValues);
 		}
@@ -2376,6 +2382,7 @@ window.JCCatalogElement.prototype.Compare = function()
 	{
 		switch (this.productType)
 		{
+			case 0://no catalog
 			case 1://product
 			case 2://set
 				compareLink = this.compareData.compareUrl.replace('#ID#', this.product.id.toString());
@@ -2399,13 +2406,11 @@ window.JCCatalogElement.prototype.CompareResult = function(result)
 {
 	var popupContent, popupButtons, popupTitle;
 	if (!!this.obPopupWin)
-	{
 		this.obPopupWin.close();
-	}
+
 	if (typeof result !== 'object')
-	{
 		return false;
-	}
+
 	this.InitPopupWindow();
 	popupTitle = {
 		content: BX.create('div', {
@@ -2474,13 +2479,9 @@ window.JCCatalogElement.prototype.CompareResult = function(result)
 window.JCCatalogElement.prototype.CompareRedirect = function()
 {
 	if (!!this.compareData.comparePath)
-	{
 		location.href = this.compareData.comparePath;
-	}
 	else
-	{
 		this.obPopupWin.close();
-	}
 };
 
 window.JCCatalogElement.prototype.InitBasketUrl = function()
@@ -2512,9 +2513,8 @@ window.JCCatalogElement.prototype.InitBasketUrl = function()
 window.JCCatalogElement.prototype.FillBasketProps = function()
 {
 	if (!this.visual.BASKET_PROP_DIV)
-	{
 		return;
-	}
+
 	var
 		i = 0,
 		propCollection = null,
@@ -2523,9 +2523,7 @@ window.JCCatalogElement.prototype.FillBasketProps = function()
 	if (this.basketData.useProps && !this.basketData.emptyProps)
 	{
 		if (!!this.obPopupWin && !!this.obPopupWin.contentContainer)
-		{
 			obBasketProps = this.obPopupWin.contentContainer;
-		}
 	}
 	else
 	{
@@ -2589,9 +2587,8 @@ window.JCCatalogElement.prototype.FillBasketProps = function()
 window.JCCatalogElement.prototype.SendToBasket = function()
 {
 	if (!this.canBuy)
-	{
 		return;
-	}
+
 	this.InitBasketUrl();
 	this.FillBasketProps();
 	BX.ajax.loadJSON(
@@ -2617,9 +2614,8 @@ window.JCCatalogElement.prototype.Basket = function()
 {
 	var contentBasketProps = '';
 	if (!this.canBuy)
-	{
 		return;
-	}
+
 	switch (this.productType)
 	{
 	case 1://product
@@ -2664,13 +2660,11 @@ window.JCCatalogElement.prototype.BasketResult = function(arResult)
 {
 	var popupContent, popupButtons, popupTitle, productPict;
 	if (!!this.obPopupWin)
-	{
 		this.obPopupWin.close();
-	}
+
 	if (typeof arResult !== 'object')
-	{
 		return false;
-	}
+
 	if (arResult.STATUS === 'OK' && this.basketMode === 'BUY')
 	{
 		this.BasketRedirect();
@@ -2764,9 +2758,8 @@ window.JCCatalogElement.prototype.BasketRedirect = function()
 window.JCCatalogElement.prototype.InitPopupWindow = function()
 {
 	if (!!this.obPopupWin)
-	{
 		return;
-	}
+
 	this.obPopupWin = BX.PopupWindowManager.create('CatalogElementBasket_'+this.visual.ID, null, {
 		autoHide: false,
 		offsetLeft: 0,
@@ -2793,9 +2786,7 @@ window.JCCatalogElement.prototype.popupWindowClick = function()
 	if (!!this.obPopupPict && typeof (this.obPopupPict) === 'object')
 	{
 		if (this.obPopupPict.isShown())
-		{
 			this.obPopupPict.close();
-		}
 	}
 };
 
@@ -2832,8 +2823,6 @@ window.JCCatalogElement.prototype.allowViewedCount = function(update)
 	update = !!update;
 	this.currentIsSet = true;
 	if (update)
-	{
 		this.incViewedCounter();
-	}
 };
 })(window);

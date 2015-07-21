@@ -2,7 +2,7 @@
 $MESS["IBD_FIELD_ID"] = "Element ID";
 $MESS["IBD_FIELD_TIMESTAMP_X"] = "Element Last Modified On";
 $MESS["IBD_FIELD_MODYFIED"] = "Element Last Modified By";
-$MESS["IBD_FIELD_MODIFIED_BY_USER_PRINTABLE"] = "Edited By";
+$MESS["IBD_FIELD_MODIFIED_BY_USER_PRINTABLE"] = "Edited By (name)";
 $MESS["IBD_FIELD_DATE_CREATE"] = "Element Created On";
 $MESS["IBD_FIELD_IBLOCK_ID"] = "Information Block ID";
 $MESS["IBD_FIELD_ACTIVE"] = "Element Is Active";
@@ -20,7 +20,7 @@ $MESS["IBD_FIELD_DETAIL_TEXT_TYPE"] = "Full Text Type";
 $MESS["IBD_FIELD_CODE"] = "Mnemonic Code";
 $MESS["IBD_FIELD_XML_ID"] = "External ID";
 $MESS["IBD_FIELD_CREATED"] = "Created By";
-$MESS["IBD_FIELD_CREATED_BY_USER_PRINTABLE"] = "Created By";
+$MESS["IBD_FIELD_CREATED_BY_USER_PRINTABLE"] = "Created By (name)";
 $MESS["IBD_OPERATION_READ"] = "Read";
 $MESS["IBD_OPERATION_WRITE"] = "Write";
 $MESS["IBD_DOCUMENT_AUTHOR"] = "Author";

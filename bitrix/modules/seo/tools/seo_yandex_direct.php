@@ -19,6 +19,7 @@ use Bitrix\Main\Localization\Loc;
 use Bitrix\Seo\Engine;
 use Bitrix\Seo\Adv;
 use Bitrix\Main\Type\Date;
+use Bitrix\Seo\Service;
 
 Loader::includeModule('seo');
 Loader::includeModule('socialservices');
@@ -28,27 +29,80 @@ CUtil::JSPostUnescape();
 Loc::loadMessages(dirname(__FILE__).'/../include.php');
 Loc::loadMessages(dirname(__FILE__).'/../admin/seo_adv.php');
 
-$engine = new Engine\YandexDirect();
-$bNeedAuth = !$engine->getAuthSettings();
+$action = isset($_REQUEST['action']) ? $_REQUEST["action"] : null;
 
-try
+if($action !== "register")
 {
-	$currentUser = $engine->getCurrentUser();
+	$bNeedAuth = !Service::isRegistered();
+	if(!$bNeedAuth && $action != "authorize")
+	{
+		$engine = new Engine\YandexDirect();
+
+		$bNeedAuth = !Service::isAuthorized($engine->getCode());
+		$currentUser = null;
+
+		if(!$bNeedAuth)
+		{
+			try
+			{
+				$currentAuth = Service::getAuth($engine->getCode());
+				if($currentAuth)
+				{
+					$currentUser = $currentAuth["user"];
+					$bNeedAuth = false;
+				}
+			}
+			catch(Exception $e)
+			{
+				$bNeedAuth = true;
+			}
+		}
+	}
+
 }
-catch(Exception $e)
+else
 {
-	$currentUser = null;
-	$bNeedAuth = true;
+	$bNeedAuth = false;
 }
 
-if(isset($_REQUEST['action']) && !$bNeedAuth)
+if(isset($action) && !$bNeedAuth)
 {
 	try
 	{
 		switch($_REQUEST['action'])
 		{
+			case 'register':
+				if(!Service::isRegistered())
+				{
+					try
+					{
+						Service::register();
+						$res = array("result" => true);
+					}
+					catch(\Bitrix\Main\SystemException $e)
+					{
+						$res = array(
+							'error' => array(
+								'message' => $e->getMessage(),
+								'code' => $e->getCode(),
+							)
+						);
+					}
+				}
+
+			break;
+
+			case 'authorize':
+				$authResult = Service::authorize();
+				$res = array(
+					"result" => true,
+					"location" => $authResult["location"],
+				);
+
+			break;
+
 			case 'nullify_auth':
-				$engine->clearAuthSettings();
+				Service::clearAuth($engine->getCode());
 				$res = array("result" => true);
 			break;
 
@@ -196,7 +250,6 @@ if(isset($_REQUEST['action']) && !$bNeedAuth)
 				break;
 
 			case 'campaign_update':
-
 				$campaignId = intval($_REQUEST['campaign']);
 
 				$res = $engine->updateCampaignManual($campaignId);

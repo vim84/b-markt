@@ -643,7 +643,7 @@ class Facet
 			{
 				$this->where["><".$facetId] = array(
 					"TYPE" => Storage::NUMERIC,
-					"OP" => $operator,
+					"OP" => "><",
 					"FACET_ID" => $facetId,
 					"VALUES" => array(
 						$this->where[">=".$facetId]["VALUES"][0],
@@ -747,7 +747,7 @@ class Facet
 			{
 				$this->where["><".$facetId] = array(
 					"TYPE" => Storage::DATETIME,
-					"OP" => $operator,
+					"OP" => "><",
 					"FACET_ID" => $facetId,
 					"VALUES" => array(
 						$this->where[">=".$facetId]["VALUES"][0],

@@ -29,6 +29,7 @@ Loc::loadMessages(__FILE__);
  * <li> SETTINGS string optional
  * <li> CAMPAIGN_ID int mandatory
  * <li> GROUP_ID int optional - Yandex.Direct supports groups only in Live version, so we add this entity but won't use it right now
+ * <li> AUTO_QUANTITY char(1) optional
  * </ul>
  *
  * @package Bitrix\Seo
@@ -42,6 +43,8 @@ class YandexBannerTable extends AdvEntity
 	const MAX_TEXT_LENGTH = 75;
 
 	const CACHE_LIFETIME = 3600;
+
+	const MARKED = 'D';
 
 	private static $engine = null;
 
@@ -89,6 +92,16 @@ class YandexBannerTable extends AdvEntity
 				'GROUP_ID' => array(
 					'data_type' => 'integer',
 					'title' => Loc::getMessage('ADV_CAMPAIGN_ENTITY_GROUP_ID_FIELD'),
+				),
+				'AUTO_QUANTITY_OFF' => array(
+					'data_type' => 'enum',
+					'values' => array(static::INACTIVE, static::ACTIVE, static::MARKED),
+					'title' => Loc::getMessage('ADV_CAMPAIGN_ENTITY_AUTO_QUANTITY_OFF_FIELD'),
+				),
+				'AUTO_QUANTITY_ON' => array(
+					'data_type' => 'enum',
+					'values' => array(static::INACTIVE, static::ACTIVE, static::MARKED),
+					'title' => Loc::getMessage('ADV_CAMPAIGN_ENTITY_AUTO_QUANTITY_ON_FIELD'),
 				),
 				'CAMPAIGN' => array(
 					'data_type' => 'Bitrix\Seo\Adv\YandexCampaignTable',
@@ -519,5 +532,81 @@ class YandexBannerTable extends AdvEntity
 		}
 
 		return $bannerParam;
+	}
+
+	public static function markStopped(array $idList)
+	{
+		if(count($idList) > 0)
+		{
+			$connection = Main\Application::getConnection();
+			$sqlHelper = $connection->getSqlHelper();
+
+			$idList = array_map("intval", $idList);
+
+			$update = $sqlHelper->prepareUpdate(static::getTableName(), array(
+				"AUTO_QUANTITY_OFF" => static::MARKED,
+			));
+
+			$connection->queryExecute(
+				"UPDATE ".static::getTableName()." SET ".$update[0]." WHERE ID IN (".implode(",", $idList).")"
+			);
+		}
+	}
+
+	public static function markResumed(array $idList)
+	{
+		if(count($idList) > 0)
+		{
+			$connection = Main\Application::getConnection();
+			$sqlHelper = $connection->getSqlHelper();
+
+			$idList = array_map("intval", $idList);
+
+			$update = $sqlHelper->prepareUpdate(static::getTableName(), array(
+				"AUTO_QUANTITY_ON" => static::MARKED,
+			));
+
+			$connection->queryExecute(
+				"UPDATE ".static::getTableName()." SET ".$update[0]." WHERE ID IN (".implode(",", $idList).")"
+			);
+		}
+	}
+
+	public static function unMarkStopped(array $idList)
+	{
+		if(count($idList) > 0)
+		{
+			$connection = Main\Application::getConnection();
+			$sqlHelper = $connection->getSqlHelper();
+
+			$idList = array_map("intval", $idList);
+
+			$update = $sqlHelper->prepareUpdate(static::getTableName(), array(
+				"AUTO_QUANTITY_OFF" => static::ACTIVE,
+			));
+
+			$connection->queryExecute(
+				"UPDATE ".static::getTableName()." SET ".$update[0]." WHERE ID IN (".implode(",", $idList).")"
+			);
+		}
+	}
+
+	public static function unMarkResumed(array $idList)
+	{
+		if(count($idList) > 0)
+		{
+			$connection = Main\Application::getConnection();
+			$sqlHelper = $connection->getSqlHelper();
+
+			$idList = array_map("intval", $idList);
+
+			$update = $sqlHelper->prepareUpdate(static::getTableName(), array(
+				"AUTO_QUANTITY_ON" => static::ACTIVE,
+			));
+
+			$connection->queryExecute(
+				"UPDATE ".static::getTableName()." SET ".$update[0]." WHERE ID IN (".implode(",", $idList).")"
+			);
+		}
 	}
 }

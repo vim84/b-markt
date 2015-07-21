@@ -22,7 +22,7 @@ $MESS["IBLOCK_FIELD"] = "Fields";
 $MESS["IBLOCK_PROPERTY"] = "Properties";
 $MESS["T_IBLOCK_DESC_KEYWORDS"] = "Set page keywords from property";
 $MESS["T_IBLOCK_DESC_DESCRIPTION"] = "Set page description from property";
-$MESS["CP_BPD_SET_STATUS_404"] = "Set 404 status if no element or section was found";
 $MESS["CP_BPD_BROWSER_TITLE"] = "Set browser window title from property value";
 $MESS["CP_BPD_CACHE_GROUPS"] = "Respect Access Permissions";
+$MESS["CP_BPD_SET_LAST_MODIFIED"] = "Set page last modified date to response header";
 ?>

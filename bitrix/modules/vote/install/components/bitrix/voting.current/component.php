@@ -33,12 +33,16 @@ $cache_id = "vote_current_".serialize($arParams).(($tzOffset = CTimeZone::GetOff
 if (!$obCache->InitCache($arParams["CACHE_TIME"], $cache_id, $cache_path))
 {
 	$arVote = array(); $db_res = false;
-	if (!!$arParams["VOTE_ID"]) {
+	if (!!$arParams["VOTE_ID"])
+	{
 		$db_res = CVote::GetByIDEx($arParams["VOTE_ID"]);
-	} else {
+	}
+	else
+	{
 		$obChannel = CVoteChannel::GetList($by, $order,
 			array("SID"=> $arParams["CHANNEL_SID"], "SID_EXACT_MATCH" => "Y", "SITE" => SITE_ID, "ACTIVE" => "Y", "HIDDEN" => "N"), $is_filtered);
-		if ($obChannel && ($arChannel = $obChannel->Fetch())) {
+		if ($obChannel && ($arChannel = $obChannel->Fetch()))
+		{
 			$db_res = CVote::GetList($by, $order, array("CHANNEL_ID"=>$arChannel["ID"], "LAMP" => "green"), $is_filtered);
 		}
 	}
@@ -62,16 +66,23 @@ else
 	$this->SetTemplateCachedData($arVars["templateCachedData"]);
 }
 $arParams["PERMISSION"] = ($arParams["PERMISSION"] === false ? CVoteChannel::GetGroupPermission($arResult["VOTE"]["CHANNEL_ID"]) : $arParams["PERMISSION"]);
-if ($arParams["PERMISSION"] <= 0) {
+if ($arParams["PERMISSION"] <= 0)
+{
 	return false;
-} elseif ($GLOBALS["VOTING_OK"] == "Y" && $GLOBALS["VOTING_ID"] == $arParams["VOTE_ID"] && !empty($arParams["VOTE_RESULT_TEMPLATE"])) {
+}
+elseif ($GLOBALS["VOTING_OK"] == "Y" && $GLOBALS["VOTING_ID"] == $arParams["VOTE_ID"] && !empty($arParams["VOTE_RESULT_TEMPLATE"]))
+{
 	$var = array("VOTE_ID", "VOTING_OK", "VOTE_SUCCESSFULL", "view_result", "view_form");
 	$url = CComponentEngine::MakePathFromTemplate($arParams["VOTE_RESULT_TEMPLATE"], array("VOTE_ID" => $arVote["ID"]));
-	if (strpos($url, "?") === false) {
+	if (strpos($url, "?") === false)
+	{
 		$url .= "?";
-	} elseif (($token = substr($url, (strpos($url, "?") + 1))) && !empty($token) &&
-		preg_match_all("/(?<=^|\&)\w+(?=$|\=)/is", $token, $matches)) {
-		$var = array_merge($var, $matches); }
+	}
+	elseif (($token = substr($url, (strpos($url, "?") + 1))) && !empty($token) &&
+		preg_match_all("/(?<=^|\&)\w+(?=$|\=)/is", $token, $matches))
+	{
+		$var = array_merge($var, $matches);
+	}
 	$strNavQueryString = DeleteParam($var);
 	LocalRedirect($url."&VOTE_SUCCESSFULL=Y&VOTE_ID=".intval($_REQUEST["VOTE_ID"]).($strNavQueryString <> "" ? "&" : "").$strNavQueryString);
 }
@@ -92,7 +103,8 @@ if (!$bShowResult)
 		$_REQUEST["VOTE_SUCCESSFULL"] == "Y" && $_REQUEST["VOTE_ID"] == $arResult["VOTE_ID"]);
 	if ($_REQUEST["view_form"] == "Y")
 		$bShowResult = false;
-	else if (!$bShowResult) {
+	else if (!$bShowResult)
+	{
 		$bShowResult = ($arParams["CAN_REVOTE"] == "Y");
 		if ($bShowResult && $GLOBALS["VOTING_ID"] == $arResult["VOTE"]["ID"] && $GLOBALS["VOTING_OK"] != "Y")
 			$bShowResult = false;

@@ -80,6 +80,7 @@ foreach ($arResult['VALUE'] as $key => $value)
 	}
 }
 
+$arResult['ELEMENT'] = array();
 // last 50 entity
 if (in_array('LEAD', $arParams['ENTITY_TYPE'], true))
 {

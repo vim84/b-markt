@@ -33,6 +33,8 @@ if (!defined("AUTH_404"))
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/bx_root.php");
 require_once($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/php_interface/dbconn.php");
 
+if (defined("BX_URLREWRITE"))
+	return;
 define("BX_URLREWRITE", true);
 
 $foundQMark = strpos($_SERVER["REQUEST_URI"], "?");

@@ -15,7 +15,8 @@ class CBPCalendar2Activity
 			"CalendarFrom" => "",
 			"CalendarTo" => "",
 			"CalendarType" => "",
-			"CalendarOwnerId" => ""
+			"CalendarOwnerId" => "",
+			"CalendarSection" => ""
 		);
 	}
 
@@ -47,7 +48,12 @@ class CBPCalendar2Activity
 		$arFields['DT_FROM_TS'] = $fromTs;
 		$arFields['DT_TO_TS'] = $toTs;
 
-		if ($this->CalendarOwnerId)
+		if ($this->CalendarSection && intVal($this->CalendarSection) > 0)
+		{
+			$arFields['SECTIONS'] = array(intVal($this->CalendarSection));
+		}
+
+		if ($this->CalendarOwnerId || ($arFields["CAL_TYPE"] != "user" && $arFields["CAL_TYPE"] != "group"))
 		{
 			$arFields["OWNER_ID"] = $this->CalendarOwnerId;
 			$eventId = CCalendar::SaveEvent(
@@ -60,7 +66,6 @@ class CBPCalendar2Activity
 		else
 		{
 			$arCalendarUser = CBPHelper::ExtractUsers($this->CalendarUser, $documentId);
-
 			foreach ($arCalendarUser as $calendarUser)
 			{
 				$arFields["CAL_TYPE"] = "user";
@@ -98,6 +103,7 @@ class CBPCalendar2Activity
 		$arMap = array(
 			"CalendarType" => "calendar_type",
 			"CalendarOwnerId" => "calendar_owner_id",
+			"CalendarSection" => "calendar_section",
 			"CalendarUser" => "calendar_user",
 			"CalendarName" => "calendar_name",
 			"CalendarDesrc" => "calendar_desrc",
@@ -160,7 +166,8 @@ class CBPCalendar2Activity
 			"calendar_from" => "CalendarFrom",
 			"calendar_to" => "CalendarTo",
 			"calendar_type" => "CalendarType",
-			"calendar_owner_id" => "CalendarOwnerId"
+			"calendar_owner_id" => "CalendarOwnerId",
+			"calendar_section" => "CalendarSection"
 		);
 
 		$arProperties = array();

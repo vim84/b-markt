@@ -4504,6 +4504,9 @@ BX.AdminFilter = function(filter_id, aRows)
 		{
 			var el = this.form.elements[i];
 
+			if(!el.name)
+				continue;
+
 			if(el.type == 'select-multiple')
 			{
 				elName = el.name.substr(0, el.name.length - 2);
@@ -5506,6 +5509,7 @@ BX.adminChain = {
 
 BX.InitializeAdmin = function()
 {
+	BX.browser.addGlobalFeatures(["boxShadow", "borderRadius", "flexWrap", "boxDirection", "transition", "transform"]);
 	BX.adminPanel = new BX.adminPanel();
 	BX.adminMenu = new BX.adminMenu();
 

@@ -166,10 +166,36 @@ if (!isset($arParams["USER_FIELDS_CONTACT"]) || !is_array($arParams["USER_FIELDS
 if (!isset($arParams["USER_FIELDS_PERSONAL"]) || !is_array($arParams["USER_FIELDS_PERSONAL"]))
 	$arParams["USER_FIELDS_PERSONAL"] = array();
 
-if (!isset($arParams["SONET_USER_FIELDS_SEARCHABLE"]) || !is_array($arParams["SONET_USER_FIELDS_SEARCHABLE"]))
+if (
+	!isset($arParams["SONET_USER_FIELDS_SEARCHABLE"])
+	|| !is_array($arParams["SONET_USER_FIELDS_SEARCHABLE"])
+)
+{
 	$arParams["SONET_USER_FIELDS_SEARCHABLE"] = array();
-if (!isset($arParams["SONET_USER_PROPERTY_SEARCHABLE"]) || !is_array($arParams["SONET_USER_PROPERTY_SEARCHABLE"]))
+}
+
+if (
+	!isset($arParams["SONET_USER_PROPERTY_SEARCHABLE"])
+	|| !is_array($arParams["SONET_USER_PROPERTY_SEARCHABLE"])
+)
+{
 	$arParams["SONET_USER_PROPERTY_SEARCHABLE"] = array();
+}
+
+if (!empty($arParams["SONET_USER_PROPERTY_SEARCHABLE"]))
+{
+	$curVal = serialize($arParams["SONET_USER_PROPERTY_SEARCHABLE"]);
+
+	$tmpVal = COption::GetOptionString("socialnetwork", "user_property_searchable", false, SITE_ID);
+	if (
+		!$tmpVal
+		|| $tmpVal != $curVal
+	)
+	{
+		COption::SetOptionString("socialnetwork", "user_property_searchable", $curVal, false, SITE_ID);
+	}
+}
+
 
 $arParams["PATH_TO_GROUP_SEARCH"] = trim($arParams["PATH_TO_GROUP_SEARCH"]);
 if (strlen($arParams["PATH_TO_GROUP_SEARCH"]) <= 0)
@@ -696,6 +722,10 @@ else
 						{
 							$arUserField["PROPERTY_VALUE_LINK"] = $arParams["PATH_TO_SEARCH_INNER"].(StrPos($arParams["PATH_TO_SEARCH_INNER"], "?") !== false ? "&" : "?")."set_filter_structure=Y&structure_".$arUserField["FIELD_NAME"]."=#VALUE#";
 						}
+						elseif (IsModuleInstalled("intranet"))
+						{
+							$arUserField["PROPERTY_VALUE_LINK"] = $arParams["PATH_TO_SEARCH"].(StrPos($arParams["PATH_TO_SEARCH"], "?") !== false ? "&" : "?")."flt_".StrToLower($arUserField["FIELD_NAME"])."=#VALUE#";
+						}
 						else
 						{
 							$arUserField["PROPERTY_VALUE_LINK"] = $arParams["PATH_TO_SEARCH_INNER"].(StrPos($arParams["PATH_TO_SEARCH_INNER"], "?") !== false ? "&" : "?")."flt_".StrToLower($arUserField["FIELD_NAME"])."=#VALUE#";
@@ -707,11 +737,19 @@ else
 					}
 
 					if (in_array($fieldName, $arParams["USER_PROPERTY_MAIN"]))
+					{
 						$arResult["UserPropertiesMain"]["DATA"][$fieldName] = $arUserField;
+					}
+
 					if (in_array($fieldName, $arParams["USER_PROPERTY_CONTACT"]))
+					{
 						$arResult["UserPropertiesContact"]["DATA"][$fieldName] = $arUserField;
+					}
+
 					if (in_array($fieldName, $arParams["USER_PROPERTY_PERSONAL"]))
+					{
 						$arResult["UserPropertiesPersonal"]["DATA"][$fieldName] = $arUserField;
+					}
 				}
 				if (count($arResult["UserPropertiesMain"]["DATA"]) > 0)
 					$arResult["UserPropertiesMain"]["SHOW"] = "Y";

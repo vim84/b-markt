@@ -351,21 +351,31 @@ $lAdmin->AddGroupActionTable(Array(
 
 $aContext = array(
 	array(
-		"TEXT"=>GetMessage("MAIN_ADD"),
-		"LINK"=>"/bitrix/admin/sender_contact_import.php?lang=".LANG,
+		"TEXT"=> GetMessage("SENDER_CONTACT_LIST_BUTTON_ADD"),
 		"TITLE"=>GetMessage("POST_ADD_TITLE"),
 		"ICON"=>"btn_new",
+		"MENU" => array(
+			array(
+				"TEXT" => GetMessage("SENDER_CONTACT_LIST_BUTTON_ADD_LIST"),
+				"ACTION" => $lAdmin->ActionRedirect("sender_contact_import.php?lang=".LANGUAGE_ID),
+			),
+			array(
+				"TEXT" => GetMessage("SENDER_CONTACT_LIST_BUTTON_ADD_FILE"),
+				"ACTION" => $lAdmin->ActionRedirect("sender_contact_import.php?lang=".LANGUAGE_ID),
+			),
+			(
+				$POST_RIGHT>="W"
+				?
+				array(
+					"TEXT" => GetMessage("SENDER_CONTACT_LIST_BUTTON_ADD_PULL"),
+					"ACTION" => $lAdmin->ActionRedirect("sender_contact_admin.php?action=pull&lang=".LANGUAGE_ID),
+				)
+				: null
+			)
+		)
 	),
 );
-if($POST_RIGHT>="W")
-{
-	$aContext[] = array(
-		"TEXT"=>GetMessage("SENDER_UPDATE_FROM_CONNECTORS"),
-		"LINK"=>"/bitrix/admin/sender_contact_admin.php?action=pull&lang=".LANG,
-		"TITLE"=>GetMessage("SENDER_UPDATE_FROM_CONNECTORS_TITLE"),
-		"ICON"=>"",
-	);
-}
+
 $aContext[] = array(
 	"TEXT"=>GetMessage("SENDER_CONTACT_LIST_EDIT"),
 	"LINK"=>"/bitrix/admin/sender_list_admin.php?lang=".LANG,

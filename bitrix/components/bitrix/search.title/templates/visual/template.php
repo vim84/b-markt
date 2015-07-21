@@ -11,6 +11,8 @@
 /** @var string $componentPath */
 /** @var CBitrixComponent $component */
 $this->setFrameMode(true);
+$this->addExternalCss("/bitrix/css/main/bootstrap.css");
+$this->addExternalCss("/bitrix/css/main/font-awesome.css");
 
 $INPUT_ID = trim($arParams["~INPUT_ID"]);
 if(strlen($INPUT_ID) <= 0)
@@ -23,11 +25,13 @@ if(strlen($CONTAINER_ID) <= 0)
 $CONTAINER_ID = CUtil::JSEscape($CONTAINER_ID);
 
 if($arParams["SHOW_INPUT"] !== "N"):?>
-<div id="<?echo $CONTAINER_ID?>" class="bx_search_container">
+<div id="<?echo $CONTAINER_ID?>" class="bx-searchtitle">
 	<form action="<?echo $arResult["FORM_ACTION"]?>">
-		<div class="bx_field">
-			<input id="<?echo $INPUT_ID?>" type="text" name="q" value="<?=htmlspecialcharsbx($_REQUEST["q"])?>" autocomplete="off" class="bx_input_text"/>
-			<input name="s" type="submit" value="" class="bx_input_submit"/>
+		<div class="bx-input-group">
+			<input id="<?echo $INPUT_ID?>" type="text" name="q" value="<?=htmlspecialcharsbx($_REQUEST["q"])?>" autocomplete="off" class="bx-form-control"/>
+			<span class="bx-input-group-btn">
+				<button class="btn btn-default" type="submit" name="s"><i class="fa fa-search"></i></button>
+			</span>
 		</div>
 	</form>
 </div>

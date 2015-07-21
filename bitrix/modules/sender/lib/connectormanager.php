@@ -160,7 +160,7 @@ class ConnectorManager
 		$event = new Event('sender', 'OnConnectorList', array($data), $moduleIdFilter);
 		$event->send();
 
-		if($event->getResults()) foreach ($event->getResults() as $eventResult)
+		foreach ($event->getResults() as $eventResult)
 		{
 			if ($eventResult->getType() == EventResult::ERROR)
 			{

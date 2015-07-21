@@ -75,9 +75,12 @@ $MESS["T_IBLOCK_DESC_ADD_ELEMENT_CHAIN"] = "Add element name to breadcrumbs";
 $MESS["T_IBLOCK_DESC_NEWS_NAME"] = "Display element title";
 $MESS["F_SHOW_LINK_TO_FORUM"] = "Show link to forum";
 $MESS["T_IBLOCK_DESC_CHECK_DATES"] = "Show only currently active elements";
-$MESS["CP_BN_SET_STATUS_404"] = "Set 404 status if no element or section was found";
 $MESS["CP_BN_DETAIL_PAGER_SHOW_ALL"] = "Show the ALL link";
 $MESS["CP_BN_BROWSER_TITLE"] = "Set browser window title from property value";
 $MESS["CP_BN_CACHE_GROUPS"] = "Respect Access Permissions";
 $MESS["CP_BN_DETAIL_SET_CANONICAL_URL"] = "Set canonical URL";
+$MESS["CP_BN_SET_LAST_MODIFIED"] = "Set page last modified date to response header";
+$MESS["CP_BN_DISPLAY_AS_RATING"] = "Show in rating";
+$MESS["CP_BN_AVERAGE"] = "Average value";
+$MESS["CP_BN_RATING"] = "Rating value";
 ?>

@@ -696,8 +696,10 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 			}
 		}
 
+		$isOrderPlaced = ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["confirmorder"]) && ($arParams["DELIVERY_NO_SESSION"] == "N" || check_bitrix_sessid()));
+
 		// when order is placed
-		if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["confirmorder"]) && ($arParams["DELIVERY_NO_SESSION"] == "N" || check_bitrix_sessid()))
+		if($isOrderPlaced)
 		{
 			if(IntVal($_POST["PERSON_TYPE"]) > 0)
 				$arUserResult["PERSON_TYPE_ID"] = IntVal($_POST["PERSON_TYPE"]);
@@ -710,7 +712,10 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 				if(isset($_POST["DELIVERY_ID"]))
 					$arUserResult["DELIVERY_ID"] = $_POST["DELIVERY_ID"];
 				if(strlen($_POST["ORDER_DESCRIPTION"]) > 0)
-					$arUserResult["ORDER_DESCRIPTION"] = $_POST["ORDER_DESCRIPTION"];
+				{
+					$arUserResult["~ORDER_DESCRIPTION"] = $_POST["ORDER_DESCRIPTION"];
+					$arUserResult["ORDER_DESCRIPTION"] = htmlspecialcharsbx($arUserResult["~ORDER_DESCRIPTION"]);
+				}
 				if($_POST["PAY_CURRENT_ACCOUNT"] == "Y")
 					$arUserResult["PAY_CURRENT_ACCOUNT"] = "Y";
 				if($_POST["confirmorder"] == "Y")
@@ -775,6 +780,8 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 					}
 				}
 			}
+
+			getFormatedProperties($arUserResult["PERSON_TYPE_ID"], $arResult, $arUserResult, $arParams);
 
 			$arFilter = array();
 			if (isset($_POST["PAY_SYSTEM_ID"]) && strlen($_POST["PAY_SYSTEM_ID"]) > 0 && isset($_POST["PAY_CURRENT_ACCOUNT"]) && $_POST["PAY_CURRENT_ACCOUNT"] != "Y")
@@ -1026,77 +1033,10 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 			$arResult["ORDER_PROP"]["USER_PROFILES"][$arUserProfiles["ID"]] = $arUserProfiles;
 		}
 
-		if(IntVal($arUserResult["PROFILE_ID"]) > 0 && empty($arResult["ORDER_PROP"]["USER_PROFILES"][$arUserResult["PROFILE_ID"]]))
-			$arUserResult["PROFILE_ID"] = false;
-		/* User Profiles End */
 
-		/* Order Props Begin */
-		$arDeleteFieldLocation = array();
-
-		$arFilter = array("PERSON_TYPE_ID" => $arUserResult["PERSON_TYPE_ID"], "ACTIVE" => "Y", "UTIL" => "N", "RELATED" => false);
-		if(!empty($arParams["PROP_".$arUserResult["PERSON_TYPE_ID"]]))
-			$arFilter["!ID"] = $arParams["PROP_".$arUserResult["PERSON_TYPE_ID"]];
-
-		$dbProperties = CSaleOrderProps::GetList(
-			array(
-				"GROUP_SORT" => "ASC",
-				"PROPS_GROUP_ID" => "ASC",
-				"USER_PROPS" => "ASC",
-				"SORT" => "ASC",
-				"NAME" => "ASC"
-			),
-			$arFilter,
-			false,
-			false,
-			array(
-				"ID", "NAME", "TYPE", "REQUIED", "DEFAULT_VALUE", "IS_LOCATION", "PROPS_GROUP_ID", "SIZE1", "SIZE2", "DESCRIPTION",
-				"IS_EMAIL", "IS_PROFILE_NAME", "IS_PAYER", "IS_LOCATION4TAX", "DELIVERY_ID", "PAYSYSTEM_ID", "MULTIPLE",
-				"CODE", "GROUP_NAME", "GROUP_SORT", "SORT", "USER_PROPS", "IS_ZIP", "INPUT_FIELD_LOCATION"
-			)
-		);
-
-		$propIndex = array();
-
-		if(is_array($_REQUEST['LOCATION_ALT_PROP_DISPLAY_MANUAL']))
+		if (!$isOrderPlaced)
 		{
-			foreach($_REQUEST['LOCATION_ALT_PROP_DISPLAY_MANUAL'] as $propId => $switch)
-			{
-				if(intval($propId))
-					$arResult['LOCATION_ALT_PROP_DISPLAY_MANUAL'][intval($propId)] = !!$switch;
-			}
-		}
-
-		while ($arProperties = $dbProperties->GetNext())
-		{
-			$arProperties = getOrderPropFormated($arProperties, $arResult, $arUserResult, $arDeleteFieldLocation);
-
-			$flag = $arProperties["USER_PROPS"]=="Y" ? 'Y' : 'N';
-
-			$arResult["ORDER_PROP"]["USER_PROPS_".$flag][$arProperties["ID"]] = $arProperties;
-			$propIndex[$arProperties["ID"]] =& $arResult["ORDER_PROP"]["USER_PROPS_".$flag][$arProperties["ID"]];
-
-			$arResult["ORDER_PROP"]["PRINT"][$arProperties["ID"]] = Array("ID" => $arProperties["ID"], "NAME" => $arProperties["NAME"], "VALUE" => $arProperties["VALUE_FORMATED"], "SHOW_GROUP_NAME" => $arProperties["SHOW_GROUP_NAME"]);
-		}
-
-		// additional city property process
-		foreach($propIndex as $propId => $propDesc)
-		{
-			if(intval($propDesc['INPUT_FIELD_LOCATION']) && isset($propIndex[$propDesc['INPUT_FIELD_LOCATION']]))
-			{
-				$propIndex[$propDesc['INPUT_FIELD_LOCATION']]['IS_ALTERNATE_LOCATION_FOR'] = $propId;
-				$propIndex[$propId]['CAN_HAVE_ALTERNATE_LOCATION'] = $propDesc['INPUT_FIELD_LOCATION']; // more strict condition rather INPUT_FIELD_LOCATION, check if the property really exists
-			}
-		}
-
-		foreach(GetModuleEvents("sale", "OnSaleComponentOrderOneStepOrderProps", true) as $arEvent)
-			ExecuteModuleEventEx($arEvent, Array(&$arResult, &$arUserResult, &$arParams));
-		/* Order Props End */
-
-		//delete prop for text location (town)
-		if (count($arDeleteFieldLocation) > 0)
-		{
-			foreach ($arDeleteFieldLocation as $fieldId)
-				unset($arResult["ORDER_PROP"]["USER_PROPS_Y"][$fieldId]);
+			getFormatedProperties($arUserResult["PERSON_TYPE_ID"], $arResult, $arUserResult, $arParams);
 		}
 
 		/* Delivery Begin */
@@ -1948,7 +1888,7 @@ if ($USER->IsAuthorized() || $arParams["ALLOW_AUTO_REGISTER"] == "Y" )
 						"DELIVERY_ID" => (strlen($arUserResult["DELIVERY_ID"]) > 0 ? $arUserResult["DELIVERY_ID"] : false),
 						"DISCOUNT_VALUE" => $arResult["DISCOUNT_PRICE"],
 						"TAX_VALUE" => $arResult["bUsingVat"] == "Y" ? $arResult["VAT_SUM"] : $arResult["TAX_PRICE"],
-						"USER_DESCRIPTION" => $arUserResult["ORDER_DESCRIPTION"]
+						"USER_DESCRIPTION" => $arUserResult["~ORDER_DESCRIPTION"]
 				);
 
 				$arOrderDat['USER_ID'] = $arFields['USER_ID'];

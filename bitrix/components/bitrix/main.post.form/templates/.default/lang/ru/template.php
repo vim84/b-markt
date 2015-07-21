@@ -26,4 +26,8 @@ $MESS["MPF_BUTTON_SEND"] = "Отправить";
 $MESS["MPF_BUTTON_CANCEL"] = "Отменить";
 $MESS["MPF_SMILE_SET"] = "наборы";
 $MESS["BLOG_LINK_SHOW_NEW"] = "Написать сообщение &hellip;";
+$MESS["MPF_SELECT_ATTACHMENTS"] = "Загрузить файл или картинку";
+$MESS["MPF_DROP_ATTACHMENTS"] = "Перетащить с помощью Drag'n'drop";
+$MESS["MPF_DRAG_ATTACHMENTS"] = "Перетащите файлы";
+$MESS["MPF_DRAG_ATTACHMENTS2"] = "Загрузить файлы?";
 ?>

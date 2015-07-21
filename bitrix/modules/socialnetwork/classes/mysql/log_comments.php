@@ -233,11 +233,9 @@ class CSocNetLogComments extends CAllSocNetLogComments
 					{
 						$GLOBALS["CACHE_MANAGER"]->ClearByTag("SONET_LOG_".$arFields["LOG_ID"]);
 					}
-					else
-					{
-						$cache = new CPHPCache;
-						$cache->CleanDir("/sonet/log/".intval(intval($arFields["LOG_ID"]) / 1000)."/".$arFields["LOG_ID"]."/comments/");
-					}
+
+					$cache = new CPHPCache;
+					$cache->CleanDir("/sonet/log/".intval(intval($arFields["LOG_ID"]) / 1000)."/".$arFields["LOG_ID"]."/comments/");
 
 					CSocNetLogComments::SendMentionNotification(array_merge($arFields, array("ID" => $ID)));
 				}
@@ -421,10 +419,8 @@ class CSocNetLogComments extends CAllSocNetLogComments
 
 				$GLOBALS["USER_FIELD_MANAGER"]->Update("SONET_COMMENT", $ID, $arFields);
 
-				if(defined("BX_COMP_MANAGED_CACHE"))
-				{
-					$GLOBALS["CACHE_MANAGER"]->ClearByTag("SONET_LOG_COMMENT_".$ID);
-				}
+				$cache = new CPHPCache;
+				$cache->CleanDir("/sonet/log/".intval(intval($arFields["LOG_ID"]) / 1000)."/".$arFields["LOG_ID"]."/comments/");
 			}
 			elseif (!$GLOBALS["USER_FIELD_MANAGER"]->Update("SONET_COMMENT", $ID, $arFields))
 			{

@@ -8,7 +8,6 @@
 namespace Bitrix\Main\Mail;
 
 use Bitrix\Main\Localization\Loc;
-use Bitrix\Main\Mail as Mail;
 use Bitrix\Main\Mail\Internal as MailInternal;
 use Bitrix\Main\Config as Config;
 
@@ -197,47 +196,52 @@ class EventMessageCompiler
 	 */
 	protected function setMailAttachment()
 	{
-		$arEventMessageAttachment = array();
+		$eventMessageAttachment = array();
 
 		// Attach files from message template
 		if(array_key_exists('FILE', $this->eventMessageFields))
 		{
-			$arEventMessageAttachment = $this->eventMessageFields["FILE"];
+			$eventMessageAttachment = $this->eventMessageFields["FILE"];
 		}
 
 		// Attach files from event
 		if(isset($this->event["FILE"]) && is_array($this->event["FILE"]))
 		{
-			$arEventFile = array();
-			foreach($this->event["FILE"] as $fileId) if(is_numeric($fileId)) $arEventFile[] = $fileId;
-			$arEventMessageAttachment = array_merge($arEventMessageAttachment, $arEventFile);
+			$eventFileList = array();
+			foreach($this->event["FILE"] as $fileId)
+			{
+				if(is_numeric($fileId))
+				{
+					$eventFileList[] = $fileId;
+				}
+			}
+
+			$eventMessageAttachment = array_merge($eventMessageAttachment, $eventFileList);
 		}
 
 
-
-		if(count($arEventMessageAttachment)>0)
+		if(count($eventMessageAttachment)>0)
 		{
-			$arAttachFile = array();
-			$arEventMessageAttachment = array_unique($arEventMessageAttachment);
+			$attachFileList = array();
+			$eventMessageAttachment = array_unique($eventMessageAttachment);
 
-			$strId = implode(',', $arEventMessageAttachment);
-			$con = \Bitrix\Main\Application::getConnection();
+			$strId = implode(',', $eventMessageAttachment);
+			$conn = \Bitrix\Main\Application::getConnection();
 			$strSql = "SELECT * FROM b_file WHERE ID IN(".$strId.")";
-			$resultDb = $con->query($strSql);
-			while($arFile = $resultDb->fetch())
+			$resultDb = $conn->query($strSql);
+			while($file = $resultDb->fetch())
 			{
-				$arTempFile = \CFile::MakeFileArray($arFile["ID"]);
-				$arAttachFile[] = array(
-					'PATH' => $arTempFile['tmp_name'],
-					'ID' => $arFile['ID'],
-					'CONTENT_TYPE' => $arFile['CONTENT_TYPE'],
-					'NAME' => !empty($arFile['ORIGINAL_NAME']) ? $arFile['ORIGINAL_NAME'] : $arFile['FILE_NAME'],
+				$tempFile = \CFile::MakeFileArray($file["ID"]);
+				$attachFileList[] = array(
+					'PATH' => $tempFile['tmp_name'],
+					'ID' => $file['ID'],
+					'CONTENT_TYPE' => $file['CONTENT_TYPE'],
+					'NAME' => ($file['ORIGINAL_NAME'] <> "" ? $file['ORIGINAL_NAME'] : $file['FILE_NAME']),
 				);
 			}
 
-			$this->mailAttachment = $arAttachFile;
+			$this->mailAttachment = $attachFileList;
 		}
-
 	}
 
 	/**
@@ -415,7 +419,7 @@ class EventMessageCompiler
 
 		if(!empty($this->eventMessageId))
 		{
-			$messageSiteDb = Mail\Internal\EventMessageSiteTable::getList(array(
+			$messageSiteDb = MailInternal\EventMessageSiteTable::getList(array(
 				'select' => array('SITE_ID'),
 				'filter' => array(
 					'EVENT_MESSAGE_ID' => $this->eventMessageId,

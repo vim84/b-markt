@@ -304,6 +304,10 @@ class CPullPush
 
 class CPushManager
 {
+	const SEND_IMMEDIATELY = 0;
+	const SEND_DEFERRED = 1;
+	const SEND_SKIP = 2;
+
 	public static $pushServices = false;
 	private static $remoteProviderUrl = "https://cloud-messaging.bitrix24.com/send/";
 
@@ -335,7 +339,7 @@ class CPushManager
 
 		global $DB;
 
-		if (isset($arParams['USER_ID']) && intval($arParams['USER_ID']) > 0)
+		if (isset($arParams['USER_ID']) && intval($arParams['USER_ID']) != 0)
 			$arFields['USER_ID'] = intval($arParams['USER_ID']);
 		else
 			return false;
@@ -367,8 +371,8 @@ class CPushManager
 
 		$arFields['APP_ID'] = (strlen($arParams['APP_ID']) > 0)? $arParams['APP_ID']: "Bitrix24";
 
-
-		if (isset($arParams['SEND_IMMEDIATELY']) && $arParams['SEND_IMMEDIATELY'] == 'Y' || !CUser::IsOnLine($arFields['USER_ID'], 120))
+		$sendMode = self::GetSendMode($arFields['USER_ID']);
+		if (isset($arParams['SEND_IMMEDIATELY']) && $arParams['SEND_IMMEDIATELY'] == 'Y' || $sendMode == self::SEND_IMMEDIATELY)
 		{
 			$arAdd = Array(
 				'USER_ID' => $arFields['USER_ID'],
@@ -389,7 +393,7 @@ class CPushManager
 			$CPushManager = new CPushManager();
 			$CPushManager->SendMessage(Array($arAdd));
 		}
-		else
+		else if ($sendMode == self::SEND_DEFERRED)
 		{
 			$arAdd = Array(
 				'USER_ID' => $arFields['USER_ID'],
@@ -409,7 +413,7 @@ class CPushManager
 
 			$DB->Add("b_pull_push_queue", $arAdd, Array("PARAMS"));
 
-			CAgent::AddAgent("CPushManager::SendAgent();", "pull", "N", 30, "", "Y", ConvertTimeStamp(time()+CTimeZone::GetOffset()+30, "FULL"));
+			CAgent::AddAgent("CPushManager::SendAgent();", "pull", "N", 30, "", "Y", ConvertTimeStamp(time()+CTimeZone::GetOffset()+30, "FULL"), 100, false, false);
 		}
 
 		return true;
@@ -418,7 +422,7 @@ class CPushManager
 	public static function DeleteFromQueueByTag($userId, $tag)
 	{
 		global $DB;
-		if (strlen($tag) <= 0 || intval($userId) <= 0)
+		if (strlen($tag) <= 0 || intval($userId) == 0)
 			return false;
 
 		$strSql = "DELETE FROM b_pull_push_queue WHERE USER_ID = ".intval($userId)." AND TAG = '".$DB->ForSQL($tag)."'";
@@ -430,13 +434,61 @@ class CPushManager
 	public static function DeleteFromQueueBySubTag($userId, $tag)
 	{
 		global $DB;
-		if (strlen($tag) <= 0 || intval($userId) <= 0)
+		if (strlen($tag) <= 0 || intval($userId) == 0)
 			return false;
 
 		$strSql = "DELETE FROM b_pull_push_queue WHERE USER_ID = ".intval($userId)." AND SUB_TAG = '".$DB->ForSQL($tag)."'";
 		$DB->Query($strSql, false, "File: ".__FILE__."<br>Line: ".__LINE__);
 
 		return true;
+	}
+
+	public static function GetSendMode($userId)
+	{
+		$result = self::SEND_IMMEDIATELY;
+
+		$isMobile = false;
+		if (CModule::IncludeModule('mobile'))
+		{
+			$isMobile = Bitrix\Mobile\User::checkOnline($userId);
+		}
+
+		$isDesktop = false;
+		$isDesktopIdle = false;
+		if (CModule::IncludeModule('im'))
+		{
+			$arOnline = CIMStatus::GetList(Array('ID' => $userId, 'SKIP_CHECK' => 'Y'));
+			$isOnline = isset($arOnline['users'][$userId]) && $arOnline['users'][$userId]['status'] != 'offline';
+
+			$isDesktop = CIMMessenger::CheckDesktopStatusOnline($userId);
+			if ($isDesktop && intval($arOnline['users'][$userId]['idle']) > 0)
+			{
+				$isDesktopIdle = true;
+			}
+		}
+		else
+		{
+			$isOnline = CUser::IsOnLine($userId, 120);
+		}
+
+		if ($isMobile)
+		{
+			$result = self::SEND_IMMEDIATELY;
+		}
+		else if ($isOnline)
+		{
+			$result = self::SEND_DEFERRED;
+			if ($isDesktop)
+			{
+				$result = self::SEND_SKIP;
+				if ($isDesktopIdle)
+				{
+					$result = self::SEND_IMMEDIATELY;
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	public static function SendAgent()

@@ -97,4 +97,5 @@ $MESS["IBLOCK_FIELD_DETAIL_TEXT"] = "Detailed description";
 $MESS["IBLOCK_FIELD_TAGS"] = "Tags";
 $MESS["IBLOCK_UPPER_LEVEL"] = "Upper level";
 $MESS["IBLOCK_FIELD_STATUS"] = "Status";
+$MESS["IBEL_E_MAIN_IBLOCK_SECTION_ID"] = "Main section";
 ?>

@@ -199,4 +199,7 @@ $MESS["MAIN_GATHER_CATALOG_STAT"] = "Use product recommendation service";
 $MESS["MAIN_OPTION_ATTACH_IMAGES"] = "Send images as attachments";
 $MESS["MAIN_OPTION_MAX_FILE_SIZE"] = "Max. attached file size, bytes (0 means no limit):";
 $MESS["MAIN_USE_MINIFIED_ASSETS"] = "Include compressed CSS and JS files:";
+$MESS["MAIN_MOVE_JS_TO_BODY"] = "Move JavaScript to the page bottom:";
+$MESS["MAIN_OPTION_SESS_AUTH"] = "Extend session for logged in users only:";
+$MESS["MAIN_OPTIONS_AUTH_TEMPLATE"] = "System authentication component template (system.auth.*):";
 ?>

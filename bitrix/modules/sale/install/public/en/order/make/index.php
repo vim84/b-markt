@@ -9,5 +9,6 @@ $APPLICATION->SetTitle("Orders");
 	"PATH_TO_AUTH"	=>	"/auth/",
 	"PATH_TO_PAYMENT"	=>	"/personal/order/payment/",
 	"SET_TITLE"	=>	"Y",
+	"DELIVERY_NO_SESSION"	=>	"Y",
 	)
 );?><?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>

@@ -6,6 +6,10 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 {
 	global $USER;
 
+	$isProfileChanged = ($arUserResult["PROFILE_CHANGE"] == "Y");
+
+	$isEmptyUserResult = (empty($arUserResult["ORDER_PROP"]));
+
 	$curVal = $arUserResult["ORDER_PROP"][$arProperties["ID"]];
 	$curLocation = false;
 	static $propertyGroupID = 0;
@@ -83,6 +87,13 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 			$arProperties["VALUE_FORMATED"] = GetMessage("SOA_N");
 
 		$arProperties["SIZE1"] = ((intval($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 30);
+
+		if ($isProfileChanged || $isEmptyUserResult)
+		{
+			$arUserResult["ORDER_PROP"][$arProperties["ID"]] = (isset($arProperties["CHECKED"]) && $arProperties["CHECKED"] == "Y" ? 'Y' : "N");
+
+		}
+
 	}
 	elseif ($arProperties["TYPE"] == "TEXT")
 	{
@@ -151,6 +162,11 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 		$arProperties["VALUE"] = htmlspecialcharsEx($arProperties["VALUE"]);
 		$arProperties["VALUE_FORMATED"] = $arProperties["VALUE"];
 
+		if ($isProfileChanged || $isEmptyUserResult)
+		{
+			$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arProperties["VALUE"];
+		}
+
 	}
 	elseif ($arProperties["TYPE"] == "SELECT")
 	{
@@ -176,6 +192,11 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 				$arVariants["SELECTED"] = "Y";
 				$arProperties["VALUE_FORMATED"] = $arVariants["NAME"];
 				$flagDefault = "Y";
+
+				if ($isProfileChanged || $isEmptyUserResult)
+				{
+					$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arVariants["NAME"];
+				}
 			}
 			$arProperties["VARIANTS"][] = $arVariants;
 		}
@@ -183,10 +204,16 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 		{
 			$arProperties["VARIANTS"][0]["SELECTED"]= "Y";
 			$arProperties["VARIANTS"][0]["VALUE_FORMATED"] = $nameProperty;
+			if ($isProfileChanged || $isEmptyUserResult)
+			{
+				$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $nameProperty;
+			}
 		}
 	}
 	elseif ($arProperties["TYPE"] == "MULTISELECT")
 	{
+
+		$setValue = array();
 		$arProperties["FIELD_NAME"] = "ORDER_PROP_".$arProperties["ID"].'[]';
 		$arProperties["SIZE1"] = ((intval($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 5);
 		$arDefVal = explode(",", $arProperties["DEFAULT_VALUE"]);
@@ -210,9 +237,15 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 				if ($i > 0)
 					$arProperties["VALUE_FORMATED"] .= ", ";
 				$arProperties["VALUE_FORMATED"] .= $arVariants["NAME"];
+				$setValue[] = $arVariants["VALUE"];
 				$i++;
 			}
 			$arProperties["VARIANTS"][] = $arVariants;
+		}
+
+		if ($isProfileChanged || $isEmptyUserResult)
+		{
+			$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $setValue;
 		}
 	}
 	elseif ($arProperties["TYPE"] == "TEXTAREA")
@@ -221,6 +254,11 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 		$arProperties["SIZE1"] = ((intval($arProperties["SIZE1"]) > 0) ? $arProperties["SIZE1"] : 40);
 		$arProperties["VALUE"] = htmlspecialcharsEx(isset($curVal) ? $curVal : $arProperties["DEFAULT_VALUE"]);
 		$arProperties["VALUE_FORMATED"] = $arProperties["VALUE"];
+
+		if ($isProfileChanged || $isEmptyUserResult)
+		{
+			$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arProperties["VALUE"];
+		}
 	}
 	elseif ($arProperties["TYPE"] == "LOCATION")
 	{
@@ -245,12 +283,18 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 					$arProperties["VALUE_FORMATED"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 
 					// location found, set it as DELIVERY_LOCATION and TAX_LOCATION
-					$arUserResult["DELIVERY_LOCATION"] = $arProperties["VALUE"];
+
+					$arUserResult["DELIVERY_LOCATION"] = $arVariants['ID'];
 					if($arProperties["IS_LOCATION4TAX"]=="Y")
-						$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
+						$arUserResult["TAX_LOCATION"] = $arVariants['ID'];
 
 					$locationFound = $arVariants;
 					$arVariants["SELECTED"] = "Y";
+
+					if ($isProfileChanged || $isEmptyUserResult)
+					{
+						$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arVariants['ID'];
+					}
 				}
 				$arVariants["NAME"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 
@@ -272,6 +316,10 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 					if($arProperties["IS_LOCATION4TAX"]=="Y")
 						$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
 
+					if ($isProfileChanged || $isEmptyUserResult)
+					{
+						$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arProperties["VALUE"];
+					}
 					$locationFound = $item;
 					$item['SELECTED'] = 'Y';
 					$item['NAME'] = $item["COUNTRY_NAME"].((strlen($item["CITY_NAME"]) > 0) ? " - " : "").$item["CITY_NAME"];
@@ -358,6 +406,11 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 					if ($arProperties["IS_LOCATION4TAX"]=="Y")
 						$arUserResult["TAX_LOCATION"] = $arProperties["VALUE"];
 
+					if ($isProfileChanged || $isEmptyUserResult)
+					{
+						$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arProperties["VALUE"];
+					}
+
 				}
 				$arVariants["NAME"] = $arVariants["COUNTRY_NAME"].((strlen($arVariants["CITY_NAME"]) > 0) ? " - " : "").$arVariants["CITY_NAME"];
 				$arProperties["VARIANTS"][] = $arVariants;
@@ -387,6 +440,11 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 			{
 				$arVariants["CHECKED"]="Y";
 				$arProperties["VALUE_FORMATED"] = $arVariants["NAME"];
+
+				if ($isProfileChanged || $isEmptyUserResult)
+				{
+					$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arVariants["VALUE"];
+				}
 			}
 
 			$arProperties["VARIANTS"][] = $arVariants;
@@ -396,6 +454,11 @@ function getOrderPropFormated($arProperties, $arResult, &$arUserResult, &$arDele
 	{
 		$arProperties["SIZE1"] = intval($arProperties["SIZE1"]);
 		$arProperties["VALUE"] = isset($curVal) ? CSaleHelper::getFileInfo($curVal) : $arProperties["DEFAULT_VALUE"];
+
+		if ($isProfileChanged || $isEmptyUserResult)
+		{
+			$arUserResult["ORDER_PROP"][$arProperties["ID"]] = $arProperties["VALUE"];
+		}
 	}
 
 	return $arProperties;
@@ -470,4 +533,75 @@ function getFileData($fileId, $orderId = 0, $arSize = array("WIDTH" => 90, "HEIG
 	return $res;
 }
 
+
+function getFormatedProperties($personTypeId, &$arResult, &$arUserResult, &$params)
+{
+	$arDeleteFieldLocation = array();
+
+	$arFilter = array("PERSON_TYPE_ID" => $personTypeId, "ACTIVE" => "Y", "UTIL" => "N", "RELATED" => false);
+	if(!empty($params["PROP_".$personTypeId]))
+		$arFilter["!ID"] = $params["PROP_".$personTypeId];
+
+	$dbProperties = CSaleOrderProps::GetList(
+		array(
+			"GROUP_SORT" => "ASC",
+			"PROPS_GROUP_ID" => "ASC",
+			"USER_PROPS" => "ASC",
+			"SORT" => "ASC",
+			"NAME" => "ASC"
+		),
+		$arFilter,
+		false,
+		false,
+		array(
+			"ID", "NAME", "TYPE", "REQUIED", "DEFAULT_VALUE", "IS_LOCATION", "PROPS_GROUP_ID", "SIZE1", "SIZE2", "DESCRIPTION",
+			"IS_EMAIL", "IS_PROFILE_NAME", "IS_PAYER", "IS_LOCATION4TAX", "DELIVERY_ID", "PAYSYSTEM_ID", "MULTIPLE",
+			"CODE", "GROUP_NAME", "GROUP_SORT", "SORT", "USER_PROPS", "IS_ZIP", "INPUT_FIELD_LOCATION"
+		)
+	);
+
+	$propIndex = array();
+
+	if(is_array($_REQUEST['LOCATION_ALT_PROP_DISPLAY_MANUAL']))
+	{
+		foreach($_REQUEST['LOCATION_ALT_PROP_DISPLAY_MANUAL'] as $propId => $switch)
+		{
+			if(intval($propId))
+				$arResult['LOCATION_ALT_PROP_DISPLAY_MANUAL'][intval($propId)] = !!$switch;
+		}
+	}
+
+	while ($arProperties = $dbProperties->GetNext())
+	{
+		$arProperties = getOrderPropFormated($arProperties, $arResult, $arUserResult, $arDeleteFieldLocation);
+
+		$flag = $arProperties["USER_PROPS"]=="Y" ? 'Y' : 'N';
+
+		$arResult["ORDER_PROP"]["USER_PROPS_".$flag][$arProperties["ID"]] = $arProperties;
+		$propIndex[$arProperties["ID"]] =& $arResult["ORDER_PROP"]["USER_PROPS_".$flag][$arProperties["ID"]];
+
+		$arResult["ORDER_PROP"]["PRINT"][$arProperties["ID"]] = Array("ID" => $arProperties["ID"], "NAME" => $arProperties["NAME"], "VALUE" => $arProperties["VALUE_FORMATED"], "SHOW_GROUP_NAME" => $arProperties["SHOW_GROUP_NAME"]);
+	}
+
+	// additional city property process
+	foreach($propIndex as $propId => $propDesc)
+	{
+		if(intval($propDesc['INPUT_FIELD_LOCATION']) && isset($propIndex[$propDesc['INPUT_FIELD_LOCATION']]))
+		{
+			$propIndex[$propDesc['INPUT_FIELD_LOCATION']]['IS_ALTERNATE_LOCATION_FOR'] = $propId;
+			$propIndex[$propId]['CAN_HAVE_ALTERNATE_LOCATION'] = $propDesc['INPUT_FIELD_LOCATION']; // more strict condition rather INPUT_FIELD_LOCATION, check if the property really exists
+		}
+	}
+
+	foreach(GetModuleEvents("sale", "OnSaleComponentOrderOneStepOrderProps", true) as $arEvent)
+		ExecuteModuleEventEx($arEvent, Array(&$arResult, &$arUserResult, &$params));
+	/* Order Props End */
+
+	//delete prop for text location (town)
+	if (count($arDeleteFieldLocation) > 0)
+	{
+		foreach ($arDeleteFieldLocation as $fieldId)
+			unset($arResult["ORDER_PROP"]["USER_PROPS_Y"][$fieldId]);
+	}
+}
 ?>

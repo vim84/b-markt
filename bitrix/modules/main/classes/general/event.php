@@ -36,7 +36,11 @@ class CAllEvent
 			if(ExecuteModuleEventEx($arEvent, array(&$event, &$lid, &$arFields, &$message_id)) === false)
 				return false;
 
-		if(!is_array($arFields)) $arFields = array();
+		if(!is_array($arFields))
+		{
+			$arFields = array();
+		}
+
 		$arLocalFields = array(
 			"EVENT_NAME" => $event,
 			"C_FIELDS" => $arFields,
@@ -690,10 +694,13 @@ class CAllEventMessage
 		);
 
 		if($bIsLang)
+		{
 			$arSelect['SITE_ID'] = 'EVENT_MESSAGE_SITE.SITE_ID';
+		}
 		else
+		{
 			$arSelect['SITE_ID'] = 'LID';
-
+		}
 
 		$resultDb = Mail\Internal\EventMessageTable::getList(array(
 			'select' => $arSelect,
@@ -702,7 +709,7 @@ class CAllEventMessage
 			'runtime' => array(
 				'EVENT_MESSAGE_TYPE' => array(
 					'data_type' => 'Bitrix\Main\Mail\Internal\EventType',
-					'reference' => array('=this.EVENT_NAME' => 'ref.EVENT_NAME', '=ref.LID' => new \Bitrix\Main\DB\SqlExpression('?', LANG_ADMIN)),
+					'reference' => array('=this.EVENT_NAME' => 'ref.EVENT_NAME', '=ref.LID' => new \Bitrix\Main\DB\SqlExpression('?', LANGUAGE_ID)),
 				),
 			)
 		));

@@ -79,8 +79,12 @@ if ((!empty($_REQUEST["ID"]) || !empty($_REQUEST["answer_id"])) && check_bitrix_
 				array("ID" => implode("|", $_REQUEST["ID"])),
 				array("FIELDS" => array("ID", "NAME", "LAST_NAME", "SECOND_NAME", "LOGIN", "PERSONAL_PHOTO"))
 			);
+
 			while ($res = $db_res->Fetch())
 			{
+				$data = array(
+					"ID" => $res["ID"]
+				);
 				if (array_key_exists("PERSONAL_PHOTO", $res))
 				{
 					$arFileTmp = CFile::ResizeImageGet(
@@ -89,11 +93,11 @@ if ((!empty($_REQUEST["ID"]) || !empty($_REQUEST["answer_id"])) && check_bitrix_
 						BX_RESIZE_IMAGE_EXACT,
 						false
 					);
-					$res["PHOTO"] = CFile::ShowImage($arFileTmp["src"], 21, 21, "border=0");
+					$data["PHOTO"] = CFile::ShowImage($arFileTmp["src"], 21, 21, "border=0");
 				}
-				$res["FULL_NAME"] = CUser::FormatName($_REQUEST["NAME_TEMPLATE"], $res);
-				$res["URL"] = CUtil::JSEscape(CComponentEngine::MakePathFromTemplate($_REQUEST["URL_TEMPLATE"], array("UID" => $res["ID"], "user_id" => $res["ID"], "USER_ID" => $res["ID"])));
-				$arUsers[$res["ID"]] = $res;
+				$data["FULL_NAME"] = CUser::FormatName($_REQUEST["NAME_TEMPLATE"], $res);
+				$data["URL"] = CUtil::JSEscape(CComponentEngine::MakePathFromTemplate($_REQUEST["URL_TEMPLATE"], array("UID" => $res["ID"], "user_id" => $res["ID"], "USER_ID" => $res["ID"])));
+				$arUsers[$res["ID"]] = $data;
 			}
 			$arVoteList["items"] = array();
 			foreach($_REQUEST["ID"] as $id)

@@ -12,7 +12,6 @@ if (check_bitrix_sessid() &&
 	is_array($arParams["PUSH&PULL"]) && $arParams["PUSH&PULL"]["ACTION"] == "REPLY" &&
 	CModule::IncludeModule("pull") && CPullOptions::GetNginxStatus())
 {
-	$_SESSION["UC"][$_REQUEST["ENTITY_XML_ID"]]["RECORDS"][] = $arParams["PUSH&PULL"]["ID"];
 	$res = $arParams["RECORDS"][$arParams["PUSH&PULL"]["ID"]];
 
 	if ($res["APPROVED"] != "Y")

@@ -156,6 +156,7 @@ window.JCCatalogSection = function (arParams)
 
 		switch (this.productType)
 		{
+			case 0://no catalog
 			case 1://product
 			case 2://set
 				if (!!arParams.PRODUCT && 'object' === typeof(arParams.PRODUCT))
@@ -741,6 +742,7 @@ window.JCCatalogSection.prototype.SearchOfferPropIndex = function(strPropID, str
 		arShowValues = false,
 		i, j,
 		arCanBuyValues = [],
+		allValues = [],
 		index = -1,
 		arFilter = {},
 		tmpFilter = [];
@@ -780,6 +782,7 @@ window.JCCatalogSection.prototype.SearchOfferPropIndex = function(strPropID, str
 			{
 				return false;
 			}
+			allValues = [];
 			if (this.showAbsent)
 			{
 				arCanBuyValues = [];
@@ -788,10 +791,9 @@ window.JCCatalogSection.prototype.SearchOfferPropIndex = function(strPropID, str
 				for (j = 0; j < arShowValues.length; j++)
 				{
 					tmpFilter[strName] = arShowValues[j];
+					allValues[allValues.length] = arShowValues[j];
 					if (this.GetCanBuy(tmpFilter))
-					{
 						arCanBuyValues[arCanBuyValues.length] = arShowValues[j];
-					}
 				}
 			}
 			else
@@ -804,7 +806,10 @@ window.JCCatalogSection.prototype.SearchOfferPropIndex = function(strPropID, str
 			}
 			else
 			{
-				arFilter[strName] = arCanBuyValues[0];
+				if (this.showAbsent)
+					arFilter[strName] = (arCanBuyValues.length > 0 ? arCanBuyValues[0] : allValues[0]);
+				else
+					arFilter[strName] = arCanBuyValues[0];
 			}
 			this.UpdateRow(i, arFilter[strName], arShowValues, arCanBuyValues);
 		}
@@ -1241,6 +1246,7 @@ window.JCCatalogSection.prototype.Compare = function()
 	{
 		switch (this.productType)
 		{
+			case 0://no catalog
 			case 1://product
 			case 2://set
 				compareLink = this.compareData.compareUrl.replace('#ID#', this.product.id.toString());
@@ -1565,7 +1571,7 @@ window.JCCatalogSection.prototype.BasketResult = function(arResult)
 				);
 				break;
 			}
-			strContent = '<div style="width: 96%; margin: 10px 2%; text-align: center;"><img src="'+strPict+'" height="130"><p>'+this.product.name+'</p></div>';
+			strContent = '<div style="width: 96%; margin: 10px 2%; text-align: center;"><img src="'+strPict+'" height="130" style="max-height:130px"><p>'+this.product.name+'</p></div>';
 			if (this.showClosePopup)
 			{
 				buttons = [

@@ -13,6 +13,9 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /** @global CIntranetToolbar $INTRANET_TOOLBAR */
 global $INTRANET_TOOLBAR;
 
+use Bitrix\Main\Context;
+use Bitrix\Main\Type\DateTime;
+
 CPageOption::SetOptionString("main", "nav_page_in_session", "N");
 
 if(!isset($arParams["CACHE_TIME"]))
@@ -24,6 +27,7 @@ if(strlen($arParams["IBLOCK_TYPE"])<=0)
 $arParams["IBLOCK_ID"] = trim($arParams["IBLOCK_ID"]);
 $arParams["PARENT_SECTION"] = intval($arParams["PARENT_SECTION"]);
 $arParams["INCLUDE_SUBSECTIONS"] = $arParams["INCLUDE_SUBSECTIONS"]!="N";
+$arParams["SET_LAST_MODIFIED"] = $arParams["SET_LAST_MODIFIED"]==="Y";
 
 $arParams["SORT_BY1"] = trim($arParams["SORT_BY1"]);
 if(strlen($arParams["SORT_BY1"])<=0)
@@ -113,6 +117,17 @@ else
 	$arNavigation = false;
 }
 
+if (empty($arParams["PAGER_PARAMS_NAME"]) || !preg_match("/^[A-Za-z_][A-Za-z01-9_]*$/", $arParams["PAGER_PARAMS_NAME"]))
+{
+	$pagerParameters = array();
+}
+else
+{
+	$pagerParameters = $GLOBALS[$arParams["PAGER_PARAMS_NAME"]];
+	if (!is_array($pagerParameters))
+		$pagerParameters = array();
+}
+
 $arParams["USE_PERMISSIONS"] = $arParams["USE_PERMISSIONS"]=="Y";
 if(!is_array($arParams["GROUP_PERMISSIONS"]))
 	$arParams["GROUP_PERMISSIONS"] = array(1);
@@ -131,7 +146,7 @@ if($arParams["USE_PERMISSIONS"] && isset($GLOBALS["USER"]) && is_object($GLOBALS
 	}
 }
 
-if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()), $bUSER_HAVE_ACCESS, $arNavigation, $arrFilter)))
+if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false: $USER->GetGroups()), $bUSER_HAVE_ACCESS, $arNavigation, $arrFilter, $pagerParameters)))
 {
 	if(!CModule::IncludeModule("iblock"))
 	{
@@ -164,7 +179,9 @@ if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false:
 			"IBLOCK_SECTION_ID",
 			"NAME",
 			"ACTIVE_FROM",
+			"TIMESTAMP_X",
 			"DETAIL_PAGE_URL",
+			"LIST_PAGE_URL",
 			"DETAIL_TEXT",
 			"DETAIL_TEXT_TYPE",
 			"PREVIEW_TEXT",
@@ -301,10 +318,60 @@ if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false:
 				}
 			}
 
+			if ($arParams["SET_LAST_MODIFIED"])
+			{
+				$time = DateTime::createFromUserTime($arItem["TIMESTAMP_X"]);
+				if (
+					!isset($arResult["ITEMS_TIMESTAMP_X"])
+					|| $time->getTimestamp() > $arResult["ITEMS_TIMESTAMP_X"]->getTimestamp()
+				)
+					$arResult["ITEMS_TIMESTAMP_X"] = $time;
+			}
+
 			$arResult["ITEMS"][] = $arItem;
 			$arResult["ELEMENTS"][] = $arItem["ID"];
 		}
-		$arResult["NAV_STRING"] = $rsElement->GetPageNavStringEx($navComponentObject, $arParams["PAGER_TITLE"], $arParams["PAGER_TEMPLATE"], $arParams["PAGER_SHOW_ALWAYS"], $this);
+
+		$navComponentParameters = array();
+		if ($arParams["PAGER_BASE_LINK_ENABLE"] === "Y")
+		{
+			$pagerBaseLink = trim($arParams["PAGER_BASE_LINK"]);
+			if ($pagerBaseLink === "")
+			{
+				if (
+					$arResult["SECTION"]
+					&& $arResult["SECTION"]["PATH"]
+					&& $arResult["SECTION"]["PATH"][0]
+					&& $arResult["SECTION"]["PATH"][0]["~SECTION_PAGE_URL"]
+				)
+				{
+					$pagerBaseLink = $arResult["SECTION"]["PATH"][0]["~SECTION_PAGE_URL"];
+				}
+				elseif (
+					$arItem["~LIST_PAGE_URL"]
+				)
+				{
+					$pagerBaseLink = $arItem["~LIST_PAGE_URL"];
+				}
+			}
+
+			if ($pagerParameters && isset($pagerParameters["BASE_LINK"]))
+			{
+				$pagerBaseLink = $pagerParameters["BASE_LINK"];
+				unset($pagerParameters["BASE_LINK"]);
+			}
+
+			$navComponentParameters["BASE_LINK"] = CHTTP::urlAddParams($pagerBaseLink, $pagerParameters, array("encode"=>true));
+		}
+
+		$arResult["NAV_STRING"] = $rsElement->GetPageNavStringEx(
+			$navComponentObject,
+			$arParams["PAGER_TITLE"],
+			$arParams["PAGER_TEMPLATE"],
+			$arParams["PAGER_SHOW_ALWAYS"],
+			$this,
+			$navComponentParameters
+		);
 		$arResult["NAV_CACHED_DATA"] = null;
 		$arResult["NAV_RESULT"] = $rsElement;
 		$this->SetResultCacheKeys(array(
@@ -316,16 +383,20 @@ if($this->StartResultCache(false, array(($arParams["CACHE_GROUPS"]==="N"? false:
 			"SECTION",
 			"ELEMENTS",
 			"IPROPERTY_VALUES",
+			"ITEMS_TIMESTAMP_X",
 		));
 		$this->IncludeComponentTemplate();
 	}
 	else
 	{
 		$this->AbortResultCache();
-		ShowError(GetMessage("T_NEWS_NEWS_NA"));
-		@define("ERROR_404", "Y");
-		if($arParams["SET_STATUS_404"]==="Y")
-			CHTTP::SetStatus("404 Not Found");
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("T_NEWS_NEWS_NA")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
 	}
 }
 
@@ -417,6 +488,11 @@ if(isset($arResult["ID"]))
 			else
 				$APPLICATION->AddChainItem($arPath["NAME"], $arPath["~SECTION_PAGE_URL"]);
 		}
+	}
+
+	if ($arParams["SET_LAST_MODIFIED"] && $arResult["ITEMS_TIMESTAMP_X"])
+	{
+		Context::getCurrent()->getResponse()->setLastModified($arResult["ITEMS_TIMESTAMP_X"]);
 	}
 
 	return $arResult["ELEMENTS"];

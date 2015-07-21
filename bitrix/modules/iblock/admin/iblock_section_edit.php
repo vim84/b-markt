@@ -892,7 +892,12 @@ $tabControl->BeginCustomField("DESCRIPTION", GetMessage("IBSEC_E_DESCRIPTION"), 
 				0,
 				"",
 				"",
-				$arIBlock["LID"]
+				$arIBlock["LID"],
+				true,
+				false,
+				array(
+					'hideTypeSelector' => $arIBlock["FIELDS"]["SECTION_DESCRIPTION_TYPE_ALLOW_CHANGE"]["DEFAULT_VALUE"] === "N",
+				)
 			);?>
 		</td>
 	</tr>
@@ -1681,18 +1686,21 @@ if($arIBlock["SECTION_PROPERTY"] === "Y")
 			}
 			function setMode(table, mode)
 			{
-				var trCollection = BX.findChildren(table, {tag:'TR'}, true);
-				for (var i = 0; i < trCollection.length; i++)
+				for (var i = 0; i < table.rows.length; i++)
 				{
-					var tr = trCollection[i];
+					var tr = table.rows[i];
 					var trMode = tr.getAttribute('mode');
 					if (!trMode)
+					{
 						return;
+					}
+
 					if (trMode == 'both' || trMode == mode)
 						tr.style.display = 'table-row';
 					else
 						tr.style.display = 'none';
 				}
+
 				if (mode == 'tree')
 				{
 					BX('modeChangeToTree').style.display = 'none';

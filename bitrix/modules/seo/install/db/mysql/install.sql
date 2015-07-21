@@ -25,7 +25,7 @@ create table if not exists b_seo_search_engine
 
 INSERT INTO b_seo_search_engine (CODE, ACTIVE, SORT, NAME, CLIENT_ID, CLIENT_SECRET, REDIRECT_URI) VALUES ('google', 'Y', 200, 'Google', '950140266760.apps.googleusercontent.com', 'IBktWJ_dS3rMKh43PSHO-zo5', 'urn:ietf:wg:oauth:2.0:oob');
 INSERT INTO b_seo_search_engine (CODE, ACTIVE, SORT, NAME, CLIENT_ID, CLIENT_SECRET, REDIRECT_URI) VALUES ('yandex', 'Y', 300, 'Yandex', 'f848c7bfc1d34a94ba6d05439f81bbd7', 'da0e73b2d9cc4e809f3170e49cb9df01', 'https://oauth.yandex.ru/verification_code');
-INSERT INTO b_seo_search_engine (CODE, ACTIVE, SORT, NAME, CLIENT_ID, CLIENT_SECRET, REDIRECT_URI) VALUES ('yandex_direct', 'Y', 400, 'Yandex.Direct', 'e46a29a748d84036baee1e2ae2a84fc6', '7122987f5a99479bb756d79ed7986e6c', 'https://oauth.yandex.ru/verification_code');
+INSERT INTO b_seo_search_engine (CODE, ACTIVE, SORT, NAME, CLIENT_ID, CLIENT_SECRET, REDIRECT_URI) VALUES ('yandex_direct', 'Y', 400, 'Yandex.Direct', '', '', 'https://oauth.yandex.ru/verification_code');
 
 create table if not exists b_seo_sitemap
 (
@@ -119,9 +119,12 @@ CREATE TABLE if not exists b_seo_adv_banner
 	SETTINGS text NULL,
 	CAMPAIGN_ID int(11) NOT NULL,
 	GROUP_ID int(11) NULL,
+	AUTO_QUANTITY_OFF char(1) NULL DEFAULT 'N',
+	AUTO_QUANTITY_ON char(1) NULL DEFAULT 'N',
 	PRIMARY KEY (ID),
 	UNIQUE INDEX ux_b_seo_adv_banner(ENGINE_ID, XML_ID),
-	INDEX ix_b_seo_adv_banner1(CAMPAIGN_ID)
+	INDEX ix_b_seo_adv_banner1(CAMPAIGN_ID),
+	INDEX ix_b_seo_adv_banner2(AUTO_QUANTITY_OFF, AUTO_QUANTITY_ON)
 );
 
 
@@ -178,6 +181,22 @@ CREATE TABLE if not exists b_seo_adv_log
 	PRIMARY KEY (ID),
 	INDEX ix_b_seo_adv_log1 (ENGINE_ID),
 	INDEX ix_b_seo_adv_log2 (TIMESTAMP_X)
+);
+
+CREATE TABLE if not exists b_seo_adv_autolog
+(
+	ID int(11) NOT NULL AUTO_INCREMENT,
+	ENGINE_ID int(11) NOT NULL,
+	TIMESTAMP_X timestamp NOT NULL,
+	CAMPAIGN_ID int(11) NOT NULL,
+	CAMPAIGN_XML_ID varchar(255) NOT NULL,
+	BANNER_ID int(11) NOT NULL,
+	BANNER_XML_ID varchar(255) NOT NULL,
+	CAUSE_CODE int NULL DEFAULT 0,
+	SUCCESS char(1) NULL DEFAULT 'Y',
+	PRIMARY KEY pk_b_seo_adv_autolog (ID),
+	INDEX ix_b_seo_adv_autolog1 (ENGINE_ID),
+	INDEX ix_b_seo_adv_autolog2 (TIMESTAMP_X)
 );
 
 CREATE TABLE if not exists b_seo_yandex_direct_stat

@@ -303,17 +303,26 @@ if(
 			}
 		}
 
-		if(!$arResult["bFromList"])
+		if (!$arResult["bFromList"])
+		{
 			CBlogPost::CounterInc($arPost["ID"]);
+		}
 
 		$arPost = CBlogTools::htmlspecialcharsExArray($arPost);
 		if($arPost["AUTHOR_ID"] == $user_id)
+		{
 			$arPost["perms"] = $arResult["PostPerm"] = BLOG_PERMS_FULL;
+		}
 		elseif($arResult["bFromList"])
 		{
 			$arPost["perms"] = $arResult["PostPerm"] = BLOG_PERMS_READ;
-			if (CSocNetUser::IsCurrentUserModuleAdmin() || $APPLICATION->GetGroupRight("blog") >= "W")
+			if (
+				CSocNetUser::IsCurrentUserModuleAdmin(SITE_ID, (!isset($arParams["MOBILE"]) || $arParams["MOBILE"] != "Y"))
+				|| $APPLICATION->GetGroupRight("blog") >= "W"
+			)
+			{
 				$arPost["perms"] = $arResult["PostPerm"] = BLOG_PERMS_FULL;
+			}
 		}
 		else
 		{
@@ -857,7 +866,9 @@ if(
 							{
 								$group_id_tmp = substr($v, 2);
 								if(IntVal($group_id_tmp) > 0)
+								{
 									CSocNetGroup::SetLastActivity(IntVal($group_id_tmp));
+								}
 							}
 						}
 					}
@@ -910,15 +921,27 @@ if(
 			);
 			foreach($arKeys as $param_key)
 			{
-				if (array_key_exists($param_key, $arParams))
-					$arCacheID[$param_key] = $arParams[$param_key];
-				else
-					$arCacheID[$param_key] = false;
+				$arCacheID[$param_key] = (array_key_exists($param_key, $arParams) ? $arParams[$param_key] : false);
 			}
 
 			$cache_id = "blog_socnet_post_".md5(serialize($arCacheID))."_".LANGUAGE_ID."_".$arParams["DATE_TIME_FORMAT"];
-			if($arResult["TZ_OFFSET"] <> 0)
+			if ($arResult["TZ_OFFSET"] <> 0)
+			{
 				$cache_id .= "_".$arResult["TZ_OFFSET"];
+			}
+
+			if (
+				!empty($arParams["MOBILE"])
+				&& $arParams["MOBILE"] == "Y"
+			)
+			{
+				$imageResizeWidth = CMobileHelper::getDeviceResizeWidth();
+				if ($imageResizeWidth)
+				{
+					$cache_id .= "_".$imageResizeWidth;
+				}
+			}
+
 			$cache_path = "/blog/socnet_post/".intval($arPost["ID"] / 100)."/".$arPost["ID"]."/";
 
 			if ($arParams["CACHE_TIME"] > 0 && $cache->InitCache($arParams["CACHE_TIME"], $cache_id, $cache_path))

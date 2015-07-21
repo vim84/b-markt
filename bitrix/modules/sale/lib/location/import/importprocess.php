@@ -1413,7 +1413,13 @@ final class ImportProcess extends Location\Util\Process
 
 	public function getRequiredLanguages()
 	{
-		return array_unique(array_merge(array(ToUpper($this->getLanguageId())), static::getSiteLanguages())); // current language plus for all active sites
+		$required = array(ToUpper($this->getLanguageId()));
+
+		$langs = Location\Admin\NameHelper::getLanguageList();
+		if(isset($langs['en']))
+			$required[] = 'EN';
+
+		return array_unique(array_merge($required, static::getSiteLanguages())); // current language plus for all active sites
 	}
 
 	// read type.csv and build type table

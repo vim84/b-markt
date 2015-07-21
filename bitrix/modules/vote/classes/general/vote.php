@@ -867,7 +867,9 @@ class CAllVote
 											$arVote["TOTAL_URL"] = (CMain::IsHTTPS() ? "https" : "http")."://".$arVote["TOTAL_URL"].$arVote["URL"];
 									}
 
+
 									// send notification
+									$gender = ($USER->getParam("PERSONAL_GENDER") == "F" ? "_F" : "");
 									$arMessageFields = array(
 										"MESSAGE_TYPE" => IM_MESSAGE_SYSTEM,
 										"TO_USER_ID" => $arVote["AUTHOR_ID"],
@@ -877,11 +879,11 @@ class CAllVote
 										"NOTIFY_EVENT" => "voting",
 										"NOTIFY_TAG" => "VOTING|".$VOTE_ID,
 										"NOTIFY_MESSAGE" => (!empty($arVote["URL"]) ?
-											GetMessage("V_NOTIFY_MESSAGE_HREF", array("#VOTE_TITLE#" => $arVote["TITLE"], "#VOTE_URL#" => $arVote["URL"])) :
-											GetMessage("V_NOTIFY_MESSAGE", array("#VOTE_TITLE#" => $arVote["TITLE"]))),
+											GetMessage("V_NOTIFY_MESSAGE_HREF".$gender, array("#VOTE_TITLE#" => $arVote["TITLE"], "#VOTE_URL#" => $arVote["URL"])) :
+											GetMessage("V_NOTIFY_MESSAGE".$gender, array("#VOTE_TITLE#" => $arVote["TITLE"]))),
 										"NOTIFY_MESSAGE_OUT" => (!empty($arVote["TOTAL_URL"]) ?
-											GetMessage("V_NOTIFY_MESSAGE_OUT_HREF", array("#VOTE_TITLE#" => $arVote["TITLE"], "#VOTE_URL#" => $arVote["TOTAL_URL"])) :
-											GetMessage("V_NOTIFY_MESSAGE", array("#VOTE_TITLE#" => $arVote["TITLE"])))
+											GetMessage("V_NOTIFY_MESSAGE_OUT_HREF".$gender, array("#VOTE_TITLE#" => $arVote["TITLE"], "#VOTE_URL#" => $arVote["TOTAL_URL"])) :
+											GetMessage("V_NOTIFY_MESSAGE".$gender, array("#VOTE_TITLE#" => $arVote["TITLE"])))
 									);
 
 									CIMNotify::Add($arMessageFields);

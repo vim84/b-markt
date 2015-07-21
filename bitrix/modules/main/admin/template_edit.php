@@ -29,7 +29,7 @@ if(!$edit_php && !$USER->CanDoOperation('view_other_settings') && !$USER->CanDoO
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
 $isEditingMessageThemePage = $APPLICATION->GetCurPage() == '/bitrix/admin/message_theme_edit.php';
-	
+
 IncludeModuleLangFile(__FILE__);
 
 $lpa = ($USER->CanDoOperation('lpa_template_edit') && !$edit_php); // Limit PHP access: for non admin users
@@ -313,11 +313,12 @@ $tabControl->BeginNextTab();
 	<tr>
 		<td align="center" colspan="2">
 		<?
-		$stylesPath = $_SERVER["DOCUMENT_ROOT"].$templFields["PATH"]."/.styles.php";
+		$io = CBXVirtualIo::GetInstance();
+		$stylesPath = $io->RelativeToAbsolutePath($templFields["PATH"]."/.styles.php");
+		$arStyles = array();
 		if($bVarsFromForm)
 		{
 			$i = 0;
-			$arStyles = array();
 			while(isset($_POST["CODE_".$i]))
 			{
 				$arStyles[$_POST["CODE_".$i]] = $_POST["VALUE_".$i];
@@ -326,7 +327,11 @@ $tabControl->BeginNextTab();
 		}
 		else
 		{
-			$arStyles = (file_exists($stylesPath)) ? CSiteTemplate::__GetByStylesTitle($stylesPath) : array();
+			$io = CBXVirtualIo::GetInstance();
+			if ($io->FileExists($stylesPath))
+			{
+				$arStyles = CSiteTemplate::__GetByStylesTitle($stylesPath);
+			}
 		}
 		?>
 		<script>
@@ -355,6 +360,8 @@ $tabControl->BeginNextTab();
 
 				foreach($arStyles as $style_ => $title_)
 				{
+					if (is_array($title_))
+						continue;
 					?>
 					<tr>
 						<td  >

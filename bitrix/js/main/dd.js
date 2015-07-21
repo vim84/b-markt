@@ -370,7 +370,7 @@ jsDD = {
 
 		for (var i = 0, cnt = jsDD.arDestinations.length; i < cnt; i++)
 		{
-			if (jsDD.arDestinations[i].onbxdestdragstart)
+			if (jsDD.arDestinations[i] && jsDD.arDestinations[i].onbxdestdragstart)
 				jsDD.arDestinations[i].onbxdestdragstart(jsDD.current_node);
 		}
 
@@ -499,14 +499,14 @@ jsDD = {
 			{
 				for (var i = 0, cnt = jsDD.arDestinations.length; i < cnt; i++)
 				{
-					if (i != dest_index && null != jsDD.arDestinations[i].onbxdestdragrelease)
+					if (i != dest_index && jsDD.arDestinations[i] && null != jsDD.arDestinations[i].onbxdestdragrelease)
 						jsDD.arDestinations[i].onbxdestdragrelease(jsDD.current_node, jsDD.x, jsDD.y);
 				}
 			}
 
 			for (var i = 0, cnt = jsDD.arDestinations.length; i < cnt; i++)
 			{
-				if (null != jsDD.arDestinations[i].onbxdestdragstop)
+				if (jsDD.arDestinations[i] && null != jsDD.arDestinations[i].onbxdestdragstop)
 					jsDD.arDestinations[i].onbxdestdragstop(jsDD.current_node, jsDD.x, jsDD.y);
 			}
 		}

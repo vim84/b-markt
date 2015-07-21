@@ -20,4 +20,6 @@ $MESS["sender_imp_error"] = "Error importing recipients.";
 $MESS["sender_imp_addr_add_err"] = "Error importing a recipient.";
 $MESS["sender_imp_add_list"] = "Add to list";
 $MESS["sender_imp_list_new_error"] = "The list name is required.";
+$MESS["sender_imp_back_to_list"] = "Back to list";
+$MESS["sender_imp_back_to_list_title"] = "Go back to address list";
 ?>

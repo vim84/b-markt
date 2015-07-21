@@ -492,18 +492,6 @@ BX.BXGCE.setSelector = function(selectorName)
 	BX.BXGCE.userSelector = selectorName;
 }
 
-BX.BXGCE.setLinkName = function(name)
-{
-	if (BX.SocNetLogDestination.getSelectedCount(name) <= 0)
-	{
-		BX('sonet_group_create_popup_users_tag_post_' + name).innerHTML = BX.message("SONET_GCE_T_DEST_LINK_1");
-	}
-	else
-	{
-		BX('sonet_group_create_popup_users_tag_post_' + name).innerHTML = BX.message("SONET_GCE_T_DEST_LINK_2");
-	}
-}
-
 BX.BXGCE.disableBackspace = function(event)
 {
 	if (
@@ -576,21 +564,13 @@ BX.BXGCE.selectCallback = function(item, type, search, bUndeleted, name)
 	}
 
 	BX('sonet_group_create_popup_users_input_post_' + name).value = '';
-	BX.BXGCE.setLinkName(name);
-}
 
-BX.BXGCE.unSelectCallback = function(item, type, search)
-{
-	var elements = BX.findChildren(BX('sonet_group_create_popup_users_item_post_' + BX.BXGCE.userSelector), {attribute: {'data-id': ''+item.id+''}}, true);
-	if (elements != null)
-	{
-		for (var j = 0; j < elements.length; j++)
-		{
-			BX.remove(elements[j]);
-		}
-	}
-	BX('sonet_group_create_popup_users_input_post_' + BX.BXGCE.userSelector).value = '';
-	BX.BXGCE.setLinkName(BX.BXGCE.userSelector);
+	BX.SocNetLogDestination.BXfpSetLinkName({
+		formName: name,
+		tagInputName: 'sonet_group_create_popup_users_tag_post_' + name,
+		tagLink1: BX.message('SONET_GCE_T_DEST_LINK_1'),
+		tagLink2: BX.message('SONET_GCE_T_DEST_LINK_2')
+	});
 }
 
 BX.BXGCE.openDialogCallback = function()
@@ -598,95 +578,7 @@ BX.BXGCE.openDialogCallback = function()
 	BX.PopupWindow.setOptions({
 		'popupZindex': 2100
 	});
-	BX.style(BX('sonet_group_create_popup_users_input_box_post_' + BX.BXGCE.userSelector), 'display', 'inline-block');
-	BX.style(BX('sonet_group_create_popup_users_tag_post_' + BX.BXGCE.userSelector), 'display', 'none');
-	BX.focus(BX('sonet_group_create_popup_users_input_post_' + BX.BXGCE.userSelector));
-}
-
-BX.BXGCE.closeDialogCallback = function()
-{
-	if (
-		!BX.SocNetLogDestination.isOpenSearch() 
-		&& BX('sonet_group_create_popup_users_input_post_' + BX.BXGCE.userSelector).value.length <= 0
-	)
-	{
-		BX.style(BX('sonet_group_create_popup_users_input_box_post_' + BX.BXGCE.userSelector), 'display', 'none');
-//		BX.style(BX('sonet_group_create_popup_users_tag_post_' + BX.BXGCE.userSelector), 'display', 'inline-block');
-		BX.BXGCE.disableBackspace();
-	}
-}
-
-BX.BXGCE.searchBefore = function(event)
-{
-	if (
-		event.keyCode == 8 
-		&& BX('sonet_group_create_popup_users_input_post_' + BX.BXGCE.userSelector).value.length <= 0
-	)
-	{
-		BX.SocNetLogDestination.sendEvent = false;
-		BX.SocNetLogDestination.deleteLastItem(BX.BXGCE.userSelector);
-	}
-
-	return true;
-}
-
-BX.BXGCE.search = function(event)
-{
-	if (
-		event.keyCode == 16 
-		|| event.keyCode == 17 
-		|| event.keyCode == 18 
-		|| event.keyCode == 20 
-		|| event.keyCode == 244 
-		|| event.keyCode == 224 
-		|| event.keyCode == 91
-	)
-	{
-		return false;
-	}
-
-	if (event.keyCode == 13)
-	{
-		BX.SocNetLogDestination.selectFirstSearchItem(BX.BXGCE.userSelector);
-		return true;
-	}
-
-	if (event.keyCode == 27)
-	{
-		BX('sonet_group_create_popup_users_input_post_' + BX.BXGCE.userSelector).value = '';
-		BX.style(BX('sonet_group_create_popup_users_tag_post_' + BX.BXGCE.userSelector), 'display', 'inline');
-	}
-	else
-	{
-		BX.SocNetLogDestination.search(
-			BX('sonet_group_create_popup_users_input_post_' + BX.BXGCE.userSelector).value, 
-			true, 
-			BX.BXGCE.userSelector
-		);
-	}
-
-	if (
-		!BX.SocNetLogDestination.isOpenDialog() 
-		&& BX('sonet_group_create_popup_users_input_post_' + BX.BXGCE.userSelector).value.length <= 0
-	)
-	{
-		BX.SocNetLogDestination.openDialog(BX.BXGCE.userSelector);
-	}
-	else
-	{
-		if (
-			BX.SocNetLogDestination.sendEvent 
-			&& BX.SocNetLogDestination.isOpenDialog()
-		)
-		{
-			BX.SocNetLogDestination.closeDialog();
-		}
-	}
-	if (event.keyCode == 8)
-	{
-		BX.SocNetLogDestination.sendEvent = true;
-	}
-	return true;
+	BX.SocNetLogDestination.BXfpOpenDialogCallback.apply(this, arguments);
 }
 
 BX.BXGCE.bindActionLink = function(oBlock)

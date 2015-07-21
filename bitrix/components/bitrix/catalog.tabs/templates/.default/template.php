@@ -39,7 +39,7 @@ if (isset($arParams["DATA"]) && !empty($arParams["DATA"]) && is_array($arParams[
 		?>
 	</ul>
 	<div class="bx-catalog-tab-body-container">
-		<div class="container">
+		<div class="bx-catalog-tab-container">
 			<?=$content?>
 		</div>
 	</div>

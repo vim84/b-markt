@@ -12,6 +12,10 @@ BX.SocNetLogDestination =
 	extranetUser: false,
 
 	obSearchFirstElement: null,
+	obSearchCurrentElement: null,
+	obSearchResult: null,
+	obSearchPosition: null,
+
 	searchTimeout: null,
 	createSonetGroupTimeout: null,
 
@@ -38,7 +42,20 @@ BX.SocNetLogDestination =
 
 	obSiteDepartmentID: {},
 
-	obCrmFeed: {}
+	obCrmFeed: {},
+
+	bFinderInited: false,
+	obClientDb: null,
+	obClientDbData: {},
+	obClientDbDataSearchIndex: {},
+
+	oDbUserSearchResult: {},
+	oAjaxUserSearchResult: {},
+	oSearchWaiterEnabled: {},
+	oSearchWaiterContentHeight: 0,
+
+	bSearchResultMoved: false,
+	oXHR: null
 };
 
 BX.SocNetLogDestination.init = function(arParams)
@@ -67,6 +84,9 @@ BX.SocNetLogDestination.init = function(arParams)
 
 	BX.SocNetLogDestination.obLastEnable[arParams.name] = (arParams.lastTabDisable == true ? false : true);
 	BX.SocNetLogDestination.obDepartmentEnable[arParams.name] = false;
+
+	BX.SocNetLogDestination.oDbUserSearchResult[arParams.name] = {};
+
 	if (arParams.items.department)
 	{
 		for(var i in arParams.items.department)
@@ -94,6 +114,13 @@ BX.SocNetLogDestination.init = function(arParams)
 	{
 		var type = BX.SocNetLogDestination.obItemsSelected[arParams.name][itemId];
 		BX.SocNetLogDestination.runSelectCallback(itemId, type, arParams.name);
+	}
+
+	if (!BX.SocNetLogDestination.bFinderInited)
+	{
+		BX.Finder(false, 'destination', [], {});
+		BX.onCustomEvent('initFinderDb', [ BX.SocNetLogDestination ]);
+		BX.SocNetLogDestination.bFinderInited = true;
 	}
 
 	if (
@@ -132,7 +159,9 @@ BX.SocNetLogDestination.openDialog = function(name, params)
 		params = {};
 
 	if (BX.SocNetLogDestination.popupSearchWindow != null)
+	{
 		BX.SocNetLogDestination.popupSearchWindow.close();
+	}
 
 	if (BX.SocNetLogDestination.popupWindow != null)
 	{
@@ -151,16 +180,28 @@ BX.SocNetLogDestination.openDialog = function(name, params)
 		lightShadow: true,
 		events: {
 			onPopupShow : function() {
-				if(BX.SocNetLogDestination.sendEvent && BX.SocNetLogDestination.obCallback[name] && BX.SocNetLogDestination.obCallback[name].openDialog)
+				if (
+					BX.SocNetLogDestination.sendEvent
+					&& BX.SocNetLogDestination.obCallback[name]
+					&& BX.SocNetLogDestination.obCallback[name].openDialog
+				)
+				{
 					BX.SocNetLogDestination.obCallback[name].openDialog(name);
+				}
 			},
 			onPopupClose : function() {
 				this.destroy();
 			},
 			onPopupDestroy : BX.proxy(function() {
 				BX.SocNetLogDestination.popupWindow = null;
-				if(BX.SocNetLogDestination.sendEvent && BX.SocNetLogDestination.obCallback[name] && BX.SocNetLogDestination.obCallback[name].closeDialog)
+				if (
+					BX.SocNetLogDestination.sendEvent
+					&& BX.SocNetLogDestination.obCallback[name]
+					&& BX.SocNetLogDestination.obCallback[name].closeDialog
+				)
+				{
 					BX.SocNetLogDestination.obCallback[name].closeDialog(name);
+				}
 			}, this)
 		},
 		content:
@@ -195,7 +236,9 @@ BX.SocNetLogDestination.openDialog = function(name, params)
 		&& BX.SocNetLogDestination.obDepartmentEnable[name]
 		&& BX('destDepartmentTab_'+name)
 	)
+	{
 		BX.SocNetLogDestination.SwitchTab(name, BX('destDepartmentTab_'+name), 'department');
+	}
 };
 
 BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, params)
@@ -213,9 +256,14 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 		sendAjax = false;
 	}
 
-	var bTranslated = (typeof params.bTranslated != 'undefined' ? params.bTranslated : false);
-
 	BX.SocNetLogDestination.obSearchFirstElement = null;
+	BX.SocNetLogDestination.obSearchCurrentElement = null;
+	BX.SocNetLogDestination.obSearchResult = [];
+	BX.SocNetLogDestination.obSearchPosition = {
+		group: 0,
+		row: 0,
+		column: 0
+	};
 
 	if (text.length <= 0)
 	{
@@ -233,13 +281,57 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 			'contacts': {}, 'companies': {}, 'leads': {}, 'deals': {}
 		};
 		var count = 0;
+
+		var resultGroupIndex = 0;
+		var resultRowIndex = 0;
+		var resultColumnIndex = 0;
+		var bNewGroup = null;
+		var storedItem = false;
+		var bSkip = false;
+
 		var partsItem = [];
-		var partsSearchText = [];
 		var bFound = false;
 		var bPartFound = false;
+		var partsSearchText = text.toLowerCase().split(" ");
+
+		if (sendAjax) // before AJAX request
+		{
+			var obSearch = { searchString: text };
+			BX.onCustomEvent('findEntityByName', [
+				BX.SocNetLogDestination,
+				obSearch,
+				{ },
+				BX.SocNetLogDestination.oDbUserSearchResult[name]
+			]);
+			text = obSearch.searchString;
+			BX.SocNetLogDestination.bSearchResultMoved = false;
+		}
+		else // from AJAX results
+		{
+			if (
+				typeof BX.SocNetLogDestination.oDbUserSearchResult[name][text] != 'undefined'
+				&& BX.SocNetLogDestination.oDbUserSearchResult[name][text].length > 0
+				&& BX.SocNetLogDestination.oAjaxUserSearchResult[name][text].length < 20
+			)
+			{
+				/* sync minus */
+				BX.onCustomEvent('syncClientDb', [
+					BX.SocNetLogDestination,
+					name,
+					BX.SocNetLogDestination.oDbUserSearchResult[name][text],
+					(
+						typeof BX.SocNetLogDestination.oAjaxUserSearchResult[name][text] != 'undefined'
+							? BX.SocNetLogDestination.oAjaxUserSearchResult[name][text]
+							: {}
+					)
+				]);
+			}
+		}
 
 		for (var group in items)
 		{
+			bNewGroup = true;
+
 			if (
 				BX.SocNetLogDestination.obDepartmentSelectDisable[name]
 				&& group == 'department'
@@ -248,14 +340,25 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 				continue;
 			}
 
+			if (
+				group == 'users'
+				&& sendAjax
+				&& typeof BX.SocNetLogDestination.oDbUserSearchResult[name][text] != 'undefined'
+				&& BX.SocNetLogDestination.oDbUserSearchResult[name][text].length > 0 // results from local DB
+			)
+			{
+				for (var i in BX.SocNetLogDestination.oDbUserSearchResult[name][text])
+				{
+					BX.SocNetLogDestination.obItems[name][group][BX.SocNetLogDestination.oDbUserSearchResult[name][text][i]] = BX.SocNetLogDestination.obClientDbData.users[BX.SocNetLogDestination.oDbUserSearchResult[name][text][i]];
+				}
+			}
+
 			for (var i in BX.SocNetLogDestination.obItems[name][group])
 			{
-				if (BX.SocNetLogDestination.obItemsSelected[name][i])
+				if (BX.SocNetLogDestination.obItemsSelected[name][i]) // if already in selected
 				{
 					continue;
 				}
-
-				partsSearchText = text.toLowerCase().split(" ");
 
 				if (partsSearchText.length <= 1)
 				{
@@ -278,7 +381,7 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 						bPartFound = false;
 						for (var k in partsItem)
 						{
-							if (partsItem[k].indexOf(partsSearchText[j]) >= 0)
+							if (partsItem[k].indexOf(partsSearchText[j]) === 0)
 							{
 								bPartFound = true;
 								break;
@@ -298,15 +401,74 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 					}
 				}
 
+				if (bNewGroup)
+				{
+					if (typeof BX.SocNetLogDestination.obSearchResult[resultGroupIndex] != 'undefined')
+					{
+						resultGroupIndex++;
+					}
+					bNewGroup = false;
+				}
+
 				items[group][i] = true;
+
+				bSkip = false;
+				if (BX.SocNetLogDestination.obItems[name][group][i]['id'] == 'UA')
+				{
+					bSkip = true;
+				}
+				else
+				{
+					if (typeof BX.SocNetLogDestination.obSearchResult[resultGroupIndex] == 'undefined')
+					{
+						BX.SocNetLogDestination.obSearchResult[resultGroupIndex] = [];
+						resultRowIndex = 0;
+						resultColumnIndex = 0;
+					}
+
+					if (resultColumnIndex == 2)
+					{
+						resultRowIndex++;
+						resultColumnIndex = 0;
+					}
+
+					if (typeof BX.SocNetLogDestination.obSearchResult[resultGroupIndex][resultRowIndex] == 'undefined')
+					{
+						BX.SocNetLogDestination.obSearchResult[resultGroupIndex][resultRowIndex] = [];
+						resultColumnIndex = 0;
+					}
+				}
+
+				var item = BX.clone(BX.SocNetLogDestination.obItems[name][group][i]);
+
+				if (bSkip)
+				{
+					storedItem = item;
+				}
+
+				item.type = group;
+				if (!bSkip)
+				{
+					if (storedItem)
+					{
+						BX.SocNetLogDestination.obSearchResult[resultGroupIndex][resultRowIndex][resultColumnIndex] = storedItem;
+						storedItem = false;
+						resultColumnIndex++;
+					}
+
+					BX.SocNetLogDestination.obSearchResult[resultGroupIndex][resultRowIndex][resultColumnIndex] = item;
+				}
+
 				if (count <= 0)
 				{
-					var item = BX.clone(BX.SocNetLogDestination.obItems[name][group][i]);
-					item.type = group;
 					BX.SocNetLogDestination.obSearchFirstElement = item;
+					BX.SocNetLogDestination.obSearchCurrentElement = item;
 				}
 				count++;
+
+				resultColumnIndex++;
 			}
+
 		}
 
 		if (sendAjax)
@@ -374,10 +536,14 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 		}
 
 		clearTimeout(BX.SocNetLogDestination.searchTimeout);
+
 		if (sendAjax && text.toLowerCase() != '')
 		{
-			BX.SocNetLogDestination.searchTimeout = setTimeout(function(){
-				BX.ajax({
+			BX.SocNetLogDestination.showSearchWaiter(name);
+
+			BX.SocNetLogDestination.searchTimeout = setTimeout(function()
+			{
+				BX.SocNetLogDestination.oXHR = BX.ajax({
 					url: BX.SocNetLogDestination.obPathToAjax[name],
 					method: 'POST',
 					dataType: 'json',
@@ -386,63 +552,67 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 						'CRM_SEARCH' : BX.SocNetLogDestination.obCrmFeed[name] ? 'Y' : 'N',
 						'EXTRANET_SEARCH' : BX.util.in_array(BX.SocNetLogDestination.obUserSearchArea[name], ['I', 'E']) ? BX.SocNetLogDestination.obUserSearchArea[name] : 'N',
 						'SEARCH' : text.toLowerCase(),
+						'SEARCH_CONVERTED' : (
+							BX.message('LANGUAGE_ID') == 'ru'
+							&& BX.correctText
+								? BX.correctText(text.toLowerCase())
+								: ''
+						),
 						'sessid': BX.bitrix_sessid(),
 						'nt': nameTemplate,
 						'DEPARTMENT_ID': (parseInt(BX.SocNetLogDestination.obSiteDepartmentID[name]) > 0 ? parseInt(BX.SocNetLogDestination.obSiteDepartmentID[name]) : 0)
 					},
 					onsuccess: function(data)
 					{
-						for (var i in data.USERS)
+						BX.SocNetLogDestination.hideSearchWaiter(name);
+
+						/* sync plus */
+						if (typeof data.SEARCH != 'undefined')
 						{
-							bFound = true;
-							if (!BX.SocNetLogDestination.obItems[name].users[i])
-							{
-								BX.SocNetLogDestination.obItems[name].users[i] = data.USERS[i];
-							}
-						}
-						if (BX.SocNetLogDestination.obCrmFeed[name])
-						{
-							var types = {'contacts': 'CONTACTS', 'companies': 'COMPANIES', 'leads': 'LEADS', 'deals': 'DEALS'};
-							for (type in types)
-							{
-								for (var i in data[types[type]])
-								{
-									bFound = true;
-									if (!BX.SocNetLogDestination.obItems[name][type][i])
-										BX.SocNetLogDestination.obItems[name][type][i] = data[types[type]][i];
-								}
-							}
+							text = data.SEARCH;
 						}
 
-						if (!bFound)
+						BX.onCustomEvent('onFinderAjaxSuccess', [ data, BX.SocNetLogDestination ]);
+
+						if (!BX.SocNetLogDestination.bSearchResultMoved)
 						{
-							if (
-								!bTranslated
-								&& BX.message('LANGUAGE_ID') == 'ru'
-								&& BX.correctText
-							)
+							BX.SocNetLogDestination.oAjaxUserSearchResult[name] = {};
+							BX.SocNetLogDestination.oAjaxUserSearchResult[name][text.toLowerCase()] = [];
+
+							for (var i in data.USERS)
 							{
-								var correctedText = BX.correctText(text);
-								if (correctedText != text)
+								bFound = true;
+								BX.SocNetLogDestination.oAjaxUserSearchResult[name][text.toLowerCase()].push(i);
+
+								if (!BX.SocNetLogDestination.obItems[name].users[i])
 								{
-									BX.SocNetLogDestination.search(correctedText, true, name, nameTemplate, { bTranslated: true });
-								}
-								else
-								{
-									BX.SocNetLogDestination.search(text, false, name, nameTemplate);
+									BX.SocNetLogDestination.obItems[name].users[i] = data.USERS[i];
 								}
 							}
-							else
+
+							if (BX.SocNetLogDestination.obCrmFeed[name])
 							{
-								BX.SocNetLogDestination.search(text, false, name, nameTemplate);
+								var types = {'contacts': 'CONTACTS', 'companies': 'COMPANIES', 'leads': 'LEADS', 'deals': 'DEALS'};
+								for (type in types)
+								{
+									for (var i in data[types[type]])
+									{
+										bFound = true;
+										if (!BX.SocNetLogDestination.obItems[name][type][i])
+										{
+											BX.SocNetLogDestination.obItems[name][type][i] = data[types[type]][i];
+										}
+									}
+								}
 							}
-						}
-						else
-						{
+
 							BX.SocNetLogDestination.search(text, false, name, nameTemplate);
 						}
 					},
-					onfailure: function(data) {}
+					onfailure: function(data)
+					{
+						BX.SocNetLogDestination.hideSearchWaiter(name);
+					}
 				});
 			}, 1000);
 		}
@@ -451,14 +621,20 @@ BX.SocNetLogDestination.search = function(text, sendAjax, name, nameTemplate, pa
 
 BX.SocNetLogDestination.openSearch = function(items, name, params)
 {
-	if(!name)
+	if (!name)
+	{
 		name = 'lm';
+	}
 
 	if (!params)
+	{
 		params = {};
+	}
 
 	if (BX.SocNetLogDestination.popupWindow != null)
+	{
 		BX.SocNetLogDestination.popupWindow.close();
+	}
 
 	if (BX.SocNetLogDestination.popupSearchWindow != null)
 	{
@@ -490,34 +666,99 @@ BX.SocNetLogDestination.openSearch = function(items, name, params)
 				BX.SocNetLogDestination.popupSearchWindowContent = null;
 			}, this)
 		},
-		content:
-		'<div class="bx-finder-box bx-lm-box '+BX.SocNetLogDestination.obWindowClass[name] +'" style="min-width: 450px; padding-bottom: 8px;">'+
-			'<div class="bx-finder-box-tabs-content">'+
-				'<table class="bx-finder-box-tabs-content-table">'+
-					'<tr>'+
-						'<td class="bx-finder-box-tabs-content-cell">'+
-							'<div id="bx-lm-box-search-content" class="bx-finder-box-tab-content bx-finder-box-tab-content-selected">'
-								+BX.SocNetLogDestination.getItemLastHtml(items, true, name)+
-							'</div>'+
-						'</td>'+
-					'</tr>'+
-				'</table>'+
-			'</div>'+
-		'</div>'
+		content: BX.create('DIV', {
+			props: {
+				className: 'bx-finder-box bx-lm-box ' + BX.SocNetLogDestination.obWindowClass[name]
+			},
+			style: {
+				minWidth: '450px',
+				paddingBottom: '8px'
+			},
+			children: [
+				BX.create('DIV', {
+					attrs : {
+						id : 'bx-lm-box-search-tabs-content'
+					},
+					props: {
+						className: 'bx-finder-box-tabs-content'
+					},
+					children: [
+						BX.create('TABLE', {
+							props: {
+								className: 'bx-finder-box-tabs-content-table'
+							},
+							children: [
+								BX.create('TR', {
+									children: [
+										BX.create('TD', {
+											props: {
+												className: 'bx-finder-box-tabs-content-cell'
+											},
+											children: [
+												BX.create('DIV', {
+													attrs : {
+														id : 'bx-lm-box-search-content'
+													},
+													props: {
+														className: 'bx-finder-box-tab-content bx-finder-box-tab-content-selected'
+													},
+													html: BX.SocNetLogDestination.getItemLastHtml(items, true, name)
+												})
+											]
+										})
+									]
+								})
+							]
+						})
+					]
+				}),
+				BX.create('DIV', {
+					attrs : {
+						id : 'bx-lm-box-search-waiter'
+					},
+					props: {
+						className: 'bx-finder-box-search-waiter'
+					},
+					style: {
+						height: '0px'
+					},
+					children: [
+						BX.create('IMG', {
+							props: {
+								className: 'bx-finder-box-search-waiter-background'
+							},
+							attrs: {
+								src: '/bitrix/js/main/core/images/waiter-white.gif'
+							}
+						}),
+						BX.create('DIV', {
+							props: {
+								className: 'bx-finder-box-search-waiter-text'
+							},
+							text: BX.message('LM_POPUP_WAITER_TEXT')
+						})
+					]
+				})
+			]
+		})
 	});
 	BX.SocNetLogDestination.popupSearchWindow.setAngle({});
 	BX.SocNetLogDestination.popupSearchWindow.show();
 	BX.SocNetLogDestination.popupSearchWindowContent = BX('bx-lm-box-search-content');
+
+	BX.SocNetLogDestination.oSearchWaiterContentHeight = BX.pos(BX('bx-lm-box-search-tabs-content')).height;
 };
 
-/* privat function */
+/* vizualize lastItems - search result */
 BX.SocNetLogDestination.getItemLastHtml = function(lastItems, search, name)
 {
 	if(!name)
 		name = 'lm';
 
 	if (!lastItems)
+	{
 		lastItems = BX.SocNetLogDestination.obItemsLast[name];
+	}
 
 	var html = '';
 	var count = 0;
@@ -601,29 +842,46 @@ BX.SocNetLogDestination.getItemLastHtml = function(lastItems, search, name)
 		}
 	}
 
-	if (search || !BX.SocNetLogDestination.obCrmFeed[name])
+	if (
+		search
+		|| !BX.SocNetLogDestination.obCrmFeed[name]
+	)
 	{
 		var itemsHtml = '';
 		for (var i in lastItems.groups)
 		{
 			if (!BX.SocNetLogDestination.obItems[name].groups[i])
+			{
 				continue;
+			}
 			itemsHtml = BX.SocNetLogDestination.getHtmlByTemplate7(
 				name, BX.SocNetLogDestination.obItems[name].groups[i],
 				{className: 'bx-lm-element-groups', descLessMode : true, itemType: 'groups', 'search': search, 'itemHover': (search && count <= 0 ? true : false)}
 			);
 			count++;
 		}
-		for (var i in lastItems.users)
+
+		for (var i in lastItems.users) // users
 		{
-			if (!BX.SocNetLogDestination.obItems[name].users[i])
+			if (!BX.SocNetLogDestination.obItems[name].users[i]) // check if in available items
+			{
 				continue;
+			}
+
 			itemsHtml += BX.SocNetLogDestination.getHtmlByTemplate7(
-				name, BX.SocNetLogDestination.obItems[name].users[i],
-				{className: 'bx-lm-element-user', descLessMode : true, itemType: 'users', 'search': search, 'itemHover': (search && count <= 0 ? true : false)}
+				name,
+				BX.SocNetLogDestination.obItems[name].users[i],
+				{
+					'className': 'bx-lm-element-user',
+					'descLessMode' : true,
+					'itemType': 'users',
+					'search': search,
+					'itemHover': (search && count <= 0)
+				}
 			);
 			count++;
 		}
+
 		if (itemsHtml != '')
 		{
 			html += '<span class="bx-finder-groupbox bx-lm-groupbox-last">'+
@@ -840,7 +1098,7 @@ BX.SocNetLogDestination.getHtmlByTemplate1 = function(name, item, params)
 
 	var activeClass = BX.SocNetLogDestination.obItemsSelected[name][item.id]? ' bx-finder-box-item-selected': '';
 	var hoverClass = params.itemHover? 'bx-finder-box-item-hover': '';
-	var html = '<a class="bx-finder-box-item '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 1, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" href="#'+item.id+'">\
+	var html = '<a id="' + name + '_' + item.id + '" class="bx-finder-box-item '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 1, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" href="#'+item.id+'">\
 		<div class="bx-finder-box-item-text">'+item.name+'</div>\
 	</a>';
 	return html;
@@ -855,7 +1113,7 @@ BX.SocNetLogDestination.getHtmlByTemplate2 = function(name, item, params)
 
 	var activeClass = BX.SocNetLogDestination.obItemsSelected[name][item.id]? ' bx-finder-box-item-t2-selected': '';
 	var hoverClass = params.itemHover? 'bx-finder-box-item-t2-hover': '';
-	var html = '<a class="bx-finder-box-item-t2 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 2, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" href="#'+item.id+'">\
+	var html = '<a id="' + name + '_' + item.id + '" class="bx-finder-box-item-t2 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 2, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" href="#'+item.id+'">\
 		<div class="bx-finder-box-item-t2-text">'+item.name+'</div>\
 	</a>';
 	return html;
@@ -870,7 +1128,7 @@ BX.SocNetLogDestination.getHtmlByTemplate3 = function(name, item, params)
 
 	var activeClass = BX.SocNetLogDestination.obItemsSelected[name][item.id]? ' bx-finder-box-item-t3-selected': '';
 	var hoverClass = params.itemHover? 'bx-finder-box-item-t3-hover': '';
-	var html = '<a hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 3, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="bx-finder-box-item-t3 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" href="#'+item.id+'">'+
+	var html = '<a id="' + name + '_' + item.id + '" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 3, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="bx-finder-box-item-t3 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" href="#'+item.id+'">'+
 		'<div class="bx-finder-box-item-t3-avatar" '+(item.avatar? 'style="background:url(\''+item.avatar+'\') no-repeat center center"':'')+'></div>'+
 		'<div class="bx-finder-box-item-t3-info">'+
 			'<div class="bx-finder-box-item-t3-name">'+item.name+'</div>'+
@@ -890,7 +1148,7 @@ BX.SocNetLogDestination.getHtmlByTemplate5 = function(name, item, params)
 
 	var activeClass = BX.SocNetLogDestination.obItemsSelected[name][item.id]? ' bx-finder-box-item-t5-selected': '';
 	var hoverClass = params.itemHover? 'bx-finder-box-item-t5-hover': '';
-	var html = '<a hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 5, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="bx-finder-box-item-t5 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" href="#'+item.id+'">'+
+	var html = '<a id="' + name + '_' + item.id + '" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 5, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="bx-finder-box-item-t5 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" href="#'+item.id+'">'+
 		'<div class="bx-finder-box-item-t5-avatar" '+(item.avatar? 'style="background:url(\''+item.avatar+'\') no-repeat center center"':'')+'></div>'+
 		'<div class="bx-finder-box-item-t5-info">'+
 			'<div class="bx-finder-box-item-t5-name">'+item.name+'</div>'+
@@ -910,7 +1168,7 @@ BX.SocNetLogDestination.getHtmlByTemplate6 = function(name, item, params)
 
 	var activeClass = BX.SocNetLogDestination.obItemsSelected[name][item.id]? ' bx-finder-box-item-t6-selected': '';
 	var hoverClass = params.itemHover? 'bx-finder-box-item-t6-hover': '';
-	var html = '<a hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 6, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="bx-finder-box-item-t6 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" href="#'+item.id+'">'+
+	var html = '<a id="' + name + '_' + item.id + '" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 6, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="bx-finder-box-item-t6 '+activeClass+' '+hoverClass+' bx-finder-element'+(params.className? ' '+params.className: '')+'" href="#'+item.id+'">'+
 		'<div class="bx-finder-box-item-t6-avatar" '+(item.avatar? 'style="background:url(\''+item.avatar+'\') no-repeat center center"':'')+'></div>'+
 		'<div class="bx-finder-box-item-t6-info">'+
 			'<div class="bx-finder-box-item-t6-name">'+item.name+'</div>'+
@@ -939,8 +1197,12 @@ BX.SocNetLogDestination.getHtmlByTemplate7 = function(name, item, params)
 	itemClass += params.avatarLessMode && params.avatarLessMode == true ? ' bx-finder-box-item-t7-avatarless' : '';
 	itemClass += typeof (item.isExtranet != 'undefined') && item.isExtranet == 'Y' ? ' bx-lm-element-extranet' : '';
 
-	var html = '<a hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 7, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="' + itemClass + '" href="#'+item.id+'">'+
-		'<div class="bx-finder-box-item-t7-avatar" '+(item.avatar? 'style="background:url(\''+item.avatar+'\') no-repeat center center;"':'')+'></div>'+
+	var html = '<a id="' + name + '_' + item.id + '" hidefocus="true" onclick="return BX.SocNetLogDestination.selectItem(\''+name+'\', this, 7, \''+item.id+'\', \''+(params.itemType? params.itemType: 'item')+'\', '+(params.search? true: false)+')" rel="'+item.id+'" class="' + itemClass + '" href="#'+item.id+'">'+
+		(
+			item.avatar
+				? '<div class="bx-finder-box-item-t7-avatar"><img bx-lm-item-id="' + item.id + '" bx-lm-item-type="' + params.itemType + '" class="bx-finder-box-item-t7-avatar-img" src="' + item.avatar + '" onerror="BX.onCustomEvent(\'removeClientDbObject\', [BX.SocNetLogDestination, this.getAttribute(\'bx-lm-item-id\'), this.getAttribute(\'bx-lm-item-type\')]); BX.cleanNode(this, true);"></div>'
+				: '<div class="bx-finder-box-item-t7-avatar"></div>'
+		) +
 		'<div class="bx-finder-box-item-t7-space"></div>' +
 		'<div class="bx-finder-box-item-t7-info">'+
 		'<div class="bx-finder-box-item-t7-name">'+item.name+'</div>'+
@@ -1212,9 +1474,6 @@ BX.SocNetLogDestination.deleteLastItem = function(name)
 	if(!name)
 		name = 'lm';
 
-	//if (BX.SocNetLogDestination.popupWindow != null)
-	//	BX.SocNetLogDestination.popupWindow.close();
-
 	var lastId = false;
 	for (var itemId in BX.SocNetLogDestination.obItemsSelected[name])
 		lastId = itemId;
@@ -1237,6 +1496,221 @@ BX.SocNetLogDestination.selectFirstSearchItem = function(name)
 		BX.SocNetLogDestination.obSearchFirstElement = null;
 	}
 };
+
+BX.SocNetLogDestination.selectCurrentSearchItem = function(name)
+{
+	if(!name)
+	{
+		name = 'lm';
+	}
+
+	var item = BX.SocNetLogDestination.obSearchCurrentElement;
+	if (item != null)
+	{
+		BX.SocNetLogDestination.selectItem(name, null, null, item.id, item.type, true);
+		BX.SocNetLogDestination.obSearchCurrentElement = null;
+	}
+};
+
+BX.SocNetLogDestination.moveCurrentSearchItem = function(name, direction)
+{
+	BX.SocNetLogDestination.bSearchResultMoved = true;
+
+	if (BX.SocNetLogDestination.oXHR)
+	{
+		BX.SocNetLogDestination.oXHR.abort();
+		BX.SocNetLogDestination.hideSearchWaiter(name);
+	}
+
+	if (!BX.SocNetLogDestination.obSearchPosition)
+	{
+		BX.SocNetLogDestination.obSearchPosition = {
+			group: 0,
+			row: 0,
+			column: 0
+		};
+	}
+
+	var bMoved = false;
+	var oldId = BX.SocNetLogDestination.obSearchCurrentElement.id;
+
+	switch (direction)
+	{
+		case 'left':
+			if (BX.SocNetLogDestination.obSearchPosition.column == 1)
+			{
+				if (typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row][BX.SocNetLogDestination.obSearchPosition.column - 1] != 'undefined')
+				{
+					BX.SocNetLogDestination.obSearchPosition.column--;
+					bMoved = true;
+				}
+			}
+			break;
+		case 'right':
+			if (BX.SocNetLogDestination.obSearchPosition.column == 0)
+			{
+				if (typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row][BX.SocNetLogDestination.obSearchPosition.column + 1] != 'undefined')
+				{
+					BX.SocNetLogDestination.obSearchPosition.column++;
+					bMoved = true;
+				}
+			}
+			break;
+		case 'up':
+			if (
+				BX.SocNetLogDestination.obSearchPosition.row > 0
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row - 1] != 'undefined'
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row - 1][BX.SocNetLogDestination.obSearchPosition.column] != 'undefined'
+			)
+			{
+				BX.SocNetLogDestination.obSearchPosition.row--;
+				bMoved = true;
+			}
+			else if (
+				BX.SocNetLogDestination.obSearchPosition.row == 0
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group - 1] != 'undefined'
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group - 1][BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group - 1].length - 1] != 'undefined'
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group - 1][BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group - 1].length - 1][0] != 'undefined'
+			)
+			{
+				BX.SocNetLogDestination.obSearchPosition.row = BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group - 1].length - 1;
+				BX.SocNetLogDestination.obSearchPosition.column = 0;
+				BX.SocNetLogDestination.obSearchPosition.group--;
+				bMoved = true;
+			}
+			break;
+		case 'down':
+			if (
+				typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row + 1] != 'undefined'
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row + 1][BX.SocNetLogDestination.obSearchPosition.column] != 'undefined'
+			)
+			{
+				BX.SocNetLogDestination.obSearchPosition.row++;
+				bMoved = true;
+			}
+			else if (
+				typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row + 1] != 'undefined'
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row + 1][0] != 'undefined'
+			)
+			{
+				BX.SocNetLogDestination.obSearchPosition.column = 0;
+				BX.SocNetLogDestination.obSearchPosition.row++;
+				bMoved = true;
+			}
+			else if (
+				BX.SocNetLogDestination.obSearchPosition.row == (BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group].length - 1)
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group + 1] != 'undefined'
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group + 1][0] != 'undefined'
+				&& typeof BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group + 1][0][0] != 'undefined'
+			)
+			{
+				BX.SocNetLogDestination.obSearchPosition.group++;
+				BX.SocNetLogDestination.obSearchPosition.row = 0;
+				BX.SocNetLogDestination.obSearchPosition.column = 0;
+				bMoved = true;
+			}
+			break;
+		default:
+	}
+
+	if (bMoved)
+	{
+		BX.SocNetLogDestination.obSearchCurrentElement = BX.SocNetLogDestination.obSearchResult[BX.SocNetLogDestination.obSearchPosition.group][BX.SocNetLogDestination.obSearchPosition.row][BX.SocNetLogDestination.obSearchPosition.column];
+
+		if (BX(name + '_' + oldId))
+		{
+			BX.SocNetLogDestination.unhoverSearchItem(BX(name + '_' + oldId));
+		}
+
+		var hoveredNode = BX(name + '_' + BX.SocNetLogDestination.obSearchCurrentElement.id);
+		var containerNode = BX('bx-lm-box-search-tabs-content');
+		if (
+			hoveredNode
+			&& containerNode
+		)
+		{
+			var arPosContainer = BX.pos(containerNode);
+			var arPosNode = BX.pos(hoveredNode);
+			if (
+				arPosNode.bottom > arPosContainer.bottom
+				|| arPosNode.top < arPosContainer.top
+			)
+			{
+				containerNode.scrollTop += (
+					arPosNode.bottom > arPosContainer.bottom
+						? (arPosNode.bottom - arPosContainer.bottom)
+						: (arPosNode.top - arPosContainer.top)
+				);
+			}
+
+			BX.SocNetLogDestination.hoverSearchItem(hoveredNode);
+		}
+	}
+};
+
+BX.SocNetLogDestination.getSearchItemHoverClassName = function(node)
+{
+	if (!node)
+	{
+		return false;
+	}
+
+	if (node.classList.contains('bx-finder-box-item-t1'))
+	{
+		return 'bx-finder-box-item-t1-hover';
+	}
+	else if (node.classList.contains('bx-finder-box-item-t2'))
+	{
+		return 'bx-finder-box-item-t2-hover';
+	}
+	else if (node.classList.contains('bx-finder-box-item-t3'))
+	{
+		return 'bx-finder-box-item-t3-hover';
+	}
+	else if (node.classList.contains('bx-finder-box-item-t4'))
+	{
+		return 'bx-finder-box-item-t4-hover';
+	}
+	else if (node.classList.contains('bx-finder-box-item-t5'))
+	{
+		return 'bx-finder-box-item-t5-hover';
+	}
+	else if (node.classList.contains('bx-finder-box-item-t6'))
+	{
+		return 'bx-finder-box-item-t6-hover';
+	}
+	else if (node.classList.contains('bx-finder-box-item-t7'))
+	{
+		return 'bx-finder-box-item-t7-hover';
+	}
+
+	return  false;
+}
+
+BX.SocNetLogDestination.hoverSearchItem = function(node)
+{
+	var hoverClassName = BX.SocNetLogDestination.getSearchItemHoverClassName(node);
+
+	if (hoverClassName)
+	{
+		BX.addClass(
+			node,
+			hoverClassName
+		);
+	}
+}
+
+BX.SocNetLogDestination.unhoverSearchItem = function(node)
+{
+	var hoverClassName = BX.SocNetLogDestination.getSearchItemHoverClassName(node);
+
+	if (hoverClassName) {
+		BX.removeClass(
+			node,
+			hoverClassName
+		);
+	}
+}
 
 BX.SocNetLogDestination.getSelectedCount = function(name)
 {
@@ -1344,5 +1818,254 @@ BX.SocNetLogDestination.createSocNetGroupButtons = function(text, name)
 
 	return strReturn;
 };
+
+BX.SocNetLogDestination.showSearchWaiter = function(name)
+{
+	if (
+		typeof BX.SocNetLogDestination.oSearchWaiterEnabled[name] == 'undefined'
+		|| !BX.SocNetLogDestination.oSearchWaiterEnabled[name]
+	)
+	{
+		if (BX.SocNetLogDestination.oSearchWaiterContentHeight > 0)
+		{
+			BX.SocNetLogDestination.oSearchWaiterEnabled[name] = true;
+			var startHeight = 0;
+			var finishHeight = 40;
+
+			BX.SocNetLogDestination.animateSearchWaiter(startHeight, finishHeight);
+		}
+	}
+}
+
+BX.SocNetLogDestination.hideSearchWaiter = function(name)
+{
+	if (
+		typeof BX.SocNetLogDestination.oSearchWaiterEnabled[name] != 'undefined'
+		&& BX.SocNetLogDestination.oSearchWaiterEnabled[name]
+	)
+	{
+		BX.SocNetLogDestination.oSearchWaiterEnabled[name] = false;
+
+		var startHeight = 40;
+		var finishHeight = 0;
+		BX.SocNetLogDestination.animateSearchWaiter(startHeight, finishHeight);
+	}
+}
+
+BX.SocNetLogDestination.animateSearchWaiter = function(startHeight, finishHeight)
+{
+	if (
+		BX('bx-lm-box-search-waiter')
+		&& BX('bx-lm-box-search-tabs-content')
+	)
+	{
+		(new BX.fx({
+			time: 0.5,
+			step: 0.05,
+			type: 'linear',
+			start: startHeight,
+			finish: finishHeight,
+			callback: BX.delegate(function(height)
+			{
+				if (this)
+				{
+					this.waiterBlock.style.height = height + 'px';
+					this.contentBlock.style.height = (BX.SocNetLogDestination.oSearchWaiterContentHeight) - height + 'px';
+				}
+			},
+			{
+				waiterBlock: BX('bx-lm-box-search-waiter'),
+				contentBlock: BX('bx-lm-box-search-tabs-content')
+			}),
+			callback_complete: function()
+			{
+			}
+		})).start();
+	}
+}
+
+BX.SocNetLogDestination.BXfpSetLinkName = function(ob)
+{
+	BX(ob.tagInputName).innerHTML = (
+		BX.SocNetLogDestination.getSelectedCount(ob.formName) <= 0
+			? ob.tagLink1
+			: ob.tagLink2
+	);
+};
+
+BX.SocNetLogDestination.BXfpUnSelectCallback = function(item)
+{
+	var elements = BX.findChildren(BX(this.inputContainerName), {attribute: {'data-id': '' + item.id + ''}}, true);
+	if (elements !== null)
+	{
+		for (var j = 0; j < elements.length; j++)
+		{
+			if (
+				typeof (this.undeleteClassName) == 'undefined'
+				|| !BX.hasClass(elements[j], this.undeleteClassName)
+			)
+			{
+				BX.remove(elements[j]);
+			}
+		}
+	}
+	BX(this.inputName).value = '';
+	BX.SocNetLogDestination.BXfpSetLinkName(this);
+};
+
+BX.SocNetLogDestination.BXfpSearch = function(event)
+{
+	if (
+		event.keyCode == 16
+		|| event.keyCode == 17
+		|| event.keyCode == 18
+		|| event.keyCode == 20
+		|| event.keyCode == 244
+		|| event.keyCode == 224
+		|| event.keyCode == 91
+	)
+	{
+		return false;
+	}
+
+	if (event.keyCode == 37)
+	{
+		BX.SocNetLogDestination.moveCurrentSearchItem(this.formName, 'left');
+		BX.PreventDefault(event);
+		return false;
+	}
+	else if (event.keyCode == 38)
+	{
+		BX.SocNetLogDestination.moveCurrentSearchItem(this.formName, 'up');
+		BX.PreventDefault(event);
+		return false;
+	}
+	else if (event.keyCode == 39)
+	{
+		BX.SocNetLogDestination.moveCurrentSearchItem(this.formName, 'right');
+		BX.PreventDefault(event);
+		return false;
+	}
+	else if (event.keyCode == 40)
+	{
+		BX.SocNetLogDestination.moveCurrentSearchItem(this.formName, 'down');
+		BX.PreventDefault(event);
+		return false;
+	}
+
+	if (event.keyCode == 13)
+	{
+		BX.SocNetLogDestination.selectCurrentSearchItem(this.formName);
+		return true;
+	}
+	if (event.keyCode == 27)
+	{
+		BX(this.inputName).value = '';
+		BX.style(BX(this.tagInputName), 'display', 'inline');
+	}
+	else
+	{
+		BX.SocNetLogDestination.search(
+			BX(this.inputName).value,
+			true,
+			this.formName
+		);
+	}
+
+	if (
+		!BX.SocNetLogDestination.isOpenDialog()
+		&& BX(this.inputName).value.length <= 0
+	)
+	{
+		BX.SocNetLogDestination.openDialog(this.formName);
+	}
+	else if (
+		BX.SocNetLogDestination.sendEvent
+		&& BX.SocNetLogDestination.isOpenDialog()
+	)
+	{
+		BX.SocNetLogDestination.closeDialog();
+	}
+
+	if (event.keyCode == 8)
+	{
+		BX.SocNetLogDestination.sendEvent = true;
+	}
+	return true;
+}
+
+BX.SocNetLogDestination.BXfpSearchBefore = function(event)
+{
+	if (
+		event.keyCode == 8
+		&& BX(this.inputName).value.length <= 0
+	)
+	{
+		BX.SocNetLogDestination.sendEvent = false;
+		BX.SocNetLogDestination.deleteLastItem(this.formName);
+	}
+
+	return true;
+}
+
+BX.SocNetLogDestination.BXfpOpenDialogCallback = function()
+{
+	BX.style(BX(this.inputBoxName), 'display', 'inline-block');
+	BX.style(BX(this.tagInputName), 'display', 'none');
+	BX.focus(BX(this.inputName));
+};
+
+BX.SocNetLogDestination.BXfpCloseDialogCallback = function()
+{
+	if (
+		!BX.SocNetLogDestination.isOpenSearch()
+		&& BX(this.inputName).value.length <= 0
+	)
+	{
+		BX.style(BX(this.inputBoxName), 'display', 'none');
+		BX.style(BX(this.tagInputName), 'display', 'inline-block');
+		BX.SocNetLogDestination.BXfpDisableBackspace();
+	}
+};
+
+BX.SocNetLogDestination.BXfpCloseSearchCallback = function()
+{
+	if (
+		!BX.SocNetLogDestination.isOpenSearch()
+		&& BX(this.inputName).value.length > 0
+	)
+	{
+		BX.style(BX(this.inputBoxName), 'display', 'none');
+		BX.style(BX(this.tagInputName), 'display', 'inline-block');
+		BX(this.inputName).value = '';
+		BX.SocNetLogDestination.BXfpDisableBackspace();
+	}
+}
+
+BX.SocNetLogDestination.BXfpDisableBackspace = function(event)
+{
+	if (
+		BX.SocNetLogDestination.backspaceDisable
+		|| BX.SocNetLogDestination.backspaceDisable !== null
+	)
+	{
+		BX.unbind(window, 'keydown', BX.SocNetLogDestination.backspaceDisable);
+	}
+
+	BX.bind(window, 'keydown', BX.SocNetLogDestination.backspaceDisable = function(event)
+	{
+		if (event.keyCode == 8)
+		{
+			BX.PreventDefault(event);
+			return false;
+		}
+	});
+
+	setTimeout(function()
+	{
+		BX.unbind(window, 'keydown', BX.SocNetLogDestination.backspaceDisable);
+		BX.SocNetLogDestination.backspaceDisable = null;
+	}, 5000);
+}
 
 })();

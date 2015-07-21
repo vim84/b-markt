@@ -1,5 +1,8 @@
 <?
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main;
+use Bitrix\Iblock;
+
 Loc::loadMessages(__FILE__);
 
 class CCatalogAdminToolsAll
@@ -112,9 +115,7 @@ class CCatalogAdminToolsAll
 			);
 		}
 		if (!empty($arItems))
-		{
 			$arResult = $arItems;
-		}
 
 		return $arResult;
 	}
@@ -251,9 +252,7 @@ class CCatalogAdminToolsAll
 			}
 		}
 		if (!$boolFeatureSet && CCatalogSKU::TYPE_FULL != $arCatalog['CATALOG_TYPE'])
-		{
 			$arItems = array();
-		}
 		//group
 		if ($boolFeatureSet && self::TAB_GROUP != $strProductType)
 		{
@@ -409,6 +408,7 @@ class CCatalogAdminToolsAll
 	public static function showFormParams()
 	{
 		$boolFeatureSet = CBXFeatures::IsFeatureEnabled('CatCompleteSet');
+		$strProductType = '';
 		if (isset($_REQUEST[self::$strMainPrefix.'PRODUCT_TYPE']))
 		{
 			$strProductType = (string)$_REQUEST[self::$strMainPrefix.'PRODUCT_TYPE'];
@@ -473,13 +473,9 @@ class CCatalogAdminToolsAll
 		if ($boolFeatureSet)
 		{
 			if (isset($_REQUEST['groupdel']) && 'Y' == $_REQUEST['groupdel'])
-			{
 				$result = CCatalogProductSet::deleteAllSetsByProduct($intProductID, CCatalogProductSet::TYPE_GROUP);
-			}
 			elseif (isset($_REQUEST['setdel']) && 'Y' == $_REQUEST['setdel'])
-			{
 				$result = CCatalogProductSet::deleteAllSetsByProduct($intProductID, CCatalogProductSet::TYPE_SET);
-			}
 		}
 		return $result;
 	}
@@ -489,6 +485,7 @@ class CCatalogAdminToolsAll
 		if (!is_array($arParams))
 			return;
 		$boolFeatureSet = CBXFeatures::IsFeatureEnabled('CatCompleteSet');
+		$strProductType = '';
 		if (isset($_REQUEST[self::$strMainPrefix.'PRODUCT_TYPE']))
 		{
 			$strProductType = (string)$_REQUEST[self::$strMainPrefix.'PRODUCT_TYPE'];
@@ -649,12 +646,68 @@ class CCatalogAdminProductSetEdit
 		if (!isset(self::$arSrcValues[self::$strMainPrefix]) || empty(self::$arSrcValues[self::$strMainPrefix]))
 			return;
 
-		$arSets = self::$arSrcValues[self::$strMainPrefix];
+		foreach (self::$arSrcValues[self::$strMainPrefix] as $setKey => $setData)
+		{
+			if (empty($setData['ITEMS']))
+			{
+				if (array_key_exists($setKey, $arSets))
+					unset($arSets[$setKey]);
+				continue;
+			}
+			$newSetData = $setData;
+			unset($newSetData['ITEMS']);
+			$newItemCount = 0;
+			$setItems = array();
+
+			foreach ($setData['ITEMS'] as $itemKey => $item)
+			{
+				if (empty($item['ITEM_ID']) || trim($item['ITEM_ID'] == ''))
+					continue;
+				$itemKey = (int)$itemKey;
+				if ($itemKey > 0)
+				{
+					$setItems[$itemKey] = $item;
+				}
+				else
+				{
+					$setItems['n'.$newItemCount] = $item;
+					$newItemCount++;
+				}
+			}
+			unset($itemKey, $item);
+
+			$newSetData['ITEMS'] = $setItems;
+			$newSetData['NEW_ITEM_COUNT'] = $newItemCount;
+
+			if (isset($arSets[$setKey]))
+			{
+				$arSets[$setKey] = array_merge($newSetData, $arSets[$setKey]);
+				$arSets[$setKey]['ITEMS'] = $newSetData['ITEMS'];
+				$arSets[$setKey]['NEW_ITEM_COUNT'] = $newSetData['NEW_ITEM_COUNT'];
+			}
+			else
+			{
+				$arSets[$setKey] = $newSetData;
+			}
+			unset($newSetData, $newItemCount, $setItems);
+		}
+		unset($setKey, $setData);
 	}
 
 	public static function addEmptyValues(&$arSets)
 	{
+		if (empty($arSets) || !is_array($arSets))
+			return;
 
+		foreach ($arSets as $setKey => $setData)
+		{
+			$start = isset($setData['NEW_ITEM_COUNT']) ? $setData['NEW_ITEM_COUNT'] : 0;
+			foreach (self::getEmptyItem($start) as $rowKey => $row)
+				$arSets[$setKey]['ITEMS'][$rowKey] = $row;
+			$arSets[$setKey]['NEW_ITEM_COUNT'] = $start + self::NEW_ITEM_COUNT;
+			unset($rowKey, $row, $start);
+		}
+		unset($setKey, $setData);
 	}
 
 	public static function getItemsInfo(&$arSets)
@@ -682,16 +735,13 @@ class CCatalogAdminProductSetEdit
 		if (!empty($arItemList))
 		{
 			$arFilter = array(
-				'ID' => array_keys($arItemList)
+				'@ID' => array_keys($arItemList)
 			);
-			$rsProducts = CIBlockElement::GetList(
-				array(),
-				$arFilter,
-				false,
-				false,
-				array('ID', 'NAME')
-			);
-			while ($arProduct = $rsProducts->Fetch())
+			$productIterator = Iblock\ElementTable::getList(array(
+				'select' => array('ID', 'NAME'),
+				'filter' => $arFilter
+			));
+			while ($arProduct = $productIterator->fetch())
 			{
 				$arProduct['ID'] = (int)$arProduct['ID'];
 				if (isset($arItemList[$arProduct['ID']]))
@@ -702,6 +752,7 @@ class CCatalogAdminProductSetEdit
 					}
 				}
 			}
+			unset($arProduct, $productIterator);
 		}
 	}
 
@@ -735,8 +786,6 @@ class CCatalogAdminProductSetEdit
 
 	public static function showEditForm($arSets)
 	{
-		global $APPLICATION;
-
 		if (CCatalogProductSet::TYPE_SET != self::$intTypeID && CCatalogProductSet::TYPE_GROUP != self::$intTypeID)
 			return;
 		if (empty($arSets) || !is_array($arSets))
@@ -746,7 +795,7 @@ class CCatalogAdminProductSetEdit
 		if (!$boolFeatureSet)
 			return;
 
-		$APPLICATION->AddHeadScript('/bitrix/js/catalog/tbl_edit.js');
+		Main\Page\Asset::getInstance()->addJs('/bitrix/js/catalog/tbl_edit.js');
 
 		self::getItemsInfo($arSets);
 
@@ -825,7 +874,7 @@ var ob<? echo self::$strMainPrefix; ?> = new JCCatTblEditExt(<? echo CUtil::PhpT
 		?><tr>
 		<td class="align-left">
 			<input name="<? echo $strNamePrefix; ?>[ITEM_ID]" id="<? echo $strIDPrefix; ?>_ITEM_ID" value="<? echo htmlspecialcharsbx($arRow['ITEM_ID']); ?>" size="5" type="text">
-			<input type="button" value="..." onclick="jsUtils.OpenWindow('/bitrix/admin/iblock_element_search.php?lang=<? echo LANGUAGE_ID; ?>&n=<? echo $strIDPrefix; ?>_ITEM_ID&discount=Y', 900, 600);">
+			<input type="button" value="..." id="<? echo $strIDPrefix; ?>_BTN" data-row-id="<? echo $strIDPrefix; ?>">
 			&nbsp;<span id="<? echo $strIDPrefix; ?>_ITEM_ID_link"><? echo htmlspecialcharsex($arRow['ITEM_NAME']); ?></span>
 		</td>
 		<td class="align-right">
@@ -872,7 +921,7 @@ var ob<? echo self::$strMainPrefix; ?> = new JCCatTblEditExt(<? echo CUtil::PhpT
 		$arCells = array();
 		$arCellParams = array();
 		$arCells[] = '<input name="'.$strNamePrefix.'[ITEM_ID]" id="'.$strIDPrefix.'_ITEM_ID" value="" size="5" type="text">'.
-			' <input type="button" value="..." onclick="jsUtils.OpenWindow(\'/bitrix/admin/iblock_element_search.php?lang='.LANGUAGE_ID.'&n='.$strIDPrefix.'_ITEM_ID&discount=Y\', 900, 600);">'.
+			' <input type="button" value="..." id="'.$strIDPrefix.'_BTN" data-row-id="'.$strIDPrefix.'">'.
 			'&nbsp;<span id="'.$strIDPrefix.'_ITEM_ID_link"></span>';
 		$arCellParams[] = array(
 			'attrs' => array(
@@ -1031,4 +1080,3 @@ var ob<? echo self::$strMainPrefix; ?> = new JCCatTblEditExt(<? echo CUtil::PhpT
 		return self::$arErrors;
 	}
 }
-?>

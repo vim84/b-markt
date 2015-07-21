@@ -317,7 +317,7 @@ $arExcludeSites = CPullOptions::GetExcludeSites();
 			<?=GetMessage("PULL_OPTIONS_WEBSOCKET_DESC")?>
 		</td>
 	</tr>
-	<?if (count($arSites) > 1):?>
+	<?if (count($arSites) > 1 || count($arExcludeSites) > 0):?>
 	<tr class="heading">
 		<td colspan="2"><b><?=GetMessage('PULL_OPTIONS_HEAD_BLOCK')?></b></td>
 	</tr>

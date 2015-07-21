@@ -158,6 +158,41 @@ $arComponentParameters = array(
 		)
 	),
 	"PARAMETERS" => array(
+		"SEF_MODE" => array(),
+		"SEF_RULE" => array(
+			"VALUES" => array(
+				"SECTION_ID" => array(
+					"TEXT" => GetMessage("IBLOCK_SECTION_ID"),
+					"TEMPLATE" => "#SECTION_ID#",
+					"PARAMETER_LINK" => "SECTION_ID",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_ID"]}',
+				),
+				"SECTION_CODE" => array(
+					"TEXT" => GetMessage("IBLOCK_SECTION_CODE"),
+					"TEMPLATE" => "#SECTION_CODE#",
+					"PARAMETER_LINK" => "SECTION_CODE",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_CODE"]}',
+				),
+				"SECTION_CODE_PATH" => array(
+					"TEXT" => GetMessage("CP_BCE_SECTION_CODE_PATH"),
+					"TEMPLATE" => "#SECTION_CODE_PATH#",
+					"PARAMETER_LINK" => "SECTION_CODE_PATH",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_CODE_PATH"]}',
+				),
+				"ELEMENT_ID" => array(
+					"TEXT" => GetMessage("IBLOCK_ELEMENT_ID"),
+					"TEMPLATE" => "#ELEMENT_ID#",
+					"PARAMETER_LINK" => "ELEMENT_ID",
+					"PARAMETER_VALUE" => '={$_REQUEST["ELEMENT_ID"]}',
+				),
+				"ELEMENT_CODE" => array(
+					"TEXT" => GetMessage("IBLOCK_ELEMENT_CODE"),
+					"TEMPLATE" => "#ELEMENT_CODE#",
+					"PARAMETER_LINK" => "ELEMENT_CODE",
+					"PARAMETER_VALUE" => '={$_REQUEST["ELEMENT_CODE"]}',
+				),
+			),
+		),
 		"IBLOCK_TYPE" => array(
 			"PARENT" => "BASE",
 			"NAME" => GetMessage("IBLOCK_TYPE"),
@@ -278,9 +313,15 @@ $arComponentParameters = array(
 			"VALUES" => array_merge(array("-"=>" "),$arProperty_LS),
 			"HIDDEN" => (isset($arCurrentValues['SET_META_DESCRIPTION']) && $arCurrentValues['SET_META_DESCRIPTION'] == 'N' ? 'Y' : 'N')
 		),
-		"SET_STATUS_404" => array(
+		"SET_LAST_MODIFIED" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BCE_SET_STATUS_404"),
+			"NAME" => GetMessage("CP_BCE_SET_LAST_MODIFIED"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
+		"USE_MAIN_ELEMENT_SECTION" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BCE_USE_MAIN_ELEMENT_SECTION"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
@@ -505,6 +546,15 @@ $arComponentParameters = array(
 	),
 );
 
+if ($arCurrentValues["SEF_MODE"] == "Y")
+{
+	$arComponentParameters["PARAMETERS"]["SECTION_CODE_PATH"] = array(
+		"NAME" => GetMessage("CP_BCE_SECTION_CODE_PATH"),
+		"TYPE" => "STRING",
+		"DEFAULT" => "",
+	);
+}
+
 if ($catalogIncluded)
 {
 	$arComponentParameters["PARAMETERS"]['HIDE_NOT_AVAILABLE'] = array(
@@ -566,3 +616,5 @@ if (isset($arCurrentValues['DISPLAY_COMPARE']) && $arCurrentValues['DISPLAY_COMP
 		'DEFAULT' => ''
 	);
 }
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues);

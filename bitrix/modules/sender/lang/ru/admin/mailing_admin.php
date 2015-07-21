@@ -25,6 +25,7 @@ $MESS["rub_f_is_public"] = "Возможность подписаться";
 $MESS["sender_mailing_adm_wizard"] = "Добавить через мастер";
 $MESS["sender_mailing_adm_wizard_title"] = "Добавить новую рассылку с помощью мастера";
 $MESS["sender_mailing_adm_detbut_chain"] = "Выпуски";
+$MESS["sender_mailing_trig_adm_detbut_chain"] = "Письма";
 $MESS["sender_mailing_adm_detbut_stat"] = "Статистика";
 $MESS["sender_mailing_adm_detbut_address"] = "Список адресов";
 

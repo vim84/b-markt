@@ -16,6 +16,7 @@ if (
 	echo CUtil::PhpToJsObject(Array('ERROR' => 'MODULE_NOT_INSTALLED'));
 	die();
 }
+
 if (check_bitrix_sessid())
 {	
 	if (isset($_POST["nt"]))
@@ -33,9 +34,46 @@ if (check_bitrix_sessid())
 		CUtil::decodeURIComponent($_POST);
 
 		$search = $_POST['SEARCH'];
+		$searchConverted = (!empty($_POST['SEARCH_CONVERTED']) ? $_POST['SEARCH_CONVERTED'] : false);
+
 		$searchResults = array(
-			'USERS' => CSocNetLogDestination::SearchUsers($search, $nameTemplate, true, ($_POST['EXTRANET_SEARCH'] == "I"), ($_POST['EXTRANET_SEARCH'] == "E"), (isset($_POST['DEPARTMENT_ID']) && intval($_POST['DEPARTMENT_ID']) > 0 ? intval($_POST['DEPARTMENT_ID']) : false))
+			'USERS' => CSocNetLogDestination::SearchUsers(
+				$search,
+				$nameTemplate,
+				true,
+				($_POST['EXTRANET_SEARCH'] == "I"),
+				($_POST['EXTRANET_SEARCH'] == "E"),
+				(
+					isset($_POST['DEPARTMENT_ID'])
+					&& intval($_POST['DEPARTMENT_ID']) > 0
+						? intval($_POST['DEPARTMENT_ID'])
+						: false
+				)
+			)
 		);
+
+		if (
+			empty($searchResults['USERS'])
+			&& $search != $searchConverted
+		)
+		{
+			$searchResults = array(
+				'USERS' => CSocNetLogDestination::SearchUsers(
+					$searchConverted,
+					$nameTemplate,
+					true,
+					($_POST['EXTRANET_SEARCH'] == "I"),
+					($_POST['EXTRANET_SEARCH'] == "E"),
+					(
+						isset($_POST['DEPARTMENT_ID'])
+						&& intval($_POST['DEPARTMENT_ID']) > 0
+							? intval($_POST['DEPARTMENT_ID'])
+							: false
+					)
+				),
+				'SEARCH' => $searchConverted
+			);
+		}
 
 		if (isset($_POST['CRM_SEARCH']) && $_POST['CRM_SEARCH'] == 'Y' && CModule::IncludeModule('crm'))
 		{

@@ -1,4 +1,12 @@
 <?if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
+/**
+ * Bitrix vars
+ * @global CUser $USER
+ * @global CMain $APPLICATION
+ * @var array $arParams
+ * @var array $arResult
+ * @var CBitrixComponent $this
+ */
 // Action params
 /*@param string $arParams["mfi"] contains hash of something to add new uploaded file into session array */
 $arParams["mfi"] = trim($arParams["mfi"]);
@@ -37,10 +45,9 @@ $arParams["SHOW_LOGIN"] = ($_REQUEST["SHOW_LOGIN"] == "Y" ? "Y" : "N");
 $arParams["DATE_TIME_FORMAT"] = trim($arParams["DATE_TIME_FORMAT"]);
 $arParams["SHOW_POST_FORM"] = ($arParams["SHOW_POST_FORM"] == "Y" ? "Y" : "N");
 $arParams["BIND_VIEWER"] = ($arParams["BIND_VIEWER"] == "Y" ? "Y" : "N");
+$sign = (new \Bitrix\Main\Security\Sign\Signer());
+$arParams["SIGN"] = $sign->sign($arParams["ENTITY_XML_ID"], "main.post.list");
 
-
-$_SESSION["UC"] = (!!$_SESSION["UC"] ? $_SESSION["UC"] : array());
-$_SESSION["UC"][$arParams["ENTITY_XML_ID"]] = array("ACTIVITY" => 0, "RECORDS" => array());
 if ($arParams["VISIBLE_RECORDS_COUNT"] > 0)
 {
 	if ($arParams["NAV_RESULT"]->bShowAll)
@@ -68,6 +75,7 @@ if (!empty($arParams["RECORDS"]))
 {
 	if ($arParams["VISIBLE_RECORDS_COUNT"] > 0)
 	{
+		$res = 0;
 		for ($ii = 0; $ii < $arParams["VISIBLE_RECORDS_COUNT"]; $ii++)
 		{
 			$res = array_shift($arParams["RECORDS"]);
@@ -135,7 +143,7 @@ ob_start();
 $output = ob_get_clean();
 foreach (GetModuleEvents('main.post.list', 'OnCommentsDisplayTemplate', true) as $arEvent)
 {
-	$result = ExecuteModuleEventEx($arEvent, array(&$output, &$arParams, &$arResult));
+	ExecuteModuleEventEx($arEvent, array(&$output, &$arParams, &$arResult));
 }
 return array("HTML" => $output, "JSON" => $arResult["JSON"]);
 ?>

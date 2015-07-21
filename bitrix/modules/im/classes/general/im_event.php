@@ -591,59 +591,103 @@ class CIMEvent
 
 		return $message;
 	}
-	
+
 	private static function GetMessageRatingEntityURL($url, $user_id = false, $arSites = false, $intranet_site_id = false, $extranet_site_id = false)
 	{
+		static $arSiteData = false;
+
 		if (
-			is_array($arSites)
-			&& intval($user_id) > 0
-			&& strlen($extranet_site_id) > 0
-			&& strlen($intranet_site_id) > 0
+			!$arSiteData
+			&& IsModuleInstalled('intranet')
+			&& CModule::IncludeModule('socialnetwork')
 		)
 		{
-			$bExtranetUser = false;
-			if ($arSites[$extranet_site_id])
+			$arSiteData = CSocNetLogTools::GetSiteData();
+		}
+
+		if (
+			$arSiteData
+			&& count($arSiteData) > 1
+		)
+		{
+			foreach($arSiteData as $siteId => $arUrl)
 			{
-				$bExtranetUser = true;
-				$rsUser = CUser::GetByID(intval($user_id));
-				if ($arUser = $rsUser->Fetch())
-				{
-					if (intval($arUser["UF_DEPARTMENT"][0]) > 0)
-					{
-						$bExtranetUser = false;
-					}
-				}
+				$url = str_replace($arUrl["USER_PATH"], "#USER_PATH#", $url);
 			}
 
-			if ($bExtranetUser)
-			{
-				$link = $url;
-				if (substr($link, 0, strlen($arSites[$extranet_site_id]['DIR'])) == $arSites[$extranet_site_id]['DIR'])
-				{
-					$link = substr($link, strlen($arSites[$extranet_site_id]['DIR']));
-				}
+			$arTmp = CSocNetLogTools::ProcessPath(
+				array(
+					"URL" => $url
+				),
+				$user_id
+			);
 
-				$SiteServerName = $arSites[$extranet_site_id]['SERVER_NAME'].$arSites[$extranet_site_id]['DIR'].ltrim($link, "/");
-			}
-			else
-			{
-				$link = $url;
-				if (substr($link, 0, strlen($arSites[$intranet_site_id]['DIR'])) == $arSites[$intranet_site_id]['DIR'])
-				{
-					$link = substr($link, strlen($arSites[$intranet_site_id]['DIR']));
-				}
-
-				$SiteServerName = $arSites[$intranet_site_id]['SERVER_NAME'].$arSites[$intranet_site_id]['DIR'].ltrim($link, "/");
-			}
-
-			$url = (CMain::IsHTTPS() ? "https" : "http")."://".$SiteServerName;
+			$url = $arTmp["URLS"]["URL"];
+			$url = (
+				strpos($url, "http://") === 0
+				|| strpos($url, "https://") === 0
+					? ""
+					: (
+						isset($arTmp["SERVER_NAME"])
+						&& !empty($arTmp["SERVER_NAME"])
+							? $arTmp["SERVER_NAME"]
+							: ""
+					)
+			).$arTmp["URLS"]["URL"];
 		}
 		else
 		{
-			$SiteServerName = (defined('SITE_SERVER_NAME') && strlen(SITE_SERVER_NAME) > 0 ? SITE_SERVER_NAME : COption::GetOptionString("main", "server_name", $_SERVER['SERVER_NAME']));
-			if (strlen($SiteServerName) > 0)
+			if (
+				is_array($arSites)
+				&& intval($user_id) > 0
+				&& strlen($extranet_site_id) > 0
+				&& strlen($intranet_site_id) > 0
+			)
 			{
-				$url = (CMain::IsHTTPS() ? "https" : "http")."://".$SiteServerName.$url;
+				$bExtranetUser = false;
+				if ($arSites[$extranet_site_id])
+				{
+					$bExtranetUser = true;
+					$rsUser = CUser::GetByID(intval($user_id));
+					if ($arUser = $rsUser->Fetch())
+					{
+						if (intval($arUser["UF_DEPARTMENT"][0]) > 0)
+						{
+							$bExtranetUser = false;
+						}
+					}
+				}
+
+				if ($bExtranetUser)
+				{
+					$link = $url;
+					if (substr($link, 0, strlen($arSites[$extranet_site_id]['DIR'])) == $arSites[$extranet_site_id]['DIR'])
+					{
+						$link = substr($link, strlen($arSites[$extranet_site_id]['DIR']));
+					}
+
+					$SiteServerName = $arSites[$extranet_site_id]['SERVER_NAME'].$arSites[$extranet_site_id]['DIR'].ltrim($link, "/");
+				}
+				else
+				{
+					$link = $url;
+					if (substr($link, 0, strlen($arSites[$intranet_site_id]['DIR'])) == $arSites[$intranet_site_id]['DIR'])
+					{
+						$link = substr($link, strlen($arSites[$intranet_site_id]['DIR']));
+					}
+
+					$SiteServerName = $arSites[$intranet_site_id]['SERVER_NAME'].$arSites[$intranet_site_id]['DIR'].ltrim($link, "/");
+				}
+
+				$url = (CMain::IsHTTPS() ? "https" : "http")."://".$SiteServerName;
+			}
+			else
+			{
+				$SiteServerName = (defined('SITE_SERVER_NAME') && strlen(SITE_SERVER_NAME) > 0 ? SITE_SERVER_NAME : COption::GetOptionString("main", "server_name", $_SERVER['SERVER_NAME']));
+				if (strlen($SiteServerName) > 0)
+				{
+					$url = (CMain::IsHTTPS() ? "https" : "http")."://".$SiteServerName.$url;
+				}
 			}
 		}
 

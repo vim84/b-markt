@@ -540,6 +540,7 @@ abstract class CAllUser extends CDBResult
 			$_SESSION["SESS_AUTH"]["SECOND_NAME"] = $arUser["SECOND_NAME"];
 			$_SESSION["SESS_AUTH"]["LAST_NAME"] = $arUser["LAST_NAME"];
 			$_SESSION["SESS_AUTH"]["PERSONAL_PHOTO"] = $arUser["PERSONAL_PHOTO"];
+			$_SESSION["SESS_AUTH"]["PERSONAL_GENDER"] = $arUser["PERSONAL_GENDER"];
 			$_SESSION["SESS_AUTH"]["ADMIN"] = false;
 			$_SESSION["SESS_AUTH"]["CONTROLLER_ADMIN"] = false;
 			$_SESSION["SESS_AUTH"]["POLICY"] = CUser::GetGroupPolicy($arUser["ID"]);
@@ -548,39 +549,16 @@ abstract class CAllUser extends CDBResult
 			$_SESSION["SESS_AUTH"]["APPLICATION_ID"] = $applicationId;
 			$_SESSION["SESS_AUTH"]["BX_USER_ID"] = $arUser["BX_USER_ID"];
 
-			$arGroups = array();
+			// groups
+			$_SESSION["SESS_AUTH"]["GROUPS"] = Main\UserTable::getUserGroupIds($arUser["ID"]);
 
-			$strSql =
-				"SELECT G.ID ".
-				"FROM b_group G  ".
-				"WHERE G.ANONYMOUS='Y' ".
-				"	AND G.ACTIVE='Y' ";
-			$result = $DB->Query($strSql, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
-			while($ar = $result->Fetch())
-				$arGroups[] = $ar["ID"];
-
-			if(!in_array(2, $arGroups))
-				$arGroups[] = 2;
-
-			$strSql =
-				"SELECT G.ID ".
-				"FROM b_user_group UG, b_group G  ".
-				"WHERE UG.USER_ID = ".$arUser["ID"]." ".
-				"	AND G.ID=UG.GROUP_ID  ".
-				"	AND G.ACTIVE='Y' ".
-				"	AND ((UG.DATE_ACTIVE_FROM IS NULL) OR (UG.DATE_ACTIVE_FROM <= ".$DB->CurrentTimeFunction().")) ".
-				"	AND ((UG.DATE_ACTIVE_TO IS NULL) OR (UG.DATE_ACTIVE_TO >= ".$DB->CurrentTimeFunction().")) ".
-				"	AND (G.ANONYMOUS<>'Y' OR G.ANONYMOUS IS NULL) ";
-			$result = $DB->Query($strSql, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
-			while($ar = $result->Fetch())
+			foreach ($_SESSION["SESS_AUTH"]["GROUPS"] as $groupId)
 			{
-				$arGroups[] = $ar["ID"];
-				if($ar["ID"] == 1)
+				if ($groupId == 1)
+				{
 					$_SESSION["SESS_AUTH"]["ADMIN"] = true;
+				}
 			}
-
-			sort($arGroups);
-			$_SESSION["SESS_AUTH"]["GROUPS"] = $arGroups;
 
 			//sometimes we don't need to update db (REST)
 			if($bUpdate)
@@ -1289,22 +1267,33 @@ abstract class CAllUser extends CDBResult
 		if($bOk)
 		{
 			$f = false;
-			$sFilter = "";
-			if($arParams["LOGIN"] <> '')
-				$sFilter .= "LOGIN='".$DB->ForSQL($arParams["LOGIN"])."'";
-			if($arParams["EMAIL"] <> '')
-				$sFilter .= ($sFilter <> ''? ' OR ':'')."EMAIL='".$DB->ForSQL($arParams["EMAIL"])."'";
-
-			if($sFilter <> '')
+			if($arParams["LOGIN"] <> '' || $arParams["EMAIL"] <> '')
 			{
 				$confirmation = (COption::GetOptionString("main", "new_user_registration_email_confirmation", "N") == "Y");
 
-				$strSql =
-					"SELECT ID, LID, ACTIVE, CONFIRM_CODE, LOGIN, EMAIL, NAME, LAST_NAME ".
-					"FROM b_user u ".
-					"WHERE (".$sFilter.") ".
-					"	AND (ACTIVE='Y' OR NOT(CONFIRM_CODE IS NULL OR CONFIRM_CODE='')) ".
-					"	AND (EXTERNAL_AUTH_ID IS NULL OR EXTERNAL_AUTH_ID='') ";
+				$strSql = "";
+				if($arParams["LOGIN"] <> '')
+				{
+					$strSql =
+						"SELECT ID, LID, ACTIVE, CONFIRM_CODE, LOGIN, EMAIL, NAME, LAST_NAME ".
+						"FROM b_user u ".
+						"WHERE LOGIN='".$DB->ForSQL($arParams["LOGIN"])."' ".
+						"	AND (ACTIVE='Y' OR NOT(CONFIRM_CODE IS NULL OR CONFIRM_CODE='')) ".
+						"	AND (EXTERNAL_AUTH_ID IS NULL OR EXTERNAL_AUTH_ID='') ";
+				}
+				if($arParams["EMAIL"] <> '')
+				{
+					if($strSql <> '')
+					{
+						$strSql .= "\nUNION\n";
+					}
+					$strSql .=
+						"SELECT ID, LID, ACTIVE, CONFIRM_CODE, LOGIN, EMAIL, NAME, LAST_NAME ".
+						"FROM b_user u ".
+						"WHERE EMAIL='".$DB->ForSQL($arParams["EMAIL"])."' ".
+						"	AND (ACTIVE='Y' OR NOT(CONFIRM_CODE IS NULL OR CONFIRM_CODE='')) ".
+						"	AND (EXTERNAL_AUTH_ID IS NULL OR EXTERNAL_AUTH_ID='') ";
+				}
 				$res = $DB->Query($strSql);
 
 				while($arUser = $res->Fetch())
@@ -2193,7 +2182,7 @@ abstract class CAllUser extends CDBResult
 			{
 				static $arSessFields = array(
 					'LOGIN'=>'LOGIN', 'EMAIL'=>'EMAIL', 'TITLE'=>'TITLE', 'FIRST_NAME'=>'NAME', 'SECOND_NAME'=>'SECOND_NAME', 'LAST_NAME'=>'LAST_NAME',
-					'PERSONAL_PHOTO'=>'PERSONAL_PHOTO',	'AUTO_TIME_ZONE'=>'AUTO_TIME_ZONE', 'TIME_ZONE'=>'TIME_ZONE');
+					'PERSONAL_PHOTO'=>'PERSONAL_PHOTO', 'PERSONAL_GENDER'=>'PERSONAL_GENDER', 'AUTO_TIME_ZONE'=>'AUTO_TIME_ZONE', 'TIME_ZONE'=>'TIME_ZONE');
 				foreach($arSessFields as $key => $val)
 					if(isset($arFields[$val]))
 						$USER->SetParam($key, $arFields[$val]);

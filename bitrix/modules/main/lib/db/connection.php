@@ -723,7 +723,7 @@ abstract class Connection extends Data\Connection
 	/**
 	 * Truncates all table data
 	 *
-	 * @param $tableName Name of the table.
+	 * @param string $tableName Name of the table.
 	 * @return Result
 	 */
 	public function truncateTable($tableName)

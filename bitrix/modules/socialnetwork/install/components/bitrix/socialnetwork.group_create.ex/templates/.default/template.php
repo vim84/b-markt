@@ -440,11 +440,34 @@ else
 												},
 												'callback' : {
 													'select' : BX.BXGCE.selectCallback,
-													'unSelect' : BX.BXGCE.unSelectCallback,
-													'openDialog' : BX.BXGCE.openDialogCallback,
-													'closeDialog' : BX.BXGCE.closeDialogCallback,
-													'openSearch' : BX.BXGCE.openDialogCallback,
-													'closeSearch' : BX.BXGCE.closeDialogCallback
+													'unSelect' : BX.delegate(BX.SocNetLogDestination.BXfpUnSelectCallback, {
+														formName: '<?=$selectorName?>',
+														inputContainerName: 'sonet_group_create_popup_users_item_post_<?=$selectorName?>',
+														inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+														tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>',
+														tagLink1: BX.message('SONET_GCE_T_DEST_LINK_1'),
+														tagLink2: BX.message('SONET_GCE_T_DEST_LINK_2')
+													}),
+													'openDialog' : BX.delegate(BX.BXGCE.openDialogCallback, {
+														inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+														inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+														tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+													}),
+													'closeDialog' : BX.delegate(BX.SocNetLogDestination.BXfpCloseDialogCallback, {
+														inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+														inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+														tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+													}),
+													'openSearch' : BX.delegate(BX.BXGCE.openDialogCallback, {
+														inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+														inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+														tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+													}),
+													'closeSearch' : BX.delegate(BX.SocNetLogDestination.BXfpCloseDialogCallback, {
+														inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+														inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+														tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+													})
 												},
 												'items' : {
 													'users' : <?=(
@@ -467,8 +490,15 @@ else
 												'itemsSelected' : <?=(empty($arValue)? '{}': CUtil::PhpToJSObject($arValue))?>
 											});
 											BX.BXGCE.arUserSelector.push('<?=$selectorName?>');
-											BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keyup', BX.BXGCE.search);
-											BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keydown', BX.BXGCE.searchBefore);
+											BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keyup', BX.delegate(BX.SocNetLogDestination.BXfpSearch, {
+												formName: '<?=$selectorName?>',
+												inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+												tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+											}));
+											BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keydown', BX.delegate(BX.SocNetLogDestination.BXfpSearchBefore, {
+												formName: '<?=$selectorName?>',
+												inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>'
+											}));
 											BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'click', function(e) {
 												BX.BXGCE.setSelector('<?=$selectorName?>');
 												BX.SocNetLogDestination.openDialog('<?=$selectorName?>');
@@ -543,11 +573,34 @@ else
 															},
 															'callback' : {
 																'select' : BX.BXGCE.selectCallback,
-																'unSelect' : BX.BXGCE.unSelectCallback,
-																'openDialog' : BX.BXGCE.openDialogCallback,
-																'closeDialog' : BX.BXGCE.closeDialogCallback,
-																'openSearch' : BX.BXGCE.openDialogCallback,
-																'closeSearch' : BX.BXGCE.closeDialogCallback
+																'unSelect' : BX.delegate(BX.SocNetLogDestination.BXfpUnSelectCallback, {
+																	formName: '<?=$selectorName?>',
+																	inputContainerName: 'sonet_group_create_popup_users_item_post_<?=$selectorName?>',
+																	inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+																	tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>',
+																	tagLink1: BX.message('SONET_GCE_T_DEST_LINK_1'),
+																	tagLink2: BX.message('SONET_GCE_T_DEST_LINK_2')
+																}),
+																'openDialog' : BX.delegate(BX.SocNetLogDestination.BXfpOpenDialogCallback, {
+																	inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+																	inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+																	tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+																}),
+																'closeDialog' : BX.delegate(BX.SocNetLogDestination.BXfpCloseDialogCallback, {
+																	inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+																	inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+																	tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+																}),
+																'openSearch' : BX.delegate(BX.SocNetLogDestination.BXfpOpenDialogCallback, {
+																	inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+																	inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+																	tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+																}),
+																'closeSearch' : BX.delegate(BX.SocNetLogDestination.BXfpCloseDialogCallback, {
+																	inputBoxName: 'sonet_group_create_popup_users_input_box_post_<?=$selectorName?>',
+																	inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+																	tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+																})
 															},
 															'items' : {
 																'users' : <?=(is_array($arResult["POST"]["USERS_FOR_JS_E"]) && !empty($arResult["POST"]["USERS_FOR_JS_E"]) ? CUtil::PhpToJSObject($arResult["POST"]["USERS_FOR_JS_E"]) : '{}')?>,
@@ -565,8 +618,15 @@ else
 															'itemsSelected' : <?=(empty($arValue)? '{}': CUtil::PhpToJSObject($arValue))?>
 														});
 														BX.BXGCE.arUserSelector.push('<?=$selectorName?>');
-														BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keyup', BX.BXGCE.search);
-														BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keydown', BX.BXGCE.searchBefore);
+														BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keyup', BX.delegate(BX.SocNetLogDestination.BXfpSearch, {
+															formName: '<?=$selectorName?>',
+															inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>',
+															tagInputName: 'sonet_group_create_popup_users_tag_post_<?=$selectorName?>'
+														}));
+														BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'keydown', BX.delegate(BX.SocNetLogDestination.BXfpSearchBefore, {
+															formName: '<?=$selectorName?>',
+															inputName: 'sonet_group_create_popup_users_input_post_<?=$selectorName?>'
+														}));
 														BX.bind(BX('sonet_group_create_popup_users_input_post_<?=$selectorName?>'), 'click', function(e) {
 															BX.BXGCE.setSelector('<?=$selectorName?>');
 															BX.SocNetLogDestination.openDialog('<?=$selectorName?>');

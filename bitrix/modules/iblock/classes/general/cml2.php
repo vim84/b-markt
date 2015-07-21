@@ -19,6 +19,7 @@ class CIBlockCMLImport
 	var $_xml_file = null;
 
 	var $bCatalog = false;
+	var $isCatalogIblock = false;
 	var $PROPERTY_MAP = array();
 	var $SECTION_MAP = array();
 	var $PRICES_MAP = array();
@@ -110,6 +111,16 @@ class CIBlockCMLImport
 			$this->detail = false;
 
 		$this->bCatalog = CModule::IncludeModule('catalog');
+		if ($this->bCatalog)
+		{
+			$catalogsIterator = \Bitrix\Catalog\CatalogIblockTable::getList(array(
+				'select' => array('IBLOCK_ID'),
+				'filter' => array('=IBLOCK_ID' => $this->next_step["IBLOCK_ID"])
+			));
+			if ($catalogData = $catalogsIterator->fetch())
+				$this->isCatalogIblock = true;
+			unset($catalogData, $catalogsIterator);
+		}
 		$this->arProperties = array();
 		$this->PROPERTY_MAP = array();
 		if($this->next_step["IBLOCK_ID"] > 0)
@@ -2637,7 +2648,7 @@ class CIBlockCMLImport
 		{
 			$cacheValue[$xmlValue] = $xmlValue;
 			$cacheDescr[$xmlValue] = false;
-			if ($xmlValue > 0)
+			if ($xmlValue > 0 && CModule::IncludeModule('catalog'))
 			{
 				$rsBaseUnit = CCatalogMeasure::GetList(array(), array("CODE" => $xmlValue));
 				$arIDUnit = $rsBaseUnit->Fetch();
@@ -2841,7 +2852,10 @@ class CIBlockCMLImport
 				);
 			}
 
-			if(array_key_exists($this->mess["IBLOCK_XML2_MANUFACTURER"], $arXMLElement))
+			if(
+				array_key_exists($this->mess["IBLOCK_XML2_MANUFACTURER"], $arXMLElement)
+				&& $this->PROPERTY_MAP["CML2_MANUFACTURER"] > 0
+			)
 			{
 				$arElement["PROPERTY_VALUES"][$this->PROPERTY_MAP["CML2_MANUFACTURER"]] = array(
 					"n0" => array(
@@ -3560,7 +3574,7 @@ class CIBlockCMLImport
 		{
 			//nothing to do
 		}
-		elseif($arElement["ID"] && $this->bCatalog && $this->next_step["bOffer"])
+		elseif($arElement["ID"] && $this->bCatalog && $this->isCatalogIblock)
 		{
 			$CML_LINK = $this->PROPERTY_MAP["CML2_LINK"];
 
@@ -3974,13 +3988,21 @@ class CIBlockCMLImport
 					}
 				}
 
-				foreach($arElement["PRICES"] as $price)
+				if ($TAX_IN_SUM == "Y" && $arTaxMap)
 				{
-					$TAX_NAME = $price["PRICE"]["TAX_NAME"];
-					if(array_key_exists($TAX_NAME, $arTaxMap))
+					$vat = current($arTaxMap);
+					$arProduct["VAT_ID"] = $vat["ID"];
+				}
+				else
+				{
+					foreach($arElement["PRICES"] as $price)
 					{
-						$arProduct["VAT_ID"] = $arTaxMap[$TAX_NAME]["ID"];
-						break;
+						$TAX_NAME = $price["PRICE"]["TAX_NAME"];
+						if(array_key_exists($TAX_NAME, $arTaxMap))
+						{
+							$arProduct["VAT_ID"] = $arTaxMap[$TAX_NAME]["ID"];
+							break;
+						}
 					}
 				}
 
@@ -4083,6 +4105,11 @@ class CIBlockCMLImport
 		return $arDiscounts;
 	}
 
+	/**
+	 * @param int $PRODUCT_ID
+	 * @param array $arPrices
+	 * @param bool|array $arDiscounts
+	 */
 	function SetProductPrice($PRODUCT_ID, $arPrices, $arDiscounts = false)
 	{
 		$arDBPrices = array();

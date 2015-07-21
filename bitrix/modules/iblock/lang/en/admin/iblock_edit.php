@@ -275,4 +275,5 @@ $MESS["IB_E_ERR_PROPERTY_CODE_DUBLICATE_EXT"] = "Information block properties ca
 $MESS["IBLOCK_BACK_TO_ADMIN"] = "Back to information block list";
 $MESS["IB_E_CANONICAL_PAGE_URL"] = "Element canonical URL:<br>(specify the protocol, server address and path)";
 $MESS["IB_E_FIELD_IBLOCK_SECTION_KEEP_IBLOCK_SECTION_ID"] = "Enable to select main section for binding.";
+$MESS["IB_E_FIELD_TEXT_TYPE_ALLOW_CHANGE"] = "Allow to switch editing mode (text/html)";
 ?>

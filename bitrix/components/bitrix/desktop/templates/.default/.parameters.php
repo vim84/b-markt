@@ -27,6 +27,8 @@ foreach($arGadgets as $gd)
 		continue;
 	if ($gd["WEBDAV_ONLY"] == true && !IsModuleInstalled("webdav"))
 		continue;
+	if ($gd["DISK_ONLY"] == true && !IsModuleInstalled("disk"))
+		continue;
 	if ($gd["VOTE_ONLY"] == true && !IsModuleInstalled("vote"))
 		continue;	
 	

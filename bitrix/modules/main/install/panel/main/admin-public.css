@@ -1,5 +1,4 @@
 /*=================================================================BUTTONS==================================================*/
-
 .adm-workarea .adm-btn:hover,
 .adm-workarea input[type="button"]:hover,
 .adm-workarea input[type="reset"]:hover,
@@ -331,7 +330,7 @@
 }
 
 #bx-admin-prefix .add-file-popup-btn:before {
-	background:url("images/bx-admin-sprite-big.png") no-repeat 0 -1548px;
+	background:url("images/bx-admin-sprite-big1.png") no-repeat 0 -1548px;
 	content:"";
 	left:10px;
 	top:9px;
@@ -1794,7 +1793,7 @@
 
 #bx-admin-prefix .adm-info-message-icon-progress {
 	float: left;
-	background: url("images/bx-admin-sprite-big.png") no-repeat scroll 0 -1394px transparent;
+	background: url("images/bx-admin-sprite-big1.png") no-repeat scroll 0 -1394px transparent;
 	height: 35px;
 	width: 40px;
 }
@@ -1877,7 +1876,7 @@
 }
 
 #bx-admin-prefix .adm-info-message-icon:before {
-	background:url("images/bx-admin-sprite-big.png") no-repeat 0 -1394px;
+	background:url("images/bx-admin-sprite-big1.png") no-repeat 0 -1394px;
 	content:"";
 	height:33px;
 	margin-top:-16px;

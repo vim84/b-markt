@@ -17,12 +17,28 @@ $MESS ['mnu_sender_template_admin_alt'] = "Редактирование доба
 $MESS ['mnu_sender_mailing_admin'] = "Список рассылок";
 $MESS ['mnu_sender_mailing_admin_alt'] = "Управление рассылками";
 
+$MESS ['mnu_sender_mailing_trig_admin'] = "Список";
+$MESS ['mnu_sender_mailing_admin_trig_alt'] = "Управление триггерными рассылками";
+
+$MESS ['mnu_sender_mailing_trig'] = "Триггерные рассылки";
+$MESS ['mnu_sender_mailing_trig_alt'] = "Просмотр и управление триггерными рассылками";
+
 $MESS ['mnu_sender_site_mailing'] = "Рассылки сайта";
 $MESS ['mnu_sender_site_mailing_alt'] = "Рассылки сайта";
 $MESS ['mnu_sender_site_mailing_one_alt'] = "Рассылка";
 
+$MESS ['mnu_sender_site_mailing_trig'] = "Рассылки сайта";
+$MESS ['mnu_sender_site_mailing_trig_alt'] = "Рассылки сайта";
+$MESS ['mnu_sender_site_mailing_trig_one_alt'] = "Триггерная рассылка";
+
 $MESS ['mnu_sender_site_mailing_chain'] = "Выпуски";
 $MESS ['mnu_sender_site_mailing_chain_alt'] = "Выпуски";
+
+$MESS ['mnu_sender_site_mailing_trig_chain'] = "Письма";
+$MESS ['mnu_sender_site_mailing_trig_chain_alt'] = "Редактирование писем и их тестовая отправка";
+
+$MESS ['mnu_sender_site_mailing_trig_stat'] = "Статистика";
+$MESS ['mnu_sender_site_mailing_trig_stat_alt'] = "Статистика";
 
 $MESS ['mnu_sender_site_mailing_stat'] = "Статистика выпусков";
 $MESS ['mnu_sender_site_mailing_stat_alt'] = "Статистика выпусков";

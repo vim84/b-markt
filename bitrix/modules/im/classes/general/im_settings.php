@@ -179,6 +179,7 @@ class CIMSettings
 				'viewOffline' => COption::GetOptionString("im", "view_offline"),
 				'viewGroup' => COption::GetOptionString("im", "view_group"),
 				'enableSound' => true,
+				'enableBigSmile' => true,
 				'sendByEnter' => COption::GetOptionString("im", "send_by_enter"),
 				'correctText' => COption::GetOptionString("im", "correct_text"),
 				'panelPositionHorizontal' => COption::GetOptionString("im", "panel_position_horizontal"),

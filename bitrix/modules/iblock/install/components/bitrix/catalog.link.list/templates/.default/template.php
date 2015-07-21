@@ -36,6 +36,7 @@ $APPLICATION->IncludeComponent(
 		"CACHE_FILTER" => $arParams["CACHE_FILTER"],
 		"CACHE_GROUPS" => $arParams["CACHE_GROUPS"],
 		"SET_TITLE" => $arParams["SET_TITLE"],
+		"SET_LAST_MODIFIED" => $arParams["SET_LAST_MODIFIED"],
 		"PAGE_ELEMENT_COUNT" => $arParams["PAGE_ELEMENT_COUNT"],
 		"LINE_ELEMENT_COUNT" => $arParams["LINE_ELEMENT_COUNT"],
 		"PROPERTY_CODE" => $arParams["PROPERTY_CODE"],

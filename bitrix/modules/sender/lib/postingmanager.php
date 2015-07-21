@@ -24,30 +24,30 @@ class PostingManager
 	protected static $currentMailingChainFields = null;
 
 	/**
-	 * @param array $arData
+	 * @param array $data
 	 * @return array
 	 */
-	public static function onMailEventMailRead(array $arData)
+	public static function onMailEventMailRead(array $data)
 	{
-		$id = intval($arData['RECIPIENT_ID']);
+		$id = intval($data['RECIPIENT_ID']);
 		if ($id > 0)
 			static::read($id);
 
-		return $arData;
+		return $data;
 	}
 
 	/**
-	 * @param array $arData
+	 * @param array $data
 	 * @return array
 	 */
-	public static function onMailEventMailClick(array $arData)
+	public static function onMailEventMailClick(array $data)
 	{
-		$id = intval($arData['RECIPIENT_ID']);
-		$url = $arData['URL'];
+		$id = intval($data['RECIPIENT_ID']);
+		$url = $data['URL'];
 		if ($id > 0 && strlen($url) > 0)
 			static::click($id, $url);
 
-		return $arData;
+		return $data;
 	}
 
 	/**
@@ -56,12 +56,12 @@ class PostingManager
 	public static function read($recipientId)
 	{
 		$postingContactPrimary = array('ID' => $recipientId);
-		$arPostingEmail = PostingRecipientTable::getRowById($postingContactPrimary);
-		if ($arPostingEmail && $arPostingEmail['ID'])
+		$recipient = PostingRecipientTable::getRowById($postingContactPrimary);
+		if ($recipient && $recipient['ID'])
 		{
 			PostingReadTable::add(array(
-				'POSTING_ID' => $arPostingEmail['POSTING_ID'],
-				'RECIPIENT_ID' => $arPostingEmail['ID'],
+				'POSTING_ID' => $recipient['POSTING_ID'],
+				'RECIPIENT_ID' => $recipient['ID'],
 			));
 		}
 	}
@@ -73,30 +73,51 @@ class PostingManager
 	 */
 	public static function click($recipientId, $url)
 	{
+
 		$postingContactPrimary = array('ID' => $recipientId);
-		$arPostingEmail = PostingRecipientTable::getRowById($postingContactPrimary);
-		if ($arPostingEmail && $arPostingEmail['ID'])
+		$recipient = PostingRecipientTable::getRowById($postingContactPrimary);
+		if ($recipient && $recipient['ID'])
 		{
-			$arPostingRead = PostingReadTable::getRowById(array(
-				'POSTING_ID' => $arPostingEmail['POSTING_ID'],
-				'RECIPIENT_ID' => $arPostingEmail['ID']
+			$read = PostingReadTable::getRowById(array(
+				'POSTING_ID' => $recipient['POSTING_ID'],
+				'RECIPIENT_ID' => $recipient['ID']
 			));
-			if ($arPostingRead === null)
+			if ($read === null)
 			{
 				static::read($recipientId);
 			}
 
 			$postingDb = PostingTable::getList(array(
 				'select' => array('ID'),
-				'filter' => array('ID' => $arPostingEmail['POSTING_ID'], 'MAILING.TRACK_CLICK' => 'Y'),
+				'filter' => array('ID' => $recipient['POSTING_ID']),
 			));
 			if ($postingDb->fetch())
 			{
-				PostingClickTable::add(array(
-					'POSTING_ID' => $arPostingEmail['POSTING_ID'],
-					'RECIPIENT_ID' => $arPostingEmail['ID'],
-					'URL' => $url
+				$fixedUrl = str_replace(
+					array(
+						'&bx_sender_conversion_id=' . $recipient['ID'],
+						'?bx_sender_conversion_id=' . $recipient['ID']
+					),
+					array('', ''),
+					$url
+				);
+				$addClickDb = PostingClickTable::add(array(
+					'POSTING_ID' => $recipient['POSTING_ID'],
+					'RECIPIENT_ID' => $recipient['ID'],
+					'URL' => $fixedUrl
 				));
+				if($addClickDb->isSuccess())
+				{
+					// send event
+					$eventData = array(
+						'URL' => $url,
+						'URL_FIXED' => $fixedUrl,
+						'CLICK_ID' => $addClickDb->getId(),
+						'RECIPIENT' => $recipient
+					);
+					$event = new Event('sender', 'OnAfterRecipientClick', array($eventData));
+					$event->send();
+				}
 			}
 		}
 	}
@@ -129,12 +150,12 @@ class PostingManager
 
 	/**
 	 * @param $mailingChainId
-	 * @param array $arParams
+	 * @param array $params
 	 * @return string
 	 * @throws \Bitrix\Main\ArgumentException
 	 * @throws \Bitrix\Main\DB\Exception
 	 */
-	protected static function sendInternal($mailingChainId, array $arParams)
+	protected static function sendInternal($mailingChainId, array $params)
 	{
 		if(static::$currentMailingChainFields !== null)
 		{
@@ -148,28 +169,28 @@ class PostingManager
 				'select' => array('*', 'SITE_ID' => 'MAILING.SITE_ID'),
 				'filter' => array('ID' => $mailingChainId)
 			));
-			if(!($arMailingChain = $mailingChainDb->fetch()))
+			if(!($mailingChain = $mailingChainDb->fetch()))
 				return PostingRecipientTable::SEND_RESULT_ERROR;
 
 
 			$charset = false;
 			$siteDb = \Bitrix\Main\SiteTable::getList(array(
 				'select'=>array('SERVER_NAME', 'NAME', 'CULTURE_CHARSET'=>'CULTURE.CHARSET'),
-				'filter' => array('LID' => $arMailingChain['SITE_ID'])
+				'filter' => array('LID' => $mailingChain['SITE_ID'])
 			));
-			if($arSiteDb = $siteDb->fetch())
+			if($site = $siteDb->fetch())
 			{
-				$charset = $arSiteDb['CULTURE_CHARSET'];
-				$serverName = $arSiteDb['SERVER_NAME'];
+				$charset = $site['CULTURE_CHARSET'];
+				$serverName = $site['SERVER_NAME'];
 			}
 			else
 			{
-				throw new \Bitrix\Main\DB\Exception(Loc::getMessage('SENDER_POSTING_MANAGER_ERR_SITE', array('#SITE_ID#' => $arMailingChain['SITE_ID'])));
+				throw new \Bitrix\Main\DB\Exception(Loc::getMessage('SENDER_POSTING_MANAGER_ERR_SITE', array('#SITE_ID#' => $mailingChain['SITE_ID'])));
 			}
 
 			if(!$charset)
 			{
-				throw new \Bitrix\Main\DB\Exception(Loc::getMessage('SENDER_POSTING_MANAGER_ERR_CHARSET', array('#SITE_ID#' => "[".$arMailingChain['SITE_ID']."]".$arSiteDb['NAME'])));
+				throw new \Bitrix\Main\DB\Exception(Loc::getMessage('SENDER_POSTING_MANAGER_ERR_CHARSET', array('#SITE_ID#' => "[".$mailingChain['SITE_ID']."]".$site['NAME'])));
 			}
 
 			$attachmentList = array();
@@ -188,46 +209,46 @@ class PostingManager
 			static::$currentMailingChainFields['EVENT'] = array(
 				'FILE' => $attachmentList
 			);
-			static::$currentMailingChainFields['ID'] = $arMailingChain['ID'];
+			static::$currentMailingChainFields['ID'] = $mailingChain['ID'];
 			static::$currentMailingChainFields['MESSAGE'] = array(
 				'BODY_TYPE' => 'html',
-				'EMAIL_FROM' => $arMailingChain['EMAIL_FROM'],
+				'EMAIL_FROM' => $mailingChain['EMAIL_FROM'],
 				'EMAIL_TO' => '#EMAIL_TO#',
-				'SUBJECT' => $arMailingChain['SUBJECT'],
-				'MESSAGE' => $arMailingChain['MESSAGE'],
-				'MESSAGE_PHP' => \Bitrix\Main\Mail\Internal\EventMessageTable::replaceTemplateToPhp($arMailingChain['MESSAGE']),
+				'SUBJECT' => $mailingChain['SUBJECT'],
+				'MESSAGE' => $mailingChain['MESSAGE'],
+				'MESSAGE_PHP' => \Bitrix\Main\Mail\Internal\EventMessageTable::replaceTemplateToPhp($mailingChain['MESSAGE']),
 			);
-			static::$currentMailingChainFields['SITE'] = array($arMailingChain['SITE_ID']);
+			static::$currentMailingChainFields['SITE'] = array($mailingChain['SITE_ID']);
 			static::$currentMailingChainFields['CHARSET'] = $charset;
 			static::$currentMailingChainFields['SERVER_NAME'] = $serverName;
 		}
 
 
-		$arMessageParams = array(
+		$messageParams = array(
 			'EVENT' => static::$currentMailingChainFields['EVENT'],
-			'FIELDS' => $arParams['FIELDS'],
+			'FIELDS' => $params['FIELDS'],
 			'MESSAGE' => static::$currentMailingChainFields['MESSAGE'],
 			'SITE' => static::$currentMailingChainFields['SITE'],
 			'CHARSET' => static::$currentMailingChainFields['CHARSET'],
 		);
 
-		$message = Mail\EventMessageCompiler::createInstance($arMessageParams);
+		$message = Mail\EventMessageCompiler::createInstance($messageParams);
 		$message->compile();
 
 		$mailHeaders = $message->getMailHeaders();
-		if(!empty($arParams['FIELDS']['UNSUBSCRIBE_LINK']))
+		if(!empty($params['FIELDS']['UNSUBSCRIBE_LINK']))
 		{
-			if(substr($arParams['FIELDS']['UNSUBSCRIBE_LINK'], 0, 4) !== 'http')
+			if(substr($params['FIELDS']['UNSUBSCRIBE_LINK'], 0, 4) !== 'http')
 			{
 				if(!empty(static::$currentMailingChainFields['SERVER_NAME']))
 					$serverName = static::$currentMailingChainFields['SERVER_NAME'];
 				else
 					$serverName = \Bitrix\Main\Config\Option::get("main", "server_name", $GLOBALS["SERVER_NAME"]);
 
-				$unsubUrl = 'http://' . $serverName . $arParams['FIELDS']['UNSUBSCRIBE_LINK'];
+				$unsubUrl = 'http://' . $serverName . $params['FIELDS']['UNSUBSCRIBE_LINK'];
 			}
 			else
-				$unsubUrl = $arParams['FIELDS']['UNSUBSCRIBE_LINK'];
+				$unsubUrl = $params['FIELDS']['UNSUBSCRIBE_LINK'];
 
 			$mailHeaders['List-Unsubscribe'] = '<'.$unsubUrl.'>';
 		}
@@ -242,8 +263,8 @@ class PostingManager
 			'CONTENT_TYPE' => $message->getMailContentType(),
 			'MESSAGE_ID' => '',
 			'ATTACHMENT' => $message->getMailAttachment(),
-			'TRACK_READ' => (isset($arParams['TRACK_READ']) ? $arParams['TRACK_READ'] : null),
-			'TRACK_CLICK' => (isset($arParams['TRACK_CLICK']) ? $arParams['TRACK_CLICK'] : null)
+			'TRACK_READ' => (isset($params['TRACK_READ']) ? $params['TRACK_READ'] : null),
+			'TRACK_CLICK' => (isset($params['TRACK_CLICK']) ? $params['TRACK_CLICK'] : null)
 		));
 
 		if($result)
@@ -261,24 +282,36 @@ class PostingManager
 	public static function sendToAddress($mailingChainId, $address)
 	{
 		$recipientEmail = $address;
-		$arEmailParts = explode('@', $recipientEmail);
-		$recipientName = $arEmailParts[0];
+		$emailParts = explode('@', $recipientEmail);
+		$recipientName = $emailParts[0];
+
+		global $USER;
 
 		$mailingChain = MailingChainTable::getRowById(array('ID' => $mailingChainId));
-		$arParams = array(
+		$sendParams = array(
 			'FIELDS' => array(
 				'NAME' => $recipientName,
 				'EMAIL_TO' => $address,
-				'USER_ID' => '',
+				'USER_ID' => $USER->GetID(),
+				'SENDER_CHAIN_CODE' => 'sender_chain_item_' . $mailingChain["ID"],
 				'UNSUBSCRIBE_LINK' => Subscription::getLinkUnsub(array(
 					'MAILING_ID' => !empty($mailingChain) ? $mailingChain['MAILING_ID'] : 0,
 					'EMAIL' => $address,
 					'TEST' => 'Y'
-				)),
+				))
+			),
+			'TRACK_READ' => array(
+				'MODULE_ID' => "sender",
+				'FIELDS' => array('RECIPIENT_ID' => 0),
+			),
+			'TRACK_CLICK' => array(
+				'MODULE_ID' => "sender",
+				'FIELDS' => array('RECIPIENT_ID' => 0),
+				'URL_PARAMS' => array('bx_sender_conversion_id' => 0)
 			)
 		);
 
-		$mailSendResult = static::sendInternal($mailingChainId, $arParams);
+		$mailSendResult = static::sendInternal($mailingChainId, $sendParams);
 
 
 		switch($mailSendResult)
@@ -317,9 +350,9 @@ class PostingManager
 				'ID',
 				'STATUS',
 				'MAILING_ID',
-				'TRACK_CLICK' => 'MAILING.TRACK_CLICK',
 				'MAILING_CHAIN_ID',
 				'MAILING_CHAIN_REITERATE' => 'MAILING_CHAIN.REITERATE',
+				'MAILING_CHAIN_IS_TRIGGER' => 'MAILING_CHAIN.IS_TRIGGER',
 			),
 			'filter' => array(
 				'ID' => $id,
@@ -327,18 +360,39 @@ class PostingManager
 				'MAILING_CHAIN.STATUS' => MailingChainTable::STATUS_SEND,
 			)
 		));
-		$arPosting = $postingDb->fetch();
+		$postingData = $postingDb->fetch();
 
-		// if posting in new status, then import recipients from groups and set right status for sending
-		if($arPosting && $arPosting["STATUS"] == PostingTable::STATUS_NEW)
+		// posting not found
+		if(!$postingData)
 		{
-			PostingTable::initGroupRecipients($arPosting['ID']);
-			PostingTable::update(array('ID' => $arPosting['ID']), array('STATUS' => PostingTable::STATUS_PART));
-			$arPosting["STATUS"] = PostingTable::STATUS_PART;
+			return static::SEND_RESULT_ERROR;
 		}
 
-		// posting not found or not in right status
-		if(!$arPosting || $arPosting["STATUS"] != PostingTable::STATUS_PART)
+		// if posting in new status, then import recipients from groups and set right status for sending
+		$isInitGroupRecipients = false;
+		$isChangeStatusToPart = false;
+		if($postingData["STATUS"] == PostingTable::STATUS_NEW)
+		{
+			$isInitGroupRecipients = true;
+			$isChangeStatusToPart = true;
+		}
+		if($postingData["STATUS"] != PostingTable::STATUS_PART && $postingData["MAILING_CHAIN_IS_TRIGGER"] == 'Y')
+		{
+			$isInitGroupRecipients = false;
+			$isChangeStatusToPart = true;
+		}
+
+		if($isInitGroupRecipients)
+			PostingTable::initGroupRecipients($postingData['ID']);
+		if($isChangeStatusToPart)
+		{
+			PostingTable::update(array('ID' => $postingData['ID']), array('STATUS' => PostingTable::STATUS_PART));
+			$postingData["STATUS"] = PostingTable::STATUS_PART;
+		}
+
+
+		// posting not in right status
+		if($postingData["STATUS"] != PostingTable::STATUS_PART)
 		{
 			return static::SEND_RESULT_ERROR;
 		}
@@ -351,57 +405,68 @@ class PostingManager
 
 
 		// select all recipients of posting, only not processed
-		$postingEmailDb = PostingRecipientTable::getList(array(
+		$recipientDataDb = PostingRecipientTable::getList(array(
 			'filter' => array(
-				'POSTING_ID' => $arPosting['ID'],
+				'POSTING_ID' => $postingData['ID'],
 				'STATUS' => PostingRecipientTable::SEND_RESULT_NONE
 			),
 			'limit' => $maxMailCount
 		));
 
-		while($arEmail = $postingEmailDb->fetch())
+		while($recipientData = $recipientDataDb->fetch())
 		{
 			// create name from email
-			$recipientEmail = $arEmail["EMAIL"];
-			if(empty($arEmail["NAME"]))
+			$recipientEmail = $recipientData["EMAIL"];
+			if(empty($recipientData["NAME"]))
 			{
-				$arEmailParts = explode('@', $recipientEmail);
-				$recipientName = $arEmailParts[0];
+				$recipientEmailParts = explode('@', $recipientEmail);
+				$recipientName = $recipientEmailParts[0];
 			}
 			else
 			{
-				$recipientName = $arEmail["NAME"];
+				$recipientName = $recipientData["NAME"];
 			}
 
 
 			// prepare params for send
-			$arParams = array(
+			$sendParams = array(
 				'FIELDS' => array(
 					'EMAIL_TO' => $recipientEmail,
 					'NAME' => $recipientName,
-					'USER_ID' => $arEmail["USER_ID"],
+					'USER_ID' => $recipientData["USER_ID"],
+					'SENDER_CHAIN_CODE' => 'sender_chain_item_' . $postingData["MAILING_CHAIN_ID"],
 					'UNSUBSCRIBE_LINK' => Subscription::getLinkUnsub(array(
-						'MAILING_ID' => $arPosting['MAILING_ID'],
+						'MAILING_ID' => $postingData['MAILING_ID'],
 						'EMAIL' => $recipientEmail,
-						'RECIPIENT_ID' => $arEmail["ID"]
+						'RECIPIENT_ID' => $recipientData["ID"]
 					)),
 				),
 				'TRACK_READ' => array(
 					'MODULE_ID' => "sender",
-					'FIELDS' => array('RECIPIENT_ID' => $arEmail["ID"])
+					'FIELDS' => array('RECIPIENT_ID' => $recipientData["ID"]),
+				),
+				'TRACK_CLICK' => array(
+					'MODULE_ID' => "sender",
+					'FIELDS' => array('RECIPIENT_ID' => $recipientData["ID"]),
+					'URL_PARAMS' => array('bx_sender_conversion_id' => $recipientData["ID"])
 				)
 			);
-			if($arPosting['TRACK_CLICK'] == 'Y')
-			{
-				$arParams['TRACK_CLICK'] = array(
-					'MODULE_ID' => "sender",
-					'FIELDS' => array('RECIPIENT_ID' => $arEmail["ID"])
-				);
-			}
+
+			if(is_array($recipientData['FIELDS']) && count($recipientData) > 0)
+				$sendParams['FIELDS'] = $sendParams['FIELDS'] + $recipientData['FIELDS'];
 
 			// set sending result to recipient
-			$mailSendResult = static::sendInternal($arPosting['MAILING_CHAIN_ID'], $arParams);
-			PostingRecipientTable::update(array('ID' => $arEmail["ID"]), array('STATUS' => $mailSendResult, 'DATE_SENT' => new Type\DateTime()));
+			$mailSendResult = static::sendInternal($postingData['MAILING_CHAIN_ID'], $sendParams);
+			PostingRecipientTable::update(array('ID' => $recipientData["ID"]), array('STATUS' => $mailSendResult, 'DATE_SENT' => new Type\DateTime()));
+
+			// send event
+			$eventData = array(
+				'SEND_RESULT' => $mailSendResult == PostingRecipientTable::SEND_RESULT_SUCCESS,
+				'RECIPIENT' => $recipientData,
+				'POSTING' => $postingData
+			);
+			$event = new Event('sender', 'OnAfterPostingSendRecipient', array($eventData));
+			$event->send();
 
 			// limit executing script by time
 			if($timeout > 0 && getmicrotime()-$start_time >= $timeout)
@@ -411,11 +476,12 @@ class PostingManager
 			static::$emailSentPerIteration++;
 		}
 
+
 		//set status and delivered and error emails
-		$arStatuses = PostingTable::getRecipientCountByStatus($id);
-		if(!array_key_exists(PostingRecipientTable::SEND_RESULT_NONE, $arStatuses))
+		$statusList = PostingTable::getRecipientCountByStatus($id);
+		if(!array_key_exists(PostingRecipientTable::SEND_RESULT_NONE, $statusList))
 		{
-			if(array_key_exists(PostingRecipientTable::SEND_RESULT_ERROR, $arStatuses))
+			if(array_key_exists(PostingRecipientTable::SEND_RESULT_ERROR, $statusList))
 				$STATUS = PostingTable::STATUS_SENT_WITH_ERRORS;
 			else
 				$STATUS = PostingTable::STATUS_SENT;
@@ -463,9 +529,9 @@ class PostingManager
 		$connection = \Bitrix\Main\Application::getInstance()->getConnection();
 		if($connection instanceof \Bitrix\Main\DB\MysqlCommonConnection)
 		{
-			$db_lock = $connection->query("SELECT GET_LOCK('".$uniq."_sendpost_".$id."', 0) as L", false, "File: ".__FILE__."<br>Line: ".__LINE__);
-			$ar_lock = $db_lock->fetch();
-			if($ar_lock["L"]=="1")
+			$lockDb = $connection->query("SELECT GET_LOCK('".$uniq."_sendpost_".$id."', 0) as L", false, "File: ".__FILE__."<br>Line: ".__LINE__);
+			$lock = $lockDb->fetch();
+			if($lock["L"]=="1")
 				return true;
 			else
 				return false;
@@ -478,15 +544,15 @@ class PostingManager
 			if($i<5) $i=5;
 			$connection->query("DELETE FROM B_SENDER_POSTING_LOCK WHERE DATEDIFF(SECOND, TIMESTAMP_X, GETDATE())>".$i);
 			$connection->query("SET LOCK_TIMEOUT 1");
-			$db_lock = $connection->query("INSERT INTO B_SENDER_POSTING_LOCK (ID, TIMESTAMP_X) VALUES (".$id.", GETDATE())");
+			$lockDb = $connection->query("INSERT INTO B_SENDER_POSTING_LOCK (ID, TIMESTAMP_X) VALUES (".$id.", GETDATE())");
 			$connection->query("SET LOCK_TIMEOUT -1");
-			return $db_lock->getResource()!==false;
+			return $lockDb->getResource()!==false;
 		}
 		elseif($connection instanceof \Bitrix\Main\DB\OracleConnection)
 		{
 			try
 			{
-				$db_lock = $connection->query("
+				$lockDb = $connection->query("
 					declare
 						my_lock_id number;
 						my_result number;
@@ -514,7 +580,7 @@ class PostingManager
 					throw $exception;
 			}
 
-			return $db_lock->getResource()!==false;
+			return $lockDb->getResource()!==false;
 		}
 
 		return false;
@@ -534,9 +600,9 @@ class PostingManager
 			$uniq = \COption::GetOptionString("main", "server_uniq_id", "");
 			if(strlen($uniq)>0)
 			{
-				$db_lock = $connection->query("SELECT RELEASE_LOCK('".$uniq."_sendpost_".$id."') as L");
-				$ar_lock = $db_lock->fetch();
-				if($ar_lock["L"]=="0")
+				$lockDb = $connection->query("SELECT RELEASE_LOCK('".$uniq."_sendpost_".$id."') as L");
+				$lock = $lockDb->fetch();
+				if($lock["L"] == "0")
 					return false;
 				else
 					return true;

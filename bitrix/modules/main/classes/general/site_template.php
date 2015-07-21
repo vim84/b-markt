@@ -134,7 +134,8 @@ class CSiteTemplate
 
 	function __GetByStylesTitle($file)
 	{
-		if(file_exists($file))
+		$io = CBXVirtualIo::GetInstance();
+		if ($io->FileExists($file))
 			return include($file);
 		return false;
 	}
@@ -215,28 +216,10 @@ class CSiteTemplate
 
 		if(isset($arFields["NAME"]) || isset($arFields["DESCRIPTION"]) || isset($arFields["SORT"]))
 		{
-			$APPLICATION->SaveFileContent($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/templates/".$arFields["ID"]."/description.php",
-				'<'.'?'.
-				'$arTemplate = array('."\n".
-				'	"NAME" => "'.EscapePHPString($arFields['NAME']).'",'."\n".
-				'	"DESCRIPTION" => "'.EscapePHPString($arFields['DESCRIPTION']).'",'."\n".
-				'	"SORT" => '.(intval($arFields['SORT']) > 0? intval($arFields['SORT']) : '""').','."\n".
-				'	"TYPE" => "'.(strlen($arFields['TYPE']) > 0? ($arFields['TYPE']) : '').'",'."\n".
-				');'."\n".
-				'?'.'>'
-			);
+			self::SaveDescription($arFields, $_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/templates/".$arFields["ID"]."/description.php");
 		}
 
-		if(isset($arFields["STYLES_DESCRIPTION"]) && is_array($arFields["STYLES_DESCRIPTION"]))
-		{
-			$str = '<'.'?'."\nreturn array(\n";
-			foreach($arFields["STYLES_DESCRIPTION"] as $code => $val)
-			{
-				$str .= "\t\"".EscapePHPString($code).'" => "'.EscapePHPString($val)."\",\n";
-			}
-			$str .= ");\n".'?'.'>';
-			$APPLICATION->SaveFileContent($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/templates/".$arFields["ID"]."/.styles.php", $str);
-		}
+		self::SaveStyleDescription($arFields["STYLES_DESCRIPTION"], $_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/templates/".$arFields["ID"]."/.styles.php");
 
 		return $arFields["ID"];
 	}
@@ -288,29 +271,13 @@ class CSiteTemplate
 				$arFields["SORT"] = $ar_t["SORT"];
 			if(!isset($arFields["TYPE"]))
 				$arFields["TYPE"] = $ar_t["TYPE"];
+			if(!isset($arFields["EDITOR_STYLES"]))
+				$arFields["EDITOR_STYLES"] = $ar_t["EDITOR_STYLES"];
 
-			$APPLICATION->SaveFileContent($_SERVER["DOCUMENT_ROOT"].$path."/description.php",
-				'<'.'?'.
-				'$arTemplate = array('."\n".
-				'	"NAME" => "'.EscapePHPString($arFields['NAME']).'",'."\n".
-				'	"DESCRIPTION" => "'.EscapePHPString($arFields['DESCRIPTION']).'",'."\n".
-				'	"SORT" => '.(intval($arFields['SORT']) > 0? intval($arFields['SORT']) : '""').','."\n".
-				'	"TYPE" => "'.(strlen($arFields['TYPE']) > 0? ($arFields['TYPE']) : '').'",'."\n".
-				');'."\n".
-				'?'.'>'
-			);
+			self::SaveDescription($arFields, $_SERVER["DOCUMENT_ROOT"].$path."/description.php");
 		}
 
-		if(isset($arFields["STYLES_DESCRIPTION"]) && is_array($arFields["STYLES_DESCRIPTION"]))
-		{
-			$str = '<'.'?'."\nreturn array(\n";
-			foreach($arFields["STYLES_DESCRIPTION"] as $code => $val)
-			{
-				$str .= "\t\"".EscapePHPString($code).'" => "'.EscapePHPString($val)."\",\n";
-			}
-			$str .= ");\n".'?'.'>';
-			$APPLICATION->SaveFileContent($_SERVER["DOCUMENT_ROOT"].$path."/.styles.php", $str);
-		}
+		self::SaveStyleDescription($arFields["STYLES_DESCRIPTION"], $_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/templates/".$arFields["ID"]."/.styles.php");
 
 		return true;
 	}
@@ -398,4 +365,48 @@ class CSiteTemplate
 		}
 		return $arRes;
 	}
+
+	public static function SaveStyleDescription($stylesDesc = array(), $stylesPath)
+	{
+		/** @global CMain $APPLICATION */
+		global $APPLICATION;
+
+		if(isset($stylesDesc) && is_array($stylesDesc))
+		{
+			$curStylesDesc = CSiteTemplate::__GetByStylesTitle($stylesPath);
+			if (is_array($curStylesDesc))
+			{
+				foreach($curStylesDesc as $code => $val)
+				{
+					if (!is_array($curStylesDesc[$code]))
+						unset($curStylesDesc[$code]);
+				}
+			}
+			foreach($stylesDesc as $code => $val)
+			{
+				if (!isset($curStylesDesc[EscapePHPString($code)]) || !is_array($curStylesDesc[EscapePHPString($code)]))
+				{
+					$curStylesDesc[EscapePHPString($code)] = EscapePHPString($val);
+				}
+			}
+			$APPLICATION->SaveFileContent($stylesPath, '<'.'?'."\nreturn ".var_export($curStylesDesc, 1).";\n".'?'.'>');
+		}
+	}
+
+	public static function SaveDescription($arFields = array(), $descPath)
+	{
+		/** @global CMain $APPLICATION */
+		global $APPLICATION;
+
+		$arDescription = array(
+			"NAME" => EscapePHPString($arFields['NAME']),
+			"DESCRIPTION" => EscapePHPString($arFields['DESCRIPTION']),
+			"SORT" => (intval($arFields['SORT']) > 0? intval($arFields['SORT']) : ''),
+			"TYPE" => $arFields['TYPE']
+		);
+		if (isset($arFields['EDITOR_STYLES']))
+			$arDescription["EDITOR_STYLES"] = $arFields['EDITOR_STYLES'];
+		$APPLICATION->SaveFileContent($descPath, '<'.'?'."\n\$arTemplate = ".var_export($arDescription, 1).";\n".'?'.'>');
+	}
+
 }

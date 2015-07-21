@@ -96,7 +96,7 @@ class CAllPullStack
 
 	public static function AddByUser($userId, $arMessage, $channelType = 'private')
 	{
-		if (intval($userId) <= 0)
+		if (intval($userId) == 0)
 			return false;
 
 		$arChannel = CPullChannel::GetChannel($userId, $channelType);

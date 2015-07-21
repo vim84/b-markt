@@ -38,7 +38,6 @@ $FilterArr = Array(
 	"find_lid",
 	"find_name",
 	"find_active",
-	"find_track_click",
 	"find_is_public",
 );
 
@@ -51,7 +50,6 @@ if (CheckFilter())
 		"NAME" => ($find!="" && $find_type == "name"? $find:$find_name),
 		"ACTIVE" => $find_active,
 		"SITE_ID" => $find_lid,
-		"TRACK_CLICK" => $find_track_click,
 		"IS_PUBLIC" => $find_is_public,
 	);
 
@@ -143,8 +141,9 @@ if(($arID = $lAdmin->GroupAction()) && $POST_RIGHT=="W")
 }
 
 // runtime: RECIPIENT_CNT = include_cnt = group_cnt * (exclude_int)
+$arFilter['IS_TRIGGER'] = 'N';
 $groupListDb = \Bitrix\Sender\MailingTable::getList(array(
-	'select' => array('ID', 'NAME', 'SORT', 'DATE_INSERT', 'ACTIVE', 'TRACK_CLICK', 'IS_PUBLIC', 'SITE_ID', 'RECIPIENT_CNT'),
+	'select' => array('ID', 'NAME', 'SORT', 'DATE_INSERT', 'ACTIVE', 'IS_PUBLIC', 'SITE_ID', 'RECIPIENT_CNT'),
 	'filter' => $arFilter,
 	'runtime' => array(new \Bitrix\Main\Entity\ExpressionField('RECIPIENT_CNT', 'SUM(%2$s*(%1$s))', array('MAILING_GROUP.INCLUDE', 'MAILING_GROUP.GROUP.ADDRESS_COUNT'))),
 	'order' => array($by=>$order)
@@ -181,11 +180,6 @@ $lAdmin->AddHeaders(array(
 		"sort"		=>"SITE_ID",
 		"default"	=>true,
 	),
-	array(	"id"		=>"TRACK_CLICK",
-		"content"	=>GetMessage("rub_f_track_click"),
-		"sort"		=>"TRACK_CLICK",
-		"default"	=>false,
-	),
 	array(	"id"		=>"IS_PUBLIC",
 		"content"	=>GetMessage("rub_f_is_public"),
 		"sort"		=>"IS_PUBLIC",
@@ -205,7 +199,6 @@ while($arRes = $rsData->NavNext(true, "f_")):
 	$row->AddViewField("NAME", '<a href="sender_mailing_edit.php?ID='.$f_ID.'&amp;lang='.LANG.'">'.$f_NAME.'</a>');
 	$row->AddInputField("SORT", array("size"=>6));
 	$row->AddCheckField("ACTIVE");
-	$row->AddCheckField("TRACK_CLICK");
 	$row->AddCheckField("IS_PUBLIC");
 	$row->AddViewField("RECIPIENT_CNT", '<a href="sender_mailing_recipient_admin.php?MAILING_ID='.$f_ID.'&amp;lang='.LANG.'">'.$f_RECIPIENT_CNT.'</a>');
 
@@ -266,7 +259,7 @@ $aContext = array(
 	),
 	array(
 		"TEXT"=>GetMessage("sender_mailing_adm_wizard"),
-		"LINK"=>"sender_mailing_wizard.php?lang=".LANGUAGE_ID,
+		"LINK"=>"sender_mailing_wizard.php?IS_TRIGGER=N&lang=".LANGUAGE_ID,
 		"TITLE"=>GetMessage("sender_mailing_adm_wizard_title"),
 		"ICON"=>"btn_new",
 	),
@@ -285,7 +278,6 @@ $oFilter = new CAdminFilter(
 		GetMessage("rub_f_name"),
 		GetMessage("rub_f_active"),
 		GetMessage("rub_f_site"),
-		GetMessage("rub_f_track_click"),
 		GetMessage("rub_f_is_public"),
 	)
 );
@@ -354,24 +346,6 @@ $oFilter = new CAdminFilter(
 				?>
 			</select></td>
 	</tr>
-<tr>
-	<td><?=GetMessage("rub_f_track_click")?>:</td>
-	<td>
-		<?
-		$arr = array(
-			"reference" => array(
-				GetMessage("MAIN_YES"),
-				GetMessage("MAIN_NO"),
-			),
-			"reference_id" => array(
-				"Y",
-				"N",
-			)
-		);
-		echo SelectBoxFromArray("find_track_click", $arr, $find_track_click, GetMessage("MAIN_ALL"), "");
-		?>
-	</td>
-</tr>
 	<tr>
 		<td><?=GetMessage("rub_f_is_public")?>:</td>
 		<td>

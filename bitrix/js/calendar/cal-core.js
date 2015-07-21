@@ -187,6 +187,7 @@ JCEC.prototype = {
 			this.year_workdays[this.yearWorkdays[i]] = true;
 
 		window.onbeforeunload = function(){_this.bOnunload = true;};
+		BX.addCustomEvent('onPopupClose', BX.proxy(this._OnPopupCloseHandler, this));
 
 		this.BuildSectionBlock();
 		this.Selector = new ECMonthSelector(this);
@@ -2126,6 +2127,13 @@ JCEC.prototype = {
 			this.SetView({month: this.activeDate.month, year: this.activeDate.year});
 			setTimeout(function(){_this.bJustRedraw = false;}, 500);
 		}
+	},
+
+	_OnPopupCloseHandler: function()
+	{
+		this.OnResize();
+		// Do it once
+		BX.removeCustomEvent('onPopupClose', BX.proxy(this._OnPopupCloseHandler, this));
 	},
 
 	CreateStrut: function(width)

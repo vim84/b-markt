@@ -189,7 +189,7 @@ if (
 		'js' => '/bitrix/js/socialnetwork/log-destination.js',
 		'css' => '/bitrix/js/main/core/css/core_finder.css',
 		'lang' => '/bitrix/modules/socialnetwork/lang/'.LANGUAGE_ID.'/install/js/log_destination.php',
-		'rel' => array('core', 'popup', 'json')
+		'rel' => array('core', 'popup', 'json', 'finder')
 	));
 }
 

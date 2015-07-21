@@ -85,5 +85,5 @@ if($_SERVER['REQUEST_METHOD'] == 'POST')
 $controller = new \Bitrix\Disk\DownloadController();
 $controller->setActionName($_GET['action'])->exec();
 
-require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/epilog_after.php");
-?>
+CMain::FinalActions();
+die();

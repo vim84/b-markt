@@ -219,4 +219,5 @@ $MESS["admin_lib_calend_period_title"] = "Выбор периода";
 $MESS["admin_lib_calend_direct_title"] = "Уточнение периода";
 $MESS["admin_lib_filter_goto_dfilter"] = "Перейти к фильтру &quot;По умолчанию&quot;";
 $MESS["admin_lib_required"] = "Обязательные поля";
+$MESS["admin_lib_menu_marketing"] = "Маркетинг";
 ?>

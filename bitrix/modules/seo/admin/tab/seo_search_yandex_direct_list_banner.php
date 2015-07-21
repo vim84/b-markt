@@ -51,6 +51,7 @@ else
 			BX.ajax.loadJSON('/bitrix/tools/seo_yandex_direct.php?action=link_delete&banner=<?=$ID?>&link='+linkId+'&link_type='+linkType+'&get_list_html=2&sessid='+BX.bitrix_sessid(), function(res)
 			{
 				BX('adv_link_list').innerHTML = res.list_html;
+				BX.onCustomEvent("OnSeoYandexDirectLinksChange", [BX('adv_link_list')]);
 			});
 		}
 	}

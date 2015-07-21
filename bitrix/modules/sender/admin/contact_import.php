@@ -197,6 +197,18 @@ $APPLICATION->SetTitle(GetMessage("sender_imp_title"));
 
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 
+$aMenu = array(
+	array(
+		"TEXT"=>GetMessage("sender_imp_back_to_list"),
+		"TITLE"=>GetMessage("sender_imp_back_to_list_title"),
+		"LINK"=>"sender_contact_admin.php?lang=".LANG,
+		"ICON"=>"btn_list",
+	)
+);
+$context = new CAdminContextMenu($aMenu);
+$context->Show();
+
+
 if(count($arError)>0)
 {
 	$e = new CAdminException($arError);

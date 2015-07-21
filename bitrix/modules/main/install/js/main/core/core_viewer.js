@@ -2701,6 +2701,11 @@ BX.CViewer.isEnableLocalEditInDesktop = function()
 	return BX.CViewer.enableInVersionDesktop(21) && (!!BX.message('wd_desktop_disk_is_installed') || (typeof(BXIM) !== "undefined" && BXIM.desktopStatus));
 };
 
+BX.CViewer.hasLockScroll = function()
+{
+	return BX.hasClass(document.body, 'bx-viewer-lock-scroll');
+};
+
 BX.CViewer.lockScroll = function()
 {
 	BX.addClass(document.body, 'bx-viewer-lock-scroll');
@@ -2859,7 +2864,7 @@ BX.CViewer.getWindowCopyToDisk = function(params)
 							props: {
 								className: 'bx-viewer-btn-link',
 								target: '_blank',
-								href: response.viewUrl + '#showInViewer'
+								href: response.runViewUrl? response.runViewUrl : (response.viewUrl + '#showInViewer')
 							},
 							text: BX.message('JS_CORE_VIEWER_EDIT')
 						}) : null)
@@ -3273,11 +3278,6 @@ BX.CViewer.prototype._adjustPosByElement = function()
 			top = this.params.minMargin;
 		if (left < this.params.minMargin + Math.min(70, this.PREV_LINK.offsetWidth))
 			left = this.params.minMargin + Math.min(70, this.PREV_LINK.offsetWidth);
-
-		if (this.params.showTitle && !!this.getCurrent().title)
-		{
-			top -= 20;
-		}
 
 		this.DIV.style.top = top + 'px';
 		this.DIV.style.left = left + 'px';
@@ -4157,6 +4157,7 @@ BX.CViewer.prototype.helpDiskDialog = function(){
 		]
 	});
 
+	var hasLock = BX.CViewer.hasLockScroll();
 	BX.CViewer.lockScroll();
 	this.openConfirm(helpDiskDialog, [
 		new BX.PopupWindowButton({
@@ -4171,7 +4172,10 @@ BX.CViewer.prototype.helpDiskDialog = function(){
 			text : BX.message('JS_CORE_VIEWER_IFRAME_CANCEL'),
 			events : { click : BX.delegate(function() {
 					this.closeConfirm();
-					BX.CViewer.unlockScroll();
+					if(!hasLock)
+					{
+						BX.CViewer.unlockScroll();
+					}
 				}, this
 			)}
 		})

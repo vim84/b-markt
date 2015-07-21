@@ -24,4 +24,11 @@ $MESS["sender_wizard_step_mailing_field_exist_list"] = "Select from list ...";
 $MESS["sender_wizard_step_mailing_group_field_bnt_add"] = "Create new group";
 $MESS["sender_group_conn_cnt"] = "Selected";
 $MESS["sender_wizard_access_denied"] = "You cannot run the wizard because you have only the read permission.";
+$MESS["sender_wizard_step_trig_mailing_title"] = "New triggered e-mail";
+$MESS["sender_wizard_step_trig_mailing_title_sub"] = "Select preset";
+$MESS["sender_wizard_step_trig_mailing_group_title"] = "Start and stop conditions";
+$MESS["sender_wizard_status_trig_mailing"] = "Create or edit newsletter";
+$MESS["sender_wizard_status_trig_mailing_group"] = "Start condition";
+$MESS["sender_wizard_status_trig_chain"] = "Configure e-mails";
+$MESS["sender_wizard_step_trig_mailing_exist_title"] = "Edit triggered e-mail";
 ?>

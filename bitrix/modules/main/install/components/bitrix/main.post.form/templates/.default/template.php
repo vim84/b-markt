@@ -42,10 +42,21 @@ foreach($arParams["BUTTONS"] as $val)
 ?>
 <div class="feed-add-post-micro" id="micro<?=$arParams["divId"]?>" <?
 	?>onclick="BX.onCustomEvent(this.nextSibling, 'OnControlClick'); if(this.nextSibling.style.display=='none'){BX.onCustomEvent(this.nextSibling, 'OnShowLHE', ['show']);}" <?
-	?><?if(!$arParams["LHE"]["lazyLoad"]){?> style="display:none;"<?}?>><?=GetMessage("BLOG_LINK_SHOW_NEW")?></div><?
-?><div class="feed-add-post" id="div<?=$arParams["divId"]?>" <?if($arParams["LHE"]["lazyLoad"]){?> style="display:none;"<?}?>>
-	<div class="feed-add-post-form feed-add-post-edit-form">
-	<div class="feed-add-post-form-dnd"></div>
+	?><?if(!$arParams["LHE"]["lazyLoad"]){?> style="display:none;"<?}?>><span class="feed-add-post-micro-title"><?=GetMessage("BLOG_LINK_SHOW_NEW")?></span><span class="feed-add-post-micro-dnd"><?=GetMessage("MPF_DRAG_ATTACHMENTS2")?></span></div><?
+?><div class="feed-add-post" id="div<?=$arParams["divId"]?>" <?if($arParams["LHE"]["lazyLoad"]){?> style="display:none;"<?}?>><?
+?><div class="feed-add-post-dnd">
+	<div class="feed-add-post-dnd-inner">
+		<span class="feed-add-post-dnd-icon"></span>
+		<span class="feed-add-post-dnd-text"><?=GetMessage("MPF_SELECT_ATTACHMENTS")?><span><?=GetMessage("MPF_DROP_ATTACHMENTS")?></span></span>
+	</div>
+</div><?
+?><div class="feed-add-post-dnd-notice">
+	<div class="feed-add-post-dnd-inner">
+		<span class="feed-add-post-dnd-icon"></span>
+		<span class="feed-add-post-dnd-text"><?=GetMessage("MPF_DRAG_ATTACHMENTS")?></span>
+	</div>
+</div><?
+	?><div class="feed-add-post-form feed-add-post-edit-form">
 		<?= $arParams["~HTML_BEFORE_TEXTAREA"]?>
 		<div class="feed-add-post-text">
 <script type="text/javascript">
@@ -215,44 +226,45 @@ if (defined("BITRIX24_INDEX_COMPOSITE"))
 
 if (in_array('socnetlogdest', $array))
 {
-?>
-<script type="text/javascript">
-	var lastUsers = <?=(empty($arParams["DESTINATION"]['LAST']['USERS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['USERS']))?>;
-	MPFMentionInit('<?=$arParams["FORM_ID"]?>', {
-		editorId : '<?= $arParams["LHE"]["id"]?>',
-		id : '<?=$this->randString(6)?>',
-		extranetUser : <?=($arParams["DESTINATION"]["EXTRANET_USER"] == 'Y'? 'true': 'false')?>,
-		initDestination : <?=($arParams["DESTINATION_SHOW"] == "Y" ? "true" : "false")?>,
-		items : {
-			users : <?=(empty($arParams["DESTINATION"]['USERS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['USERS']))?>,
-			groups : <?=($arParams["DESTINATION"]["EXTRANET_USER"] == 'Y' || (array_key_exists("DENY_TOALL", $arParams["DESTINATION"]) && $arParams["DESTINATION"]["DENY_TOALL"]) ?
-			'{}' : "{'UA' : {'id':'UA','name': '".(!empty($arParams["DESTINATION"]['DEPARTMENT']) ? GetMessageJS("MPF_DESTINATION_3"): GetMessageJS("MPF_DESTINATION_4"))."'}}")?>,
-			sonetgroups : <?=(empty($arParams["DESTINATION"]['SONETGROUPS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['SONETGROUPS']))?>,
-			department : <?=(empty($arParams["DESTINATION"]['DEPARTMENT'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['DEPARTMENT']))?>,
-			departmentRelation : <?=(empty($arParams["DESTINATION"]['DEPARTMENT_RELATION']) ?
-				"false" : CUtil::PhpToJSObject($arParams["DESTINATION"]['DEPARTMENT_RELATION']))?>,
-			contacts : <?=(empty($arParams["DESTINATION"]['CONTACTS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['CONTACTS'])); ?>,
-			companies : <?=(empty($arParams["DESTINATION"]['COMPANIES'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['COMPANIES'])); ?>,
-			leads : <?=(empty($arParams["DESTINATION"]['LEADS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LEADS'])); ?>,
-			deals : <?=(empty($arParams["DESTINATION"]['DEALS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['DEALS'])); ?>
-		},
-		itemsLast : {
-			users : lastUsers,
-			sonetgroups : <?=(empty($arParams["DESTINATION"]['LAST']['SONETGROUPS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['SONETGROUPS']))?>,
-			department : <?=(empty($arParams["DESTINATION"]['LAST']['DEPARTMENT'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['DEPARTMENT']))?>,
-			groups : <?=($arParams["DESTINATION"]["EXTRANET_USER"] == 'Y' || (array_key_exists("DENY_TOALL", $arParams["DESTINATION"]) && $arParams["DESTINATION"]["DENY_TOALL"]) ? '{}' : "{'UA':true}" )?>,
-			contacts : <?=(empty($arParams["DESTINATION"]['LAST']['CONTACTS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['CONTACTS'])); ?>,
-			companies : <?=(empty($arParams["DESTINATION"]['LAST']['COMPANIES'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['COMPANIES'])); ?>,
-			leads : <?=(empty($arParams["DESTINATION"]['LAST']['LEADS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['LEADS'])); ?>,
-			deals : <?=(empty($arParams["DESTINATION"]['LAST']['DEALS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['DEALS'])); ?>,
-			crm : <?=(empty($arParams["DESTINATION"]['LAST']['CRM'])? '[]': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['CRM'])); ?>
-		},
-		itemsSelected : <?=(empty($arParams["DESTINATION"]['SELECTED'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['SELECTED']))?>,
-		itemsHidden : <?=CUtil::PhpToJSObject($arParams["DESTINATION"]["HIDDEN_GROUPS"])?>,
-		isCrmFeed : <?=(empty($arParams["DESTINATION"]['LAST']['CRM']) ? 'false' : 'true'); ?>
-	});
-</script>
-<?
+	?>
+	<script type="text/javascript">
+		var lastUsers = <?=(empty($arParams["DESTINATION"]['LAST']['USERS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['USERS']))?>;
+		MPFMentionInit('<?=$arParams["FORM_ID"]?>', {
+			editorId : '<?= $arParams["LHE"]["id"]?>',
+			id : '<?=$this->randString(6)?>',
+			extranetUser : <?=($arParams["DESTINATION"]["EXTRANET_USER"] == 'Y'? 'true': 'false')?>,
+			initDestination : <?=($arParams["DESTINATION_SHOW"] == "Y" ? "true" : "false")?>,
+			items : {
+				users : <?=(empty($arParams["DESTINATION"]['USERS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['USERS']))?>,
+				groups : <?=($arParams["DESTINATION"]["EXTRANET_USER"] == 'Y' || (array_key_exists("DENY_TOALL", $arParams["DESTINATION"]) && $arParams["DESTINATION"]["DENY_TOALL"]) ?
+				'{}' : "{'UA' : {'id':'UA','name': '".(!empty($arParams["DESTINATION"]['DEPARTMENT']) ? GetMessageJS("MPF_DESTINATION_3"): GetMessageJS("MPF_DESTINATION_4"))."'}}")?>,
+				sonetgroups : <?=(empty($arParams["DESTINATION"]['SONETGROUPS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['SONETGROUPS']))?>,
+				department : <?=(empty($arParams["DESTINATION"]['DEPARTMENT']) ? '{}' : CUtil::PhpToJSObject($arParams["DESTINATION"]["DEPARTMENT"]))?>,
+				extranetRoot : <?=(empty($arResult["EXTRANET_ROOT"]) ? '{}' : CUtil::PhpToJSObject($arResult["EXTRANET_ROOT"]))?>,
+				departmentRelation : <?=(empty($arParams["DESTINATION"]['DEPARTMENT_RELATION']) ? "false" : CUtil::PhpToJSObject($arParams["DESTINATION"]['DEPARTMENT_RELATION']))?>,
+				contacts : <?=(empty($arParams["DESTINATION"]['CONTACTS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['CONTACTS'])); ?>,
+				companies : <?=(empty($arParams["DESTINATION"]['COMPANIES'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['COMPANIES'])); ?>,
+				leads : <?=(empty($arParams["DESTINATION"]['LEADS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LEADS'])); ?>,
+				deals : <?=(empty($arParams["DESTINATION"]['DEALS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['DEALS'])); ?>
+			},
+			itemsLast : {
+				users : lastUsers,
+				sonetgroups : <?=(empty($arParams["DESTINATION"]['LAST']['SONETGROUPS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['SONETGROUPS']))?>,
+				department : <?=(empty($arParams["DESTINATION"]['LAST']['DEPARTMENT'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['DEPARTMENT']))?>,
+				groups : <?=($arParams["DESTINATION"]["EXTRANET_USER"] == 'Y' || (array_key_exists("DENY_TOALL", $arParams["DESTINATION"]) && $arParams["DESTINATION"]["DENY_TOALL"]) ? '{}' : "{'UA':true}" )?>,
+				contacts : <?=(empty($arParams["DESTINATION"]['LAST']['CONTACTS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['CONTACTS'])); ?>,
+				companies : <?=(empty($arParams["DESTINATION"]['LAST']['COMPANIES'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['COMPANIES'])); ?>,
+				leads : <?=(empty($arParams["DESTINATION"]['LAST']['LEADS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['LEADS'])); ?>,
+				deals : <?=(empty($arParams["DESTINATION"]['LAST']['DEALS'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['DEALS'])); ?>,
+				crm : <?=(empty($arParams["DESTINATION"]['LAST']['CRM'])? '[]': CUtil::PhpToJSObject($arParams["DESTINATION"]['LAST']['CRM'])); ?>
+			},
+			itemsSelected : <?=(empty($arParams["DESTINATION"]['SELECTED'])? '{}': CUtil::PhpToJSObject($arParams["DESTINATION"]['SELECTED']))?>,
+			itemsHidden : <?=CUtil::PhpToJSObject($arParams["DESTINATION"]["HIDDEN_GROUPS"])?>,
+			isCrmFeed : <?=(empty($arParams["DESTINATION"]['LAST']['CRM']) ? 'false' : 'true'); ?>,
+			useClientDatabase : <?=($arParams["DESTINATION"]['USE_CLIENT_DATABASE'] == "Y" ? 'true' : 'false'); ?>
+		});
+	</script>
+	<?
 }
 
 if (defined("BITRIX24_INDEX_COMPOSITE"))

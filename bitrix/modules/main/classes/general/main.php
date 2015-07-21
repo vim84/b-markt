@@ -6,6 +6,7 @@
  * @copyright 2001-2013 Bitrix
  */
 
+use Bitrix\Main;
 use Bitrix\Main\Localization\CultureTable;
 use Bitrix\Main\Page\Asset;
 use Bitrix\Main\Page\AssetLocation;
@@ -297,10 +298,14 @@ abstract class CAllMain
 		if($isAdmin == "")
 		{
 			// form by Components 2.0
-			$this->IncludeComponent("bitrix:".$comp_name, "", array(
-				"AUTH_RESULT" => $arAuthResult,
-				"NOT_SHOW_LINKS" => $not_show_links,
-			));
+			$this->IncludeComponent(
+				"bitrix:".$comp_name,
+				COption::GetOptionString("main", "auth_components_template", ""),
+				array(
+					"AUTH_RESULT" => $arAuthResult,
+					"NOT_SHOW_LINKS" => $not_show_links,
+				)
+			);
 		}
 		else
 		{
@@ -3088,6 +3093,40 @@ abstract class CAllMain
 		return $this->GetLang($cur_dir, $cur_host);
 	}
 
+	function RestartWorkarea($start = false)
+	{
+		static $index = null;
+
+		if ($start)
+		{
+			$this->AddBufferContent("trim", "");
+			$index = count($this->buffer_content);
+
+			return true;
+		}
+		elseif (
+			!isset($index) //Was not started
+			|| !isset($this->buffer_content_type[$index/2-1]) //RestartBuffer was called
+			|| $this->buffer_content_type[$index/2-1]["F"] !== "trim"
+		)
+		{
+			return false;
+		}
+		else
+		{
+			$this->buffer_man = true;
+			ob_end_clean();
+			$this->buffer_man = false;
+
+			array_splice($this->buffer_content, $index);
+			array_splice($this->buffer_content_type, $index/2);
+
+			ob_start(array(&$this, "EndBufferContent"));
+
+			return true;
+		}
+	}
+	
 	function AddBufferContent($callback)
 	{
 		$args = array();
@@ -3155,51 +3194,65 @@ abstract class CAllMain
 
 	function EndBufferContent($content="")
 	{
-		if($this->buffer_man)
+		if ($this->buffer_man)
 		{
 			$this->auto_buffer_cleaned = true;
-			return '';
+			return "";
 		}
 
 		Frame::checkAdminPanel();
 
-		if(function_exists("getmoduleevents"))
+		if (function_exists("getmoduleevents"))
 		{
-			foreach(GetModuleEvents("main", "OnBeforeEndBufferContent", true) as $arEvent)
+			foreach (GetModuleEvents("main", "OnBeforeEndBufferContent", true) as $arEvent)
+			{
 				ExecuteModuleEventEx($arEvent, array());
+			}
 		}
 
+		$asset = Asset::getInstance();
 		if (Frame::getUseAppCache())
 		{
-			Asset::getInstance()->addString(CJSCore::GetCoreMessagesScript(), false, AssetLocation::AFTER_CSS, AssetMode::ALL);
+			$asset->addString(CJSCore::GetCoreMessagesScript(), false, AssetLocation::AFTER_CSS, AssetMode::ALL);
 		}
 		else
 		{
-			Asset::getInstance()->addString(CJSCore::GetCoreMessagesScript(), false, AssetLocation::AFTER_CSS, AssetMode::STANDARD);
-			Asset::getInstance()->addString(CJSCore::GetCoreMessagesScript(true), false, AssetLocation::AFTER_CSS, AssetMode::COMPOSITE);
+			$asset->addString(CJSCore::GetCoreMessagesScript(), false, AssetLocation::AFTER_CSS, AssetMode::STANDARD);
+			$asset->addString(CJSCore::GetCoreMessagesScript(true), false, AssetLocation::AFTER_CSS, AssetMode::COMPOSITE);
 		}
 
-		Asset::getInstance()->addString($this->GetSpreadCookieHTML(), false, AssetLocation::AFTER_JS, AssetMode::STANDARD);
+		$asset->addString($this->GetSpreadCookieHTML(), false, AssetLocation::AFTER_JS, AssetMode::STANDARD);
+		if ($asset->canMoveJsToBody() && \CJSCore::IsInited())
+		{
+			$asset->addString(\CJSCore::GetInlineCoreJs(), false, AssetLocation::BEFORE_CSS, AssetMode::ALL);
+		}
 
-		if(is_object($GLOBALS["APPLICATION"])) //php 5.1.6 fix: http://bugs.php.net/bug.php?id=40104
+		if (is_object($GLOBALS["APPLICATION"])) //php 5.1.6 fix: http://bugs.php.net/bug.php?id=40104
 		{
 			$cnt = count($this->buffer_content_type);
-			for($i=0; $i<$cnt; $i++)
+			for ($i = 0; $i < $cnt; $i++)
+			{
 				$this->buffer_content[$i*2+1] = call_user_func_array($this->buffer_content_type[$i]["F"], $this->buffer_content_type[$i]["P"]);
+			}
 		}
 
 		$composite = Frame::getInstance();
 		$compositeContent = $composite->startBuffering($content);
+		$content = implode("", $this->buffer_content).$content;
 
-		$content = implode('', $this->buffer_content).$content;
-
-		if(function_exists("getmoduleevents"))
+		if (function_exists("getmoduleevents"))
 		{
-			foreach(GetModuleEvents("main", "OnEndBufferContent", true) as $arEvent)
+			foreach (GetModuleEvents("main", "OnEndBufferContent", true) as $arEvent)
+			{
 				ExecuteModuleEventEx($arEvent, array(&$content));
+			}
 		}
 
-		$composite->endBuffering($content, $compositeContent);
+		$wasContentModified = $composite->endBuffering($content, $compositeContent);
+		if (!$wasContentModified && $asset->canMoveJsToBody())
+		{
+			$asset->moveJsToBody($content);
+		}
 
 		return $content;
 	}
@@ -3410,44 +3463,58 @@ abstract class CAllMain
 			ob_start(array(&$APPLICATION, "EndBufferContent"));
 			$APPLICATION->buffered = true;
 			define("BX_BUFFER_USED", true);
-			register_shutdown_function(create_function('', 'define("BX_BUFFER_SHUTDOWN", true); while(@ob_end_flush());'));
+
+			register_shutdown_function(
+				function()
+				{
+					define("BX_BUFFER_SHUTDOWN", true);
+					for ($i=0, $n = ob_get_level(); $i < $n; $i++)
+					{
+						ob_end_flush();
+					}
+				}
+			);
 		}
 
 		//session expander
 		if(COption::GetOptionString("main", "session_expand", "Y") <> "N" && (!defined("BX_SKIP_SESSION_EXPAND") || BX_SKIP_SESSION_EXPAND === false))
 		{
-			$arPolicy = $USER->GetSecurityPolicy();
-
-			$phpSessTimeout = ini_get("session.gc_maxlifetime");
-			if($arPolicy["SESSION_TIMEOUT"] > 0)
+			//only for authorized
+			if(COption::GetOptionString("main", "session_auth_only", "Y") <> "Y" || $USER->IsAuthorized())
 			{
-				$sessTimeout = min($arPolicy["SESSION_TIMEOUT"]*60, $phpSessTimeout);
-			}
-			else
-			{
-				$sessTimeout = $phpSessTimeout;
-			}
+				$arPolicy = $USER->GetSecurityPolicy();
 
-			$cookie_prefix = COption::GetOptionString('main', 'cookie_name', 'BITRIX_SM');
-			$salt = $_COOKIE[$cookie_prefix.'_UIDH']."|".$USER->GetID()."|".$_SERVER["REMOTE_ADDR"]."|".@filemtime($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/general/version.php")."|".LICENSE_KEY."|".CMain::GetServerUniqID();
-			$key = md5(bitrix_sessid().$salt);
+				$phpSessTimeout = ini_get("session.gc_maxlifetime");
+				if($arPolicy["SESSION_TIMEOUT"] > 0)
+				{
+					$sessTimeout = min($arPolicy["SESSION_TIMEOUT"]*60, $phpSessTimeout);
+				}
+				else
+				{
+					$sessTimeout = $phpSessTimeout;
+				}
 
-			$bShowMess = ($USER->IsAuthorized() && COption::GetOptionString("main", "session_show_message", "Y") <> "N");
+				$cookie_prefix = COption::GetOptionString('main', 'cookie_name', 'BITRIX_SM');
+				$salt = $_COOKIE[$cookie_prefix.'_UIDH']."|".$USER->GetID()."|".$_SERVER["REMOTE_ADDR"]."|".@filemtime($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/classes/general/version.php")."|".LICENSE_KEY."|".CMain::GetServerUniqID();
+				$key = md5(bitrix_sessid().$salt);
 
-			CUtil::InitJSCore(array('ajax', 'ls'));
+				$bShowMess = ($USER->IsAuthorized() && COption::GetOptionString("main", "session_show_message", "Y") <> "N");
 
-			$jsMsg = '<script type="text/javascript">'."\n".
-				($bShowMess? 'bxSession.mess.messSessExpired = \''.CUtil::JSEscape(GetMessage("MAIN_SESS_MESS", array("#TIMEOUT#"=>round($sessTimeout/60)))).'\';'."\n" : '').
-				'bxSession.Expand('.$sessTimeout.', \''.bitrix_sessid().'\', '.($bShowMess? 'true':'false').', \''.$key.'\');'."\n".
-				'</script>';
+				CUtil::InitJSCore(array('ajax', 'ls'));
 
-			$APPLICATION->AddHeadScript('/bitrix/js/main/session.js');
-			$APPLICATION->AddAdditionalJS($jsMsg);
+				$jsMsg = '<script type="text/javascript">'."\n".
+					($bShowMess? 'bxSession.mess.messSessExpired = \''.CUtil::JSEscape(GetMessage("MAIN_SESS_MESS", array("#TIMEOUT#"=>round($sessTimeout/60)))).'\';'."\n" : '').
+					'bxSession.Expand('.$sessTimeout.', \''.bitrix_sessid().'\', '.($bShowMess? 'true':'false').', \''.$key.'\');'."\n".
+					'</script>';
 
-			$_SESSION["BX_SESSION_COUNTER"] = intval($_SESSION["BX_SESSION_COUNTER"]) + 1;
-			if(!defined("BX_SKIP_SESSION_TERMINATE_TIME"))
-			{
-				$_SESSION["BX_SESSION_TERMINATE_TIME"] = time()+$sessTimeout;
+				$APPLICATION->AddHeadScript('/bitrix/js/main/session.js');
+				$APPLICATION->AddAdditionalJS($jsMsg);
+
+				$_SESSION["BX_SESSION_COUNTER"] = intval($_SESSION["BX_SESSION_COUNTER"]) + 1;
+				if(!defined("BX_SKIP_SESSION_TERMINATE_TIME"))
+				{
+					$_SESSION["BX_SESSION_TERMINATE_TIME"] = time()+$sessTimeout;
+				}
 			}
 		}
 
@@ -4450,6 +4517,118 @@ class CAllSite
 	function GetDefaultNameFormat()
 	{
 		return '#NAME# #LAST_NAME#';
+	}
+
+	function GetCurTemplate()
+	{
+		/** @noinspection PhpUnusedLocalVariableInspection */
+		global $APPLICATION, $USER, $CACHE_MANAGER;
+
+		$connection = Main\Application::getConnection();
+		$helper = $connection->getSqlHelper();
+
+		$conditionQuoted = $helper->quote("CONDITION");
+
+		$siteTemplate = "";
+		if(CACHED_b_site_template===false)
+		{
+			$strSql = "
+				SELECT
+					".$conditionQuoted.",
+					TEMPLATE
+				FROM
+					b_site_template
+				WHERE
+					SITE_ID='".SITE_ID."'
+				ORDER BY
+					CASE
+						WHEN ".$helper->getIsNullFunction($helper->getLengthFunction($conditionQuoted), 0)."=0 THEN 2
+						ELSE 1
+					END,
+					SORT
+				";
+			$dbr = $connection->query($strSql);
+			while($ar = $dbr->fetch())
+			{
+				$strCondition = trim($ar["CONDITION"]);
+				if(strlen($strCondition) > 0 && (!@eval("return ".$strCondition.";")))
+				{
+					continue;
+				}
+				if(($path = getLocalPath("templates/".$ar["TEMPLATE"], BX_PERSONAL_ROOT)) !== false && is_dir($_SERVER["DOCUMENT_ROOT"].$path))
+				{
+					$siteTemplate = $ar["TEMPLATE"];
+					break;
+				}
+			}
+		}
+		else
+		{
+			if($CACHE_MANAGER->Read(CACHED_b_site_template, "b_site_template"))
+			{
+				$arSiteTemplateBySite = $CACHE_MANAGER->Get("b_site_template");
+			}
+			else
+			{
+				$dbr = $connection->query("
+					SELECT
+						".$conditionQuoted.",
+						TEMPLATE,
+						SITE_ID
+					FROM
+						b_site_template
+					ORDER BY
+						SITE_ID,
+						CASE
+							WHEN ".$helper->getIsNullFunction($helper->getLengthFunction($conditionQuoted), 0)."=0 THEN 2
+							ELSE 1
+						END,
+						SORT
+				");
+				$arSiteTemplateBySite = array();
+				while($ar = $dbr->fetch())
+				{
+					$arSiteTemplateBySite[$ar['SITE_ID']][] = $ar;
+				}
+				$CACHE_MANAGER->Set("b_site_template", $arSiteTemplateBySite);
+			}
+			if(is_array($arSiteTemplateBySite[SITE_ID]))
+			{
+				foreach($arSiteTemplateBySite[SITE_ID] as $ar)
+				{
+					$strCondition = trim($ar["CONDITION"]);
+					if(strlen($strCondition) > 0 && (!@eval("return ".$strCondition.";")))
+					{
+						continue;
+					}
+					if(($path = getLocalPath("templates/".$ar["TEMPLATE"], BX_PERSONAL_ROOT)) !== false && is_dir($_SERVER["DOCUMENT_ROOT"].$path))
+					{
+						$siteTemplate = $ar["TEMPLATE"];
+						break;
+					}
+				}
+			}
+		}
+
+		if($siteTemplate == "")
+		{
+			$siteTemplate = ".default";
+		}
+
+		$event = new Main\Event("main", "OnGetCurrentSiteTemplate", array("template" => $siteTemplate));
+		$event->send();
+
+		foreach($event->getResults() as $evenResult)
+		{
+			if(($result = $evenResult->getParameters()) <> '')
+			{
+				//only the first result matters
+				$siteTemplate = $result;
+				break;
+			}
+		}
+
+		return $siteTemplate;
 	}
 }
 

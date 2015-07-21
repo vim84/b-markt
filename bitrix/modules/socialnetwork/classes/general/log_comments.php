@@ -198,14 +198,15 @@ class CAllSocNetLogComments
 					$GLOBALS["USER_FIELD_MANAGER"]->Delete("SONET_COMMENT", $ID);
 				}
 
-				if ($bSuccess && intval($arComment["LOG_ID"]) > 0)
+				if (
+					$bSuccess
+					&& intval($arComment["LOG_ID"]) > 0
+				)
 				{
 					CSocNetLogComments::UpdateLogData($arComment["LOG_ID"], false, true);
-				}
 
-				if($bSuccess && defined("BX_COMP_MANAGED_CACHE"))
-				{
-					$GLOBALS["CACHE_MANAGER"]->ClearByTag("SONET_LOG_COMMENT_".$ID);
+					$cache = new CPHPCache;
+					$cache->CleanDir("/sonet/log/".intval(intval($arComment["LOG_ID"]) / 1000)."/".$arComment["LOG_ID"]."/comments/");
 				}
 			}
 			elseif (

@@ -74,10 +74,13 @@ $MESS["T_IBLOCK_DESC_ADD_SECTIONS_CHAIN"] = "Bereich in der Navigationskette anz
 $MESS["T_IBLOCK_DESC_NEWS_NAME"] = "Element-Überschrift anzeigen";
 $MESS["F_SHOW_LINK_TO_FORUM"] = "Link zum Forum anzeigen";
 $MESS["T_IBLOCK_DESC_CHECK_DATES"] = "Nur die im aktuellen Moment aktiven Elemente anzeigen";
-$MESS["CP_BN_SET_STATUS_404"] = "Status 404 festlegen, falls ein Element oder ein Bereich nicht gefunden werden können";
 $MESS["CP_BN_DETAIL_PAGER_SHOW_ALL"] = "Link \"Alle\" anzeigen";
 $MESS["CP_BN_BROWSER_TITLE"] = "Titel für den Browserfenster aus den Eigenschaften definieren.";
 $MESS["CP_BN_CACHE_GROUPS"] = "Zugriffsrechte berücksichtigen";
 $MESS["T_IBLOCK_DESC_ADD_ELEMENT_CHAIN"] = "Elementnamen zur Breadcrumb-Navigation hinzufügen";
 $MESS["CP_BN_DETAIL_SET_CANONICAL_URL"] = "Kanonische URL verwenden";
+$MESS["CP_BN_SET_LAST_MODIFIED"] = "Im Header der Antwort den Zeitpunkt der Seitenänderung angeben";
+$MESS["CP_BN_AVERAGE"] = "Durchschnittswert";
+$MESS["CP_BN_RATING"] = "Bewertung";
+$MESS["CP_BN_DISPLAY_AS_RATING"] = "Als Bewertung anzeigen";
 ?>

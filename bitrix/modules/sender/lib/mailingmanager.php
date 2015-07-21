@@ -73,8 +73,7 @@ class MailingManager
 			while ($arAgent = $rsAgents->Fetch())
 				$agent->Delete($arAgent["ID"]);
 
-
-			if($isSendByTimeMethodCron || ($mailingChain['REITERATE']!='Y' && empty($mailingChain['AUTO_SEND_TIME'])))
+			if($isSendByTimeMethodCron || empty($mailingChain['AUTO_SEND_TIME']))
 				continue;
 
 			if ($mailingChain['MAILING_ACTIVE'] == 'Y' && $mailingChain['STATUS'] == MailingChainTable::STATUS_SEND)
@@ -100,8 +99,8 @@ class MailingManager
 
 		$mailingChainPrimary = array('ID' => $mailingChainId);
 		$mailingChainDb = MailingChainTable::getById($mailingChainPrimary);
-		$arMailingChain = $mailingChainDb->fetch();
-		if($arMailingChain && $arMailingChain['STATUS'] == MailingChainTable::STATUS_SEND)
+		$mailingChain = $mailingChainDb->fetch();
+		if($mailingChain && $mailingChain['STATUS'] == MailingChainTable::STATUS_SEND)
 		{
 			if(\COption::GetOptionString("sender", "auto_method") === 'cron')
 			{
@@ -114,24 +113,55 @@ class MailingManager
 				$timeout = \COption::GetOptionInt("sender", "interval");
 			}
 
-			try
+			$postingSendStatus = '';
+			if(!empty($mailingChain['POSTING_ID']))
 			{
-				$postingSendStatus = PostingManager::send($arMailingChain['POSTING_ID'], $timeout, $maxMailCount);
-			}
-			catch(Exception $e)
-			{
-				static::$error = $e;
+				try
+				{
+					$postingSendStatus = PostingManager::send($mailingChain['POSTING_ID'], $timeout, $maxMailCount);
+				} catch (Exception $e)
+				{
+					static::$error = $e;
+					$postingSendStatus = PostingManager::SEND_RESULT_ERROR;
+				}
 			}
 
 			if(empty(static::$error) && $postingSendStatus !== PostingManager::SEND_RESULT_CONTINUE)
 			{
-				if ($arMailingChain['REITERATE'] == 'Y')
+				if ($mailingChain['REITERATE'] == 'Y')
 				{
-					MailingChainTable::update($mailingChainPrimary, array(
-						'POSTING_ID' => null,
+					$mailingChainFields = array(
 						'STATUS' => MailingChainTable::STATUS_WAIT,
-						'AUTO_SEND_TIME' => null
-					));
+						'AUTO_SEND_TIME' => null,
+						'POSTING_ID' => null
+					);
+
+					if($mailingChain['IS_TRIGGER'] == 'Y')
+					{
+						$postingDb = PostingTable::getList(array(
+							'select' => array('ID', 'DATE_CREATE'),
+							'filter' => array(
+								'STATUS' => PostingTable::STATUS_NEW,
+								'MAILING_CHAIN_ID' => $mailingChain['ID']
+							),
+							'order' => array('DATE_CREATE' => 'ASC'),
+							'limit' => 1
+						));
+						if($posting = $postingDb->fetch())
+						{
+							$mailingChainFields['AUTO_SEND_TIME'] = $posting['DATE_CREATE']->add($mailingChain['TIME_SHIFT'].' minutes');
+							$mailingChainFields['STATUS'] = MailingChainTable::STATUS_SEND;
+							$mailingChainFields['POSTING_ID'] = $posting['ID'];
+						}
+					}
+
+					MailingChainTable::update($mailingChainPrimary, $mailingChainFields);
+
+					$eventData = array(
+						'MAILING_CHAIN' => $mailingChain
+					);
+					$event = new \Bitrix\Main\Event('sender', 'OnAfterMailingChainSend', array($eventData));
+					$event->send();
 				}
 				else
 				{
@@ -197,7 +227,8 @@ class MailingManager
 			'filter' => array(
 				'=REITERATE' => 'Y',
 				'=MAILING.ACTIVE' => 'Y',
-				'STATUS' => MailingChainTable::STATUS_WAIT,
+				'=IS_TRIGGER' => 'N',
+				'=STATUS' => MailingChainTable::STATUS_WAIT,
 				//'!><LAST_EXECUTED' => $arDateFilter,
 			)
 		));

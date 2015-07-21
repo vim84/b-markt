@@ -23,8 +23,8 @@ class Template
 	public static function getListByType()
 	{
 		$resultTemplateList = array();
-		$arTemplateList = static::getList();
-		foreach($arTemplateList as $template)
+		$templateList = static::getList();
+		foreach($templateList as $template)
 			$resultTemplateList[$template['TYPE']][] = $template;
 
 		return $resultTemplateList;
@@ -51,7 +51,7 @@ class Template
 		$event = new Event('sender', 'OnPresetTemplateList');
 		$event->send();
 
-		if($event->getResults()) foreach ($event->getResults() as $eventResult)
+		foreach ($event->getResults() as $eventResult)
 		{
 			if ($eventResult->getType() == EventResult::ERROR)
 			{
@@ -72,58 +72,40 @@ class Template
 	/**
 	 * @return string
 	 */
-	public static function getTemplateListHtml()
+	public static function getTemplateListHtml($containerId = 'TEMPLATE_CONTAINER')
 	{
-		$arTemplateListByType = \Bitrix\Sender\Preset\Template::getListByType();
-		$arTemplateTypeList = \Bitrix\Sender\Preset\Template::getTypeList();
+		static $templateListByType;
+
+		if(!$templateListByType)
+			$templateListByType = \Bitrix\Sender\Preset\Template::getListByType();
+
+		$templateTypeList = \Bitrix\Sender\Preset\Template::getTypeList();
 
 		ob_start();
 		?>
 		<script>
-			function ChangeTemplateList(type)
-			{
-				var tmplTypeContList = BX.findChildren(BX('TEMPLATE_CONTAINER'), {'className': 'sender-template-list-type-container'}, true);
-				for(var i in tmplTypeContList)
-					tmplTypeContList[i].style.display = 'none';
-
-				BX('TEMPLATE_CONTAINER_'+type).style.display = 'table-row';
-
-
-				var buttonList = BX.findChildren(BX('TEMPLATE_BUTTON_CONTAINER'), {'className': 'sender-template-type-selector-button'}, true);
-				for(var j in buttonList)
-					BX.removeClass(buttonList[j], 'sender-template-type-selector-button-selected');
-
-				BX.addClass(BX('TEMPLATE_BUTTON_'+type), 'sender-template-type-selector-button-selected');
-			}
-			function SetTemplateToMessage(type, num)
-			{
-				BX('TEMPLATE_SELECTED_TITILE').innerHTML = templateListByType[type][num]['NAME'];
-				var tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'hidden-when-show-template-list'}, true);
-				for(i in tmplTypeContList)
-					tmplTypeContList[i].style.display = 'table-row';
-
-				tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'show-when-show-template-list'}, true);
-				for(i in tmplTypeContList)
-					tmplTypeContList[i].style.display = 'none';
-
-				PutStringToMessageContainer(templateListByType[type][num]['HTML'], true);
-				BX('IS_TEMPLATE_LIST_SHOWN').value = 'N';
-			}
-
-			var templateListByType = <?=\CUtil::PhpToJSObject($arTemplateListByType);?>;
+			BX.ready(function(){
+				letterManager = new SenderLetterManager;
+				letterManager.setTemplateListByType(<?=\CUtil::PhpToJSObject($templateListByType);?>);
+				if(!letterManager.get('<?=$containerId?>'))
+				{
+					letterManager.add('<?=$containerId?>', {'container': BX('<?=$containerId?>')});
+				}
+			});
 		</script>
-		<div id="TEMPLATE_CONTAINER">
+		<div class="sender-template-cont">
 			<div>
 				<table>
 					<tr>
 					<td style="vertical-align: top;">
-						<div class="sender-template-type-selector" id="TEMPLATE_BUTTON_CONTAINER">
+						<div class="sender-template-type-selector">
 							<?
 							$firstTemplateType = null;
-							foreach($arTemplateTypeList as $templateType => $templateTypeName):
+							foreach($templateTypeList as $templateType => $templateTypeName):
 								if(!$firstTemplateType) $firstTemplateType = $templateType;
 								?>
-								<div id="TEMPLATE_BUTTON_<?=$templateType?>" class="sender-template-type-selector-button" onclick="ChangeTemplateList('<?=htmlspecialcharsbx($templateType)?>');">
+								<div class="sender-template-type-selector-button sender-template-type-selector-button-type-<?=$templateType?>"
+									 bxsendertype="<?=htmlspecialcharsbx($templateType)?>">
 									<?=$templateTypeName?>
 								</div>
 							<?endforeach;?>
@@ -131,25 +113,24 @@ class Template
 					</td>
 					<td style="vertical-align: top;">
 						<div class="sender-template-list-container">
-							<?foreach($arTemplateTypeList as $templateType => $templateTypeName):?>
-								<div class="sender-template-list-type-container" id="TEMPLATE_CONTAINER_<?=$templateType?>" style="display: none;">
-									<?if(isset($arTemplateListByType[$templateType])) foreach($arTemplateListByType[$templateType] as $templateNum => $arTemplate):?>
+							<?foreach($templateTypeList as $templateType => $templateTypeName):?>
+								<div class="sender-template-list-type-container sender-template-list-type-container-<?=$templateType?>" style="display: none;">
+									<?if(isset($templateListByType[$templateType])) foreach($templateListByType[$templateType] as $templateNum => $template):?>
 										<div class="sender-template-list-type-block">
-											<div class="sender-template-list-type-block-caption">
-												<a class="sender-link-email" href="javascript: void(0);"
-													onclick="SetTemplateToMessage('<?=htmlspecialcharsbx($arTemplate['TYPE'])?>', <?=intval($templateNum)?>);"
-													>
-													<?=htmlspecialcharsbx($arTemplate['NAME'])?>
+											<div class="sender-template-list-type-block-caption sender-template-list-block-selector">
+												<a class="sender-link-email" href="javascript: void(0);" bxsendertype="<?=htmlspecialcharsbx($template['TYPE'])?>" bxsendernum="<?=intval($templateNum)?>">
+													<?=htmlspecialcharsbx($template['NAME'])?>
 												</a>
 											</div>
-											<div class="sender-template-list-type-block-img" onclick="SetTemplateToMessage('<?=htmlspecialcharsbx($arTemplate['TYPE'])?>', <?=intval($templateNum)?>);">
-												<?if(!empty($arTemplate['ICON'])):?>
-													<img src="<?=$arTemplate['ICON']?>">
+											<div class="sender-template-list-type-block-img sender-template-list-block-selector"
+												 bxsendertype="<?=htmlspecialcharsbx($template['TYPE'])?>" bxsendernum="<?=intval($templateNum)?>">
+												<?if(!empty($template['ICON'])):?>
+													<img src="<?=$template['ICON']?>">
 												<?endif;?>
 											</div>
 										</div>
 									<?endforeach;?>
-									<?if(empty($arTemplateListByType[$templateType])):?>
+									<?if(empty($templateListByType[$templateType])):?>
 										<div class="sender-template-list-type-blockempty">
 											<?=Loc::getMessage('SENDER_PRESET_TEMPLATE_NO_TMPL')?>
 										</div>
@@ -160,9 +141,6 @@ class Template
 					</td>
 					</tr>
 				</table>
-				<script>
-					ChangeTemplateList('BASE');
-				</script>
 			</div>
 		</div>
 		<?
@@ -183,10 +161,10 @@ class TemplateBase
 	{
 		$resultList = array();
 
-		$arTemplate = static::getListName();
+		$templateList = static::getListName();
 
 
-		foreach ($arTemplate as $templateName)
+		foreach ($templateList as $templateName)
 		{
 			$template = static::getById($templateName);
 			if($template)
@@ -201,7 +179,7 @@ class TemplateBase
 	 */
 	public static function getListName()
 	{
-		$arTemplate = array(
+		$templateNameList = array(
 			'empty',
 			'1column1',
 			'1column2',
@@ -216,7 +194,7 @@ class TemplateBase
 			'3column3',
 		);
 
-		return $arTemplate;
+		return $templateNameList;
 	}
 
 	/**

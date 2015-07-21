@@ -20,4 +20,5 @@ $MESS["IBLOCK_ELSEARCH_INCLUDING_SUBSECTIONS"] = "Включая подразд�
 $MESS["IBLOCK_ELSEARCH_FROMTO_ID"] = "ID (начальный и конечный):";
 $MESS["IBLOCK_ELSEARCH_ELEMENTS"] = "Элементы";
 $MESS["IBLOCK_FIELD_EXTERNAL_ID"] = "Внешний код";
+$MESS["IBLOCK_FIELD_CODE"] = "Символьный код";
 ?>

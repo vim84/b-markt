@@ -20,6 +20,43 @@
 		return this.BXIM.mobileVersion;
 	}
 
+	BX.MessengerCommon.prototype.muteMessageChat = function(chatId, mute, sendAjax)
+	{
+		if (!this.BXIM.messenger.chat[chatId])
+			return false;
+
+		sendAjax = sendAjax != false;
+
+		if (!this.BXIM.messenger.userChatBlockStatus[chatId])
+			this.BXIM.messenger.userChatBlockStatus[chatId] = {}
+
+		if (mute)
+		{
+			this.BXIM.messenger.userChatBlockStatus[chatId][this.BXIM.userId] = mute;
+		}
+		else
+		{
+			if (this.BXIM.messenger.userChatBlockStatus[chatId][this.BXIM.userId] == 'Y')
+				this.BXIM.messenger.userChatBlockStatus[chatId][this.BXIM.userId] = 'N';
+			else
+				this.BXIM.messenger.userChatBlockStatus[chatId][this.BXIM.userId] = 'Y';
+		}
+		this.BXIM.messenger.dialogStatusRedraw();
+
+		if (sendAjax)
+		{
+			BX.localStorage.set('mcl2', {chatId: chatId, mute: this.BXIM.messenger.userChatBlockStatus[chatId][this.BXIM.userId]}, 5);
+
+			BX.ajax({
+				url: this.BXIM.pathToAjax+'?CHAT_MUTE&V='+this.BXIM.revision,
+				method: 'POST',
+				dataType: 'json',
+				timeout: 60,
+				data: {'IM_CHAT_MUTE' : 'Y', 'CHAT_ID': chatId, 'MUTE': this.BXIM.messenger.userChatBlockStatus[chatId][this.BXIM.userId], 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()}
+			});
+		}
+	};
+
 	BX.MessengerCommon.prototype.MobileActionEqual = function(action)
 	{
 		if (!this.isMobile())
@@ -347,43 +384,43 @@
 			textElement = textElement.replace(new RegExp("("+highlightText.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")+")",'ig'), '<span class="bx-messenger-highlight">$1</span>');
 		}
 
-		if (false)
+		if (this.BXIM.settings.enableBigSmile)
 		{
 			textElement = textElement.replace(
-				/^(\s*<img\s+src=[^>]+?data-code=[^>]+?width=")(\d+)("[^>]+?height=")(\d+)("[^>]+?class="bx-smile"\s*\/?>\s*)$/,
+				/^(\s*<img\s+src=[^>]+?data-code=[^>]+?data-definition="UHD"[^>]+?width=")(\d+)("[^>]+?height=")(\d+)("[^>]+?class="bx-smile"\s*\/?>\s*)$/,
 				function doubleSmileSize(match, start, width, middle, height, end) {
 					return start + (parseInt(width, 10) * 2) + middle + (parseInt(height, 10) * 2) + end;
 				}
 			);
 		}
 
-		if (true)
+
+		textElement = textElement.replace(/\[USER=([0-9]{1,})\](.*?)\[\/USER\]/ig, function(whole, userId, text)
 		{
-			textElement = textElement.replace(/\[USER=([0-9]{1,})\](.*?)\[\/USER\]/ig, function(whole, userId, text)
-			{
-				var html = '';
+			var html = '';
 
-				userId = parseInt(userId);
-				if (quote && text && userId > 0 && typeof(BXIM) != 'undefined')
-					html = '<span class="bx-messenger-ajax '+(userId == BXIM.userId? 'bx-messenger-ajax-self': '')+'" data-entity="user" data-userId="'+userId+'">'+text+'</span>';
-				else
-					html = text;
+			userId = parseInt(userId);
+			if (quote && text && userId > 0 && typeof(BXIM) != 'undefined')
+				html = '<span class="bx-messenger-ajax '+(userId == BXIM.userId? 'bx-messenger-ajax-self': '')+'" data-entity="user" data-userId="'+userId+'">'+text+'</span>';
+			else
+				html = text;
 
-				return html;
-			});
-			textElement = textElement.replace(/\[PCH=([0-9]{1,})\](.*?)\[\/PCH\]/ig, function(whole, historyId, text)
-			{
-				var html = '';
+			return html;
+		});
+		
+		textElement = textElement.replace(/\[PCH=([0-9]{1,})\](.*?)\[\/PCH\]/ig, function(whole, historyId, text)
+		{
+			var html = '';
 
-				historyId = parseInt(historyId);
-				if (quote && text && historyId > 0)
-					html = '<span class="bx-messenger-ajax" data-entity="phoneCallHistory" data-historyId="'+historyId+'">'+text+'</span>';
-				else
-					html = text;
+			historyId = parseInt(historyId);
+			if (quote && text && historyId > 0)
+				html = '<span class="bx-messenger-ajax" data-entity="phoneCallHistory" data-historyId="'+historyId+'">'+text+'</span>';
+			else
+				html = text;
 
-				return html;
-			});
-		}
+			return html;
+		});
+
 		if (textElement.substr(-6) == '<br />')
 		{
 			textElement = textElement.substr(0, textElement.length-6);
@@ -413,6 +450,38 @@
 
 		return textElement;
 	};
+
+	BX.MessengerCommon.prototype.addMentionList = function(dialogId, userName, userId)
+	{
+		if (!dialogId || !userName || parseInt(userId) <= 0)
+			return false;
+
+		if (!this.BXIM.messenger.mentionList[dialogId])
+			this.BXIM.messenger.mentionList[dialogId] = {};
+
+		this.BXIM.messenger.mentionList[dialogId][userName] = userId;
+	}
+
+	BX.MessengerCommon.prototype.prepareMention = function(dialogId, text)
+	{
+		if (!this.BXIM.messenger.mentionList[dialogId])
+			return text;
+
+		for (var userName in this.BXIM.messenger.mentionList[dialogId])
+		{
+			var userId = this.BXIM.messenger.mentionList[dialogId][userName];
+			text = text.split(userName).join('[USER='+userId+']'+userName+'[/USER]');
+		}
+
+		this.clearMentionList(dialogId);
+
+		return text;
+	}
+
+	BX.MessengerCommon.prototype.clearMentionList = function(dialogId)
+	{
+		delete this.BXIM.messenger.mentionList[dialogId];
+	}
 
 	/* User state */
 	BX.MessengerCommon.prototype.getUserParam = function(userId, reset)
@@ -466,10 +535,15 @@
 			status = 'offline';
 			statusText = BX.message('IM_STATUS_OFFLINE');
 		}
-		else if (this.BXIM.messenger.BXIM.userId == userId)
+		else if (this.BXIM.userId == userId)
 		{
 			status = this.BXIM.messenger.users[userId].status;
 			statusText = BX.message('IM_STATUS_'+status.toUpperCase());
+		}
+		else if (this.getUserMobileStatus(userId))
+		{
+			status = 'mobile';
+			statusText = BX.message('IM_STATUS_MOBILE');
 		}
 		else if (this.BXIM.messenger.users[userId].idle > 0)
 		{
@@ -511,6 +585,24 @@
 		return message;
 	}
 
+	BX.MessengerCommon.prototype.getUserMobileStatus = function(userId)
+	{
+		userId = parseInt(userId);
+		userId = isNaN(userId)? this.BXIM.userId: userId;
+
+		var status = false;
+		if ( this.BXIM.messenger.users[userId].mobileLastDate > 0)
+		{
+			var mobileLastDate = parseInt(this.BXIM.messenger.users[userId].mobileLastDate);
+			if ((this.getNowDate()+parseInt(BX.message("SERVER_TZ_OFFSET")))-(parseInt(mobileLastDate)+parseInt(BX.message("SERVER_TZ_OFFSET"))) < 240)
+			{
+				status = true;
+			}
+		}
+
+		return status;
+	}
+
 	BX.MessengerCommon.prototype.getUserPosition = function(userId)
 	{
 		var pos = '';
@@ -526,7 +618,7 @@
 		{
 			pos = BX.message('IM_CL_USER_EXTRANET');
 		}
-		else if (this.BXIM.messenger.BXIM.bitrixIntranet)
+		else if (this.BXIM.bitrixIntranet)
 		{
 			pos = BX.message('IM_CL_USER_B24');
 		}
@@ -726,7 +818,7 @@
 			{
 				if (!activeSearch && this.BXIM.messenger.chat[i].style == 'call')
 					continue;
-				
+
 				groupChat.push(i);
 			}
 
@@ -734,6 +826,8 @@
 
 			userInGroup['chat'] = {'id':'chat', 'users': groupChat, 'isChat': true};
 		}
+
+		var sortIndex = this.recentListGetSortIndex();
 
 		for (var i in groups)
 		{
@@ -745,17 +839,18 @@
 			var userDrowedInGroup = {};
 			if (userInGroup[i] && !userInGroup[i].isChat)
 			{
+				var userIdShow = [];
 				for (var j = 0; j < userInGroup[i].users.length; j++)
 				{
 					var user = this.BXIM.messenger.users[userInGroup[i].users[j]];
-					if (typeof(user) == 'undefined' || this.BXIM.userId == user.id || typeof(user.name) == 'undefined' || exceptUsers[user.id] || userDrowedInGroup[i+'_'+user.id])
+					if (typeof(user) == 'undefined' || this.BXIM.userId == user.id || typeof(user.name) == 'undefined' || exceptUsers[user.id] || userDrowedInGroup[i + '_' + user.id])
 						continue;
 
-					userDrowedInGroup[i+'_'+user.id] = true;
+					userDrowedInGroup[i + '_' + user.id] = true;
 
 					if (activeSearch)
 					{
-						var userSearchString = user.name.toLowerCase()+(user.workPosition? (" "+user.workPosition).toLowerCase(): "");
+						var userSearchString = user.name.toLowerCase() + (user.workPosition? (" " + user.workPosition).toLowerCase(): "");
 						var skipUser = false;
 						for (var s = 0; s < arSearch.length; s++)
 							if (userSearchString.indexOf(arSearch[s].toLowerCase()) < 0)
@@ -775,6 +870,22 @@
 						if (skipUser)
 							continue;
 					}
+
+					userIdShow.push(user.id);
+				}
+
+				userIdShow.sort(function(u1, u2) {
+					var i1 = sortIndex[u1]? sortIndex[u1]: 0;
+					var i2 = sortIndex[u2]? sortIndex[u2]: 0;
+
+					if (i1 > i2) { return -1; }
+					else if (i1 < i2) { return 1;}
+					else{ return 0;}
+				});
+
+				for (var j = 0; j < userIdShow.length; j++)
+				{
+					var user = this.BXIM.messenger.users[userIdShow[j]];
 
 					var newMessage = '';
 					var newMessageCount = '';
@@ -834,6 +945,7 @@
 			}
 			else if (userInGroup[i] && userInGroup[i].isChat)
 			{
+				var chatIdShow = [];
 				for (var j = 0; j < userInGroup[i].users.length; j++)
 				{
 					var chat = this.BXIM.messenger.chat[userInGroup[i].users[j]];
@@ -863,6 +975,21 @@
 						if (skipUser)
 							continue;
 					}
+					chatIdShow.push(chat.id);
+				}
+
+				chatIdShow.sort(function(u1, u2) {
+					var i1 = sortIndex['chat'+u1]? sortIndex['chat'+u1]: 0;
+					var i2 = sortIndex['chat'+u2]? sortIndex['chat'+u2]: 0;
+
+					if (i1 > i2) { return -1; }
+					else if (i1 < i2) { return 1;}
+					else{ return 0;}
+				});
+
+				for (var j = 0; j < chatIdShow.length; j++)
+				{
+					var chat = this.BXIM.messenger.chat[chatIdShow[j]];
 
 					var writingMessage = '';
 					if (extraEnable && this.countWriting('chat'+chat.id))
@@ -987,7 +1114,7 @@
 						else
 						{
 							var src = '_src="'+user.avatar+'" src="'+this.BXIM.pathToBlankImage+'"';
-							if (activeSearch || (group.status == "open" && groupOpen == 'auto') || groupOpen == true)
+							if ((group.status == "open" && groupOpen == 'auto') || groupOpen == true)
 								src = 'src="'+user.avatar+'" _src="'+this.BXIM.pathToBlankImage+'"';
 						}
 
@@ -1103,7 +1230,7 @@
 		}
 
 		var id = BX.proxy_context.getAttribute('data-groupId');
-		var viewGroup = this.BXIM.messenger.contactListSearchText != null && this.BXIM.messenger.contactListSearchText.length > 0? false: this.BXIM.messenger.BXIM.settings.viewGroup;
+		var viewGroup = this.BXIM.messenger.contactListSearchText != null && this.BXIM.messenger.contactListSearchText.length > 0? false: this.BXIM.settings.viewGroup;
 		if (viewGroup)
 			this.BXIM.messenger.groups[id].status = status;
 		else if (this.BXIM.messenger.woGroups[id])
@@ -1288,7 +1415,7 @@
 				var item = BX.findChildByClassName(this.BXIM.messenger.popupContactListElementsWrap, "bx-messenger-cl-item");
 				if (item)
 				{
-					this.BXIM.messenger.BXIM.openMessenger(item.getAttribute('data-userid'));
+					this.BXIM.openMessenger(item.getAttribute('data-userid'));
 				}
 			}
 		}
@@ -1514,8 +1641,13 @@
 
 			item.text = this.prepareText(item.text);
 			item.text = item.text.replace(/<img.*?data-code="([^"]*)".*?>/ig, '$1');
+			item.text = item.text.replace(/\[[buis]\](.*?)\[\/[buis]\]/ig, '$1');
 			item.text = item.text.replace(/<s>([^"]*)<\/s>/ig, '');
 			item.text = item.text.replace('<br />', ' ').replace(/<\/?[^>]+>/gi, '').replace(/------------------------------------------------------(.*?)------------------------------------------------------/gmi, " ["+BX.message("IM_M_QUOTE_BLOCK")+"] ");
+			if (item.text.length <= 0)
+			{
+				item.text = BX.message('IM_M_DELETED');
+			}
 
 			var avatarId = '';
 			var avatarLink = user.avatar;
@@ -1619,6 +1751,25 @@
 			this.readMessage(userId, true, true);
 		}
 	};
+
+	BX.MessengerCommon.prototype.recentListGetSortIndex = function()
+	{
+		var sortIndex = {};
+		var tmpIndex = 0;
+
+		if (this.BXIM.messenger.recent.length <= 0)
+		{
+			this.recentListGetFromServer();
+		}
+
+		for (var item = 0; item < this.BXIM.messenger.recent.length; item++)
+		{
+			tmpIndex =  this.BXIM.messenger.recent.length-item;
+			sortIndex[this.BXIM.messenger.recent[item].recipientId] = tmpIndex;
+		}
+
+		return sortIndex;
+	}
 
 	BX.MessengerCommon.prototype.recentListGetFromServer = function()
 	{
@@ -2627,7 +2778,7 @@
 
 					if (params.type == 'private')
 					{
-						dialogId = params.fromUserId == this.BXIM.messenger.BXIM.userId? params.toUserId: params.fromUserId;
+						dialogId = params.fromUserId == this.BXIM.userId? params.toUserId: params.fromUserId;
 						this.endWriting(dialogId);
 					}
 					else
@@ -2739,7 +2890,7 @@
 
 				if (BX.MessengerCommon.enableScroll(this.BXIM.messenger.popupMessengerBody, this.BXIM.messenger.popupMessengerBody.offsetHeight))
 				{
-					if (this.BXIM.messenger.BXIM.animationSupport)
+					if (this.BXIM.animationSupport)
 					{
 						if (this.BXIM.messenger.popupMessengerBodyAnimation != null)
 							this.BXIM.messenger.popupMessengerBodyAnimation.stop();
@@ -2861,10 +3012,10 @@
 				data.UNREAD_NOTIFY[params.id] = [params.id];
 				this.BXIM.messenger.notify.notify[params.id] = params;
 				this.BXIM.messenger.notify.flashNotify[params.id] = params.silent != 'Y';
-				if (params.settingName == "main|rating_vote" && params.original_tag.substr(0,16) == "RATING|IMMESSAGE")
+				if (params.settingName == "main|rating_vote" && params.original_tag.substr(0,10) == "RATING|IM|")
 				{
-					var messageId = params.original_tag.substr(17);
-					if (this.BXIM.messenger.message[messageId] && this.BXIM.messenger.message[messageId].recipientId == this.BXIM.messenger.currentTab && this.BXIM.windowFocus)
+					var messageParams = params.original_tag.split("|");
+					if (this.BXIM.messenger.message[messageParams[4]] && this.BXIM.messenger.message[messageParams[4]].recipientId == this.BXIM.messenger.currentTab && this.BXIM.windowFocus)
 					{
 						delete data.UNREAD_NOTIFY[params.id];
 						this.BXIM.notify.flashNotify[params.id] = false;
@@ -2954,6 +3105,14 @@
 							contactListRedraw = true;
 						}
 					}
+					if (typeof(params.MOBILE_LAST_DATE) != 'undefined')
+					{
+						if (this.BXIM.messenger.users[params.USER_ID].mobileLastDate != params.MOBILE_LAST_DATE)
+						{
+							this.BXIM.messenger.users[params.USER_ID].mobileLastDate = params.MOBILE_LAST_DATE;
+							contactListRedraw = true;
+						}
+					}
 
 					if (contactListRedraw)
 					{
@@ -2970,6 +3129,7 @@
 					{
 						this.BXIM.messenger.users[params.USER_ID].status = 'offline';
 						this.BXIM.messenger.users[params.USER_ID].idle = 0;
+						this.BXIM.messenger.users[params.USER_ID].mobileLastDate = 0;
 						this.BXIM.messenger.dialogStatusRedraw();
 						BX.MessengerCommon.userListRedraw();
 					}
@@ -2989,6 +3149,18 @@
 						if (this.BXIM.messenger.users[params.USER_ID].idle != params.IDLE)
 						{
 							this.BXIM.messenger.users[params.USER_ID].idle = params.IDLE;
+							contactListRedraw = true;
+						}
+					}
+					if (typeof(params.MOBILE_LAST_DATE) != 'undefined')
+					{
+						if (typeof(this.BXIM.messenger.users[params.USER_ID].mobileLastDate) == 'undefined')
+						{
+							this.BXIM.messenger.users[params.USER_ID].mobileLastDate = 0;
+						}
+						if (this.BXIM.messenger.users[params.USER_ID].mobileLastDate != params.MOBILE_LAST_DATE)
+						{
+							this.BXIM.messenger.users[params.USER_ID].mobileLastDate = params.MOBILE_LAST_DATE;
 							contactListRedraw = true;
 						}
 					}
@@ -3018,6 +3190,7 @@
 						{
 							this.BXIM.messenger.users[i].status = 'offline';
 							this.BXIM.messenger.users[i].idle = 0;
+							this.BXIM.messenger.users[i].mobileLastDate = 0;
 							contactListRedraw = true;
 						}
 					}
@@ -3032,6 +3205,18 @@
 							if (this.BXIM.messenger.users[i].idle != params.USERS[i].idle)
 							{
 								this.BXIM.messenger.users[i].idle = params.USERS[i].idle;
+								contactListRedraw = true;
+							}
+						}
+						if (typeof(params.USERS[i].mobileLastDate) != 'undefined')
+						{
+							if (typeof(this.BXIM.messenger.users[i].mobileLastDate) == 'undefined')
+							{
+								this.BXIM.messenger.users[i].mobileLastDate = 0;
+							}
+							if (this.BXIM.messenger.users[i].mobileLastDate != params.USERS[i].mobileLastDate)
+							{
+								this.BXIM.messenger.users[i].mobileLastDate = params.USERS[i].mobileLastDate;
 								contactListRedraw = true;
 							}
 						}
@@ -3170,6 +3355,9 @@
 		var playSound = false;
 		var contactListRedraw = false;
 		var needRedrawDialogStatus = true;
+
+		var userStatus = this.isMobile()? 'online': this.BXIM.settings.status;
+
 		for (var i in unreadMessage)
 		{
 			var skipPopup = false;
@@ -3231,7 +3419,7 @@
 						for (var k = 0; k < unreadMessage[i].length; k++)
 						{
 							var resultOfNameSearch = this.BXIM.messenger.message[unreadMessage[i][k]].text.match(new RegExp("("+this.BXIM.messenger.users[this.BXIM.userId].name.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")+")",'ig'));
-							if (this.BXIM.settings.status != 'dnd' || resultOfNameSearch)
+							if (userStatus != 'dnd' || resultOfNameSearch)
 							{
 								this.BXIM.messenger.flashMessage[i][unreadMessage[i][k]] = send;
 							}
@@ -3242,7 +3430,7 @@
 						for (var k = 0; k < unreadMessage[i].length; k++)
 						{
 							var resultOfNameSearch = this.BXIM.messenger.message[unreadMessage[i][k]].text.match(new RegExp("("+this.BXIM.messenger.users[this.BXIM.userId].name.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")+")",'ig'));
-							if (this.BXIM.settings.status != 'dnd' || resultOfNameSearch)
+							if (userStatus != 'dnd' || resultOfNameSearch)
 							{
 								if (!send && !this.BXIM.isFocus())
 								{
@@ -3300,12 +3488,19 @@
 		if (this.MobileActionEqual('RECENT') && this.BXIM.messenger.popupMessenger != null && !this.BXIM.messenger.recentList && contactListRedraw)
 			BX.MessengerCommon.userListRedraw();
 
-		if (!this.isMobile())
+		if (this.isMobile() && this.MobileActionEqual('RECENT') && app.enableInVersion(13))
+		{
+			clearTimeout(this.newMessageTimeout);
+			this.newMessageTimeout = setTimeout(BX.proxy(function(){
+				this.BXIM.messenger.newMessage();
+			}, this), 1000);
+		}
+		else if (!this.isMobile())
 		{
 			this.BXIM.messenger.newMessage(send);
 			this.BXIM.messenger.updateMessageCount(send);
 
-			if (send && playSound && this.BXIM.settings.status != 'dnd')
+			if (send && playSound && userStatus != 'dnd')
 			{
 				this.BXIM.playSound("newMessage2");
 			}
@@ -3805,186 +4000,213 @@
 		delete this.BXIM.messenger.redrawTab[userId];
 		this.BXIM.messenger.loadLastMessageTimeout[userId] = true;
 
-		BX.ajax({
+		var onfailure = BX.delegate(function(){
+			this.BXIM.messenger.loadLastMessageTimeout[userId] = false;
+			this.BXIM.messenger.historyWindowBlock = false;
+			this.BXIM.messenger.sendAjaxTry = 0;
+			this.BXIM.messenger.redrawTab[userId] = true;
+
+			this.BXIM.messenger.popupMessengerBodyWrap.innerHTML = '';
+
+			var arMessage = [BX.create("div", { props : { className : "bx-messenger-content-empty"}, children : [
+				BX.create("span", { props : { className : "bx-messenger-content-load-text"}, html: BX.message("IM_M_LOAD_ERROR")})
+			]})];
+
+			BX.adjust(this.BXIM.messenger.popupMessengerBodyWrap, {children: arMessage});
+
+			if (this.isMobile() && this.MobileActionEqual('DIALOG'))
+			{
+				BXMobileApp.UI.Page.TopBar.title.setText(BX.message('IM_F_ERROR'));
+				BXMobileApp.UI.Page.TopBar.title.setDetailText('');
+			}
+		}, this);
+
+		var onsuccess = BX.delegate(function(data)
+		{
+			this.BXIM.messenger.loadLastMessageTimeout[userId] = false;
+
+			if (!data)
+			{
+				onfailure();
+				return false;
+			}
+
+			if (data && data.BITRIX_SESSID)
+			{
+				BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+			}
+
+			if (data.ERROR == '')
+			{
+				if (!userIsChat)
+				{
+					this.BXIM.messenger.userChat[userId] = data.CHAT_ID;
+
+					BX.MessengerCommon.getUserParam(userId, true);
+					this.BXIM.messenger.users[userId].name = BX.message('IM_M_USER_NO_ACCESS');
+				}
+
+				for (var i in data.USERS)
+				{
+					this.BXIM.messenger.users[i] = data.USERS[i];
+				}
+
+				for (var i in data.PHONES)
+				{
+					this.BXIM.messenger.phones[i] = {};
+					for (var j in data.PHONES[i])
+					{
+						this.BXIM.messenger.phones[i][j] = BX.util.htmlspecialcharsback(data.PHONES[i][j]);
+					}
+				}
+				for (var i in data.USER_IN_GROUP)
+				{
+					if (typeof(this.BXIM.messenger.userInGroup[i]) == 'undefined')
+					{
+						this.BXIM.messenger.userInGroup[i] = data.USER_IN_GROUP[i];
+					}
+					else
+					{
+						for (var j = 0; j < data.USER_IN_GROUP[i].users.length; j++)
+							this.BXIM.messenger.userInGroup[i].users.push(data.USER_IN_GROUP[i].users[j]);
+
+						this.BXIM.messenger.userInGroup[i].users = BX.util.array_unique(this.BXIM.messenger.userInGroup[i].users)
+					}
+				}
+				for (var i in data.WO_USER_IN_GROUP)
+				{
+					if (typeof(this.BXIM.messenger.woUserInGroup[i]) == 'undefined')
+					{
+						this.BXIM.messenger.woUserInGroup[i] = data.WO_USER_IN_GROUP[i];
+					}
+					else
+					{
+						for (var j = 0; j < data.WO_USER_IN_GROUP[i].users.length; j++)
+							this.BXIM.messenger.woUserInGroup[i].users.push(data.WO_USER_IN_GROUP[i].users[j]);
+
+						this.BXIM.messenger.woUserInGroup[i].users = BX.util.array_unique(this.BXIM.messenger.woUserInGroup[i].users)
+					}
+				}
+
+				for (var i in data.READED_LIST)
+				{
+					data.READED_LIST[i].date = parseInt(data.READED_LIST[i].date)+parseInt(BX.message('USER_TZ_OFFSET'));
+					this.BXIM.messenger.readedList[i] = data.READED_LIST[i];
+				}
+
+				if (!userIsChat && data.USER_LOAD == 'Y')
+					BX.MessengerCommon.userListRedraw();
+
+				for (var i in data.FILES)
+				{
+					if (!this.BXIM.messenger.disk.files[data.CHAT_ID])
+						this.BXIM.messenger.disk.files[data.CHAT_ID] = {};
+
+					data.FILES[i].date = parseInt(data.FILES[i].date)+parseInt(BX.message('USER_TZ_OFFSET'));
+					this.BXIM.messenger.disk.files[data.CHAT_ID][i] = data.FILES[i];
+				}
+
+				this.BXIM.messenger.sendAjaxTry = 0;
+				var messageCnt = 0;
+				for (var i in data.MESSAGE)
+				{
+					messageCnt++;
+					data.MESSAGE[i].date = parseInt(data.MESSAGE[i].date)+parseInt(BX.message('USER_TZ_OFFSET'));
+					this.BXIM.messenger.message[i] = data.MESSAGE[i];
+					this.BXIM.lastRecordId = parseInt(i) > this.BXIM.lastRecordId? parseInt(i): this.BXIM.lastRecordId;
+				}
+
+				if (messageCnt <= 0)
+					delete this.BXIM.messenger.redrawTab[data.USER_ID];
+
+				for (var i in data.USERS_MESSAGE)
+				{
+					if (this.BXIM.messenger.showMessage[i])
+						this.BXIM.messenger.showMessage[i] = BX.util.array_unique(BX.util.array_merge(data.USERS_MESSAGE[i], this.BXIM.messenger.showMessage[i]));
+					else
+						this.BXIM.messenger.showMessage[i] = data.USERS_MESSAGE[i];
+				}
+				if (userIsChat && this.BXIM.messenger.chat[data.USER_ID.substr(4)].fake)
+				{
+					this.BXIM.messenger.chat[data.USER_ID.toString().substr(4)].name = BX.message('IM_M_USER_NO_ACCESS');
+				}
+
+				for (var i in data.CHAT)
+				{
+					this.BXIM.messenger.chat[i] = data.CHAT[i];
+				}
+				for (var i in data.USER_IN_CHAT)
+				{
+					this.BXIM.messenger.userInChat[i] = data.USER_IN_CHAT[i];
+				}
+				for (var i in data.USER_BLOCK_CHAT)
+				{
+					this.BXIM.messenger.userChatBlockStatus[i] = data.USER_BLOCK_CHAT[i];
+				}
+				if (this.BXIM.messenger.currentTab == data.USER_ID)
+				{
+					if (this.BXIM.messenger.currentTab.toString().substr(0, 4) == 'chat' && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)] && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == 'call')
+					{
+						this.BXIM.messenger.openCallFlag = true;
+					}
+				}
+				BX.MessengerCommon.drawTab(data.USER_ID, this.BXIM.messenger.currentTab == data.USER_ID);
+
+				if (this.BXIM.messenger.currentTab == data.USER_ID && this.BXIM.messenger.readedList[data.USER_ID])
+					BX.MessengerCommon.drawReadMessage(data.USER_ID, this.BXIM.messenger.readedList[data.USER_ID].messageId, this.BXIM.messenger.readedList[data.USER_ID].date, false);
+
+				this.BXIM.messenger.historyWindowBlock = false;
+
+				if (this.BXIM.isFocus())
+				{
+					BX.MessengerCommon.readMessage(data.USER_ID, true, false);
+				}
+			}
+			else
+			{
+				this.BXIM.messenger.redrawTab[userId] = true;
+				if (data.ERROR == 'ACCESS_DENIED')
+				{
+					this.BXIM.messenger.currentTab = 0;
+					this.BXIM.messenger.openChatFlag = false;
+					this.BXIM.messenger.openCallFlag = false;
+					this.BXIM.messenger.extraClose();
+				}
+				else if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
+				{
+					this.BXIM.messenger.sendAjaxTry++;
+					setTimeout(BX.delegate(function(){this.loadLastMessage(userId, userIsChat)}, this), 2000);
+					BX.onCustomEvent(window, 'onImError', [data.ERROR, data.BITRIX_SESSID]);
+				}
+				else if (data.ERROR == 'AUTHORIZE_ERROR')
+				{
+					this.BXIM.messenger.sendAjaxTry++;
+					if (this.BXIM.desktop && this.BXIM.desktop.ready())
+					{
+						setTimeout(BX.delegate(function (){
+							this.loadLastMessage(userId, userIsChat)
+						}, this), 10000);
+					}
+					BX.onCustomEvent(window, 'onImError', [data.ERROR]);
+				}
+			}
+		}, this);
+
+		var xhr = BX.ajax({
 			url: this.BXIM.pathToAjax+'?LOAD_LAST_MESSAGE&V='+this.BXIM.revision,
 			method: 'POST',
 			dataType: 'json',
 			skipAuthCheck: true,
 			timeout: 90,
-			data: {'IM_LOAD_LAST_MESSAGE' : 'Y', 'CHAT' : userIsChat? 'Y': 'N', 'USER_ID' : userId, 'USER_LOAD' : userIsChat? (this.BXIM.messenger.chat[userId.toString().substr(4)] && this.BXIM.messenger.chat[userId.toString().substr(4)].fake? 'Y': 'N'): 'Y', 'TAB' : this.BXIM.messenger.currentTab, 'READ' : this.BXIM.messenger.BXIM.isFocus()? 'Y': 'N', 'MOBILE' : this.isMobile()? 'Y': 'N', 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()},
-			onsuccess: BX.delegate(function(data)
-			{
-				this.BXIM.messenger.loadLastMessageTimeout[userId] = false;
-
-				if (!data)
-					return false;
-
-				if (data && data.BITRIX_SESSID)
+			data: {'IM_LOAD_LAST_MESSAGE' : 'Y', 'CHAT' : userIsChat? 'Y': 'N', 'USER_ID' : userId, 'USER_LOAD' : userIsChat? (this.BXIM.messenger.chat[userId.toString().substr(4)] && this.BXIM.messenger.chat[userId.toString().substr(4)].fake? 'Y': 'N'): 'Y', 'TAB' : this.BXIM.messenger.currentTab, 'READ' : this.isMobile() || this.BXIM.isFocus()? 'Y': 'N', 'MOBILE' : this.isMobile()? 'Y': 'N', 'IM_AJAX_CALL' : 'Y', 'sessid': BX.bitrix_sessid()},
+			onsuccess: onsuccess,
+			onprogress: function(data){
+				if (data.position == 0 && data.totalSize == 0)
 				{
-					BX.message({'bitrix_sessid': data.BITRIX_SESSID});
+					onfailure();
 				}
-
-				if (data.ERROR == '')
-				{
-					if (!userIsChat)
-					{
-						this.BXIM.messenger.userChat[userId] = data.CHAT_ID;
-
-						BX.MessengerCommon.getUserParam(userId, true);
-						this.BXIM.messenger.users[userId].name = BX.message('IM_M_USER_NO_ACCESS');
-					}
-
-					for (var i in data.USERS)
-					{
-						this.BXIM.messenger.users[i] = data.USERS[i];
-					}
-
-					for (var i in data.PHONES)
-					{
-						this.BXIM.messenger.phones[i] = {};
-						for (var j in data.PHONES[i])
-						{
-							this.BXIM.messenger.phones[i][j] = BX.util.htmlspecialcharsback(data.PHONES[i][j]);
-						}
-					}
-					for (var i in data.USER_IN_GROUP)
-					{
-						if (typeof(this.BXIM.messenger.userInGroup[i]) == 'undefined')
-						{
-							this.BXIM.messenger.userInGroup[i] = data.USER_IN_GROUP[i];
-						}
-						else
-						{
-							for (var j = 0; j < data.USER_IN_GROUP[i].users.length; j++)
-								this.BXIM.messenger.userInGroup[i].users.push(data.USER_IN_GROUP[i].users[j]);
-
-							this.BXIM.messenger.userInGroup[i].users = BX.util.array_unique(this.BXIM.messenger.userInGroup[i].users)
-						}
-					}
-					for (var i in data.WO_USER_IN_GROUP)
-					{
-						if (typeof(this.BXIM.messenger.woUserInGroup[i]) == 'undefined')
-						{
-							this.BXIM.messenger.woUserInGroup[i] = data.WO_USER_IN_GROUP[i];
-						}
-						else
-						{
-							for (var j = 0; j < data.WO_USER_IN_GROUP[i].users.length; j++)
-								this.BXIM.messenger.woUserInGroup[i].users.push(data.WO_USER_IN_GROUP[i].users[j]);
-
-							this.BXIM.messenger.woUserInGroup[i].users = BX.util.array_unique(this.BXIM.messenger.woUserInGroup[i].users)
-						}
-					}
-
-					for (var i in data.READED_LIST)
-					{
-						data.READED_LIST[i].date = parseInt(data.READED_LIST[i].date)+parseInt(BX.message('USER_TZ_OFFSET'));
-						this.BXIM.messenger.readedList[i] = data.READED_LIST[i];
-					}
-
-					if (!userIsChat && data.USER_LOAD == 'Y')
-						BX.MessengerCommon.userListRedraw();
-
-					for (var i in data.FILES)
-					{
-						if (!this.BXIM.messenger.disk.files[data.CHAT_ID])
-							this.BXIM.messenger.disk.files[data.CHAT_ID] = {};
-
-						data.FILES[i].date = parseInt(data.FILES[i].date)+parseInt(BX.message('USER_TZ_OFFSET'));
-						this.BXIM.messenger.disk.files[data.CHAT_ID][i] = data.FILES[i];
-					}
-
-					this.BXIM.messenger.sendAjaxTry = 0;
-					var messageCnt = 0;
-					for (var i in data.MESSAGE)
-					{
-						messageCnt++;
-						data.MESSAGE[i].date = parseInt(data.MESSAGE[i].date)+parseInt(BX.message('USER_TZ_OFFSET'));
-						this.BXIM.messenger.message[i] = data.MESSAGE[i];
-						this.BXIM.lastRecordId = parseInt(i) > this.BXIM.lastRecordId? parseInt(i): this.BXIM.lastRecordId;
-					}
-
-					if (messageCnt <= 0)
-						delete this.BXIM.messenger.redrawTab[data.USER_ID];
-
-					for (var i in data.USERS_MESSAGE)
-					{
-						if (this.BXIM.messenger.showMessage[i])
-							this.BXIM.messenger.showMessage[i] = BX.util.array_unique(BX.util.array_merge(data.USERS_MESSAGE[i], this.BXIM.messenger.showMessage[i]));
-						else
-							this.BXIM.messenger.showMessage[i] = data.USERS_MESSAGE[i];
-					}
-					if (userIsChat && this.BXIM.messenger.chat[data.USER_ID.substr(4)].fake)
-					{
-						this.BXIM.messenger.chat[data.USER_ID.toString().substr(4)].name = BX.message('IM_M_USER_NO_ACCESS');
-					}
-
-					for (var i in data.CHAT)
-					{
-						this.BXIM.messenger.chat[i] = data.CHAT[i];
-					}
-					for (var i in data.USER_IN_CHAT)
-					{
-						this.BXIM.messenger.userInChat[i] = data.USER_IN_CHAT[i];
-					}
-					for (var i in data.USER_BLOCK_CHAT)
-					{
-						this.BXIM.messenger.userChatBlockStatus[i] = data.USER_BLOCK_CHAT[i];
-					}
-					if (this.BXIM.messenger.currentTab == data.USER_ID)
-					{
-						if (this.BXIM.messenger.currentTab.toString().substr(0, 4) == 'chat' && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)] && this.BXIM.messenger.chat[this.BXIM.messenger.currentTab.toString().substr(4)].style == 'call')
-						{
-							this.BXIM.messenger.openCallFlag = true;
-						}
-					}
-					BX.MessengerCommon.drawTab(data.USER_ID, this.BXIM.messenger.currentTab == data.USER_ID);
-
-					if (this.BXIM.messenger.currentTab == data.USER_ID && this.BXIM.messenger.readedList[data.USER_ID])
-						BX.MessengerCommon.drawReadMessage(data.USER_ID, this.BXIM.messenger.readedList[data.USER_ID].messageId, this.BXIM.messenger.readedList[data.USER_ID].date, false);
-
-					this.BXIM.messenger.historyWindowBlock = false;
-
-					if (this.BXIM.isFocus())
-					{
-						BX.MessengerCommon.readMessage(data.USER_ID, true, false);
-					}
-				}
-				else
-				{
-					this.BXIM.messenger.redrawTab[userId] = true;
-					if (data.ERROR == 'ACCESS_DENIED')
-					{
-						this.BXIM.messenger.currentTab = 0;
-						this.BXIM.messenger.openChatFlag = false;
-						this.BXIM.messenger.openCallFlag = false;
-						this.BXIM.messenger.extraClose();
-					}
-					else if (data.ERROR == 'SESSION_ERROR' && this.BXIM.messenger.sendAjaxTry < 2)
-					{
-						this.BXIM.messenger.sendAjaxTry++;
-						setTimeout(BX.delegate(function(){this.loadLastMessage(userId, userIsChat)}, this), 2000);
-						BX.onCustomEvent(window, 'onImError', [data.ERROR, data.BITRIX_SESSID]);
-					}
-					else if (data.ERROR == 'AUTHORIZE_ERROR')
-					{
-						this.BXIM.messenger.sendAjaxTry++;
-						if (this.BXIM.desktop && this.BXIM.desktop.ready())
-						{
-							setTimeout(BX.delegate(function (){
-								this.loadLastMessage(userId, userIsChat)
-							}, this), 10000);
-						}
-						BX.onCustomEvent(window, 'onImError', [data.ERROR]);
-					}
-				}
-			}, this),
-			onfailure: BX.delegate(function(){
-				this.BXIM.messenger.loadLastMessageTimeout[userId] = false;
-				this.BXIM.messenger.historyWindowBlock = false;
-				this.BXIM.messenger.sendAjaxTry = 0;
-				this.BXIM.messenger.redrawTab[userId] = true;
-			}, this)
+			},
+			onfailure: onfailure
 		});
 	};
 

@@ -9,4 +9,3 @@ if(file_exists($_SERVER["DOCUMENT_ROOT"].BX_PERSONAL_ROOT."/html_pages/.enabled"
 
 require_once(dirname(__FILE__)."/prolog_before.php");
 require($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/include/prolog_after.php");
-?>

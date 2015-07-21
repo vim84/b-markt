@@ -20,9 +20,10 @@ if(is_array($arResult["CHAIN"]) && !empty($arResult["CHAIN"]))
 		endif;
 
 		$bFirstChain = true;
+		$count = count($arSectionPath);
 		foreach ($arSectionPath as $arSection)
 		{
-			if($arSection["DEPTH_LEVEL"] == 1 && $arResult["MULTI_HEAD"] == false)
+			if($arSection["DEPTH_LEVEL"] == 1 && $arResult["MULTI_HEAD"] == false && $count > 1)
 			{
 				continue;
 			}

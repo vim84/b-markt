@@ -9,11 +9,13 @@ if (isset($arParams["USE_FILTER"]) && $arParams["USE_FILTER"]=="Y")
 else
 	$arParams["FILTER_NAME"] = "";
 
+$smartBase = ($arParams["SEF_URL_TEMPLATES"]["section"]? $arParams["SEF_URL_TEMPLATES"]["section"]: "#SECTION_ID#/");
 $arDefaultUrlTemplates404 = array(
 	"sections" => "",
 	"section" => "#SECTION_ID#/",
 	"element" => "#SECTION_ID#/#ELEMENT_ID#/",
 	"compare" => "compare.php?action=COMPARE",
+	"smart_filter" => $smartBase."filter/#SMART_FILTER_PATH#/apply/"
 );
 
 $arDefaultVariableAliases404 = array();
@@ -36,6 +38,7 @@ if($arParams["SEF_MODE"] == "Y")
 	if (\Bitrix\Main\Loader::includeModule('iblock'))
 	{
 		$engine->addGreedyPart("#SECTION_CODE_PATH#");
+		$engine->addGreedyPart("#SMART_FILTER_PATH#");
 		$engine->setResolveCallback(array("CIBlockFindTools", "resolveComponentEngine"));
 	}
 	$arUrlTemplates = CComponentEngine::MakeComponentUrlTemplates($arDefaultUrlTemplates404, $arParams["SEF_URL_TEMPLATES"]);
@@ -46,6 +49,9 @@ if($arParams["SEF_MODE"] == "Y")
 		$arUrlTemplates,
 		$arVariables
 	);
+
+	if ($componentPage === "smart_filter")
+		$componentPage = "section";
 
 	if(!$componentPage && isset($_REQUEST["q"]))
 		$componentPage = "search";
@@ -65,7 +71,7 @@ if($arParams["SEF_MODE"] == "Y")
 			$b404 |= !isset($arVariables["SECTION_CODE"]);
 	}
 
-	if($b404 && $arParams["SET_STATUS_404"]==="Y")
+	if($b404 && CModule::IncludeModule('iblock'))
 	{
 		$folder404 = str_replace("\\", "/", $arParams["SEF_FOLDER"]);
 		if ($folder404 != "/")
@@ -73,8 +79,16 @@ if($arParams["SEF_MODE"] == "Y")
 		if (substr($folder404, -1) == "/")
 			$folder404 .= "index.php";
 
-		if($folder404 != $APPLICATION->GetCurPage(true))
-			CHTTP::SetStatus("404 Not Found");
+		if ($folder404 != $APPLICATION->GetCurPage(true))
+		{
+			\Bitrix\Iblock\Component\Tools::process404(
+				""
+				,($arParams["SET_STATUS_404"] === "Y")
+				,($arParams["SET_STATUS_404"] === "Y")
+				,($arParams["SHOW_404"] === "Y")
+				,$arParams["FILE_404"]
+			);
+		}
 	}
 
 	CComponentEngine::InitComponentVariables($componentPage, $arComponentVariables, $arVariableAliases, $arVariables);

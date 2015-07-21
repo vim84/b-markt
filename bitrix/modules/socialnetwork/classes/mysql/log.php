@@ -189,10 +189,17 @@ class CSocNetLog extends CAllSocNetLog
 			$GLOBALS["USER_FIELD_MANAGER"]->Update("SONET_LOG", $ID, $arFields);
 
 			if(defined("BX_COMP_MANAGED_CACHE"))
+			{
 				$GLOBALS["CACHE_MANAGER"]->ClearByTag("SONET_LOG_".$ID);
+			}
+
+			$cache = new CPHPCache;
+			$cache->CleanDir("/sonet/log/".intval($ID / 1000)."/".$ID."/comments/");
 		}
 		elseif (!$GLOBALS["USER_FIELD_MANAGER"]->Update("SONET_LOG", $ID, $arFields))
+		{
 			$ID = False;
+		}
 
 		return $ID;
 	}
@@ -391,7 +398,9 @@ class CSocNetLog extends CAllSocNetLog
 					array_key_exists("USE_CB_FILTER", $arEntityTypeTmp)
 					&& $arEntityTypeTmp["USE_CB_FILTER"] == "Y"
 				)
+				{
 					$arCBFilterEntityType[] = $entity_type_tmp;
+				}
 
 			if (is_array($arCBFilterEntityType) && count($arCBFilterEntityType) > 0)
 				$arFilter["ENTITY_TYPE"] = $arCBFilterEntityType;
@@ -498,6 +507,7 @@ class CSocNetLog extends CAllSocNetLog
 			)
 			{
 				foreach($arSocNetAllowedSubscribeEntityTypesDesc as $entity_type_tmp => $arEntityTypeTmp)
+				{
 					if (
 						array_key_exists("HAS_MY", $arEntityTypeTmp)
 						&& $arEntityTypeTmp["HAS_MY"] == "Y"
@@ -507,7 +517,10 @@ class CSocNetLog extends CAllSocNetLog
 						&& strlen($arEntityTypeTmp["METHOD_MY"]) > 0
 						&& method_exists($arEntityTypeTmp["CLASS_MY"], $arEntityTypeTmp["METHOD_MY"])
 					)
+					{
 						$arMyEntities[$entity_type_tmp] = call_user_func(array($arEntityTypeTmp["CLASS_MY"], $arEntityTypeTmp["METHOD_MY"]));
+					}
+				}
 
 				$arParams["MY_ENTITIES"] = $arMyEntities;
 			}
@@ -834,11 +847,16 @@ class CSocNetLog extends CAllSocNetLog
 		if ($bSuccess)
 			$GLOBALS["USER_FIELD_MANAGER"]->Delete("SONET_LOG", $ID);
 
-		if(
-			$bSuccess 
-			&& defined("BX_COMP_MANAGED_CACHE")
-		)
-			$GLOBALS["CACHE_MANAGER"]->ClearByTag("SONET_LOG_".$ID);
+		if ($bSuccess)
+		{
+			if (defined("BX_COMP_MANAGED_CACHE"))
+			{
+				$GLOBALS["CACHE_MANAGER"]->ClearByTag("SONET_LOG_".$ID);
+			}
+
+			$cache = new CPHPCache;
+			$cache->CleanDir("/sonet/log/".intval($ID / 1000)."/".$ID."/comments/");
+		}
 
 		return $bSuccess;
 	}

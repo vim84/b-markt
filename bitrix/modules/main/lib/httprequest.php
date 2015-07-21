@@ -243,31 +243,41 @@ class HttpRequest extends Request
 	{
 		if ($this->requestedPage === null)
 		{
-			if($this->getRequestUri() == '')
+			if(($uri = $this->getRequestUri()) == '')
 			{
 				$this->requestedPage = parent::getRequestedPage();
 			}
 			else
 			{
-				$this->requestedPage = $this->convertToPath($this->getDecodedUri());
+				$parsedUri = new Web\Uri("http://".$this->server->getHttpHost().$uri);
+				$this->requestedPage = static::normalize(static::decode($parsedUri->getPath()));
 			}
 		}
 		return $this->requestedPage;
 	}
 
 	/**
-	 * Returns url-decoded and converted to the current encoding URI of the request.
+	 * Returns url-decoded and converted to the current encoding URI of the request (except the query string).
 	 *
 	 * @return string
 	 */
 	public function getDecodedUri()
 	{
-		$page = $this->getRequestUri();
+		$parsedUri = new Web\Uri("http://".$this->server->getHttpHost().$this->getRequestUri());
 
-		$page = urldecode($page);
-		$page = Text\Encoding::convertEncodingToCurrent($page);
+		$uri = static::decode($parsedUri->getPath());
 
-		return $page;
+		if(($query = $parsedUri->getQuery()) <> '')
+		{
+			$uri .= "?".$query;
+		}
+
+		return $uri;
+	}
+
+	protected static function decode($url)
+	{
+		return Text\Encoding::convertEncodingToCurrent(urldecode($url));
 	}
 
 	public function getHttpHost($raw = true)
@@ -282,12 +292,8 @@ class HttpRequest extends Request
 		if ($host === null)
 		{
 			//scheme can be anything, it's used only for parsing
-			$scheme = "http://";
-			$host = $this->server->getHttpHost();
-
-			$url = new Web\Uri($scheme.$host);
+			$url = new Web\Uri("http://".$this->server->getHttpHost());
 			$host = $url->getHost();
-
 			$host = trim($host, "\t\r\n\0 .");
 		}
 
@@ -335,17 +341,8 @@ class HttpRequest extends Request
 		return $cookiesNew;
 	}
 
-	protected function convertToPath($path)
+	protected static function normalize($path)
 	{
-		static $terminate = array("?", "#");
-		foreach($terminate as $term)
-		{
-			if(($found = strpos($path, $term)) !== false)
-			{
-				$path = substr($path, 0, $found);
-			}
-		}
-
 		if (substr($path, -1, 1) === "/")
 		{
 			$path .= "index.php";

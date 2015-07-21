@@ -10,6 +10,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
 /** @global CUser $USER */
 /** @global CMain $APPLICATION */
 
+use Bitrix\Main\Context;
+use Bitrix\Main\Type\DateTime;
 
 /*************************************************************************
 	Processing of received parameters
@@ -25,10 +27,16 @@ $arParams["SECTION_CODE"] = trim($arParams["SECTION_CODE"]);
 $arParams["ELEMENT_ID"] = intval($arParams["~ELEMENT_ID"]);
 if($arParams["ELEMENT_ID"] > 0 && $arParams["ELEMENT_ID"]."" != $arParams["~ELEMENT_ID"])
 {
-	ShowError(GetMessage("PHOTO_ELEMENT_NOT_FOUND"));
-	@define("ERROR_404", "Y");
-	if($arParams["SET_STATUS_404"]==="Y")
-		CHTTP::SetStatus("404 Not Found");
+	if (CModule::IncludeModule("iblock"))
+	{
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("PHOTO_ELEMENT_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
+	}
 	return;
 }
 
@@ -63,6 +71,7 @@ if(strlen($arParams["BROWSER_TITLE"])<=0)
 	$arParams["BROWSER_TITLE"] = "-";
 
 $arParams["SET_TITLE"] = $arParams["SET_TITLE"]!="N"; //Turn on by default
+$arParams["SET_LAST_MODIFIED"] = $arParams["SET_LAST_MODIFIED"]==="Y";
 
 $arParams["SHOW_WORKFLOW"] = $_REQUEST["show_workflow"]=="Y";
 
@@ -144,6 +153,7 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, ($arParams["CACH
 			"IBLOCK_SECTION_ID",
 			"SECTION_PAGE_URL",
 			"NAME",
+			"TIMESTAMP_X",
 			"DETAIL_PICTURE",
 			"PREVIEW_PICTURE",
 			"DETAIL_TEXT",
@@ -341,16 +351,20 @@ if($arParams["SHOW_WORKFLOW"] || $this->StartResultCache(false, ($arParams["CACH
 			"NAME",
 			"SECTION",
 			"IPROPERTY_VALUES",
+			"TIMESTAMP_X",
 		));
 		$this->IncludeComponentTemplate();
 	}
 	else
 	{
 		$this->AbortResultCache();
-		ShowError(GetMessage("PHOTO_ELEMENT_NOT_FOUND"));
-		@define("ERROR_404", "Y");
-		if($arParams["SET_STATUS_404"]==="Y")
-			CHTTP::SetStatus("404 Not Found");
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("PHOTO_ELEMENT_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
 	}
 }
 
@@ -443,6 +457,11 @@ if(isset($arResult["ID"]))
 		{
 			$APPLICATION->AddChainItem($arPath["NAME"], $arPath["~SECTION_PAGE_URL"]);
 		}
+	}
+
+	if ($arParams["SET_LAST_MODIFIED"] && $arResult["TIMESTAMP_X"])
+	{
+		Context::getCurrent()->getResponse()->setLastModified(DateTime::createFromUserTime($arResult["TIMESTAMP_X"]));
 	}
 
 	return $arResult["ID"];

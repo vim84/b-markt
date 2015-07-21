@@ -415,7 +415,7 @@ if($_REQUEST['action'] == 'sitemap_run' && check_bitrix_sessid())
 
 						$NS['IBLOCK_LASTMOD'] = max($NS['IBLOCK_LASTMOD'], MakeTimeStamp($arCurrentIBlock['TIMESTAMP_X']));
 
-						if($NS['LEFT_MARGIN'] <= 0)
+						if($NS['LEFT_MARGIN'] <= 0 && $arSitemap['SETTINGS']['IBLOCK_ELEMENT'][$iblockId] != 'N')
 						{
 							$NS['CURRENT_SECTION'] = 0;
 						}

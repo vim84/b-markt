@@ -300,7 +300,7 @@ $oFilter = new CAdminFilter(
 		<td>
 			<?
 			$arr = array();
-			$mailingDb = \Bitrix\Sender\MailingTable::getList(array('select'=>array('REFERENCE'=>'NAME','REFERENCE_ID'=>'ID')));
+			$mailingDb = \Bitrix\Sender\MailingTable::getList(array('select'=>array('REFERENCE'=>'NAME','REFERENCE_ID'=>'ID'), 'filter' => array('IS_TRIGGER' => 'N')));
 			while($arMailing = $mailingDb->fetch())
 			{
 				$arr['reference'][] = $arMailing['REFERENCE'];

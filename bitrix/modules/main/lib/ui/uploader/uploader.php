@@ -897,6 +897,10 @@ class Uploader
 					if (FileInputUtility::instance()->checkFile($this->CID, $hash))
 					{
 						$data[$fileID] = self::merge($data[$fileID], $this->getFromCache($data[$fileID]["hash"]));
+						if ($props["restored"] == "Y")
+						{
+							$data[$fileID]["status"] = "inprogress";
+						}
 					}
 				}
 			}
@@ -1061,9 +1065,12 @@ class Uploader
 		$this->CID = FileInputUtility::instance()->registerControl($this->getPost("CID", $requestType), $this->controlId);
 		if (in_array($this->mode, array("upload", "delete", "view")))
 		{
+			$directory = \CBXVirtualIo::GetInstance()->GetDirectory($this->path);
+			$directoryExists = $directory->IsExists();
+
 			if ($this->mode != "view" && !check_bitrix_sessid())
 				$this->status = new Status("BXU345.1");
-			else if (!CheckDirPath($this->path))
+			else if (!$directory->Create())
 				$this->status = new Status("BXU345.2");
 			else if ($this->getPost("packageIndex", $requestType))
 			{
@@ -1075,6 +1082,20 @@ class Uploader
 				$this->status = new Status("BXU344.1");
 
 			$this->log->setPath($this->path.$this->CID.".log");
+
+			if (!$directoryExists)
+			{
+				$access = \CBXVirtualIo::GetInstance()->GetFile($directory->GetPath()."/.access.php");
+				$content = '<?$PERM["'.$directory->GetName().'"]["*"]="X";?>';
+
+				if (!$access->IsExists() || strpos($access->GetContents(), $content) === false)
+				{
+					if (($fd = $access->Open('ab')) && $fd)
+						fwrite($fd, $content);
+					fclose($fd);
+				}
+			}
+
 
 			return true;
 		}
@@ -1125,7 +1146,8 @@ class Uploader
 		$GLOBALS["APPLICATION"]->RestartBuffer();
 		while(ob_end_clean());
 
-		if ($this->getPost("simpleUploader") != "Y")
+		$version = IsIE();
+		if ( !(0 < $version && $version < 10) )
 			header('Content-Type:application/json; charset=UTF-8');
 
 		echo Json::encode($result);

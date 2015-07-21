@@ -13,4 +13,5 @@ $MESS["UPLOADER_UPLOADING_ERROR2"] = "Cannot upload the file because there are t
 $MESS["UPLOADER_UPLOADING_ERROR3"] = "The file cannot be merged at server.";
 $MESS["UPLOADER_UPLOADING_ERROR4"] = "The file cannot be uploaded because file size exceeds max. post size.";
 $MESS["UPLOADER_UPLOADING_ERROR5"] = "The file cannot be uploaded because no server response received.";
+$MESS["UPLOADER_UPLOADING_ONBEFOREUNLOAD"] = "Files are still being uploaded. Do you want to leave this page?";
 ?>

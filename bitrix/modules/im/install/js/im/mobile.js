@@ -14,6 +14,8 @@ BX.ImMobile = function(params)
 
 	this.mobileVersion = true;
 	this.mobileAction = params.mobileAction? params.mobileAction: 'none';
+	this.mobileActionCache = false;
+	this.mobileActionRun = false;
 
 	this.revision = 2; // mobile api revision - check include.php
 	this.errorMessage = '';
@@ -131,23 +133,36 @@ BX.ImMobile = function(params)
 		this.mobileActionPrepare(params);
 	}
 
+	if (this.mobileAction == 'DIALOG')
+	{
+		BXMobileApp.UI.Page.TopBar.title.setText('');
+		BXMobileApp.UI.Page.TopBar.title.setDetailText('');
+		BXMobileApp.UI.Page.LoadingScreen.show();
+	}
+
+	BX.addCustomEvent("onFrameDataRequestFail", BX.delegate(function(data){
+		this.mobileActionReady();
+	}, this));
+
 	BX.addCustomEvent('onFrameDataProcessed', BX.delegate(function(element, fromCache)
 	{
 		for (var i = 0; i < element.length; i++)
 		{
 			if (element[i]['ID'].indexOf('im_component_') >= 0)
 			{
-				if (!fromCache)
-				{
-					this.mobileActionReady();
-				}
-				else
-				{
-					this.mobileActionFromCache();
-				}
+				this.mobileActionFromCache();
 			}
 		}
 	},this));
+}
+
+BX.ImMobile.prototype.openRecentList = function()
+{
+	BXMobileApp.UI.Slider.setState(BXMobileApp.UI.Slider.state.CENTER);
+
+	setTimeout(function(){
+		BXMobileApp.UI.Slider.setState(BXMobileApp.UI.Slider.state.RIGHT);
+	}, 500);
 }
 
 BX.ImMobile.prototype.mobileActionPrepare = function(params)
@@ -168,6 +183,11 @@ BX.ImMobile.prototype.mobileActionPrepare = function(params)
 
 BX.ImMobile.prototype.mobileActionFromCache = function()
 {
+	if (this.mobileActionCache)
+		return false;
+
+	this.mobileActionCache = true;
+
 	BX.addClass(document.body, 'im-page-from-cache');
 
 	if (this.mobileAction == 'DIALOG')
@@ -178,10 +198,18 @@ BX.ImMobile.prototype.mobileActionFromCache = function()
 		this.messenger.showMessage = {}
 		this.messenger.unreadMessage = {};
 	}
+	this.mobileActionReady();
 }
 
 BX.ImMobile.prototype.mobileActionReady = function()
 {
+	if (this.mobileActionRun)
+		return false;
+
+	this.mobileActionRun = true;
+
+	BXMobileApp.UI.Page.LoadingScreen.hide();
+
 	BX.removeClass(document.body, 'im-page-from-cache');
 
 	BX.MessengerCommon.pullEvent();
@@ -315,7 +343,7 @@ BX.ImMobile.prototype.mobileActionReady = function()
 			this.messenger.openMessageMenu(messageId);
 		}, this));
 
-		BX.bindDelegate(this.messenger.popupMessengerBodyWrap, 'click', {className: 'bx-messenger-content-item-error'}, BX.delegate(function()
+		BX.bindDelegate(this.messenger.popupMessengerBodyWrap, 'click', {className: 'bx-messenger-content-item-error'}, BX.delegate(function(e)
 		{
 			BX.localStorage.set('impmh', true, 1);
 			BX.MessengerCommon.sendMessageRetry();
@@ -453,6 +481,18 @@ BX.ImMobile.prototype.initPageAction = function (params)
 					'url' : this.pathToRoot + 'mobile/im/dialog.php'+(!app.enableInVersion(11)? "?id="+userId: ""),
 					'bx24ModernStyle' : true,
 					'data': {dialogId: userId}
+				});
+			}
+		}
+		else if (push.params.substr(0, 8) == 'IM_CHAT_') // TODO push chat
+		{
+			var chatId = parseInt(push.params.substr(8));
+			if (chatId > 0)
+			{
+				BXMobileApp.PageManager.loadPageUnique({
+					'url' : this.pathToRoot + 'mobile/im/dialog.php'+(!app.enableInVersion(11)? "?id=chat"+chatId: ""),
+					'bx24ModernStyle' : true,
+					'data': {dialogId: 'chat'+chatId}
 				});
 			}
 		}
@@ -621,6 +661,8 @@ BX.ImMobile.prototype.updateCounter = function ()
 		for (var i in this.messageCountArray)
 			this.messageCount += parseInt(this.messageCountArray[i]);
 
+		BX.Menu.updateCounters({'im-message': this.messageCount})
+
 		app.setBadge(parseInt(this.messageCount + this.notifyCount));
 		app.setCounters({
 			'messages': this.messageCount,
@@ -714,6 +756,10 @@ BX.ImMessengerMobile = function(BXIM, params)
 
 	this.textareaHistory = {};
 
+	this.mentionList = {};
+	this.mentionListen = false;
+	this.mentionDelimiter = '';
+
 	this.phones = {};
 
 	this.errorMessage = {};
@@ -783,6 +829,144 @@ BX.ImMessengerMobile = function(BXIM, params)
 	this.popupMessengerFileFormInput = null;
 }
 
+BX.ImMessengerMobile.prototype.newMessage = function()
+{
+	var arNewMessage = [];
+	var arNewMessageText = [];
+	var flashCount = 0;
+	var flashNames = {};
+
+	for (var i in this.flashMessage)
+	{
+		var skip = false;
+		var skipBlock = false;
+
+		if (i == this.currentTab)
+		{
+			skip = true;
+		}
+		else if (i.toString().substr(0,4) == 'chat' && this.userChatBlockStatus[i.substr(4)] && this.userChatBlockStatus[i.substr(4)][this.BXIM.userId] == 'Y')
+		{
+			skipBlock = true;
+		}
+
+		if (skip || skipBlock)
+		{
+			for (var k in this.flashMessage[i])
+			{
+				if (this.flashMessage[i][k] !== false)
+				{
+					this.flashMessage[i][k] = false;
+					flashCount++;
+				}
+			}
+			continue;
+		}
+
+		for (var k in this.flashMessage[i])
+		{
+			if (this.flashMessage[i][k] !== false)
+			{
+				var isChat = this.message[k].recipientId.toString().substr(0,4) == 'chat';
+				var recipientId = this.message[k].recipientId;
+
+				var senderId = !isChat && this.message[k].senderId == 0? i: this.message[k].senderId;
+				var messageText = this.message[k].text_mobile? this.message[k].text_mobile: this.message[k].text;
+				if (i != this.BXIM.userId)
+				{
+					flashNames[i] = (isChat? this.chat[recipientId.substr(4)].name: this.users[senderId].name);
+				}
+
+				messageText = messageText.replace(/------------------------------------------------------(.*?)------------------------------------------------------/gmi, "["+BX.message("IM_M_QUOTE_BLOCK")+"]");
+				if (messageText.length > 150)
+				{
+					messageText = messageText.substr(0, 150);
+					var lastSpace = messageText.lastIndexOf(' ');
+					if (lastSpace < 140)
+						messageText = messageText.substr(0, lastSpace)+'...';
+					else
+						messageText = messageText.substr(0, 140)+'...';
+				}
+
+				if (messageText == '' && this.message[k].params['FILE_ID'].length > 0)
+				{
+					messageText = '['+BX.message('IM_F_FILE')+']';
+				}
+
+				messageText = messageText.replace(/\[USER=([0-9]{1,})\](.*?)\[\/USER\]/ig, function(whole, userId, text) {return text;});
+				messageText = messageText.replace(/\[PCH=([0-9]{1,})\](.*?)\[\/PCH\]/ig, function(whole, historyId, text) {return text;});
+
+				arNewMessageText.push({
+					'id':  isChat? recipientId: senderId,
+					'title':  isChat? this.chat[recipientId.substr(4)].name: this.users[senderId].name,
+					'text':  (isChat && senderId>0?this.users[senderId].name+': ':'')+messageText,
+					'icon':  isChat? this.chat[recipientId.substr(4)].avatar: this.users[senderId].avatar,
+					'tag':  'im-messenger-'+(isChat? recipientId: senderId)
+				});
+
+				this.flashMessage[i][k] = false;
+			}
+		}
+	}
+
+	if (arNewMessageText.length > 2)
+	{
+		var countMessage = arNewMessageText.length;
+		var names = '';
+		for (var i in flashNames)
+			names += ', <i>'+flashNames[i]+'</i>';
+
+		arNewMessageText = []
+		arNewMessageText.push({
+			'id': 'im-common',
+			'title':  BX.message('IM_NM_MESSAGE_1').replace('#COUNT#', countMessage),
+			'icon': '',
+			'text':  BX.message('IM_NM_MESSAGE_2').replace('#USERS#', BX.util.htmlspecialcharsback(names.substr(2))).replace(/<\/?[^>]+>/gi, ''),
+			'tag': 'im-messenger'
+		})
+	}
+	else if (arNewMessageText.length == 0)
+	{
+		return false;
+	}
+
+	for (var i = 0; i < arNewMessageText.length; i++)
+	{
+		var tapFunction = function(){};
+		if (arNewMessageText[i].tag == 'im-messenger')
+		{
+			tapFunction = function(){
+				BXMobileApp.UI.Slider.setState(BXMobileApp.UI.Slider.state.RIGHT);
+			};
+		}
+		else
+		{
+			tapFunction = BX.proxy(function(data){
+				this.openMessenger(data.extra.dialogId);
+			}, this);
+		}
+
+		(new BXMobileApp.UI.NotificationBar({
+			message: '<b>'+arNewMessageText[i].title+"</b><br>"+arNewMessageText[i].text,
+			contentType: 'html',
+			color:"#af000000",
+			textColor: "#ffffff",
+			groupId: arNewMessageText[i].tag,
+			maxLines: 4,
+			align: "left",
+			imageURL: arNewMessageText[i].icon,
+			imageBorderRadius: 50,
+			indicatorHeight: 30,
+			isGlobal:true,
+			useCloseButton:true,
+			autoHideTimeout: 5000,
+			hideOnTap:true,
+			onTap: tapFunction,
+			extra: {'dialogId': arNewMessageText[i].id}
+		}, arNewMessageText[i].id)).show();
+	}
+};
+
 BX.ImMessengerMobile.prototype.drawRecentList = function()
 {
 	app.pullDown({
@@ -795,7 +979,9 @@ BX.ImMessengerMobile.prototype.drawRecentList = function()
 				success: function() {
 					BX.onCustomEvent('onImError', [{error: 'RECENT_RELOAD'}]);
 					BXMobileApp.onCustomEvent('onImError', {error: 'RECENT_RELOAD'});
-					BXMobileApp.UI.Page.reload();
+					BX.frameCache.update();
+					app.pullDownLoadingStop();
+					//BXMobileApp.UI.Page.reload();
 				},
 				failture: function() {
 					app.pullDownLoadingStop();
@@ -889,16 +1075,27 @@ BX.ImMessengerMobile.prototype.dialogStatusRedrawDelay = function(params)
 		var chatId = this.currentTab.toString().substr(4);
 		if (this.chat[chatId] && this.chat[chatId].style != 'call')
 		{
+			var muteButtonText = this.userChatBlockStatus[chatId] && this.userChatBlockStatus[chatId][this.BXIM.userId] == 'Y'? BX.message('IM_CHAT_MUTE_ON'): BX.message('IM_CHAT_MUTE_OFF');
+
 			app.menuCreate({items:[
+				{ icon: 'glasses', name: muteButtonText, action:BX.delegate(function() {  BX.MessengerCommon.muteMessageChat(this.currentTab.toString().substr(4)); }, this)},
 				{ icon: 'user', name: BX.message('IM_M_MENU_USERS'), action:BX.delegate(function() { app.loadPageBlank({url: '/mobile/im/chat.php?chat_id='+this.currentTab.toString().substr(4), bx24ModernStyle: true}); }, this)},
 				{ icon: 'add', name: BX.message('IM_M_MENU_ADD'), action:BX.delegate(function() {  this.extendChat(this.currentTab, true); }, this)},
-				{ icon: 'reload', name: BX.message('IM_M_MENU_RELOAD'), action:function() { BXMobileApp.UI.Page.reloadUnique() }}
+				{ icon: 'reload', name: BX.message('IM_M_MENU_RELOAD'), action:function() {
+					BXMobileApp.UI.Page.TopBar.title.setText('');
+					BXMobileApp.UI.Page.TopBar.title.setDetailText('');
+					BXMobileApp.UI.Page.reloadUnique()
+				}}
 			]});
 		}
 		else
 		{
 			app.menuCreate({items:[
-				{ icon: 'reload', name: BX.message('IM_M_MENU_RELOAD'), action:function() { BXMobileApp.UI.Page.reloadUnique() }}
+				{ icon: 'reload', name: BX.message('IM_M_MENU_RELOAD'), action:function() {
+					BXMobileApp.UI.Page.TopBar.title.setText('');
+					BXMobileApp.UI.Page.TopBar.title.setDetailText('');
+					BXMobileApp.UI.Page.reloadUnique()
+				}}
 			]});
 		}
 	}
@@ -908,12 +1105,16 @@ BX.ImMessengerMobile.prototype.dialogStatusRedrawDelay = function(params)
 		app.menuCreate({items:[
 			{ icon: 'user', name: BX.message('IM_M_MENU_USER'), action:BX.delegate(function() { app.loadPageBlank({url: this.BXIM.path.profileTemplate.replace('#user_id#', this.currentTab), bx24ModernStyle: true});}, this)},
 			{ icon: 'add', name: BX.message('IM_M_MENU_ADD'), action:BX.delegate(function() {  this.extendChat(this.currentTab, false); }, this)},
-			{ icon: 'reload', name: BX.message('IM_M_MENU_RELOAD'), action:function() { BXMobileApp.UI.Page.reloadUnique() }}
+			{ icon: 'reload', name: BX.message('IM_M_MENU_RELOAD'), action:function() {
+				BXMobileApp.UI.Page.TopBar.title.setText('');
+				BXMobileApp.UI.Page.TopBar.title.setDetailText('');
+				BXMobileApp.UI.Page.reloadUnique()
+			}}
 		]});
 	}
 	if (app.enableInVersion(10))
 	{
-		if (this.openChatFlag)
+		if (this.openChatFlag && this.chat[chatId])
 		{
 			BXMobileApp.UI.Page.TopBar.title.setText(this.chat[chatId].name);
 			BXMobileApp.UI.Page.TopBar.title.setImage(BX.MessengerCommon.isBlankAvatar(this.chat[chatId].avatar)? "": this.chat[chatId].avatar);
@@ -1255,7 +1456,7 @@ BX.ImMessengerMobile.prototype.openMessenger = function(userId, node, openPage)
 	}
 	else if (this.BXIM.mobileAction == 'DIALOG')
 	{
-		if (this.currentTab == userId && this.popupMessengerBodyWrap.innerHTML != '')
+		if (!this.BXIM.messenger.redrawTab[userId] && this.currentTab == userId && this.popupMessengerBodyWrap.innerHTML != '')
 			return false;
 
 		if (typeof(userId) == "undefined" || userId == null)
@@ -1315,14 +1516,16 @@ BX.ImMessengerMobile.prototype.openMessenger = function(userId, node, openPage)
 BX.ImMessengerMobile.prototype.closeMessenger = function(dialogId)
 {
 	dialogId = dialogId? dialogId: this.currentTab;
+
+	this.currentTab = 0;
+	this.openChatFlag = false;
+
 	var selectedElements = BX.findChild(this.popupContactListElementsWrap, {attribute: {'data-userId': dialogId}}, false);
 	if (selectedElements)
 	{
 		if (BX.hasClass(selectedElements, "bx-messenger-cl-item-active"))
 		{
 			BX.removeClass(selectedElements, "bx-messenger-cl-item-active");
-			this.currentTab = 0;
-			this.openChatFlag = false;
 		}
 	}
 }

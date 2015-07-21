@@ -167,7 +167,7 @@ foreach($arConnector as $connector)
 	$arAvailableConnectors[$connector->getId()] = array(
 		'ID' => $connector->getId(),
 		'NAME' => $connector->getName(),
-		'FORM' => $connector->getForm()
+		'FORM' => $connector->getForm().'<input type="hidden" name="'.$connector->getFieldName('bx_aux_hidden_field').'" value="0">'
 	);
 
 	if( array_key_exists($connector->getModuleId(), $arConnectorSettings) )
@@ -183,7 +183,7 @@ foreach($arConnector as $connector)
 				$arExistedConnectors[] = array(
 					'ID' => $connector->getId(),
 					'NAME' => $connector->getName(),
-					'FORM' => str_replace('%CONNECTOR_NUM%', $connectorIdCount, $connector->getForm()),
+					'FORM' => str_replace('%CONNECTOR_NUM%', $connectorIdCount, $connector->getForm().'<input type="hidden" name="'.$connector->getFieldName('bx_aux_hidden_field').'" value="0">'),
 					'COUNT' => $connector->getDataCount()
 				);
 

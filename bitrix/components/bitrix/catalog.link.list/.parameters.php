@@ -244,7 +244,7 @@ $arComponentParameters = array(
 		),
 		"CACHE_TIME"  =>  Array("DEFAULT"=>300),
 		"CACHE_FILTER" => array(
-			"PARENT" => "ADDITIONAL_SETTINGS",
+			"PARENT" => "CACHE_SETTINGS",
 			"NAME" => GetMessage("IBLOCK_CACHE_FILTER"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
@@ -254,6 +254,12 @@ $arComponentParameters = array(
 			"NAME" => GetMessage("CP_BCLL_CACHE_GROUPS"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "Y",
+		),
+		"SET_LAST_MODIFIED" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BCLL_SET_LAST_MODIFIED"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
 		),
 	),
 );

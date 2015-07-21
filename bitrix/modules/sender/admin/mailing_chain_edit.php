@@ -104,6 +104,7 @@ if($_SERVER['REQUEST_METHOD'] == "POST" && ($save!="" || $apply!="") && $POST_RI
 			else
 			{
 				$arMailingChainOld = \Bitrix\Sender\MailingChainTable::getRowById(array('ID' => $ID));
+				$arFields["AUTO_SEND_TIME"] = $arMailingChainOld["AUTO_SEND_TIME"];
 				if($arMailingChainOld['STATUS'] == \Bitrix\Sender\MailingChainTable::STATUS_NEW)
 					$arFields["STATUS"] = \Bitrix\Sender\MailingChainTable::STATUS_SEND;
 			}
@@ -290,7 +291,7 @@ if($ID>0)
 	{
 		$postingDb = \Bitrix\Sender\PostingTable::getList(array(
 			'select' => array('*'),
-			'filter' => array('ID' => $ID, '!DATE_SENT' => null),
+			'filter' => array('MAILING_CHAIN_ID' => $ID, '!DATE_SENT' => null),
 			'order' => array('DATE_SENT' => 'DESC'),
 			'limit' => 1
 		));
@@ -365,7 +366,7 @@ if(!isset($SEND_TYPE))
 		$SEND_TYPE = 'MANUAL';
 }
 
-$templateListHtml = \Bitrix\Sender\Preset\Template::getTemplateListHtml();
+$templateListHtml = \Bitrix\Sender\Preset\Template::getTemplateListHtml('tabControl_layout');
 ?>
 
 
@@ -390,22 +391,6 @@ $templateListHtml = \Bitrix\Sender\Preset\Template::getTemplateListHtml();
 
 
 		BX.message({"SENDER_SHOW_TEMPLATE_LIST" : "<?=GetMessage('SENDER_SHOW_TEMPLATE_LIST')?>"});
-		function ShowTemplateList()
-		{
-			if(confirm(BX.message("SENDER_SHOW_TEMPLATE_LIST")))
-			{
-				ChangeTemplateList('BASE');
-				var tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'hidden-when-show-template-list'}, true);
-				for (i in tmplTypeContList)
-					tmplTypeContList[i].style.display = 'none';
-
-				tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'show-when-show-template-list'}, true);
-				for (i in tmplTypeContList)
-					tmplTypeContList[i].style.display = 'table-row';
-
-				BX('IS_TEMPLATE_LIST_SHOWN').value = 'Y';
-			}
-		}
 	</script>
 
 <form method="POST" Action="<?echo $APPLICATION->GetCurPage()?>?MAILING_ID=<?=$MAILING_ID?>&ID=<?=$ID?>" name="post_form" enctype="multipart/form-data">
@@ -542,7 +527,7 @@ $tabControl->BeginNextTab();
 	<tr class="hidden-when-show-template-list" <?=(empty($str_MESSAGE) ? 'style="display: none;"' : '')?>>
 		<td><?echo GetMessage("sender_chain_edit_field_sel_templ")?></td>
 		<td>
-			<span id="TEMPLATE_SELECTED_TITILE"></span> <a class="sender-link-email" href="javascript: void(0);" onclick="ShowTemplateList();"><?echo GetMessage("sender_chain_edit_field_sel_templ_another")?></a>
+			<span class="sender-template-message-caption-container"></span> <a class="sender-link-email sender-template-message-caption-container-btn" href="javascript: void(0);"><?echo GetMessage("sender_chain_edit_field_sel_templ_another")?></a>
 		</td>
 	</tr>
 	<tr class="hidden-when-show-template-list"><td colspan="2">&nbsp;</td></tr>
@@ -562,9 +547,9 @@ $tabControl->BeginNextTab();
 			?>
 			<?echo GetMessage("sender_chain_edit_field_subject_personalize")?>
 			<?foreach($arPersonalizeList as $arPersonalize):?>
-			<a class="sender-link-email" onclick="SetAddressToControl('SUBJECT', ' #<?=htmlspecialcharsbx($arPersonalize['CODE'])?>#', true)" title="<?=htmlspecialcharsbx($arPersonalize['DESC'])?>">
+			<a class="sender-link-email" onclick="SetAddressToControl('SUBJECT', ' #<?=htmlspecialcharsbx($arPersonalize['CODE'])?>#', true)" title="#<?=htmlspecialcharsbx($arPersonalize['CODE'])?># - <?=htmlspecialcharsbx($arPersonalize['DESC'])?>">
 				<?=htmlspecialcharsbx($arPersonalize['NAME'])?>
-				</a><?=(end($arPersonalizeList)===$arPersonalize ? '' : ',')?>
+			</a><?=(end($arPersonalizeList)===$arPersonalize ? '' : ',')?>
 			<?endforeach?>
 			<span style="cursor: pointer;" class="hidden-when-show-template-list-info" onclick="BX.PopupWindowManager.create('sender_personalize_help', this, {'darkMode': false, 'closeIcon': true, 'content': '<div style=\'margin: 7px;\'><?=GetMessage('sender_chain_edit_pers_help')?></div>'}).show();">&nbsp;</span>
 		</td>
@@ -601,7 +586,11 @@ $tabControl->BeginNextTab();
 	<tr class="adm-detail-required-field hidden-when-show-template-list" <?=(empty($str_MESSAGE) ? 'style="display: none;"' : '')?>>
 		<td colspan="2" align="left">
 			<b><?=GetMessage("sender_chain_edit_field_message")?></b>
-			<?=\Bitrix\Sender\TemplateTable::initEditor(array('FIELD_VALUE' => $str_MESSAGE, 'HAVE_USER_ACCESS' => $isUserHavePhpAccess));?>
+			<?=\Bitrix\Sender\TemplateTable::initEditor(array(
+				'FIELD_NAME' => 'MESSAGE',
+				'FIELD_VALUE' => $str_MESSAGE,
+				'HAVE_USER_ACCESS' => $isUserHavePhpAccess
+			));?>
 			<input type="hidden" name="IS_TEMPLATE_LIST_SHOWN" id="IS_TEMPLATE_LIST_SHOWN" value="<?=(empty($str_MESSAGE) ?"Y":"N")?>">
 		</td>
 	</tr>
@@ -617,24 +606,40 @@ $tabControl->BeginNextTab();
 			$arInputControlValues = array();
 			foreach($arMailngChainAttachment as $arFile) $arInputControlValues["FILES[".$arFile["ID"]."]"] = $arFile["ID"];
 			\Bitrix\Main\Loader::includeModule("fileman");
-			echo CFileInput::ShowMultiple($arInputControlValues, "NEW_FILE[n#IND#]",
-				array(
-					"IMAGE" => "Y",
-					"PATH" => "Y",
-					"FILE_SIZE" => "Y",
-					"DIMENSIONS" => "Y",
-					"IMAGE_POPUP" => "Y",
-				),
-				false,
-				array(
-					'upload' => true,
-					'medialib' => true,
-					'file_dialog' => true,
-					'cloud' => true,
-					'del' => true,
-					'description' => false,
-				)
-			);
+
+			if (class_exists('\Bitrix\Main\UI\FileInput', true))
+			{
+				echo \Bitrix\Main\UI\FileInput::createInstance((
+					array(
+						"name" => "NEW_FILE[n#IND#]",
+						"upload" => true,
+						"medialib" => true,
+						"fileDialog" => true,
+						"cloud" => true
+					)
+				))->show($arInputControlValues);
+			}
+			else
+			{
+				echo CFileInput::ShowMultiple($arInputControlValues, "NEW_FILE[n#IND#]",
+					array(
+						"IMAGE" => "Y",
+						"PATH" => "Y",
+						"FILE_SIZE" => "Y",
+						"DIMENSIONS" => "Y",
+						"IMAGE_POPUP" => "Y",
+					),
+					false,
+					array(
+						'upload' => true,
+						'medialib' => true,
+						'file_dialog' => true,
+						'cloud' => true,
+						'del' => true,
+						'description' => false,
+					)
+				);
+			}
 			?>
 		</td>
 	</tr>
@@ -790,6 +795,49 @@ $tabControl->BeginNextTab();
 					</div>
 				</div>
 			</div>
+
+			<script>
+				function ShowTemplateListL(bShow)
+				{
+					var i, displayShow, displayHide, listShown;
+					if(bShow)
+					{
+						displayShow = 'none';
+						displayHide = 'table-row';
+						listShown = 'Y';
+					}
+					else
+					{
+						displayShow = '';
+						displayHide = 'none';
+						listShown = 'N';
+					}
+
+					var tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'hidden-when-show-template-list'}, true);
+					for (i in tmplTypeContList)
+						tmplTypeContList[i].style.display = displayShow;
+
+					tmplTypeContList = BX.findChildren(BX('tabControl_layout'), {'className': 'show-when-show-template-list'}, true);
+					for (i in tmplTypeContList)
+						tmplTypeContList[i].style.display = displayHide;
+
+					BX('IS_TEMPLATE_LIST_SHOWN').value = listShown;
+				}
+
+
+				var letterManager = new SenderLetterManager;
+				letterManager.onSetTemplate(function()
+				{
+					ShowTemplateListL(false);
+				});
+
+				letterManager.onShowTemplateList(function()
+				{
+					ShowTemplateListL(true);
+				});
+
+			</script>
+
 		</td>
 	</tr>
 

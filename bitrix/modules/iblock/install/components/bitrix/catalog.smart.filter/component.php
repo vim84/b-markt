@@ -275,6 +275,8 @@ elseif(isset($_REQUEST["del_filter"]))
 	$_CHECK = array();
 elseif(isset($_GET["set_filter"]))
 	$_CHECK = &$_GET;
+elseif($arParams["SMART_FILTER_PATH"])
+	$_CHECK = $this->convertUrlToCheck($arParams["~SMART_FILTER_PATH"]);
 elseif($arParams["SAVE_IN_SESSION"] && isset($_SESSION[$FILTER_NAME][$this->SECTION_ID]))
 	$_CHECK = $_SESSION[$FILTER_NAME][$this->SECTION_ID];
 else
@@ -669,19 +671,22 @@ if ($arResult["FACET_FILTER"] && $this->arResult["CURRENCIES"])
 /*Save to session if needed*/
 if($arParams["SAVE_IN_SESSION"])
 {
-	$_SESSION[$FILTER_NAME][$this->SECTION_ID] = array();
-	foreach($arResult["ITEMS"] as $PID => $arItem)
+	$_SESSION[$FILTER_NAME][$this->SECTION_ID] = $_CHECK;
+}
+
+$arResult["JS_FILTER_PARAMS"] = array();
+if ($arParams["SEF_MODE"] == "Y" && $this->SECTION_ID > 0)
+{
+	$sectionList = CIBlockSection::GetList(array(), array(
+		"=ID" => $this->SECTION_ID,
+		"IBLOCK_ID" => $this->IBLOCK_ID,
+	), false, array("ID", "IBLOCK_ID", "SECTION_PAGE_URL"));
+	$sectionList->SetUrlTemplates($arParams["SEF_RULE"]);
+	$section = $sectionList->GetNext();
+	if ($section)
 	{
-		foreach($arItem["VALUES"] as $key => $ar)
-		{
-			if(isset($_CHECK[$ar["CONTROL_NAME"]]))
-			{
-				if($arItem["PROPERTY_TYPE"] == "N" || isset($arItem["PRICE"]))
-					$_SESSION[$FILTER_NAME][$this->SECTION_ID][$ar["CONTROL_NAME"]] = $_CHECK[$ar["CONTROL_NAME"]];
-				elseif($_CHECK[$ar["CONTROL_NAME"]] == $ar["HTML_VALUE"])
-					$_SESSION[$FILTER_NAME][$this->SECTION_ID][$ar["CONTROL_NAME"]] = $_CHECK[$ar["CONTROL_NAME"]];
-			}
-		}
+		$arResult["JS_FILTER_PARAMS"]["SEF_SET_FILTER_URL"] = $this->makeSmartUrl($section["DETAIL_PAGE_URL"], true);
+		$arResult["JS_FILTER_PARAMS"]["SEF_DEL_FILTER_URL"] = $this->makeSmartUrl($section["DETAIL_PAGE_URL"], false);
 	}
 }
 
@@ -695,13 +700,17 @@ foreach($arResult["ITEMS"] as $PID => $arItem)
 		$paramsToDelete[] = $ar["CONTROL_NAME_ALT"];
 	}
 }
+
 $clearURL = CHTTP::urlDeleteParams($pageURL, $paramsToDelete, array("delete_system_params" => true));
 
-if(isset($_REQUEST["ajax"]) && $_REQUEST["ajax"] === "y")
+if ($arResult["JS_FILTER_PARAMS"]["SEF_SET_FILTER_URL"])
 {
-	$arFilter = $this->makeFilter($FILTER_NAME);
-	$arResult["ELEMENT_COUNT"] = CIBlockElement::GetList(array(), $arFilter, array(), false);
-
+	$arResult["FILTER_URL"] = $arResult["JS_FILTER_PARAMS"]["SEF_SET_FILTER_URL"];
+	$arResult["SEF_SET_FILTER_URL"] = $arResult["JS_FILTER_PARAMS"]["SEF_SET_FILTER_URL"];
+	$arResult["SEF_DEL_FILTER_URL"] = $arResult["JS_FILTER_PARAMS"]["SEF_DEL_FILTER_URL"];
+}
+else
+{
 	$paramsToAdd = array(
 		"set_filter" => "y",
 	);
@@ -723,17 +732,11 @@ if(isset($_REQUEST["ajax"]) && $_REQUEST["ajax"] === "y")
 			}
 		}
 	}
+
 	$arResult["FILTER_URL"] = htmlspecialcharsbx(CHTTP::urlAddParams($clearURL, $paramsToAdd, array(
 		"skip_empty" => true,
 		"encode" => true,
 	)));
-
-	if (isset($_GET["bxajaxid"]))
-	{
-		$arResult["COMPONENT_CONTAINER_ID"] = htmlspecialcharsbx("comp_".$_GET["bxajaxid"]);
-		if ($arParams["INSTANT_RELOAD"])
-			$arResult["INSTANT_RELOAD"] = true;
-	}
 
 	$arResult["FILTER_AJAX_URL"] = htmlspecialcharsbx(CHTTP::urlAddParams($clearURL, $paramsToAdd + array(
 		"bxajaxid" => $_GET["bxajaxid"],
@@ -741,6 +744,37 @@ if(isset($_REQUEST["ajax"]) && $_REQUEST["ajax"] === "y")
 		"skip_empty" => true,
 		"encode" => true,
 	)));
+}
+
+if(isset($_REQUEST["ajax"]) && $_REQUEST["ajax"] === "y")
+{
+	$arFilter = $this->makeFilter($FILTER_NAME);
+	$arResult["ELEMENT_COUNT"] = CIBlockElement::GetList(array(), $arFilter, array(), false);
+
+	if (isset($_GET["bxajaxid"]))
+	{
+		$arResult["COMPONENT_CONTAINER_ID"] = htmlspecialcharsbx("comp_".$_GET["bxajaxid"]);
+		if ($arParams["INSTANT_RELOAD"])
+			$arResult["INSTANT_RELOAD"] = true;
+	}
+}
+
+if (
+	!empty($arParams["PAGER_PARAMS_NAME"])
+	&& preg_match("/^[A-Za-z_][A-Za-z01-9_]*$/", $arParams["PAGER_PARAMS_NAME"])
+)
+{
+	if (!is_array($GLOBALS[$arParams["PAGER_PARAMS_NAME"]]))
+		$GLOBALS[$arParams["PAGER_PARAMS_NAME"]] = array();
+
+	if ($arResult["JS_FILTER_PARAMS"]["SEF_SET_FILTER_URL"])
+	{
+		$GLOBALS[$arParams["PAGER_PARAMS_NAME"]]["BASE_LINK"] = $arResult["JS_FILTER_PARAMS"]["SEF_SET_FILTER_URL"];
+	}
+	elseif (count($paramsToAdd) > 1)
+	{
+		$GLOBALS[$arParams["PAGER_PARAMS_NAME"]] = array_merge($GLOBALS[$arParams["PAGER_PARAMS_NAME"]], $paramsToAdd);
+	}
 }
 
 $arInputNames = array();

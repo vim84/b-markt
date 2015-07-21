@@ -40,6 +40,12 @@ class Yandex extends Engine\YandexBase implements IEngine
 	protected $engineId = 'yandex';
 	protected $arServiceList = array();
 
+	// temporary hack
+	public function getAuthSettings()
+	{
+		return $this->engineSettings['AUTH'];
+	}
+
 	public function getFeeds()
 	{
 		if(!isset($this->arServiceList[self::HOSTS_SERVICE]))

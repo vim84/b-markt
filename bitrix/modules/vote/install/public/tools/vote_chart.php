@@ -1,6 +1,5 @@
-<?$file = $_REQUEST["file"];
-$file = preg_replace("#[\\\\\\/]+#", "/", $file);
-$file = preg_replace("#\\.+[\\\\\\/]#", "", $file);
+<?
+$file = preg_replace(array("#[\\\\\\/]+#", "#\\.+[\\\\\\/]#"), array("/", ""), (isset($_REQUEST["file"]) && is_string($_REQUEST["file"]) ? $_REQUEST["file"] : ""));
 
 if(($p = strpos($file, "\0"))!==false)
 	$file = substr($file, 0, $p);

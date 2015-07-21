@@ -8,11 +8,10 @@ define('DisableEventsCheck', true);
 
 if (isset($_REQUEST['SITE_ID']) && !empty($_REQUEST['SITE_ID']))
 {
-	$strSiteID = (string)$_REQUEST['SITE_ID'];
-	if (preg_match('/^[a-z0-9_]{2}$/i', $strSiteID) === 1)
-	{
-		define('SITE_ID', $strSiteID);
-	}
+	if (!is_string($_REQUEST['SITE_ID']))
+		die();
+	if (preg_match('/^[a-z0-9_]{2}$/i', $_REQUEST['SITE_ID']) === 1)
+		define('SITE_ID', $_REQUEST['SITE_ID']);
 }
 else
 {

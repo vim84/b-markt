@@ -155,6 +155,10 @@ $oFilter->Begin();
 <script language="JavaScript">
 function SelFile(name)
 {
+	if (window.opener && window.opener.BX)
+	{
+		window.opener.BX.onCustomEvent('onCloudFileIsChosen', [name]);
+	}
 	el = window.opener.document.getElementById('<?echo CUtil::JSEscape($n)?>');
 	if(el)
 	{

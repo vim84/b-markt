@@ -123,4 +123,7 @@ $MESS["TOP_ROTATE_TIMER_TIP"] = "Specifies the time a slide with the top rated i
 $MESS["USE_COMMON_SETTINGS_BASKET_POPUP_TIP"] = "If checked, the \"Add to Cart\" and \"Buy Now\" buttons will be shown or hidden on all pages according to common preferences. Uncheck this box to apply individual parameters for product list, product details and best selling products pages.";
 $MESS["COMMON_SHOW_CLOSE_POPUP_TIP"] = "If checked, popup windows will show the \"Continue Shopping\" button";
 $MESS["USE_BIG_DATA_TIP"] = "Display personal recommendations on catalog pages";
+$MESS["CPT_SIDEBAR_PATH"] = "Path to the side bar include area";
+$MESS["CPT_SIDEBAR_SECTION_SHOW"] = "Show side bar in product list";
+$MESS["CPT_SIDEBAR_DETAIL_SHOW"] = "Show side bar on product details page";
 ?>

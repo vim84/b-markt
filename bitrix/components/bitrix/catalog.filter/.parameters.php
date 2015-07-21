@@ -151,6 +151,12 @@ $arComponentParameters = array(
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
+		"PAGER_PARAMS_NAME" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BCF_PAGER_PARAMS_NAME"),
+			"TYPE" => "STRING",
+			"DEFAULT" => "arrPager"
+		),
 	),
 );
 

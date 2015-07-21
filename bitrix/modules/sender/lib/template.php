@@ -85,92 +85,48 @@ class TemplateTable extends Entity\DataManager
 	 */
 	public static function initEditor(array $arParams)
 	{
-		$str_MESSAGE = $arParams['FIELD_VALUE'];
+		$fieldName = $arParams['FIELD_NAME'];
+		$fieldValue = $arParams['FIELD_VALUE'];
 		$isUserHavePhpAccess = $arParams['HAVE_USER_ACCESS'];
 		$showSaveTemplate = isset($arParams['SHOW_SAVE_TEMPLATE']) ? $arParams['SHOW_SAVE_TEMPLATE'] : true;
+
+		if(!empty($arParams['PERSONALIZE_LIST']) && is_array($arParams['PERSONALIZE_LIST']))
+			PostingRecipientTable::setPersonalizeList($arParams['PERSONALIZE_LIST']);
 
 		\CJSCore::RegisterExt("editor_mailblock", Array(
 			"js" =>    "/bitrix/js/sender/editor_mailblock.js",
 			"rel" =>   array()
 		));
-		\CJSCore::Init(array("editor_mailblock"));
+
+		static $isInit;
+
+		$editorHeight = 650;
+		$editorWidth = '100%';
 
 		ob_start();
+		if(\Bitrix\Main\Config\Option::get('fileman', 'use_editor_3') == 'Y'):
+			\Bitrix\Main\Loader::includeModule('fileman');
+			\CJSCore::Init(array("editor_mailblock"));
 		?>
 		<script>
+			//BX.ready(function(){
+				<?if(!$isInit): $isInit = true;?>
+					letterManager = new SenderLetterManager;
+					letterManager.setMailBlockList(<?=\CUtil::PhpToJSObject(\Bitrix\Sender\Preset\MailBlock::getBlockForVisualEditor());?>);
+				<?endif;?>
+			//});
+
 			BX.message({"BXEdMailBlocksTitle" : "<?=Loc::getMessage('SENDER_TEMPLATE_EDITOR_MAILBLOCK')?>"});
 			BX.message({"BXEdMailBlocksSearchPlaceHolder" : "<?=Loc::getMessage('SENDER_TEMPLATE_EDITOR_MAILBLOCK_SEARCH')?>"});
-
-			function ToggleTemplateSaveDialog()
-			{
-				BX('TEMPLATE_ACTION_SAVE_NAME_CONT').value = '';
-
-				var currentDisplay =  BX('TEMPLATE_ACTION_SAVE_NAME_CONT').style.display;
-				BX('TEMPLATE_ACTION_SAVE_NAME_CONT').style.display = BX.toggle(currentDisplay, ['inline', 'none']);
-			}
-
-			BX.addCustomEvent('OnEditorInitedAfter', function(editor){editor.components.SetComponentIcludeMethod('EventMessageThemeCompiler::includeComponent'); });
-
-			BX.addCustomEvent('OnEditorInitedAfter', function(editor){
-				editor.config.mailblocks = <?=\CUtil::PhpToJSObject(\Bitrix\Sender\Preset\MailBlock::getBlockForVisualEditor());?>;
-				editor.mailblocks = new BXHtmlEditor.BXEditorMailBlocks(editor);
-				editor.mailblocksTaskbar = new BXHtmlEditor.MailBlocksControl(editor, editor.taskbarManager);
-				editor.taskbarManager.AddTaskbar(editor.mailblocksTaskbar);
-				editor.taskbarManager.ShowTaskbar(editor.mailblocksTaskbar.GetId());
-			});
-		</script>
-		<script>
-			function PutStringToMessageContainer(str, bChangeAllContent)
-			{
-				var bMessageHtmlEditorVisible = false;
-				var messageHtmlEditor = window.BXHtmlEditor.Get('MESSAGE');
-				var messageContainer = BX('bxed_MESSAGE');
-				if(messageHtmlEditor) bMessageHtmlEditorVisible = messageHtmlEditor.IsShown();
-
-
-				if(bMessageHtmlEditorVisible)
-				{
-					if(bChangeAllContent)
-					{
-						messageHtmlEditor.SetContent(str, true);
-					}
-					else
-					{
-						messageHtmlEditor.InsertHtml(str);
-					}
-				}
-				else
-				{
-					if(bChangeAllContent)
-					{
-						messageContainer.value = str;
-					}
-					else
-					{
-						messageContainer.value += str;
-					}
-
-
-					BX.fireEvent(messageContainer, 'change');
-				}
-			}
-
-			function ToggleTemplateSaveDialog()
-			{
-				BX('TEMPLATE_ACTION_SAVE_NAME_CONT').value = '';
-
-				var currentDisplay =  BX('TEMPLATE_ACTION_SAVE_NAME_CONT').style.display;
-				BX('TEMPLATE_ACTION_SAVE_NAME_CONT').style.display = BX.toggle(currentDisplay, ['inline', 'none']);
-			}
 		</script>
 		<?\CFileMan::AddHTMLEditorFrame(
-			'MESSAGE',
-			$str_MESSAGE,
+			$fieldName,
+			$fieldValue,
 			false,
 			"html",
 			array(
-				'height' => 650,
-				'width' => '100%'
+				'height' => $editorHeight,
+				'width' => $editorWidth
 			),
 			"N",
 			0,
@@ -185,10 +141,29 @@ class TemplateTable extends Entity\DataManager
 				'limit_php_access' => !$isUserHavePhpAccess
 			)
 		);?>
-
 		<?
+		else:
+			$fieldValue = htmlspecialcharsback($fieldValue);
+			?>
+			<br>
+			<?=Loc::getMessage("SENDER_ENTITY_TEMPLATE_NOTE_OLD_EDITOR", array("%LINK_START%" => '<a href="/bitrix/admin/settings.php?mid=fileman&lang=' . LANGUAGE_ID . '">',	"%LINK_END%" => '</a>'))?>
+			<br>
+			<br>
+			<textarea class="typearea" style="width:<?=$editorWidth?>;height:<?=$editorHeight?>px;" name="<?=$fieldName?>" id="bxed_<?=$fieldName?>" wrap="virtual"><?= htmlspecialcharsbx($fieldValue)?></textarea>
+			<?
+		endif;
+
 		if($showSaveTemplate):
 		?>
+		<script>
+			function ToggleTemplateSaveDialog()
+			{
+				BX('TEMPLATE_ACTION_SAVE_NAME_CONT').value = '';
+
+				var currentDisplay =  BX('TEMPLATE_ACTION_SAVE_NAME_CONT').style.display;
+				BX('TEMPLATE_ACTION_SAVE_NAME_CONT').style.display = BX.toggle(currentDisplay, ['inline', 'none']);
+			}
+		</script>
 		<div class="adm-detail-content-item-block-save">
 			<span>
 				<input type="checkbox" value="Y" name="TEMPLATE_ACTION_SAVE" id="TEMPLATE_ACTION_SAVE" onclick="ToggleTemplateSaveDialog();">

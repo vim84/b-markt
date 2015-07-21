@@ -11,7 +11,7 @@ else
 }
 
 $arParams["CACHE_TIME"] = is_set($arParams, "CACHE_TIME") ? intval($arParams["CACHE_TIME"]) : 86400;
-	
+
 $bCache = $arParams["CACHE_TIME"] > 0 && ($arParams["CACHE_TYPE"] == "Y" || ($arParams["CACHE_TYPE"] == "A" && COption::GetOptionString("main", "component_cache_on", "Y") == "Y"));
 
 if ($bCache)
@@ -19,7 +19,7 @@ if ($bCache)
 	$arCacheParams = array();
 	foreach ($arParams as $key => $value) if (substr($key, 0, 1) != "~") $arCacheParams[$key] = $value;
 	$cache = new CPHPCache;
-	
+
 	$CACHE_ID = SITE_ID."|".$componentName."|".md5(serialize($arCacheParams))."|".$USER->GetGroups();
 	$CACHE_PATH = "/".SITE_ID.CComponentEngine::MakeComponentPath($componentName);
 }
@@ -35,20 +35,37 @@ else
 	{
 		$cache->StartDataCache();
 	}
-	
+
+	$extranetSiteId = (
+		IsModuleInstalled('extranet')
+			? COption::GetOptionString("extranet", "extranet_site")
+			: false
+	);
+
 	$rsSite = CSite::GetList($by="sort", $order="asc", $arFilter=array("ACTIVE" => "Y"));
 	$arResult["SITES"] = array();
 	while ($arSite = $rsSite->GetNext())
 	{
-		if ($bSiteAll || in_array($arSite["LID"], $arParams["SITE_LIST"]))
+		if (
+			(
+				!$extranetSiteId
+				|| $arSite["LID"] != $extranetSiteId
+			)
+			&& (
+				$bSiteAll
+				|| in_array($arSite["LID"], $arParams["SITE_LIST"])
+			)
+		)
 		{
 			if (strlen($arSite['DOMAINS']) > 0)
 			{
 				$arSite['DOMAINS'] = explode("\n", $arSite['DOMAINS']);
-				foreach ($arSite['DOMAINS'] as $key => $domain) 
+				foreach ($arSite['DOMAINS'] as $key => $domain)
+				{
 					$arSite['DOMAINS'][$key] = trim($domain);
+				}
 			}
-		
+
 			$arResult["SITES"][] = array(
 				"LID" => $arSite["LID"],
 				"NAME" => $arSite["NAME"],
@@ -59,7 +76,7 @@ else
 			);
 		}
 	}
-	
+
 	if ($bCache)
 	{
 		$cache->EndDataCache(

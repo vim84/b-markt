@@ -220,6 +220,12 @@ $arComponentParameters = array(
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
+		"USE_MAIN_ELEMENT_SECTION" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BCST_USE_MAIN_ELEMENT_SECTION"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
 		"SECTION_COUNT" => array(
 			"PARENT" => "VISUAL",
 			"NAME" => GetMessage("IBLOCK_SECTION_COUNT"),

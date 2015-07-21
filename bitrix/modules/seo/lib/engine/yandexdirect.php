@@ -19,9 +19,10 @@ use Bitrix\Seo\Adv\YandexCampaignTable;
 use Bitrix\Seo\Engine;
 use Bitrix\Seo\IEngine;
 use Bitrix\Main\Text;
+use Bitrix\Seo\Service;
 
 // to use Yandex.Direct Sandbox
-// define('YANDEX_DIRECT_API_URL', "https://api-sandbox.direct.yandex.ru/v4/json/");
+define('YANDEX_DIRECT_API_URL', "https://api-sandbox.direct.yandex.ru/v4/json/");
 if(!defined('YANDEX_DIRECT_API_URL'))
 {
 	define('YANDEX_DIRECT_API_URL', 'https://api.direct.yandex.ru/v4/json/');
@@ -60,6 +61,7 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 	const METHOD_FORECAST_REPORT_DELETE = 'DeleteForecastReport';
 	const METHOD_FORECAST_REPORT_GET = 'GetForecast';
 	const METHOD_FORECAST_REPORT_LIST = 'GetForecastList';
+	const METHOD_STAT_BANNER = 'GetBannersStat';
 
 	const BOOL_YES = "Yes";
 	const BOOL_NO = "No";
@@ -83,13 +85,33 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 	const ERROR_NOT_FOUND = 27;
 	const ERROR_NO_STATS = 2;
 
+	const MAX_STAT_DAYS_DELTA = 7;
+
+	const ERROR_WRONG_CURRENCY = 245;
+
+	public $allowedCurrency = array('RUB', 'CHF', 'EUR', 'KZT', 'TRY', 'UAH', 'USD');
+
 	protected $engineId = 'yandex_direct';
 	protected $locale = null;
 
 	public function __construct()
 	{
 		$this->locale = in_array(LANGUAGE_ID, array("ru", "en", "ua")) ? LANGUAGE_ID : 'en';
+
 		parent::__construct();
+	}
+
+	public function getCurrentUser()
+	{
+		if(Service::isAuthorized($this->getCode()))
+		{
+			$currentAuth = Service::getAuth($this->getCode());
+			return $currentAuth['user'];
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 	/**
@@ -104,15 +126,14 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 	 */
 	public function addCampaign(array $campaignParam)
 	{
-		$result = $this->query(static::METHOD_CAMPAIGN_ADD, $campaignParam);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->addCampaign(static::ENGINE_ID, $campaignParam);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	/**
@@ -127,15 +148,14 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 	 */
 	public function updateCampaign(array $campaignParam)
 	{
-		$result = $this->query(static::METHOD_CAMPAIGN_UPDATE, $campaignParam);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->updateCampaign(static::ENGINE_ID, $campaignParam);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	/**
@@ -159,100 +179,111 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 			$campaignId = array($campaignId);
 		}
 
-		$result = $this->query(static::METHOD_CAMPAIGN_GET, array(
-			'CampaignIDS' => $campaignId
-		));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->getCampaign(static::ENGINE_ID, $campaignId);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function getCampaignList()
 	{
-		$result = $this->query(static::METHOD_CAMPAIGN_LIST);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->getCampaignList(static::ENGINE_ID);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function archiveCampaign($campaignId)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		$result = $this->query(static::METHOD_CAMPAIGN_ARCHIVE, array("CampaignID" => $campaignId));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->archiveCampaign(static::ENGINE_ID, $campaignId);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function unArchiveCampaign($campaignId)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		$result = $this->query(static::METHOD_CAMPAIGN_UNARCHIVE, array("CampaignID" => $campaignId));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->unArchiveCampaign(static::ENGINE_ID, $campaignId);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function resumeCampaign($campaignId)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		$result = $this->query(static::METHOD_CAMPAIGN_RESUME, array("CampaignID" => $campaignId));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->resumeCampaign(static::ENGINE_ID, $campaignId);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function stopCampaign($campaignId)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		$result = $this->query(static::METHOD_CAMPAIGN_STOP, array("CampaignID" => $campaignId));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->stopCampaign(static::ENGINE_ID, $campaignId);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function deleteCampaign($campaignId)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		$result = $this->query(static::METHOD_CAMPAIGN_DELETE, array("CampaignID" => $campaignId));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->deleteCampaign(static::ENGINE_ID, $campaignId);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	/**
@@ -267,15 +298,14 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 	 */
 	public function addBanner(array $bannerParam)
 	{
-		$result = $this->query(static::METHOD_BANNER_ADD, array($bannerParam));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->addBanner(static::ENGINE_ID, $bannerParam);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"][0];
+		return $result;
 	}
 
 	/**
@@ -290,15 +320,14 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 	 */
 	public function updateBanner(array $bannerParam)
 	{
-		$result = $this->query(static::METHOD_BANNER_UPDATE, array($bannerParam));
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->updateBanner(static::ENGINE_ID, $bannerParam);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"][0];
+		return $result;
 	}
 
 	public function getBanners($bannerId)
@@ -313,17 +342,16 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 			$bannerId = array($bannerId);
 		}
 
-		$result = $this->query(static::METHOD_BANNER_LIST, array(
+		$result = $this->getProxy()->getInterface()->getBannerList(static::ENGINE_ID, array(
 			'BannerIDS' => $bannerId
 		));
-		$result = YandexJson::decode($result->getResult());
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function getCampaignBanners($campaignId)
@@ -338,120 +366,149 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 			$campaignId = array($campaignId);
 		}
 
-		$result = $this->query(static::METHOD_BANNER_LIST, array(
+		$result = $this->getProxy()->getInterface()->getBannerList(static::ENGINE_ID, array(
 			'CampaignIDS' => $campaignId
 		));
-		$result = YandexJson::decode($result->getResult());
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function moderateBanners($campaignId, array $bannerIDs)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
+
 		$queryData = array(
 			'CampaignID' => $campaignId,
 			'BannerIDS' => $bannerIDs,
 		);
 
-		$result = $this->query(static::METHOD_BANNER_MODERATE, $queryData);
-		$result = YandexJson::decode($result->getResult());
-
-		if(!empty($result['error_code']))
+		$result = $this->getProxy()->getInterface()->moderateBanners(static::ENGINE_ID, $queryData);
+		AddMessage2Log($result);
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function stopBanners($campaignId, array $bannerIDs)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
+
 		$queryData = array(
 			'CampaignID' => $campaignId,
 			'BannerIDS' => $bannerIDs,
 		);
 
-		$result = $this->query(static::METHOD_BANNER_STOP, $queryData);
-		$result = YandexJson::decode($result->getResult());
 
-		if(!empty($result['error_code']))
+		$result = $this->getProxy()->getInterface()->stopBanners(static::ENGINE_ID, $queryData);
+
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function resumeBanners($campaignId, array $bannerIDs)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
+
 		$queryData = array(
 			'CampaignID' => $campaignId,
 			'BannerIDS' => $bannerIDs,
 		);
 
-		$result = $this->query(static::METHOD_BANNER_RESUME, $queryData);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->resumeBanners(static::ENGINE_ID, $queryData);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function archiveBanners($campaignId, array $bannerIDs)
 	{
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		$result = $this->query(static::METHOD_BANNER_ARCHIVE, array(
-			"CampaignID" => $campaignId,
-			"BannerIDS" => $bannerIDs,
-		));
-		$result = YandexJson::decode($result->getResult());
+		$queryData = array(
+			'CampaignID' => $campaignId,
+			'BannerIDS' => $bannerIDs,
+		);
 
-		if(!empty($result['error_code']))
+		$result = $this->getProxy()->getInterface()->archiveBanners(static::ENGINE_ID, $queryData);
+
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function unArchiveBanners($campaignId, array $bannerIDs)
 	{
-		$result = $this->query(static::METHOD_BANNER_UNARCHIVE, array(
-			"CampaignID" => $campaignId,
-			"BannerIDS" => $bannerIDs,
-		));
-		$result = YandexJson::decode($result->getResult());
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		if(!empty($result['error_code']))
+		$queryData = array(
+			'CampaignID' => $campaignId,
+			'BannerIDS' => $bannerIDs,
+		);
+
+		$result = $this->getProxy()->getInterface()->unArchiveBanners(static::ENGINE_ID, $queryData);
+
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function deleteBanners($campaignId, array $bannerIDs)
 	{
-		$result = $this->query(static::METHOD_BANNER_DELETE, array(
-			"CampaignID" => $campaignId,
-			"BannerIDS" => $bannerIDs,
-		));
-		$result = YandexJson::decode($result->getResult());
+		if(empty($campaignId))
+		{
+			throw new ArgumentNullException("campaignId");
+		}
 
-		if(!empty($result['error_code']))
+		$queryData = array(
+			'CampaignID' => $campaignId,
+			'BannerIDS' => $bannerIDs,
+		);
+
+		$result = $this->getProxy()->getInterface()->deleteBanners(static::ENGINE_ID, $queryData);
+
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	/**
@@ -463,10 +520,14 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 	 */
 	public function getRegions()
 	{
-		$result = $this->query(static::METHOD_REGION_GET);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->getRegions(static::ENGINE_ID);
 
-		return $result["data"];
+		if(!empty($result['error']))
+		{
+			throw new YandexDirectException($result);
+		}
+
+		return $result;
 	}
 
 	public function createWordstatReport(array $phrase, $geo = null)
@@ -480,46 +541,51 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 			$queryData['GeoID'] = $geo;
 		}
 
-		$result = $this->query(static::METHOD_WORDSTAT_REPORT_CREATE, $queryData);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->createWordstatReport(static::ENGINE_ID, $queryData);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function deleteWordstatReport($reportId)
 	{
-		$result = $this->query(static::METHOD_WORDSTAT_REPORT_DELETE, $reportId);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->deleteWordstatReport(static::ENGINE_ID, $reportId);
 
-		return $result["data"];
-	}
-
-	public function getWordstatReport($reportId)
-	{
-		$result = $this->query(static::METHOD_WORDSTAT_REPORT_GET, $reportId);
-		$result = YandexJson::decode($result->getResult());
-
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
+	}
+
+	public function getWordstatReport($reportId)
+	{
+		$result = $this->getProxy()->getInterface()->getWordstatReport(static::ENGINE_ID, $reportId);
+
+		if(!empty($result['error']))
+		{
+			throw new YandexDirectException($result);
+		}
+
+		return $result;
 	}
 
 	public function getWordstatReportList()
 	{
-		$result = $this->query(static::METHOD_WORDSTAT_REPORT_LIST);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->getWordstatReportList(static::ENGINE_ID);
 
-		return $result["data"];
+		if(!empty($result['error']))
+		{
+			throw new YandexDirectException($result);
+		}
+
+		return $result;
 	}
-
 	public function createForecastReport(array $phrase, $geo = null)
 	{
 		$queryData = array(
@@ -531,46 +597,74 @@ class YandexDirect extends Engine\YandexBase implements IEngine
 			$queryData['GeoID'] = $geo;
 		}
 
-		$result = $this->query(static::METHOD_FORECAST_REPORT_CREATE, $queryData);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->createForecastReport(static::ENGINE_ID, $queryData);
 
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
 	}
 
 	public function deleteForecastReport($reportId)
 	{
-		$result = $this->query(static::METHOD_FORECAST_REPORT_DELETE, $reportId);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->deleteForecastReport(static::ENGINE_ID, $reportId);
 
-		return $result["data"];
-	}
-
-	public function getForecastReport($reportId)
-	{
-		$result = $this->query(static::METHOD_FORECAST_REPORT_GET, $reportId);
-		$result = YandexJson::decode($result->getResult());
-
-		if(!empty($result['error_code']))
+		if(!empty($result['error']))
 		{
 			throw new YandexDirectException($result);
 		}
 
-		return $result["data"];
+		return $result;
+	}
+
+	public function getForecastReport($reportId)
+	{
+		$result = $this->getProxy()->getInterface()->getForecastReport(static::ENGINE_ID, $reportId);
+
+		if(!empty($result['error']))
+		{
+			throw new YandexDirectException($result);
+		}
+
+		return $result;
 	}
 
 	public function getForecastReportList()
 	{
-		$result = $this->query(static::METHOD_FORECAST_REPORT_LIST);
-		$result = YandexJson::decode($result->getResult());
+		$result = $this->getProxy()->getInterface()->getForecastReportList(static::ENGINE_ID);
 
-		return $result["data"];
+		if(!empty($result['error']))
+		{
+			throw new YandexDirectException($result);
+		}
+
+		return $result;
 	}
 
+	/**
+	 * Sends request for banner stats.
+	 *
+	 * @param array $params Stats query params.
+	 *
+	 * @return array
+	 * @throws YandexDirectException
+	 * @throws \Bitrix\Main\SystemException
+	 *
+	 * @see https://tech.yandex.ru/direct/doc/dg-v4/live/GetBannersStat-docpage/
+	 */
+	public function getBannerStats(array $params)
+	{
+		$result = $this->getProxy()->getInterface()->getBannerStats(static::ENGINE_ID, $params);
+
+		if(!empty($result['error']))
+		{
+			throw new YandexDirectException($result);
+		}
+
+		return $result;
+	}
 
 	/**
 	 * Returns HttpClient object with query result

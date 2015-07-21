@@ -31,6 +31,11 @@ $MESS["sender_stat_graphperiod_cnt_read"] = "Прочитали";
 $MESS["sender_stat_graphperiod_cnt_click"] = "Перешли по ссылкам";
 $MESS["sender_stat_graphperiod_cnt_unsub"] = "Отписались";
 
+$MESS["sender_stat_click_title"] = "Топ-15 переходов по ссылкам";
+$MESS["sender_stat_click_cnt"] = "Количество";
+$MESS["sender_stat_click_link"] = "Ссылка";
+$MESS["sender_stat_click_no_data"] = "Нет данных";
+
 $MESS["POST_U_YES"] = "Да";
 $MESS["POST_U_NO"] = "Нет";
 $MESS["MAIN_ALL"] = "(все)";

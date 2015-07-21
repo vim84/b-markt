@@ -104,29 +104,41 @@ $this->setFrameMode(true);
 		</div>
 	<?endif;?>
 
-	<?if($arResult["VK_USE"]):?>
-		<div class="catalog-sb-item vk">
-			<?$APPLICATION->AddHeadString('<script type="text/javascript" src="http://vk.com/js/api/share.js?86" charset="windows-1251"></script>');?>
-			<script type="text/javascript"><!--
-			document.write(VK.Share.button(
-				{
+	<?
+	if($arResult["VK_USE"]):
+		$APPLICATION->AddHeadString('<script type="text/javascript" src="http://vk.com/js/api/share.js?86" charset="windows-1251"></script>');
+	?>
+		<div class="catalog-sb-item vk" id="vk-shared-button-<?$this->randString()?>"></div>
+		<script type="text/javascript">
+			(function() {
+				var div = document.getElementById("vk-shared-button-<?$this->randString()?>");
+				var button = VK.Share.button({
 					url: "<?=$arResult["URL_TO_LIKE"]?>"<?
-						if(strlen($arResult["TITLE"]) > 0 )
-							echo ','.PHP_EOL.'title: "'.$arResult["TITLE"].'"';
+					if(strlen($arResult["TITLE"]) > 0 )
+						echo ','.PHP_EOL.'title: "'.$arResult["TITLE"].'"';
 
-						if(strlen($arResult["DESCRIPTION"]) > 0 )
-							echo ','.PHP_EOL.'description: "'.$arResult["DESCRIPTION"].'"';
+					if(strlen($arResult["DESCRIPTION"]) > 0 )
+						echo ','.PHP_EOL.'description: "'.$arResult["DESCRIPTION"].'"';
 
-						if(strlen($arResult["IMAGE"]) > 0 )
-							echo ','.PHP_EOL.'image: "'.$arResult["IMAGE"].'"';
-					?>
-				},
+					if(strlen($arResult["IMAGE"]) > 0 )
+						echo ','.PHP_EOL.'image: "'.$arResult["IMAGE"].'"';?>
+					},
+					{
+						type: "round",
+						text: "<?=GetMessage("CATALOG_SB_VK_SAVE")?>"
+				});
+
+				if (div)
 				{
-					type: "round",
-					text: "<?=GetMessage("CATALOG_SB_VK_SAVE")?>"
+					div.innerHTML = button;
 				}
-			));
-			--></script>
-		</div>
+				else if (document.addEventListener)
+				{
+					document.addEventListener("DOMContentLoaded", function() {
+						div.innerHTML = button;
+					});
+				}
+			})();
+		</script>
 	<?endif;?>
 </div>

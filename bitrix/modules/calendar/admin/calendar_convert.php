@@ -866,7 +866,7 @@ if (CModule::IncludeModule("intranet") && CModule::IncludeModule("calendar"))
 	$RES = NULL;
 
 	// 1. Fetch options
-	if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["convert"]) && $_POST["convert"] == 'Y')
+	if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["convert"]) && $_POST["convert"] == 'Y' && check_bitrix_sessid())
 	{
 		// Remember all settings
 		$SET = array(
@@ -974,7 +974,7 @@ if (CModule::IncludeModule("intranet") && CModule::IncludeModule("calendar"))
 		die();
 	}
 
-	if (isset($_POST["parse_public"]))
+	if (isset($_POST["parse_public"]) && check_bitrix_sessid())
 	{
 		$oConv = new CCalendarConvert();
 		$oConv->ParseParams($_REQUEST['next_path'], $_REQUEST['cur_site']);
@@ -1014,8 +1014,10 @@ for ($i = 0; $i < 24; $i++)
 	$arWorTimeList[strval($i)] = strval($i).'.00';
 	$arWorTimeList[strval($i).'.30'] = strval($i).'.30';
 }
+}
 	?>
 	<form style="border: 2px solid #B8C1DD; padding: 10px; background: #F8F8F8;" method="post" name="calendar_form" action="/bitrix/admin/calendar_convert.php" enctype="multipart/form-data" encoding="multipart/form-data">
+		<?= bitrix_sessid_post();?>
 		<input type="hidden" name="lang" value="<?=LANG?>" />
 		<h1><?= GetMessage('CAL_CONVERT')?></h1>
 		<?if(!isset($RES)):?>

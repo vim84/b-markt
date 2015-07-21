@@ -13,16 +13,14 @@ top.BVoteConstructor = window.BVoteConstructor = function(Params)
 };
 
 window.BVoteConstructor.prototype.checkAnswerAdding = function(qId) {
+	var nodeQuestion = BX('question_' + qId);
 	if (this.a[qId].list) {
-		var nodeQuestion = BX('question_' + qId);
 		if (this.a[qId].list.firstChild) {
 			BX.unbindAll(nodeQuestion);
 			var node = this.a[qId].list.firstChild;
 			do {
-				if (node == null)
-					break;
 				BX.unbind(node.firstChild, "focus", BX.proxy(this._do, this));
-			} while (node = node.nextSibling);
+			} while ((node = node.nextSibling) && BX(node));
 		}
 	}
 
@@ -67,9 +65,9 @@ window.BVoteConstructor.prototype.InitVoteForm = function() {
 		aLi,
 		regexpa,
 		ii;
-	for (ii in vLi)
+	for (ii = 0; ii < vLi.length; ii++)
 	{
-		if (vLi.hasOwnProperty(ii) && vLi[ii]["tagName"] == "LI")
+		if (vLi[ii] && vLi[ii]["tagName"] == "LI")
 		{
 			aOl = BX.findChild(vLi[ii], {"tagName" : "OL"}, true);
 			aLi = BX.findChildren(aOl, {"tagName" : "LI"}, false);
@@ -110,8 +108,9 @@ window.BVoteConstructor.prototype.InitVoteForm = function() {
 	}
 };
 
-window.BVoteConstructor.prototype._do = function()
+window.BVoteConstructor.prototype._do = function(e)
 {
+	BX.PreventDefault(e);
 	var
 		reg = /(add|del)\w/,
 		node = BX.proxy_context,

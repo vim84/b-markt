@@ -229,7 +229,7 @@ class CCalendar
 		$id = 'EC'.rand();
 
 		$weekHolidays = array();
-		if (isset(self::$settings['year_holidays']))
+		if (isset(self::$settings['week_holidays']))
 		{
 			$days = array('MO' => 0, 'TU' => 1, 'WE' => 2,'TH' => 3,'FR' => 4,'SA' => 5,'SU' => 6);
 			foreach(self::$settings['week_holidays'] as $day)
@@ -696,6 +696,7 @@ class CCalendar
 				$APPLICATION->RestartBuffer();
 				if (CCalendarSect::CheckSign($_GET['sign'], intVal($_GET['user']), $sectId > 0 ? $sectId : 'superposed_calendars'))
 					echo 'BEGIN:VCALENDAR';
+				CMain::FinalActions();
 				die();
 			}
 
@@ -1424,6 +1425,7 @@ class CCalendar
 		if($ex = $APPLICATION->GetException())
 			ShowError($ex->GetString());
 
+		CMain::FinalActions();
 		die();
 	}
 
@@ -1751,11 +1753,20 @@ class CCalendar
 			return false;
 		$res = array();
 		$str = CUserOptions::GetOption("calendar", "superpose_displayed", false, $userId);
-		$arIds = unserialize($str);
-		if (is_array($arIds) && count($arIds) > 0)
-			foreach($arIds as $id)
-				if (intVal($id) > 0)
-					$res[] = intVal($id);
+		if (CheckSerializedData($str))
+		{
+			$arIds = unserialize($str);
+			if (is_array($arIds) && count($arIds) > 0)
+			{
+				foreach($arIds as $id)
+				{
+					if (intVal($id) > 0)
+					{
+						$res[] = intVal($id);
+					}
+				}
+			}
+		}
 		return $res;
 	}
 
@@ -1839,7 +1850,7 @@ class CCalendar
 			$res = array();
 			$str = CUserOptions::GetOption("calendar", "superpose_tracking_users", false, $userId);
 
-			if ($str !== false)
+			if ($str !== false && CheckSerializedData($str))
 			{
 				$arIds = unserialize($str);
 				if (is_array($arIds) && count($arIds) > 0)
@@ -1951,6 +1962,7 @@ class CCalendar
 		$sectionId = (is_array($arFields['SECTIONS']) && count($arFields['SECTIONS']) > 0) ? $arFields['SECTIONS'][0] : 0;
 		$bPersonal = self::IsPersonal($arFields['CAL_TYPE'], $arFields['OWNER_ID'], $userId);
 
+		// Fetch current event
 		// Fetch current event
 		$oCurEvent = false;
 		$bNew = !isset($arFields['ID']) || !$arFields['ID'];
@@ -2098,6 +2110,30 @@ class CCalendar
 		{
 			return CCalendar::ThrowError(GetMessage('EC_ACCESS_DENIED'));
 		}
+
+		if ($Params['autoDetectSection'] && $sectionId <= 0)
+		{
+			$res = CCalendarSect::GetList(array('arFilter' => array('CAL_TYPE' => $arFields['CAL_TYPE'],'OWNER_ID' => $arFields['OWNER_ID']), 'checkPermissions' => false));
+			if ($res && is_array($res) && isset($res[0]))
+			{
+				$sectionId = $res[0]['ID'];
+			}
+			elseif ($Params['autoCreateSection'])
+			{
+				$defCalendar = CCalendarSect::CreateDefault(array(
+					'type' => $arFields['CAL_TYPE'],
+					'ownerId' => $arFields['OWNER_ID']
+				));
+				$sectionId = $defCalendar['ID'];
+
+				$Params['bAffectToDav'] = false;
+			}
+			if ($sectionId > 0)
+				$arFields['SECTIONS'] = array($sectionId);
+			else
+				return false;
+		}
+
 
 		if (isset($arFields["RRULE"]))
 			$arFields["RRULE"] = CCalendarEvent::CheckRRULE($arFields["RRULE"]);
@@ -2698,7 +2734,7 @@ class CCalendar
 		if ($forSite === false)
 		{
 			$arAffectedSites = COption::GetOptionString('calendar', 'pathes_sites', false);
-			if ($arAffectedSites != false)
+			if ($arAffectedSites != false && CheckSerializedData($arAffectedSites))
 				$arAffectedSites = unserialize($arAffectedSites);
 		}
 		else
@@ -2714,7 +2750,7 @@ class CCalendar
 			foreach($arAffectedSites as $s)
 			{
 				$ar = COption::GetOptionString("calendar", 'pathes_'.$s, false);
-				if ($arAffectedSites != false)
+				if ($ar != false && CheckSerializedData($ar))
 				{
 					$ar = unserialize($ar);
 					if(is_array($ar))

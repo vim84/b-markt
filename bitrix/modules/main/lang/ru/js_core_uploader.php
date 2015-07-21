@@ -9,10 +9,10 @@ $MESS["FILE_SIZE_Gb"] = "ГБ";
 $MESS["FILE_SIZE_Tb"] = "ТБ";
 $MESS["UPLOADER_UPLOADING_ERROR"] = "Ошибка загрузки.";
 $MESS["UPLOADER_UPLOADING_ERROR1"] = "Некорректный ответ сервера.";
-$MESS["UPLOADER_UPLOADING_ERROR2"] = "Файл не м.б. загружен, так как количество загружаемых файлов указанной формы превышает допустимое значение.";
-$MESS["UPLOADER_UPLOADING_ERROR4"] = "Файл не м.б. загружен, так как допустимый размер файла превышает допустимый размер поста.";
-$MESS["UPLOADER_UPLOADING_ERROR5"] = "Файл не м.б. загружен: не получен ответ от сервера.";
-$MESS["UPLOADER_UPLOADING_ERROR3"] = "Файл не м.б. склеен на сервере.";
-
+$MESS["UPLOADER_UPLOADING_ERROR2"] = "Количество файлов указанной формы превышает допустимое значение.";
+$MESS["UPLOADER_UPLOADING_ERROR4"] = "Размер файла превышает допустимый размер поста.";
+$MESS["UPLOADER_UPLOADING_ERROR5"] = "Не получен ответ от сервера.";
+$MESS["UPLOADER_UPLOADING_ERROR3"] = "Файл не склеен на сервере.";
+$MESS["UPLOADER_UPLOADING_ONBEFOREUNLOAD"] = "Загрузка файлов не завершена. Вы хотите покинуть страницу?";
 
 ?>

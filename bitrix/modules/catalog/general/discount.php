@@ -2163,12 +2163,24 @@ class CAllCatalogDiscount
 						switch($arOneProp['USER_TYPE'])
 						{
 							case 'DateTime':
+							case 'Date':
 								$arOneProp['VALUE'] = (string)$arOneProp['VALUE'];
 								if ('' != $arOneProp['VALUE'])
 								{
+									$propertyFormat = false;
+									if ($arOneProp['USER_TYPE'] == 'DateTime')
+									{
+										if (defined('FORMAT_DATETIME'))
+											$propertyFormat = FORMAT_DATETIME;
+									}
+									else
+									{
+										if (defined('FORMAT_DATE'))
+											$propertyFormat = FORMAT_DATE;
+									}
 									$intStackTimestamp = (int)$arOneProp['VALUE'];
 									if ($intStackTimestamp.'!' != $arOneProp['VALUE'].'!')
-										$arOneProp['VALUE'] = (int)MakeTimeStamp($arOneProp['VALUE']) - $intTimeOffset;
+										$arOneProp['VALUE'] = (int)MakeTimeStamp($arOneProp['VALUE'], $propertyFormat) - $intTimeOffset;
 									else
 										$arOneProp['VALUE'] = $intStackTimestamp;
 								}
@@ -2208,9 +2220,21 @@ class CAllCatalogDiscount
 						switch($arOneProp['USER_TYPE'])
 						{
 							case 'DateTime':
+							case 'Date':
 								$arValues = array();
 								if (is_array($arOneProp['VALUE']) && !empty($arOneProp['VALUE']))
 								{
+									$propertyFormat = false;
+									if ($arOneProp['USER_TYPE'] == 'DateTime')
+									{
+										if (defined('FORMAT_DATETIME'))
+											$propertyFormat = FORMAT_DATETIME;
+									}
+									else
+									{
+										if (defined('FORMAT_DATE'))
+											$propertyFormat = FORMAT_DATE;
+									}
 									foreach ($arOneProp['VALUE'] as &$strOneValue)
 									{
 										$strOneValue = (string)$strOneValue;
@@ -2218,7 +2242,7 @@ class CAllCatalogDiscount
 										{
 											$intStackTimestamp = (int)$strOneValue;
 											if ($intStackTimestamp.'!' != $strOneValue.'!')
-												$strOneValue = (int)MakeTimeStamp($strOneValue) - $intTimeOffset;
+												$strOneValue = (int)MakeTimeStamp($strOneValue, $propertyFormat) - $intTimeOffset;
 											else
 												$strOneValue = $intStackTimestamp;
 										}

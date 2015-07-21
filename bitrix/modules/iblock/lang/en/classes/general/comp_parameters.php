@@ -55,4 +55,12 @@ $MESS["IB_COMPLIB_POPUP_SKU_PROPERTIES"] = "SKU properties";
 $MESS["IB_COMPLIB_POPUP_SKU_PRICE"] = "SKU prices";
 $MESS["IB_COMPLIB_POPUP_MIN_PRICE"] = "Minimum:";
 $MESS["IB_COMPLIB_POPUP_MAX_PRICE"] = "Maximum:";
+$MESS["T_IBLOCK_DESC_BASE_LINK_ENABLE"] = "Enable link processing";
+$MESS["T_IBLOCK_DESC_BASE_LINK"] = "Base URL for links (auto by default)";
+$MESS["T_IBLOCK_DESC_PARAMS_NAME"] = "The name of an array with variables to build links";
+$MESS["IB_COMPLIB_PARAMETER_GROUP_404_SETTINGS"] = "404 error settings";
+$MESS["IB_COMPLIB_PARAMETER_SET_STATUS_404"] = "Set status 404";
+$MESS["IB_COMPLIB_PARAMETER_MESSAGE_404"] = "Show this message (a component provided message is used by default)";
+$MESS["IB_COMPLIB_PARAMETER_SHOW_404"] = "Show page";
+$MESS["IB_COMPLIB_PARAMETER_FILE_404"] = "Show this page (/404.php by default)";
 ?>

@@ -219,4 +219,5 @@ $MESS["admin_lib_calend_period_title"] = "Select period";
 $MESS["admin_lib_calend_direct_title"] = "Refine period";
 $MESS["admin_lib_filter_goto_dfilter"] = "Revert to default filter";
 $MESS["admin_lib_required"] = "Required fields";
+$MESS["admin_lib_menu_marketing"] = "Marketing";
 ?>

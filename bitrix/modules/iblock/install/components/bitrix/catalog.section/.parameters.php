@@ -141,6 +141,29 @@ $arComponentParameters = array(
 		)
 	),
 	"PARAMETERS" => array(
+		"SEF_MODE" => array(),
+		"SEF_RULE" => array(
+			"VALUES" => array(
+				"SECTION_ID" => array(
+					"TEXT" => GetMessage("IBLOCK_SECTION_ID"),
+					"TEMPLATE" => "#SECTION_ID#",
+					"PARAMETER_LINK" => "SECTION_ID",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_ID"]}',
+				),
+				"SECTION_CODE" => array(
+					"TEXT" => GetMessage("IBLOCK_SECTION_CODE"),
+					"TEMPLATE" => "#SECTION_CODE#",
+					"PARAMETER_LINK" => "SECTION_CODE",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_CODE"]}',
+				),
+				"SECTION_CODE_PATH" => array(
+					"TEXT" => GetMessage("CP_BCS_SECTION_CODE_PATH"),
+					"TEMPLATE" => "#SECTION_CODE_PATH#",
+					"PARAMETER_LINK" => "SECTION_CODE_PATH",
+					"PARAMETER_VALUE" => '={$_REQUEST["SECTION_CODE_PATH"]}',
+				),
+			),
+		),
 		"AJAX_MODE" => array(),
 		"IBLOCK_TYPE" => array(
 			"PARENT" => "BASE",
@@ -301,22 +324,27 @@ $arComponentParameters = array(
 			"VALUES" => array_merge(array("-"=>" "), $arSProperty_LNS),
 			"HIDDEN" => (isset($arCurrentValues['SET_META_DESCRIPTION']) && $arCurrentValues['SET_META_DESCRIPTION'] == 'N' ? 'Y' : 'N')
 		),
+		"SET_LAST_MODIFIED" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BCS_SET_LAST_MODIFIED"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
+		"USE_MAIN_ELEMENT_SECTION" => array(
+			"PARENT" => "ADDITIONAL_SETTINGS",
+			"NAME" => GetMessage("CP_BCS_USE_MAIN_ELEMENT_SECTION"),
+			"TYPE" => "CHECKBOX",
+			"DEFAULT" => "N",
+		),
 		"ADD_SECTIONS_CHAIN" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
 			"NAME" => GetMessage("CP_BCS_ADD_SECTIONS_CHAIN"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
-		"DISPLAY_COMPARE" => array(
-			"PARENT" => "COMPARE",
-			"NAME" => GetMessage("CP_BCS_DISPLAY_COMPARE"),
-			"TYPE" => "CHECKBOX",
-			"DEFAULT" => "N",
-			"REFRESH" => "Y"
-		),
-		"SET_STATUS_404" => array(
+		"ADD_SECTIONS_CHAIN" => array(
 			"PARENT" => "ADDITIONAL_SETTINGS",
-			"NAME" => GetMessage("CP_BCS_SET_STATUS_404"),
+			"NAME" => GetMessage("CP_BCS_ADD_SECTIONS_CHAIN"),
 			"TYPE" => "CHECKBOX",
 			"DEFAULT" => "N",
 		),
@@ -488,7 +516,26 @@ $arComponentParameters = array(
 		),
 	),
 );
-CIBlockParameters::AddPagerSettings($arComponentParameters, GetMessage("T_IBLOCK_DESC_PAGER_CATALOG"), true, true);
+
+CIBlockParameters::AddPagerSettings(
+	$arComponentParameters,
+	GetMessage("T_IBLOCK_DESC_PAGER_CATALOG"), //$pager_title
+	true, //$bDescNumbering
+	true, //$bShowAllParam
+	true, //$bBaseLink
+	$arCurrentValues["PAGER_BASE_LINK_ENABLE"]==="Y" //$bBaseLinkEnabled
+);
+
+CIBlockParameters::Add404Settings($arComponentParameters, $arCurrentValues);
+
+if ($arCurrentValues["SEF_MODE"] == "Y")
+{
+	$arComponentParameters["PARAMETERS"]["SECTION_CODE_PATH"] = array(
+		"NAME" => GetMessage("CP_BCS_SECTION_CODE_PATH"),
+		"TYPE" => "STRING",
+		"DEFAULT" => "",
+	);
+}
 
 if ($catalogIncluded)
 {

@@ -23,6 +23,8 @@ class CAllIBlockElement
 	public $sFrom;
 	public $sWhere;
 
+	protected static $elementIblock = array();
+
 	public static function SubQuery($strField, $arFilter)
 	{
 		if(substr($strField, 0, 9) == "PROPERTY_")
@@ -3047,11 +3049,13 @@ class CAllIBlockElement
 			}
 		}
 
-		if(is_set($arFields, "IBLOCK_SECTION_ID") && intval($arFields["IBLOCK_SECTION_ID"])<=0)
-			unset($arFields["IBLOCK_SECTION_ID"]);
-
-		if(is_set($arFields, "IBLOCK_SECTION_ID") && !is_set($arFields, "IBLOCK_SECTION"))
-			$arFields["IBLOCK_SECTION"] = Array($arFields["IBLOCK_SECTION_ID"]);
+		if(
+			array_key_exists("IBLOCK_SECTION_ID", $arFields)
+			&& !array_key_exists("IBLOCK_SECTION", $arFields)
+		)
+		{
+			$arFields["IBLOCK_SECTION"] = array($arFields["IBLOCK_SECTION_ID"]);
+		}
 
 		$strWarning = "";
 		if($bResizePictures)
@@ -3380,6 +3384,9 @@ class CAllIBlockElement
 			}
 			$arFields["~TIMESTAMP_X"] = $arFields["~DATE_CREATE"] = $DB->CurrentTimeFunction();
 
+			$IBLOCK_SECTION_ID = $arFields["IBLOCK_SECTION_ID"];
+			unset($arFields["IBLOCK_SECTION_ID"]);
+
 			$ID = $DB->Add("b_iblock_element", $arFields, array("DETAIL_TEXT", "SEARCHABLE_CONTENT"), "iblock");
 
 			if(array_key_exists("PREVIEW_PICTURE", $arFields))
@@ -3407,7 +3414,7 @@ class CAllIBlockElement
 				CIBlockElement::SetPropertyValues($ID, $arFields["IBLOCK_ID"], $arFields["PROPERTY_VALUES"]);
 
 			if(is_set($arFields, "IBLOCK_SECTION"))
-				CIBlockElement::SetElementSection($ID, $arFields["IBLOCK_SECTION"], true, $arIBlock["RIGHTS_MODE"] === "E"? $arIBlock["ID"]: 0);
+				CIBlockElement::SetElementSection($ID, $arFields["IBLOCK_SECTION"], true, $arIBlock["RIGHTS_MODE"] === "E"? $arIBlock["ID"]: 0, $IBLOCK_SECTION_ID);
 
 			if($arIBlock["RIGHTS_MODE"] === "E")
 			{
@@ -3728,7 +3735,7 @@ class CAllIBlockElement
 	///////////////////////////////////////////////////////////////////
 	public static function Delete($ID)
 	{
-		global $DB, $APPLICATION, $USER, $CACHE_MANAGER;
+		global $DB, $APPLICATION, $USER;
 		$USER_ID = is_object($USER)? intval($USER->GetID()) : 0;
 		$ID = IntVal($ID);
 
@@ -3945,19 +3952,28 @@ class CAllIBlockElement
 		return CIBlockElement::GetList(Array(), $arFilter=Array("ID"=>IntVal($ID), "SHOW_HISTORY"=>"Y"));
 	}
 
-	function GetIBlockByID($ID)
+	/**
+	 * Return IBLOCK_ID for element.
+	 *
+	 * @param int $ID				Element id.
+	 * @return bool|int
+	 */
+	public static function GetIBlockByID($ID)
 	{
 		global $DB;
-		$ID = intval($ID);
+		$ID = (int)$ID;
 		if ($ID <= 0)
 			return false;
-		$strSql = "SELECT IBLOCK_ID FROM b_iblock_element WHERE ID=".$ID;
-		$rsItems = $DB->Query($strSql, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
-		if ($arItem = $rsItems->Fetch())
+		if (!isset(self::$elementIblock[$ID]))
 		{
-			return $arItem['IBLOCK_ID'];
+			self::$elementIblock[$ID] = false;
+			$strSql = "select IBLOCK_ID from b_iblock_element where ID=".$ID;
+			$rsItems = $DB->Query($strSql, false, "FILE: ".__FILE__."<br> LINE: ".__LINE__);
+			if ($arItem = $rsItems->Fetch())
+				self::$elementIblock[$ID] = (int)$arItem['IBLOCK_ID'];
+			unset($arItem, $rsItems);
 		}
-		return false;
+		return self::$elementIblock[$ID];
 	}
 	///////////////////////////////////////////////////////////////////
 	// Checks fields before update or insert
@@ -4619,38 +4635,109 @@ class CAllIBlockElement
 	//////////////////////////////////////////////////////////////////////////
 	//
 	//////////////////////////////////////////////////////////////////////////
-	function RecalcSections($ID)
+	function RecalcSections($ID, $sectionId = null)
 	{
 		global $DB;
-		$ID = IntVal($ID);
-		$res = $DB->Query(
-			"SELECT COUNT('x') as C, MIN(SE.IBLOCK_SECTION_ID) as IBLOCK_SECTION_ID_NEW, E.IBLOCK_SECTION_ID, E.IN_SECTIONS ".
-			"FROM b_iblock_section_element SE, b_iblock_element E ".
-			"WHERE SE.IBLOCK_ELEMENT_ID = ".$ID." ".
-			"	AND E.ID=".$ID." ".
-			"	AND ADDITIONAL_PROPERTY_ID IS NULL ".
-			"GROUP BY E.IN_SECTIONS, E.IBLOCK_SECTION_ID"
-			);
-		$res = $res->Fetch();
-		$cnt = (IntVal($res["C"])>0?"Y":"N");
-		if($cnt!=$res["IN_SECTIONS"] || $res["IBLOCK_SECTION_ID_NEW"]!=$res["IBLOCK_SECTION_ID"])
+		$ID = intval($ID);
+		$res = false;
+		if ($sectionId !== null)
 		{
-			$DB->Query(
-				"UPDATE b_iblock_element SET ".
-				"	IN_SECTIONS='".$cnt."', ".
-				"	IBLOCK_SECTION_ID=".(IntVal($res["IBLOCK_SECTION_ID_NEW"])>0?IntVal($res["IBLOCK_SECTION_ID_NEW"]):"NULL")." ".
-				"WHERE ID=".$ID
-				);
+			$res = $DB->Query("
+				SELECT
+					SE.IBLOCK_SECTION_ID as IBLOCK_SECTION_ID_NEW
+					,E.IBLOCK_SECTION_ID
+					,E.IN_SECTIONS
+					,E.IBLOCK_ID
+				FROM
+					b_iblock_section_element SE
+					INNER JOIN b_iblock_element E ON E.ID = SE.IBLOCK_ELEMENT_ID
+				WHERE
+					SE.IBLOCK_ELEMENT_ID = ".$ID."
+					AND SE.IBLOCK_SECTION_ID = ".intval($sectionId)."
+					AND SE.ADDITIONAL_PROPERTY_ID IS NULL
+			");
+			$res = $res->Fetch();
+			if ($res)
+			{
+				$oldInSections = $res["IN_SECTIONS"];
+				$newInSections = "Y";
+				$oldSectionId = intval($res["IBLOCK_SECTION_ID"]);
+				$newSectionId = intval($res["IBLOCK_SECTION_ID_NEW"]);
+			}
+			else
+			{
+				//No such section linked to the element
+				return;
+			}
+		}
+		else
+		{
+			$res = $DB->Query("
+				SELECT
+					COUNT('x') as C
+					,MIN(SE.IBLOCK_SECTION_ID) as MIN_IBLOCK_SECTION_ID
+					,E.IBLOCK_SECTION_ID
+					,E.IN_SECTIONS
+					,E.IBLOCK_ID
+				FROM
+					b_iblock_section_element SE
+					INNER JOIN b_iblock_element E ON E.ID = SE.IBLOCK_ELEMENT_ID
+				WHERE
+					SE.IBLOCK_ELEMENT_ID = ".$ID."
+					AND SE.ADDITIONAL_PROPERTY_ID IS NULL
+				GROUP BY
+					E.IBLOCK_SECTION_ID
+					,E.IN_SECTIONS
+					,E.IBLOCK_ID
+			");
+			$res = $res->Fetch();
+			if ($res)
+			{
+				$oldInSections = $res["IN_SECTIONS"];
+				$newInSections = ($res["C"] > 0? "Y": "N");
+
+				$arIBlock = CIBlock::GetArrayByID($res["IBLOCK_ID"]);
+				if ($arIBlock["FIELDS"]["IBLOCK_SECTION"]["DEFAULT_VALUE"]["KEEP_IBLOCK_SECTION_ID"] === "Y")
+				{
+					//We'll keep IBLOCK_SECTION_ID
+					return;
+				}
+
+				$oldSectionId = intval($res["IBLOCK_SECTION_ID"]);
+				$newSectionId = intval($res["MIN_IBLOCK_SECTION_ID"]);
+			}
+			else
+			{
+				//No such element
+				$oldInSections = "";
+				$newInSections = ($res["C"] > 0? "Y": "N");
+				$oldSectionId = 0;
+				$newSectionId = 0;
+			}
+		}
+
+		if (
+			$oldInSections != $newInSections
+			|| ($oldSectionId != $newSectionId)
+		)
+		{
+			$DB->Query("
+				UPDATE b_iblock_element SET
+					IN_SECTIONS = '".$newInSections."',
+					IBLOCK_SECTION_ID= ".($newSectionId > 0? $newSectionId: "NULL")."
+				WHERE
+					ID = ".$ID."
+			");
 		}
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	//
 	//////////////////////////////////////////////////////////////////////////
-	function SetElementSection($ID, $arSections, $bNew = false, $bRightsIBlock = 0)
+	function SetElementSection($ID, $arSections, $bNew = false, $bRightsIBlock = 0, $sectionId = null)
 	{
 		global $DB;
-		$ID = IntVal($ID);
+		$ID = intval($ID);
 
 		$min_old_id = null;
 		$min_new_id = null;
@@ -4748,8 +4835,10 @@ class CAllIBlockElement
 			$obElementRights->ChangeParents($arOldParents, $arNewParents);
 		}
 
-		if($min_old_id !== $min_new_id)
-			CIBlockElement::RecalcSections($ID);
+		if($sectionId !== null || ($min_old_id !== $min_new_id))
+		{
+			CIBlockElement::RecalcSections($ID, $sectionId);
+		}
 
 		return !empty($arToDelete) || !empty($arToInsert);
 	}
@@ -5173,23 +5262,45 @@ class CAllIBlockElement
 		$selectListMultiply = array('SORT' => SORT_ASC, 'VALUE' => SORT_STRING);
 		$selectAllMultiply = array('PROPERTY_VALUE_ID' => SORT_ASC);
 
+		$propertyListFilter = array(
+			'IBLOCK_ID' => $iblockID
+		);
 		$propertyID = array();
 		if (isset($propertyFilter['ID']))
 		{
 			$propertyID = (is_array($propertyFilter['ID']) ? $propertyFilter['ID'] : array($propertyFilter['ID']));
 			Collection::normalizeArrayValuesByInt($propertyID);
 		}
-		$propertyListFilter = array(
-			'IBLOCK_ID' => $iblockID
-		);
 		if (!empty($propertyID))
-			$propertyListFilter['ID'] = $propertyID;
+		{
+			$propertyListFilter['@ID'] = $propertyID;
+		}
+		elseif (isset($propertyFilter['CODE']))
+		{
+			if (!is_array($propertyFilter['CODE']))
+				$propertyFilter['CODE'] = array($propertyFilter['CODE']);
+			$propertyCodes = array();
+			if (!empty($propertyFilter['CODE']))
+			{
+				foreach ($propertyFilter['CODE'] as &$code)
+				{
+					$code = (string)$code;
+					if ($code !== '')
+						$propertyCodes[] = $code;
+				}
+				unset($code);
+			}
+			if (!empty($propertyCodes))
+				$propertyListFilter['@CODE'] = $propertyCodes;
+			unset($propertyCodes);
+		}
 		$propertyListFilter['=ACTIVE'] = (
 			isset($propertyFilter['ACTIVE']) && ($propertyFilter['ACTIVE'] == 'Y' || $propertyFilter['ACTIVE'] == 'N')
 			? $propertyFilter['ACTIVE']
 			: 'Y'
 		);
 
+		$propertyID = array();
 		$propertyIterator = PropertyTable::getList(array(
 			'select' => array(
 				'ID', 'IBLOCK_ID', 'NAME', 'ACTIVE', 'SORT', 'CODE', 'DEFAULT_VALUE', 'PROPERTY_TYPE', 'ROW_COUNT', 'COL_COUNT', 'LIST_TYPE',
@@ -5197,15 +5308,14 @@ class CAllIBlockElement
 				'IS_REQUIRED', 'VERSION', 'USER_TYPE', 'USER_TYPE_SETTINGS', 'HINT'
 			),
 			'filter' => $propertyListFilter,
-			'order' => array('SORT'=>'ASC','ID'=>'ASC')
+			'order' => array('SORT'=>'ASC', 'ID'=>'ASC')
 		));
 		while ($property = $propertyIterator->fetch())
 		{
+			$propertyID[] = (int)$property['ID'];
 			$property['CODE'] = trim((string)$property['CODE']);
 			if ($property['CODE'] === '')
-			{
 				$property['CODE'] = $property['ID'];
-			}
 			$code = $property['CODE'];
 			$property['~NAME'] = $property['NAME'];
 			if (preg_match("/[;&<>\"]/", $property['NAME']))
@@ -5214,7 +5324,7 @@ class CAllIBlockElement
 			if ($property['USER_TYPE'])
 			{
 				$userType = CIBlockProperty::GetUserType($property['USER_TYPE']);
-				if (isset($userType["ConvertFromDB"]))
+				if (isset($userType['ConvertFromDB']))
 				{
 					$userTypesList[$property['ID']] = $userType;
 					if(array_key_exists("DEFAULT_VALUE", $property))
@@ -5242,9 +5352,7 @@ class CAllIBlockElement
 		unset($property, $propertyIterator);
 
 		if (empty($propertiesList))
-		{
 			return;
-		}
 
 		if (!empty($existList))
 		{
@@ -5270,10 +5378,11 @@ class CAllIBlockElement
 			unset($enum, $enumIterator);
 		}
 
-		if (!empty($propertyID))
-			$valuesRes = CIBlockElement::GetPropertyValues($iblockID, $filter, true, array('ID' => $propertyID));
-		else
-			$valuesRes = CIBlockElement::GetPropertyValues($iblockID, $filter, true);
+		$valuesRes = (
+			!empty($propertyID)
+			? CIBlockElement::GetPropertyValues($iblockID, $filter, true, array('ID' => $propertyID))
+			: CIBlockElement::GetPropertyValues($iblockID, $filter, true)
+		);
 		while ($value = $valuesRes->Fetch())
 		{
 			$elementID = $value['IBLOCK_ELEMENT_ID'];

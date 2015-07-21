@@ -96,6 +96,7 @@ $MESS["IB_E_XML_ID"] = "Внешний код";
 $MESS["IB_E_FIELD_NAME"] = "Поле элемента";
 $MESS["IB_E_FIELD_IS_REQUIRED"] = "Обяз.";
 $MESS["IB_E_FIELD_DEFAULT_VALUE"] = "Значение по умолчанию";
+$MESS["IB_E_FIELD_IBLOCK_SECTION_KEEP_IBLOCK_SECTION_ID"] = "Разрешить выбор основного раздела для привязки.";
 $MESS["IB_E_FIELD_ACTIVE_FROM_EMPTY"] = "Не задано";
 $MESS["IB_E_FIELD_ACTIVE_FROM_NOW"] = "Текущие дата и время";
 $MESS["IB_E_FIELD_ACTIVE_FROM_TODAY"] = "Текущая дата";
@@ -274,4 +275,5 @@ $MESS["IB_E_ERR_PROPERTY_CODE_DUBLICATE_EXT"] = "У свойств инфобл�
 $MESS["IB_E_PROP_BASE_TYPE_GROUP"] = "Базовые типы";
 $MESS["IB_E_PROP_USER_TYPE_GROUP"] = "Пользовательские типы";
 $MESS["IBLOCK_BACK_TO_ADMIN"] = "Вернуться в список информационных блоков";
+$MESS["IB_E_FIELD_TEXT_TYPE_ALLOW_CHANGE"] = "Разрешить переключаться между text и html.";
 ?>

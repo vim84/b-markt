@@ -1,6 +1,8 @@
 <?
+use Bitrix\Main\Context;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Type\Collection;
+use Bitrix\Main\Type\DateTime;
 use Bitrix\Currency\CurrencyTable;
 
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true) die();
@@ -32,10 +34,16 @@ $arParams['SECTION_CODE'] = trim($arParams['SECTION_CODE']);
 $arParams["ELEMENT_ID"] = intval($arParams["~ELEMENT_ID"]);
 if($arParams["ELEMENT_ID"] > 0 && $arParams["ELEMENT_ID"]."" != $arParams["~ELEMENT_ID"])
 {
-	ShowError(GetMessage("CATALOG_ELEMENT_NOT_FOUND"));
-	@define("ERROR_404", "Y");
-	if($arParams["SET_STATUS_404"]==="Y")
-		CHTTP::SetStatus("404 Not Found");
+	if (CModule::IncludeModule("iblock"))
+	{
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("CATALOG_ELEMENT_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
+	}
 	return;
 }
 
@@ -78,6 +86,8 @@ $arParams["SET_BROWSER_TITLE"] = (isset($arParams["SET_BROWSER_TITLE"]) && $arPa
 $arParams["SET_META_KEYWORDS"] = (isset($arParams["SET_META_KEYWORDS"]) && $arParams["SET_META_KEYWORDS"] === 'N' ? 'N' : 'Y');
 $arParams["SET_META_DESCRIPTION"] = (isset($arParams["SET_META_DESCRIPTION"]) && $arParams["SET_META_DESCRIPTION"] === 'N' ? 'N' : 'Y');
 $arParams["ADD_SECTIONS_CHAIN"] = $arParams["ADD_SECTIONS_CHAIN"]!="N"; //Turn on by default
+$arParams["SET_LAST_MODIFIED"] = $arParams["SET_LAST_MODIFIED"]==="Y";
+$arParams["USE_MAIN_ELEMENT_SECTION"] = $arParams["USE_MAIN_ELEMENT_SECTION"]==="Y";
 $arParams["ADD_ELEMENT_CHAIN"] = (isset($arParams["ADD_ELEMENT_CHAIN"]) && $arParams["ADD_ELEMENT_CHAIN"] == "Y");
 
 if(!isset($arParams["PROPERTY_CODE"]) || !is_array($arParams["PROPERTY_CODE"]))
@@ -587,7 +597,9 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 
 		$rsElement = CIBlockElement::GetList($arSort, $arFilter, false, false, $arSelect);
 		$rsElement->SetUrlTemplates($arParams["DETAIL_URL"]);
-		$rsElement->SetSectionContext($arSection);
+		if(!$arParams["USE_MAIN_ELEMENT_SECTION"])
+			$rsElement->SetSectionContext($arSection);
+
 		if($obElement = $rsElement->GetNextElement())
 		{
 			$arResult = $obElement->GetFields();
@@ -961,6 +973,7 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 				"PROPERTIES",
 				"SECTION",
 				"IPROPERTY_VALUES",
+				"TIMESTAMP_X",
 			);
 
 			if ($bCatalog)
@@ -972,21 +985,6 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 
 				$categoryId = '';
 				$categoryPath = array();
-
-				$recommendationId = 0;
-				$rcmLogCookie = $APPLICATION->get_cookie(\Bitrix\Main\Analytics\Catalog::getCookieLogName());
-
-				if (!empty($rcmLogCookie))
-				{
-					$rcmLog = \Bitrix\Main\Analytics\Catalog::decodeProductLog($rcmLogCookie);
-
-					if (!empty($rcmLog[$arResult['ID']]))
-					{
-						$recommendationId = $rcmLog[$arResult['ID']][0];
-					}
-				}
-
-
 
 				if (isset($arResult['SECTION']['ID']))
 				{
@@ -1002,14 +1000,13 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 				}
 
 				$counterData = array(
-					'user_id' => $USER->GetID() ?: 0,
 					'product_id' => $arResult["ID"],
 					'iblock_id' => $arParams['IBLOCK_ID'],
 					'product_title' => $productTitle,
 					'category_id' => $categoryId,
 					'category' => $categoryPath,
-					'recommendation' => $recommendationId
 				);
+
 				if (empty($arResult["OFFERS"]))
 				{
 					$counterData['price'] = (isset($arResult['MIN_PRICE']) ? $arResult['MIN_PRICE']['DISCOUNT_VALUE'] : '');
@@ -1027,9 +1024,48 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 				$counterData = \Bitrix\Main\Text\Encoding::convertEncodingArray($counterData, SITE_CHARSET, 'UTF-8');
 
 				// pack value and protocol version
+				$rcmLogCookieName = COption::GetOptionString("main", "cookie_name", "BITRIX_SM")."_".\Bitrix\Main\Analytics\Catalog::getCookieLogName();
+
 				$arResult['counterData'] = array(
-					'value' => base64_encode(json_encode($counterData)),
-					'v' => '1'
+					'item' => base64_encode(json_encode($counterData)),
+					'user_id' => new \Bitrix\Main\Text\JsExpression(
+						"function() {
+							return BX.message(\"USER_ID\") ? BX.message(\"USER_ID\") : 0;
+						}"
+					),
+					'recommendation' => new \Bitrix\Main\Text\JsExpression(
+						"function() {
+
+							var rcmId = \"\";
+
+							var cookieValue = BX.getCookie(\"{$rcmLogCookieName}\");
+							var productId = {$arResult["ID"]};
+
+							var cItems = [],
+								cItem;
+
+							if (cookieValue)
+							{
+								cItems = cookieValue.split('.');
+							}
+
+							var i = cItems.length;
+
+							while (i--)
+							{
+								cItem = cItems[i].split('-');
+
+								if (cItem[0] == productId)
+								{
+									rcmId = cItem[1];
+									break;
+								}
+							}
+
+							return rcmId;
+						}"
+					),
+					'v' => '2'
 				);
 				$resultCacheKeys[] = 'counterData';
 			}
@@ -1051,19 +1087,25 @@ if($this->StartResultCache(false, ($arParams["CACHE_GROUPS"]==="N"? false: $USER
 		else
 		{
 			$this->AbortResultCache();
-			ShowError(GetMessage("CATALOG_ELEMENT_NOT_FOUND"));
-			@define("ERROR_404", "Y");
-			if($arParams["SET_STATUS_404"]==="Y")
-				CHTTP::SetStatus("404 Not Found");
+			\Bitrix\Iblock\Component\Tools::process404(
+				trim($arParams["MESSAGE_404"]) ?: GetMessage("CATALOG_ELEMENT_NOT_FOUND")
+				,true
+				,$arParams["SET_STATUS_404"] === "Y"
+				,$arParams["SHOW_404"] === "Y"
+				,$arParams["FILE_404"]
+			);
 		}
 	}
 	else
 	{
 		$this->AbortResultCache();
-		ShowError(GetMessage("CATALOG_ELEMENT_NOT_FOUND"));
-		@define("ERROR_404", "Y");
-		if($arParams["SET_STATUS_404"]==="Y")
-			CHTTP::SetStatus("404 Not Found");
+		\Bitrix\Iblock\Component\Tools::process404(
+			trim($arParams["MESSAGE_404"]) ?: GetMessage("CATALOG_ELEMENT_NOT_FOUND")
+			,true
+			,$arParams["SET_STATUS_404"] === "Y"
+			,$arParams["SHOW_404"] === "Y"
+			,$arParams["FILE_404"]
+		);
 	}
 }
 
@@ -1088,7 +1130,7 @@ if(isset($arResult["ID"]))
 
 	if ($arParams['SET_CANONICAL_URL'] === 'Y' && $arResult["CANONICAL_PAGE_URL"])
 	{
-		$APPLICATION->AddHeadString('<link rel="canonical" href="'.$arResult["CANONICAL_PAGE_URL"].'" />');
+		$APPLICATION->SetPageProperty('canonical', $arResult["CANONICAL_PAGE_URL"]);
 	}
 
 	if (!isset($_SESSION["VIEWED_ENABLE"]) && isset($_SESSION["VIEWED_PRODUCT"]) && $_SESSION["VIEWED_PRODUCT"] != $arResult["ID"] && Loader::includeModule("sale"))
@@ -1212,6 +1254,11 @@ if(isset($arResult["ID"]))
 			$APPLICATION->AddChainItem($arResult["IPROPERTY_VALUES"]["ELEMENT_PAGE_TITLE"]);
 		else
 			$APPLICATION->AddChainItem($arResult["NAME"]);
+	}
+
+	if ($arParams["SET_LAST_MODIFIED"] && $arResult["TIMESTAMP_X"])
+	{
+		Context::getCurrent()->getResponse()->setLastModified(DateTime::createFromUserTime($arResult["TIMESTAMP_X"]));
 	}
 
 	return $arResult["ID"];

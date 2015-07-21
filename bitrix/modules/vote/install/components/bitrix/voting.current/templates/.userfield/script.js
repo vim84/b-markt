@@ -1,7 +1,7 @@
 ;(function(window)
 {
 if (top.BVotedUser)
-	return true;
+	return;
 
 	top.voteGetID = function()
 	{
@@ -92,9 +92,7 @@ if (top.BVotedUser)
 	};
 
 	var lastWaitElement = null;
-	/**
-	 * @return {boolean || node}
-	 */
+
 	top.VCButtonShowWait = function(el)
 	{
 		if (el.disabled !== true)
@@ -112,9 +110,6 @@ if (top.BVotedUser)
 		}
 	};
 
-	/**
-	 * @return {boolean}
-	 */
 	top.VCButtonCloseWait = function(el)
 	{
 		if (el && !BX.type.isElementNode(el))

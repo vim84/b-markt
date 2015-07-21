@@ -88,7 +88,6 @@ abstract class CBXAllShortUri
 		if (isset($ar["path"]))
 			$shortUri = $ar["path"];
 
-		//$shortUri = @parse_url($shortUri, PHP_URL_PATH);
 		$shortUri = trim($shortUri, "/");
 
 		$uriCrc32 = self::Crc32($shortUri);

@@ -233,7 +233,7 @@ window.reviewsCtrlEnterHandler<?=CUtil::JSEscape($arParams["form_index"]);?> = f
 
 	</div>
 </form>
-<script type="application/javascript">
+<script type="text/javascript">
 BX.ready(function(){
 	window["UC"] = (!!window["UC"] ? window["UC"] : {});
 	window["UC"]["l<?=$arParams["FORM_ID"]?>"] = new FTRList({

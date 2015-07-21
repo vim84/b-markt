@@ -35,6 +35,7 @@ class SitemapFile
 	const FILE_EXT = '.xml';
 	const FILE_PART_SUFFIX = '.part';
 
+	protected $documentRoot;
 	protected $settings = array();
 	protected $parser = false;
 
@@ -56,8 +57,10 @@ class SitemapFile
 
 		$site = SiteTable::getRow(array("filter" => array("LID" => $this->settings['SITE_ID'])));
 
+		$this->documentRoot = SiteTable::getDocumentRoot($this->settings['SITE_ID']);
+
 		$this->siteRoot = Path::combine(
-			SiteTable::getDocumentRoot($this->settings['SITE_ID']),
+			$this->documentRoot,
 			$site['DIR']
 		);
 

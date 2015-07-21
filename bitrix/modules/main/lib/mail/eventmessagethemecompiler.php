@@ -7,7 +7,6 @@
  */
 namespace Bitrix\Main\Mail;
 
-use Bitrix\Main\Mail as Mail;
 use Bitrix\Main\Mail\Internal as MailInternal;
 use Bitrix\Main\Config as Config;
 use Bitrix\Main\IO as IO;

@@ -12,7 +12,7 @@ use Bitrix\Main\Text;
 use Bitrix\Main\Web;
 use Bitrix\Seo\Engine;
 
-class YandexBase extends Engine
+class YandexBase extends BitrixEngine
 {
 	const QUERY_USER = 'https://login.yandex.ru/info';
 

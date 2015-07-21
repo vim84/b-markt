@@ -12,4 +12,5 @@ $MESS["F_VOTE_SECONDS"] = "seconds";
 $MESS["F_VOTE_MINUTES"] = "minutes";
 $MESS["F_VOTE_HOURS"] = "hours";
 $MESS["F_VOTE_DAYS"] = "days";
+$MESS["VOTE_ALL_RESULTS"] = "Show response options for the \"Text\" and \"Textarea\" fields";
 ?>

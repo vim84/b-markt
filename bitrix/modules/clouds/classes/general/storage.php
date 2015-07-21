@@ -163,7 +163,11 @@ class CCloudStorage
 			}
 		}
 
-		$bImmediate = $arResizeParams[5];
+		if (defined("BX_MOBILE") && constant("BX_MOBILE") === true)
+			$bImmediate = true;
+		else
+			$bImmediate = $arResizeParams[5];
+
 		$callbackData["cacheID"] = $arFile["ID"]."/".md5(serialize($arResizeParams));
 		$callbackData["cacheOBJ"] = new CPHPCache;
 		$callbackData["fileDIR"] = "/"."resize_cache/".$callbackData["cacheID"]."/".$arFile["SUBDIR"];

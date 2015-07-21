@@ -124,9 +124,14 @@ if (is_array($arResult['SKU_PROPS']))
 
 	<div class="bx_item_list_slide active">
 	<?
+	$elementEdit = CIBlock::GetArrayByID($arParams['IBLOCK_ID'], 'ELEMENT_EDIT');
+	$elementDelete = CIBlock::GetArrayByID($arParams['IBLOCK_ID'], 'ELEMENT_DELETE');
+	$elementDeleteParams = array('CONFIRM' => GetMessage('CATALOG_RECOMMENDED_PRODUCTS_TPL_ELEMENT_DELETE_CONFIRM'));
 	foreach ($arResult['ITEMS'] as $key => $arItem)
 	{
-		$strMainID = $this->GetEditAreaId($arItem['ID'] . $key);
+		$this->AddEditAction($arItem['ID'], $arItem['EDIT_LINK'], $elementEdit);
+		$this->AddDeleteAction($arItem['ID'], $arItem['DELETE_LINK'], $elementDelete, $elementDeleteParams);
+		$strMainID = $this->GetEditAreaId($arItem['ID']);
 
 		$arItemIDs = array(
 			'ID' => $strMainID,
@@ -161,8 +166,7 @@ if (is_array($arResult['SKU_PROPS']))
 		$showImgClass = $arParams['SHOW_IMAGE'] != "Y" ? "no-imgs" : "";
 
 		?>
-	<div class="<? echo($arItem['SECOND_PICT'] && $arParams ? 'bx_catalog_item double' : 'bx_catalog_item'); ?>"
-		id="<? echo $strMainID; ?>">
+	<div class="<? echo($arItem['SECOND_PICT'] && $arParams ? 'bx_catalog_item double' : 'bx_catalog_item'); ?>" id="<? echo $strMainID; ?>">
 	<div class="bx_catalog_item_container <? echo $showImgClass; ?>">
 	<a id="<? echo $arItemIDs['PICT']; ?>"
 		href="<? echo $arItem['DETAIL_PAGE_URL']; ?>"
@@ -648,6 +652,7 @@ if (is_array($arResult['SKU_PROPS']))
 	</script>
 		</div><?
 	}
+	unset($elementDeleteParams, $elementDelete, $elementEdit);
 	?>
 	<div style="clear: both;"></div>
 

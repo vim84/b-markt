@@ -31,6 +31,7 @@ class Mail
 	protected $filesReplacedFromBody;
 	protected $trackReadLink;
 	protected $trackClickLink;
+	protected $trackClickUrlParams;
 	protected $bitrixDirectory;
 
 	protected $to;
@@ -52,8 +53,10 @@ class Mail
 		{
 			$this->trackClickLink = Tracking::getLinkClick(
 				$arMailParams['TRACK_CLICK']['MODULE_ID'],
-				$arMailParams['TRACK_CLICK']['FIELDS'])
-			;
+				$arMailParams['TRACK_CLICK']['FIELDS']
+			);
+			if(!empty($arMailParams['TRACK_CLICK']['URL_PARAMS']))
+				$this->trackClickUrlParams = $arMailParams['TRACK_CLICK']['URL_PARAMS'];
 		}
 
 		$this->charset = $arMailParams['CHARSET'];
@@ -91,15 +94,12 @@ class Mail
 
 		$event = new \Bitrix\Main\Event("main", "OnBeforeMailSend", array($arMailParams));
 		$event->send();
-		if($event->getResults())
+		foreach ($event->getResults() as $eventResult)
 		{
-			foreach ($event->getResults() as $eventResult)
-			{
-				if($eventResult->getType() == \Bitrix\Main\EventResult::ERROR)
-					return false;
+			if($eventResult->getType() == \Bitrix\Main\EventResult::ERROR)
+				return false;
 
-				$arMailParams = array_merge($arMailParams, $eventResult->getParameters());
-			}
+			$arMailParams = array_merge($arMailParams, $eventResult->getParameters());
 		}
 
 		if(defined("ONLY_EMAIL") && $arMailParams['TO'] != ONLY_EMAIL)
@@ -238,6 +238,15 @@ class Mail
 			$bodyPart = '';
 			foreach($files as $attachment)
 			{
+				try
+				{
+					$fileContent = File::getFileContents($attachment["PATH"]);
+				}
+				catch (\Exception $exception)
+				{
+					$fileContent = '';
+				}
+
 				$attachment_name = $this->encodeSubject($attachment["NAME"], $charset);
 				$bodyPart .= $eol."--".$this->boundary.$eol;
 				$bodyPart .= "Content-Type: ".$attachment["CONTENT_TYPE"]."; name=\"".$attachment_name."\"".$eol;
@@ -245,7 +254,7 @@ class Mail
 				$bodyPart .= "Content-ID: <".$attachment["ID"].">".$eol.$eol;
 				$bodyPart .= chunk_split(
 					base64_encode(
-						File::getFileContents($attachment["PATH"])
+						$fileContent
 					), 72, $eol
 				);
 			}
@@ -648,23 +657,12 @@ class Mail
 	{
 		if($this->settingServerName != '')
 		{
-			$pcre_pattern = "/(<a\\s[^>]*?(?<=\\s)href\\s*=\\s*)([\"'])(\\/.*?)(\\2)(\\s.+?>|\\s*>)/is";
-			if($this->trackClickLink)
-			{
-				$text = preg_replace_callback(
-					$pcre_pattern,
-					array($this, 'trackClick'),
-					$text
-				);
-			}
-			else
-			{
-				$text = preg_replace(
-					$pcre_pattern,
-					"\\1\\2http://".$this->settingServerName."\\3\\4\\5",
-					$text
-				);
-			}
+			$pcre_pattern = "/(<a\\s[^>]*?(?<=\\s)href\\s*=\\s*)([\"'])(\\/.*?|http:\\/\\/.*?|https:\\/\\/.*?)(\\2)(\\s.+?>|\\s*>)/is";
+			$text = preg_replace_callback(
+				$pcre_pattern,
+				array($this, 'trackClick'),
+				$text
+			);
 		}
 
 		return $text;
@@ -691,10 +689,35 @@ class Mail
 	public function trackClick($matches)
 	{
 		$href = $matches[3];
-		if($href == "")
+		if ($href == "")
+		{
 			return $matches[0];
+		}
 
-		$href = "http://".$this->settingServerName.$this->trackClickLink.'&url='.urlencode($href);
+		if(substr($href, 0, 2) == '//')
+		{
+			$href = 'http:' . $href;
+		}
+
+		if(substr($href, 0, 1) == '/')
+		{
+			$href = "http://" . $this->settingServerName . $href;
+		}
+
+		if($this->trackClickLink)
+		{
+			if($this->trackClickUrlParams)
+			{
+				$hrefAddParam = '';
+				foreach($this->trackClickUrlParams as $k => $v)
+					$hrefAddParam .= '&'.htmlspecialcharsbx($k).'='.htmlspecialcharsbx($v);
+
+				$parsedHref = explode("#", $href);
+				$parsedHref[0] .= (strpos($parsedHref[0], '?') === false ? '?' : '&') . substr($hrefAddParam, 1);
+				$href = implode("#", $parsedHref);
+			}
+			$href = "http://" . $this->settingServerName . $this->trackClickLink . '&url=' . urlencode($href);
+		}
 
 		return $matches[1].$matches[2].$href.$matches[4].$matches[5];
 	}

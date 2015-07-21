@@ -900,7 +900,16 @@ class Query
 				else
 				{
 					// scalar field
-					$element->setParameter('talias', $prev_alias.$this->table_alias_postfix);
+					// if it's a field of the init entity, use getInitAlias to use 'base' alias
+					if ($prev_alias === $this->getInitAlias(false))
+					{
+						$element->setParameter('talias', $this->getInitAlias());
+					}
+					else
+					{
+						$element->setParameter('talias', $prev_alias.$this->table_alias_postfix);
+					}
+
 					continue;
 				}
 
@@ -1938,24 +1947,32 @@ Vadim: this is for paging but currently is not used
 	}
 
 	/**
-	 * @param bool $withPrefix
+	 * @param bool $withPostfix
 	 * @return string
 	 */
-	public function getInitAlias($withPrefix = true)
+	public function getInitAlias($withPostfix = true)
 	{
 		$init_alias = strtolower($this->init_entity->getCode());
 
-		if ($withPrefix)
+		// add postfix
+		if ($withPostfix)
 		{
 			$init_alias .= $this->table_alias_postfix;
 		}
 
+		// check length
 		$connection = $this->init_entity->getConnection();
 		$aliasLength = $connection->getSqlHelper()->getAliasLength();
 
 		if (strlen($init_alias) > $aliasLength)
 		{
 			$init_alias = 'base';
+
+			// add postfix
+			if ($withPostfix)
+			{
+				$init_alias .= $this->table_alias_postfix;
+			}
 		}
 
 		return $init_alias;

@@ -88,13 +88,11 @@ JCIBlockProperty.prototype.Init = function()
 JCIBlockProperty.prototype.GetPropInfo = function(ID)
 {
 	if (0 > this.intERROR)
-	{
-		return;
-	}
+		return {};
 
 	ID = this.PREFIX + ID;
 
-	var arResult = {
+	return {
 		'PROPERTY_TYPE' : this.FORM_DATA[ID+'_PROPERTY_TYPE'].value,
 		'NAME' : this.FORM_DATA[ID+'_NAME'].value,
 		'ACTIVE' : (this.FORM_DATA[ID+'_ACTIVE_Y'].checked ? this.FORM_DATA[ID+'_ACTIVE_Y'].value : this.FORM_DATA[ID+'_ACTIVE_N'].value),
@@ -104,7 +102,6 @@ JCIBlockProperty.prototype.GetPropInfo = function(ID)
 		'CODE' : this.FORM_DATA[ID+'_CODE'].value,
 		'PROPINFO': this.FORM_DATA[ID+'_PROPINFO'].value
 	};
-	return arResult;
 };
 
 JCIBlockProperty.prototype.SetPropInfo = function(ID,arProp,formsess)
@@ -154,14 +151,11 @@ JCIBlockProperty.prototype.SetPropInfo = function(ID,arProp,formsess)
 JCIBlockProperty.prototype.GetProperty = function(strName)
 {
 	if (0 > this.intERROR)
-	{
-		return;
-	}
+		return '';
 
 	if (!strName || !this[strName])
-	{
-		return;
-	}
+		return '';
+
 	return this[strName];
 };
 
@@ -822,13 +816,13 @@ JCInheritedPropertiesTemplates.prototype.updateInheritedPropertiesTemplates = fu
 
 JCInheritedPropertiesTemplates.prototype.updateInheritedPropertiesValues = function(startup, force)
 {
-	var i, space;
+	var i, space, input, values, f, k, obj_ta, clearValues;
 
 	if (startup)
 	{
 		for (i = 0; i < ipropTemplates.length; i++)
 		{
-			var space = BX('space_' + ipropTemplates[i].ID);
+			space = BX('space_' + ipropTemplates[i].ID);
 			if (space)
 				ipropTemplates[i].SPACE = space.value;
 		}
@@ -836,7 +830,7 @@ JCInheritedPropertiesTemplates.prototype.updateInheritedPropertiesValues = funct
 
 	for (i = 0; i < ipropTemplates.length; i++)
 	{
-		var input = BX(ipropTemplates[i].INPUT_ID);
+		input = BX(ipropTemplates[i].INPUT_ID);
 		if (!input)
 			return;
 
@@ -854,11 +848,11 @@ JCInheritedPropertiesTemplates.prototype.updateInheritedPropertiesValues = funct
 		)
 		{
 			values = [];
-			f = new JCIBlockGroupField();
+			f = new JCIBlockGroupField(BX(this.form));
 			f.gatherInputsValues(values, BX.findChildren(BX(this.form), null, true));
-			for (var k = 0; k < ipropTemplates.length; k++)
+			for (k = 0; k < ipropTemplates.length; k++)
 			{
-				var obj_ta = BX(ipropTemplates[k].INPUT_ID);
+				obj_ta = BX(ipropTemplates[k].INPUT_ID);
 				if (obj_ta && obj_ta.readOnly)
 				{
 					values[values.length] = {name : obj_ta.name, value : obj_ta.value}
@@ -870,25 +864,33 @@ JCInheritedPropertiesTemplates.prototype.updateInheritedPropertiesValues = funct
 				f.values2post(values),
 				function(data)
 				{
-					var DATA = [];
+					var DATA = [], data_test, j, k, div;
 					if (BX.type.isNotEmptyString(data))
 					{
-						var data_test = BX.parseJSON(data);
+						data_test = BX.parseJSON(data);
 						if (data_test)
 						{
 							eval('DATA = ' + data);
 						}
 					}
-					for (var j = 0; j < DATA.length; j++)
+					for (j = 0; j < DATA.length; j++)
 					{
-						for (var k = 0; k < ipropTemplates.length; k++)
+						if (DATA[j].htmlId)
 						{
-							if (ipropTemplates[k].ID == DATA[j].id)
+							if (BX(DATA[j].htmlId))
+								BX(DATA[j].htmlId).innerHTML = DATA[j].value;
+						}
+						else
+						{
+							for (k = 0; k < ipropTemplates.length; k++)
 							{
-								var div = BX(ipropTemplates[k].RESULT_ID);
-								if (div)
-									div.innerHTML = DATA[j].value;
-								break;
+								if (ipropTemplates[k].ID == DATA[j].id)
+								{
+									div = BX(ipropTemplates[k].RESULT_ID);
+									if (div)
+										div.innerHTML = DATA[j].value;
+									break;
+								}
 							}
 						}
 					}
@@ -896,7 +898,7 @@ JCInheritedPropertiesTemplates.prototype.updateInheritedPropertiesValues = funct
 			);
 			if (!startup)
 			{
-				var clearValues = BX('IPROPERTY_CLEAR_VALUES');
+				clearValues = BX('IPROPERTY_CLEAR_VALUES');
 				if (clearValues)
 				{
 					clearValues.value = "Y";

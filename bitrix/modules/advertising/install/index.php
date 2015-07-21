@@ -94,6 +94,10 @@ class advertising extends CModule
 		RegisterModuleDependences("main", "OnEndBufferContent", "advertising", "CAdvBanner", "FixShowAll");
 		RegisterModuleDependences("main", "OnBeforeRestartBuffer", "advertising", "CAdvBanner", "BeforeRestartBuffer");
 
+		RegisterModuleDependences('conversion', 'OnGetCounterTypes' , 'advertising', '\Bitrix\Advertising\Internals\ConversionHandlers', 'onGetCounterTypes');
+		RegisterModuleDependences('conversion', 'OnGetRateTypes' , 'advertising', '\Bitrix\Advertising\Internals\ConversionHandlers', 'onGetRateTypes');
+		RegisterModuleDependences('advertising', 'onBannerClick', 'advertising', '\Bitrix\Advertising\Internals\ConversionHandlers', 'onBannerClick');
+
 		CAgent::AddAgent("CAdvContract::SendInfo();","advertising", "N", 7200);
 		CAgent::AddAgent("CAdvBanner::CleanUpDynamics();","advertising", "N", 86400);
 
@@ -231,6 +235,10 @@ class advertising extends CModule
 		UnRegisterModuleDependences("main", "OnBeforeRestartBuffer", "advertising", "CAdvBanner", "BeforeRestartBuffer");
 		UnRegisterModuleDependences("main", "OnEndBufferContent", "advertising", "CAdvBanner", "FixShowAll");
 		UnRegisterModuleDependences("main", "OnBeforeProlog", "advertising");
+
+		UnRegisterModuleDependences('conversion', 'OnGetCounterTypes' , 'advertising', '\Bitrix\Advertising\Internals\ConversionHandlers', 'onGetCounterTypes');
+		UnRegisterModuleDependences('conversion', 'OnGetRateTypes' , 'advertising', '\Bitrix\Advertising\Internals\ConversionHandlers', 'onGetRateTypes');
+		UnRegisterModuleDependences('advertising', 'onBannerClick', 'advertising', '\Bitrix\Advertising\Internals\ConversionHandlers', 'onBannerClick');
 
 		UnRegisterModule("advertising");
 
