@@ -101,22 +101,13 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		</div>
 	</div>
 	<div class="row search-form">
-		<div class="col-md-10 col-sm-10 col-xs-10">
-    		<div class="input-group">
-      		<input type="text" class="form-control" aria-label="...">
-      		<div class="input-group-btn">
-        		<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">По всему каталогу <span class="caret"></span></button>
-        		<ul class="dropdown-menu dropdown-menu-right" role="menu">
-          		<li><a href="#">Ванны</a></li>
-          		<li><a href="#">Душевые кабины</a></li>
-          		<li><a href="#">Смесители</a></li>
-        		</ul>
-      		</div><!-- /btn-group -->
-    		</div><!-- /input-group -->
-		</div>
-		<div class="col-md-2 col-sm-2 col-xs-2">
-			<button type="button" class="btn btn-primary btn-block">Найти</button>
-		</div>
+		<?php
+		$APPLICATION->IncludeComponent("bitrix:search.form", "flat", Array(
+			"PAGE" => "#SITE_DIR#search/",	// Страница выдачи результатов поиска (доступен макрос #SITE_DIR#)
+			),
+			false
+		);
+		?>
 	</div>
 	<div class="row">
 		<div class="col-md-3 col-sm-3">
