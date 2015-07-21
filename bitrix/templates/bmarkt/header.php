@@ -135,52 +135,70 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 			{
 				?>
 				<div class="col-md-9 col-sm-9">
-					<div class="carousel slide" id="carousel-840394">
-						<ol class="carousel-indicators">
-							<li data-slide-to="0" data-target="#carousel-840394">
-							</li>
-							<li data-slide-to="1" data-target="#carousel-840394" class="active">
-							</li>
-							<li data-slide-to="2" data-target="#carousel-840394">
-							</li>
-						</ol>
-						<div class="carousel-inner carousel-block">
-							<div class="item">
-								<img alt="Carousel Bootstrap First" src="http://lorempixel.com/output/sports-q-c-1600-500-1.jpg" />
-								<div class="carousel-caption">
-									<h4>
-										First Thumbnail label
-									</h4>
-									<p>
-										Cras justo odio, dapibus ac facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus. Nullam id dolor id nibh ultricies vehicula ut id elit.
-									</p>
-								</div>
-							</div>
-							<div class="item active">
-								<img alt="Carousel Bootstrap Second" src="http://lorempixel.com/output/sports-q-c-1600-500-2.jpg" />
-								<div class="carousel-caption">
-									<h4>
-										Second Thumbnail label
-									</h4>
-									<p>
-										Cras justo odio, dapibus ac facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus. Nullam id dolor id nibh ultricies vehicula ut id elit.
-									</p>
-								</div>
-							</div>
-							<div class="item">
-								<img alt="Carousel Bootstrap Third" src="http://lorempixel.com/output/sports-q-c-1600-500-3.jpg" />
-								<div class="carousel-caption">
-									<h4>
-										Third Thumbnail label
-									</h4>
-									<p>
-										Cras justo odio, dapibus ac facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus. Nullam id dolor id nibh ultricies vehicula ut id elit.
-									</p>
-								</div>
-							</div>
-						</div> <a class="left carousel-control" href="#carousel-840394" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a> <a class="right carousel-control" href="#carousel-840394" data-slide="next"><span class="glyphicon glyphicon-chevron-right"></span></a>
-					</div>
-					
+					<?php
+					$APPLICATION->IncludeComponent(
+	"bitrix:news.list", 
+	"main-slider", 
+	array(
+		"IBLOCK_TYPE" => "banners",
+		"IBLOCK_ID" => "8",
+		"NEWS_COUNT" => "20",
+		"SORT_BY1" => "SORT",
+		"SORT_ORDER1" => "ASC",
+		"SORT_BY2" => "TIMESTAMP_X",
+		"SORT_ORDER2" => "DESC",
+		"FILTER_NAME" => "arrFilter",
+		"FIELD_CODE" => array(
+			0 => "NAME",
+			1 => "PREVIEW_TEXT",
+			2 => "DETAIL_PICTURE",
+			3 => "",
+		),
+		"PROPERTY_CODE" => array(
+			0 => "SLIDE_LINK",
+			1 => "",
+		),
+		"CHECK_DATES" => "N",
+		"DETAIL_URL" => "",
+		"AJAX_MODE" => "N",
+		"AJAX_OPTION_JUMP" => "N",
+		"AJAX_OPTION_STYLE" => "Y",
+		"AJAX_OPTION_HISTORY" => "N",
+		"CACHE_TYPE" => "A",
+		"CACHE_TIME" => "3600",
+		"CACHE_FILTER" => "N",
+		"CACHE_GROUPS" => "N",
+		"PREVIEW_TRUNCATE_LEN" => "",
+		"ACTIVE_DATE_FORMAT" => "d.m.Y",
+		"SET_TITLE" => "N",
+		"SET_STATUS_404" => "N",
+		"INCLUDE_IBLOCK_INTO_CHAIN" => "N",
+		"ADD_SECTIONS_CHAIN" => "N",
+		"HIDE_LINK_WHEN_NO_DETAIL" => "N",
+		"PARENT_SECTION" => "",
+		"PARENT_SECTION_CODE" => "",
+		"INCLUDE_SUBSECTIONS" => "N",
+		"PAGER_TEMPLATE" => ".default",
+		"DISPLAY_TOP_PAGER" => "N",
+		"DISPLAY_BOTTOM_PAGER" => "N",
+		"PAGER_TITLE" => "Новости",
+		"PAGER_SHOW_ALWAYS" => "N",
+		"PAGER_DESC_NUMBERING" => "N",
+		"PAGER_DESC_NUMBERING_CACHE_TIME" => "36000",
+		"PAGER_SHOW_ALL" => "N",
+		"AJAX_OPTION_ADDITIONAL" => "",
+		"COMPONENT_TEMPLATE" => "main-slider",
+		"SET_BROWSER_TITLE" => "N",
+		"SET_META_KEYWORDS" => "N",
+		"SET_META_DESCRIPTION" => "N",
+		"SET_LAST_MODIFIED" => "N",
+		"PAGER_BASE_LINK_ENABLE" => "N",
+		"SHOW_404" => "N",
+		"MESSAGE_404" => ""
+	),
+	false
+);
+					?>
 					<div class="row goods-list">
 				<div class="col-md-4 col-sm-4 gl-item-wrap">
 					<div class="gl-item">

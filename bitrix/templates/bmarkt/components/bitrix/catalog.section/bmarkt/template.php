@@ -36,7 +36,7 @@ if (!empty($arResult['ITEMS']))
 						echo '<img src="http://dummyimage.com/140x140/efefef/999999.png&text='.NO_IMG_TEXT.'" alt="'.$arItem["NAME"].'" />';
 					?>
 					</a>
-					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><h4>Duravit Starck 3</h4></a>
+					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><?=$arItem["NAME"]?></a>
 					<div class="gl-buy-block">
 						<?php
 						foreach ($arItem["PRICES"] as $code => $arPrice)
