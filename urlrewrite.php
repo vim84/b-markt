@@ -19,6 +19,12 @@ $arUrlRewrite = array(
 		"PATH" => "/news/detail.php",
 	),
 	array(
+		"CONDITION" => "#^/actions/([a-zA-Z0-9_\\/\\-]+)(.*)\$#",
+		"RULE" => "N_CODE=\$1",
+		"ID" => "",
+		"PATH" => "/actions/detail.php",
+	),
+	array(
 		"CONDITION" => "#^/bitrix/services/ymarket/#",
 		"RULE" => "",
 		"ID" => "",
