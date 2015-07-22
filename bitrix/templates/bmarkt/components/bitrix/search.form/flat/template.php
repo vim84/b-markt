@@ -15,6 +15,6 @@
 		</div><!-- /input-group -->
 	</div>
 	<div class="col-md-2 col-sm-2 col-xs-2">
-		<button type="button" class="btn btn-primary btn-block">Найти</button>
+		<button type="submit" class="btn btn-primary btn-block">Найти</button>
 	</div>
 </form>
