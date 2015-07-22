@@ -51,10 +51,10 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 			</div>
 			<div class="col-md-5 col-sm-5">
 				В корзине <b>3</b> товара на сумму <b>13 666 р.</b>
-				<a href="#" class="btn btn-info btn-xs" type="button">Купить</a>
+				<a href="/personal/cart/" class="btn btn-info btn-xs" type="button">Купить</a>
 			</div>
 			<div class="col-md-4 col-sm-4">
-				<a href="#">Избранное</a> <a href="#">Сравнить 5 товаров</a>
+				<a href="/favorites/">Избранное</a> <a href="/compare/">Сравнить 5 товаров</a>
 			</div>
 	</div>
 </nav>
