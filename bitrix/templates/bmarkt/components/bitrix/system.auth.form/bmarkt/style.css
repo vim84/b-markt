@@ -1,7 +1,5 @@
 .bx_login_block{
-	float: left;
-	padding-left: 35px;
-	background: url('images/gui.png') no-repeat  10% center;
+	display: inline-block;
 }
 a.bx_login_top_inline_link{
 	color: #576e75;

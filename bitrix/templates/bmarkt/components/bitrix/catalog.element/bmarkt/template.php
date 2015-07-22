@@ -60,7 +60,7 @@
 	    	}
 	    	?>	
 		</div><!--product_gallery-->
-		
+		<br class="clear" />
 		<div class="product_info">
 			<div class="group-wrap">
 				<div class="group">

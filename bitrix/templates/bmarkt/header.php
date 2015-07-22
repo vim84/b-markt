@@ -39,7 +39,16 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 <nav role="navigation" class="navbar navbar-default navbar-bmarkt">
 	<div class="container">
 		<div class="row">
-			<div class="col-md-3 col-sm-3">Ваш ID: 10001 <a href="#">Войти</a></div>
+			<div class="col-md-3 col-sm-3">
+			<?$APPLICATION->IncludeComponent("bitrix:system.auth.form", "bmarkt", array(
+					"REGISTER_URL" => SITE_DIR."login/",
+					"PROFILE_URL" => SITE_DIR."personal/",
+					"SHOW_ERRORS" => "N"
+				),
+				false,
+				array()
+			);?>
+			</div>
 			<div class="col-md-5 col-sm-5">
 				В корзине <b>3</b> товара на сумму <b>13 666 р.</b>
 				<a href="#" class="btn btn-info btn-xs" type="button">Купить</a>

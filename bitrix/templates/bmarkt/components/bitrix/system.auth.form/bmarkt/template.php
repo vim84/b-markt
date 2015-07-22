@@ -33,11 +33,13 @@ CJSCore::Init(array("popup", "ls"));
 		}
 		else
 		{
+			$userId = $USER->GetID();
+			
 			$name = trim($USER->GetFullName());
 			if (strlen($name) <= 0)
 				$name = $USER->GetLogin();
 		?>
-			<a class="bx_login_top_inline_link" href="<?=$arResult['PROFILE_URL']?>"><?=htmlspecialcharsEx($name);?></a>
+		Ваш ID:<a class="bx_login_top_inline_link" href="<?=$arResult['PROFILE_URL']?>"><?=$userId?></a>
 			<a class="bx_login_top_inline_link" href="<?=$APPLICATION->GetCurPageParam("logout=yes", Array("logout"))?>" onclick="BX.localStorage.remove('eshop_user_name')"><?=GetMessage("AUTH_LOGOUT")?></a>
 
 			<script>
