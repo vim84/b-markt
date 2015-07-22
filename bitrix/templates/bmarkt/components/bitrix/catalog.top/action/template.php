@@ -14,7 +14,7 @@ if (!empty($arResult['ITEMS']))
 			?>
 			<div class="col-md-4 col-sm-4 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
 				<div class="gl-item">
-					<span class="label label-danger">Акция</span>
+					<span class="label label-danger">Акция</span><br />
 					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><?=$arItem["NAME"]?></a><br />
 					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>">
 					<?php
@@ -56,5 +56,5 @@ if (!empty($arResult['ITEMS']))
 	<?php
 }
 elseif ($USER->isAdmin())
-	echo '<div class="alert alert-warning" role="alert"><strong>Этот текст видят только администраторы</strong>. Тут блок акционных товаров. Надо просто добавить товары, которые участвуют в акции.</div>';
+	echo '<div class="alert alert-warning" role="alert"><strong>Этот текст видят только администраторы</strong>. Тут блок Акционных товаров. Надо просто добавить товары, которые участвуют в акции.</div>';
 ?>

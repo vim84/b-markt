@@ -28,59 +28,66 @@ $APPLICATION->SetTitle("Интернет-магазин B-Markt");
 			<a href="#">Сервисные центры</a>
 		</div>
 	</div>
-	<div class="row goods-list gl-hits">
-		<div class="col-md-12"><h4>Хиты и новинки</h4></div>
-			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
-				<div class="gl-item">
-					<span class="label label-warning">New</span>
-					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
-					<h4>Duravit Starck 3</h4>
-					<p>Унитаз подвесной без сидения</p>	
-					<div class="gl-buy-block">
-						<span class="gl-price">23 490 р.</span>
-						<a href="#" class="btn btn-success" type="button">В корзину</a>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
-				<div class="gl-item">
-					<span class="label label-primary">Хит</span>
-					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
-					<h4>Duravit Starck 3</h4>
-					<p>Унитаз подвесной без сидения</p>
-					<div class="gl-buy-block">
-						<span class="gl-price">23 490 р.</span>
-						<a href="#" class="btn btn-success" type="button">В корзину</a>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
-				<div class="gl-item">
-					<span class="label label-warning">New</span>
-					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
-					<h4>Duravit Starck 3</h4>
-					<p>Унитаз подвесной без сидения</p>
-					
-					<div class="gl-buy-block">
-						<span class="gl-price">23 490 р.</span>
-						<a href="#" class="btn btn-success" type="button">В корзину</a>
-					</div>
-				</div>
-			</div>
+	<?php
+	// Хиты и новинки (все товары, у которых стоит отметка или хит или новинка)
+	$GLOBALS["arrFilterHits"] = array(
+		array(
+			"LOGIC" => "OR",
+			array("!PROPERTY_G_HIT_FLAG_VALUE" => false),
+			array("!PROPERTY_G_NEW_FLAG_VALUE" => false)
+		)
+	);
 			
-			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap">
-				<div class="gl-item">
-					<span class="label label-warning">New</span>
-					<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
-					<h4>Duravit Starck 3</h4>
-					<p>Унитаз подвесной без сидения</p>	
-					<div class="gl-buy-block">
-						<span class="gl-price">23 490 р.</span>
-						<a href="#" class="btn btn-success" type="button">В корзину</a>
-					</div>
-				</div>
-			</div>
-		</div>
+	$APPLICATION->IncludeComponent(
+	"bitrix:catalog.top", 
+	"hits", 
+	array(
+		"IBLOCK_TYPE" => "catalog",
+		"IBLOCK_ID" => "4",
+		"ELEMENT_SORT_FIELD" => "RAND",
+		"ELEMENT_SORT_ORDER" => "asc",
+		"ELEMENT_SORT_FIELD2" => "id",
+		"ELEMENT_SORT_ORDER2" => "desc",
+		"FILTER_NAME" => "arrFilterHits",
+		"HIDE_NOT_AVAILABLE" => "N",
+		"ELEMENT_COUNT" => "4",
+		"LINE_ELEMENT_COUNT" => "1",
+		"PROPERTY_CODE" => array(
+			0 => "",
+			1 => "",
+		),
+		"OFFERS_LIMIT" => "5",
+		"SECTION_URL" => "",
+		"DETAIL_URL" => "",
+		"SECTION_ID_VARIABLE" => "SECTION_ID",
+		"CACHE_TYPE" => "A",
+		"CACHE_TIME" => "360000",
+		"CACHE_GROUPS" => "N",
+		"DISPLAY_COMPARE" => "N",
+		"CACHE_FILTER" => "N",
+		"PRICE_CODE" => array(
+			0 => "BASE",
+		),
+		"USE_PRICE_COUNT" => "N",
+		"SHOW_PRICE_COUNT" => "1",
+		"PRICE_VAT_INCLUDE" => "Y",
+		"CONVERT_CURRENCY" => "N",
+		"BASKET_URL" => "/personal/cart/",
+		"ACTION_VARIABLE" => "action",
+		"PRODUCT_ID_VARIABLE" => "id",
+		"USE_PRODUCT_QUANTITY" => "N",
+		"ADD_PROPERTIES_TO_BASKET" => "N",
+		"PRODUCT_PROPS_VARIABLE" => "prop",
+		"PARTIAL_PRODUCT_PROPERTIES" => "N",
+		"PRODUCT_PROPERTIES" => array(
+		),
+		"PRODUCT_QUANTITY_VARIABLE" => "quantity",
+		"COMPONENT_TEMPLATE" => "hits",
+		"SEF_MODE" => "N"
+	),
+	false
+);
+	?>
 <?/*
 ?>
 <h2>Лучшие коллекции</h2>
