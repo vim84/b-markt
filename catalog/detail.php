@@ -225,7 +225,7 @@ if (empty($sectionId) || empty($_REQUEST["ELEMENT_CODE"]))
 		"SET_TITLE" => "Y",
 		"SET_STATUS_404" => "N",
 		"ADD_SECTIONS_CHAIN" => "Y",
-		"ADD_ELEMENT_CHAIN" => "N",
+		"ADD_ELEMENT_CHAIN" => "Y",
 		"USE_ELEMENT_COUNTER" => "N",
 		"PRICE_CODE" => array(
 			0 => "BASE",
@@ -273,7 +273,12 @@ if (empty($sectionId) || empty($_REQUEST["ELEMENT_CODE"]))
 		"SET_BROWSER_TITLE" => "Y",
 		"SET_META_KEYWORDS" => "Y",
 		"SET_META_DESCRIPTION" => "Y",
-		"SHOW_DEACTIVATED" => "N"
+		"SHOW_DEACTIVATED" => "N",
+		"SEF_MODE" => "N",
+		"SET_LAST_MODIFIED" => "N",
+		"USE_MAIN_ELEMENT_SECTION" => "N",
+		"SHOW_404" => "N",
+		"MESSAGE_404" => ""
 	),
 	false,
 	array(

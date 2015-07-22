@@ -28,8 +28,10 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		$APPLICATION->SetAdditionalCSS(SITE_TEMPLATE_PATH.'/js/fancybox/jquery.fancybox.css');
 		
 		$APPLICATION->AddHeadScript(SITE_TEMPLATE_PATH."/script.js");
+		
+		// Bootstrap
+		$APPLICATION->SetAdditionalCSS(SITE_TEMPLATE_PATH.'/css/bootstrap.min.css');
 		?>
-		<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/css/bootstrap.min.css")?>" />
 		<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/css/style.css")?>" />
 	</head>
 	<body>
@@ -136,6 +138,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 				?>
 				<div class="col-md-9 col-sm-9">
 					<?php
+					// Слайдер баннеров
 					$APPLICATION->IncludeComponent(
 	"bitrix:news.list", 
 	"main-slider", 
@@ -199,44 +202,60 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 	false
 );
 					?>
-					<div class="row goods-list">
-				<div class="col-md-4 col-sm-4 gl-item-wrap">
-					<div class="gl-item">
-						<span class="label label-danger">Акция</span>
-						<h4>Duravit Starck 3</h4>
-						<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
-						
-						<div class="gl-buy-block">
-							<span class="gl-price">23 490 р.</span>
-							<a href="#" class="btn btn-success" type="button">В корзину</a>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-4 col-sm-4 col-xs-6 gl-item-wrap">
-					<div class="gl-item">
-						<span class="label label-danger">Акция</span>
-						<h4>Duravit Starck 3</h4>
-						<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
-						
-						<div class="gl-buy-block">
-							<span class="gl-price">23 490 р.</span>
-							<a href="#" class="btn btn-success" type="button">В корзину</a>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-4 col-sm-4 col-xs-6 gl-item-wrap">
-					<div class="gl-item">
-						<span class="label label-danger">Акция</span>
-						<h4>Duravit Starck 3</h4>
-						<a href="#"><img alt="Bootstrap Image Preview" src="http://lorempixel.com/140/140/" /></a>
-						
-						<div class="gl-buy-block">
-							<span class="gl-price">23 490 р.</span>
-							<a href="#" class="btn btn-success" type="button">В корзину</a>
-						</div>
-					</div>
-				</div>
-			</div>
+					<?php
+					// Акционные товары
+						$GLOBALS["arrFilterAction"] = array("!PROPERTY_G_ACTION_FLAG_VALUE" => false);
+							
+					    $APPLICATION->IncludeComponent(
+						"bitrix:catalog.top", 
+						"action", 
+						array(
+							"IBLOCK_TYPE" => "catalog",
+							"IBLOCK_ID" => "4",
+							"ELEMENT_SORT_FIELD" => "RAND",
+							"ELEMENT_SORT_ORDER" => "asc",
+							"ELEMENT_SORT_FIELD2" => "id",
+							"ELEMENT_SORT_ORDER2" => "desc",
+							"FILTER_NAME" => "arrFilterAction",
+							"HIDE_NOT_AVAILABLE" => "N",
+							"ELEMENT_COUNT" => "3",
+							"LINE_ELEMENT_COUNT" => "1",
+							"PROPERTY_CODE" => array(
+								0 => "",
+								1 => "",
+							),
+							"OFFERS_LIMIT" => "5",
+							"SECTION_URL" => "",
+							"DETAIL_URL" => "",
+							"SECTION_ID_VARIABLE" => "SECTION_ID",
+							"CACHE_TYPE" => "A",
+							"CACHE_TIME" => "360000",
+							"CACHE_GROUPS" => "N",
+							"DISPLAY_COMPARE" => "N",
+							"CACHE_FILTER" => "N",
+							"PRICE_CODE" => array(
+								0 => "BASE",
+							),
+							"USE_PRICE_COUNT" => "N",
+							"SHOW_PRICE_COUNT" => "1",
+							"PRICE_VAT_INCLUDE" => "Y",
+							"CONVERT_CURRENCY" => "N",
+							"BASKET_URL" => "/personal/cart/",
+							"ACTION_VARIABLE" => "action",
+							"PRODUCT_ID_VARIABLE" => "id",
+							"USE_PRODUCT_QUANTITY" => "N",
+							"ADD_PROPERTIES_TO_BASKET" => "N",
+							"PRODUCT_PROPS_VARIABLE" => "prop",
+							"PARTIAL_PRODUCT_PROPERTIES" => "N",
+							"PRODUCT_PROPERTIES" => array(
+							),
+							"PRODUCT_QUANTITY_VARIABLE" => "quantity",
+							"COMPONENT_TEMPLATE" => "action",
+							"SEF_MODE" => "N"
+						),
+						false
+					);
+					?>
 		</div>
 	</div>
 					<?php
