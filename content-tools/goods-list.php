@@ -131,23 +131,14 @@ if ($USER->isAdmin())
 		<?php
 		// С фотографией и без
 		require_once('filter/photo.php');
-		?>		
-		<div class="sections-list f-item">
-			<?php
-			$bTextY = ($_GET["text-y"] == 1)? true : false;
-			$bTextN = ($_GET["text-n"] == 1)? true : false;
-			
-			$checkedTextY = ($bTextY)? ' checked = "checked"' : '';
-			$checkedTextN = ($bTextN)? ' checked = "checked"' : '';
-			?>
-			<strong>Детальное описание:</strong>
-			<label><input type="checkbox" name="text-y" value="1"<?=$checkedTextY?>>Есть</label>
-			<label><input type="checkbox" name="text-n" value="1"<?=$checkedTextN?>>Нет</label>
-		</div>
 		
+		// С детальным описанием и без
+		require_once('filter/detail_text.php');
+		?>		
 		<input type="submit" value="Показать" name="show-filtered">
 		
 		<br class="clear" /><br />
+		
 		<?php
 		// По ответственному контент-менеджеру
 		require_once('filter/users.php');
@@ -156,29 +147,8 @@ if ($USER->isAdmin())
 		require_once('filter/marked.php');
 		?>
 		
-		<br class="clear" /><br />
-		<?php
+		<br class="clear" /><br />	
 		
-		// Если хотим и с детальным описанием и нет
-		if ($bTextY && $bTextN)
-		{
-			$GLOBALS["arrFilterText"] = array(
-				array(
-					"LOGIC" => "OR",
-					array("!DETAIL_TEXT" => false),
-					array("DETAIL_TEXT" => false)
-				)
-			);
-			
-			$GLOBALS["arrFilterSec"] = array_merge($GLOBALS["arrFilterSec"], $GLOBALS["arrFilterText"]);
-		}
-		elseif ($bTextY) // Если выбрали только с фото
-			$GLOBALS["arrFilterSec"]["!DETAIL_TEXT"] = false;
-		elseif ($bTextN) // Если выбрали только без фото
-			$GLOBALS["arrFilterSec"]["DETAIL_TEXT"] = false;
-
-			?>
-			
 		<?php
 		// По ответственному контент-менеджеру
 		require_once('func/sent_to_edit.php');
