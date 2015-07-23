@@ -84,31 +84,10 @@ if ($USER->isAdmin())
 		
 		// Список брендов
 		require_once('filter/brands.php');
-		?>
-		<div class="sections-list f-item">
-			<?php
-			// Массив брендов
-			$arSectionsAll = array();
-			
-			$obSections = CIBlockSection::GetList(array("NAME" => "ASC"), array("IBLOCK_ID" => IBLOCK_CATALOGUE, "GLOBAL_ACTIVE" => "Y"), false, array("ID", "NAME"));
-	   
-			while ($arSections = $obSections->GetNext())
-				$arSectionsAll[$arSections["ID"]] = $arSections["NAME"];
-			?>
-			<strong>Раздел каталога:</strong>
-			<select name="section">
-				<option value="">(любой)</option>
-				<?php
-				foreach ($arSectionsAll as $sectionId => $sectionName)
-				{
-					$selected = ($_GET["section"] == $sectionId)? ' selected="selected"' : '';
-					
-					echo '<option value="'.$sectionId.'"'.$selected.'>'.$sectionName.'</option>';
-				}
-				?>
-			</select>
-		</div>
-		<?php
+		
+		// Список разделов каталога
+		require_once('filter/sections.php');
+		
 		// С фотографией и без
 		require_once('filter/photo.php');
 		
