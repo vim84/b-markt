@@ -8,10 +8,12 @@ if (!empty($arResult['ITEMS']))
 	<br /><br />
 	<table class="goods-list">
 		<tr>
-			<td class="td-photo">Фото</td>
-			<td>Наименование</td>
-			<td>Артикул</td>
-			<td>Производитель</td>
+			<th class="td-photo">Фото</th>
+			<th>Наименование</th>
+			<th>Артикул</th>
+			<th>Производитель</th>
+			<th>Отправлено на доработку</th>
+			<th>Ответственный</th>
 		</tr>
 		<?
 		$itemCount = 0;
@@ -22,6 +24,18 @@ if (!empty($arResult['ITEMS']))
 			$this->AddDeleteAction($arItem['ID'], $arItem['DELETE_LINK'], CIBlock::GetArrayByID($arParams["IBLOCK_ID"], "ELEMENT_DELETE"), array("CONFIRM" => GetMessage('CATALOG_ELEMENT_DELETE_CONFIRM')));
 		
 			$bHasPicture = is_array($arItem['DETAIL_PICTURE_MID']);
+			
+			// Если назначен контент-менеджер, проверим
+			$sUserInfo = '';
+			
+			if (intval($arItem["PROPERTIES"]["C_MANAGER"]["VALUE"]) > 0)
+			{
+				$rsUser = CUser::GetByID(intval($arItem["PROPERTIES"]["C_MANAGER"]["VALUE"]));
+				$arUser = $rsUser->Fetch();
+				
+				$sUserInfo = '<a href="/bitrix/admin/user_edit.php?lang=ru&ID='.$arUser["ID"].'">'.((!empty($arUser["NAME"]))? $arUser["NAME"].' '.$arUser["LAST_NAME"] : $arUser["LOGIN"]).'</a>';
+			}
+			
 			?>
 			
 			<tr id="<?=$this->GetEditAreaId($arItem['ID']);?>">
@@ -40,6 +54,8 @@ if (!empty($arResult['ITEMS']))
 				</td>
 				<td><?=$arItem["PROPERTIES"]["G_REFERENCE"]["VALUE"]?></td>
 				<td><?=$arItem["PROPERTIES"]["G_MANUFACTURER"]["VALUE"][0]?></td>
+				<td><?=(!empty($arItem["PROPERTIES"]["C_TO_EDIT_FLAG"]["VALUE"]))? 'Да' : ''?></td>
+				<td><?=$sUserInfo?></td>
 			</tr>
 			<?php
 		}

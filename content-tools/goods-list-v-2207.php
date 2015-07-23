@@ -68,10 +68,7 @@ if ($USER->isAdmin())
 				?>
 			</select>
 		</div>
-		<?php
-		// Изначальное значение это бренд
-		$GLOBALS["arrFilterSec"] = array("PROPERTY_G_MANUFACTURER" => $_GET["brand"]);
-		?>
+		
 		<div class="sections-list f-item">
 			<?php
 			// Массив брендов
@@ -124,14 +121,6 @@ if ($USER->isAdmin())
 		
 		<input type="submit" value="Показать">
 		
-		<br class="clear" /><br />
-		<?php
-		// По ответственному контент-менеджеру
-		require_once('filter/users.php');
-		
-		// По отправленным на доработку
-		require_once('filter/marked.php');
-		?>
 		<?php /*?>
 		<br class="clear" /><br />
 		<div class="sections-list f-item">
@@ -149,6 +138,8 @@ if ($USER->isAdmin())
 		<?*/?>
 		</form>
 		<?php
+		$GLOBALS["arrFilterSec"] = array("PROPERTY_G_MANUFACTURER" => $_GET["brand"]);
+		
 		// Если хотим и с фото и без фото
 		if ($bPhotoY && $bPhotoN)
 		{
