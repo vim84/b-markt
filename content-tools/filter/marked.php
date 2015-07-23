@@ -2,7 +2,6 @@
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
 // Отобрать Отправленые на доработку
-$arFilterTemp = array();
 
 $bMarked = ($_GET["marked"] == 1)? true : false;
 $checkedMarked = ($bMarked)? ' checked = "checked"' : '';

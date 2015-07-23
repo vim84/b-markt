@@ -7,7 +7,7 @@ if ($USER->isAdmin())
 	<style type="text/css">
 		.conteiner {
 			color: #333;
-			padding: 50px 30px;
+			padding: 20px 30px;
 		}
 		
 		.goods-list {
@@ -37,6 +37,36 @@ if ($USER->isAdmin())
 			line-height: 0;
 			font-size: 0;
 		}
+		
+		.set-to-edit-block {
+			float: right;
+		}
+		
+		.add-to-edit {
+			float: right;
+			padding: 10px 15px;
+		}
+		
+		.warning-text, .success-text {
+			background: #eee;
+			
+			-webkit-border-radius: 5px;
+			   -moz-border-radius: 5px;
+					border-radius: 5px;
+			
+			border: 1px solid #333;
+			padding: 5px 10px;
+		}
+		
+		.warning-text {
+			border-color: red;
+			color: red
+		}
+		
+		.success-text {
+			border-color: green;
+			color: green
+		}
 	</style>
 	<?php
 	if (CModule::IncludeModule("iblock"))
@@ -44,6 +74,8 @@ if ($USER->isAdmin())
 		?>
 		<div class="conteiner">
 		<h1>Список всех товаров каталога</h1>
+		
+		<a href="goods-list.php">Сбросить фильтр</a><br /><br />
 		<form name="filter" id="filter" method="GET" action="" class="filter">
 		<div class="brands-list f-item">
 			<?php
@@ -52,6 +84,7 @@ if ($USER->isAdmin())
 			
 			// Список брендов
 			$property_enums = CIBlockPropertyEnum::GetList(array("SORT"=>"ASC"), array("IBLOCK_ID" => IBLOCK_CATALOGUE, "CODE" => "G_MANUFACTURER"));
+			
 			while($enum_fields = $property_enums->GetNext())
 				$arBrands[$enum_fields["ID"]] = $enum_fields["VALUE"];
 			?>
@@ -95,20 +128,10 @@ if ($USER->isAdmin())
 				?>
 			</select>
 		</div>
-		
-		<div class="sections-list f-item">
-			<?php
-			$bPhotoY = ($_GET["photo-y"] == 1)? true : false;
-			$bPhotoN = ($_GET["photo-n"] == 1)? true : false;
-			
-			$checkedPhotoY = ($bPhotoY)? ' checked = "checked"' : '';
-			$checkedPhotoN = ($bPhotoN)? ' checked = "checked"' : '';
-			?>
-			<strong>Фото:</strong>
-			<label><input type="checkbox" name="photo-y" value="1"<?=$checkedPhotoY?>>Есть</label>
-			<label><input type="checkbox" name="photo-n" value="1"<?=$checkedPhotoN?>>Нет</label>
-		</div>
-		
+		<?php
+		// С фотографией и без
+		require_once('filter/photo.php');
+		?>		
 		<div class="sections-list f-item">
 			<?php
 			$bTextY = ($_GET["text-y"] == 1)? true : false;
@@ -122,7 +145,7 @@ if ($USER->isAdmin())
 			<label><input type="checkbox" name="text-n" value="1"<?=$checkedTextN?>>Нет</label>
 		</div>
 		
-		<input type="submit" value="Показать">
+		<input type="submit" value="Показать" name="show-filtered">
 		
 		<br class="clear" /><br />
 		<?php
@@ -132,41 +155,10 @@ if ($USER->isAdmin())
 		// По отправленным на доработку
 		require_once('filter/marked.php');
 		?>
-		<?php /*?>
+		
 		<br class="clear" /><br />
-		<div class="sections-list f-item">
-			<?php
-			$bPhotoY = ($_GET["props-main-y"] == 1)? true : false;
-			$bPhotoN = ($_GET["photo-n"] == 1)? true : false;
-			
-			$checkedPhotoY = ($bPhotoY)? ' checked = "checked"' : '';
-			$checkedPhotoN = ($bPhotoN)? ' checked = "checked"' : '';
-			?>
-			<strong>Основные свойства:</strong>
-			<label><input type="checkbox" name="photo-y" value="1"<?=$checkedPhotoY?>>Заполнены все</label>
-			<label><input type="checkbox" name="photo-n" value="1"<?=$checkedPhotoN?>>Нет</label>
-		</div>
-		<?*/?>
-		</form>
 		<?php
-		// Если хотим и с фото и без фото
-		if ($bPhotoY && $bPhotoN)
-		{
-			$GLOBALS["arrFilterPhotos"] = array(
-				array(
-					"LOGIC" => "OR",
-					array("!DETAIL_PICTURE" => false),
-					array("DETAIL_PICTURE" => false)
-				)
-			);
-			
-			$GLOBALS["arrFilterSec"] = array_merge($GLOBALS["arrFilterSec"], $GLOBALS["arrFilterPhotos"]);
-		}
-		elseif ($bPhotoY) // Если выбрали только с фото
-			$GLOBALS["arrFilterSec"]["!DETAIL_PICTURE"] = false;
-		elseif ($bPhotoN) // Если выбрали только без фото
-			$GLOBALS["arrFilterSec"]["DETAIL_PICTURE"] = false;
-			
+		
 		// Если хотим и с детальным описанием и нет
 		if ($bTextY && $bTextN)
 		{
@@ -185,6 +177,14 @@ if ($USER->isAdmin())
 		elseif ($bTextN) // Если выбрали только без фото
 			$GLOBALS["arrFilterSec"]["DETAIL_TEXT"] = false;
 
+			?>
+			
+		<?php
+		// По ответственному контент-менеджеру
+		require_once('func/sent_to_edit.php');
+		?>
+			
+		<?php
 		$APPLICATION->IncludeComponent(
 			"bitrix:catalog.section", 
 			"content-tool", 
@@ -265,7 +265,26 @@ if ($USER->isAdmin())
 			),
 			false
 		);
-
+		?>
+		<br class="clear" /><br />
+		
+		<div class="set-to-edit-block">
+			<strong>Назначить ответственного</strong>
+			<select name="set-content-manager">
+				<?php
+				foreach ($arUsersAll as $userId => $userName)
+				{
+					$selected = ($_GET["set-content-manager"] == $userId)? ' selected="selected"' : '';
+					
+					echo '<option value="'.$userId.'"'.$selected.'>'.trim($userName).'</option>';
+				}
+				?>
+			</select>
+			<br /><br />
+			<input type="submit" value="Отправить на доработку" name="add-to-edit" class="add-to-edit">
+		</div>
+		</form>
+		<?php
 	}
 	else
 		echo '<p>Не удалось подключить модуль «iblock»</p>';

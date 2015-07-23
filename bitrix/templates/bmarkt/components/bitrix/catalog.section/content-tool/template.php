@@ -6,8 +6,10 @@ if (!empty($arResult['ITEMS']))
 		echo $arResult["NAV_STRING"];
 	?>
 	<br /><br />
+
 	<table class="goods-list">
 		<tr>
+			<th><input type="checkbox" name="check-all" id="check-all" value="1"></th>
 			<th class="td-photo">Фото</th>
 			<th>Наименование</th>
 			<th>Артикул</th>
@@ -39,6 +41,7 @@ if (!empty($arResult['ITEMS']))
 			?>
 			
 			<tr id="<?=$this->GetEditAreaId($arItem['ID']);?>">
+				<td align="center"><input type="checkbox" name="check[]" id="check-<?=$arItem['ID']?>" value="<?=$arItem['ID']?>"<?=(in_array($arItem['ID'], $_GET["check"])? ' checked="checked"' : '')?></td>
 				<td>
 					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>">
 					<?php
