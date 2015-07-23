@@ -22,38 +22,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 				CIBlockElement::SetPropertyValuesEx(intval($elementId), IBLOCK_CATALOGUE, array("C_MANAGER" => intval($_GET["set-content-manager"])));
 			}
 			
-			echo '<p class="success-text">Отправили на редактирование позиций: '.count($_GET["check"]).'<br />Ответственный: '.$arUsersAll[$_GET["set-content-manager"]].'</p>';
+			echo '<p class="success-text">Отправлено на редактирование позиций: '.count($_GET["check"]).'<br />Ответственный: '.$arUsersAll[$_GET["set-content-manager"]].'</p>';
 			
 		}
 	}
-	
-	// Список пользователей
-	/*$arUsersAll = array();
-	
-	$rsContentUsers = CUser::GetList(($by = "ID"), ($order = "asc"), array()); // выбираем пользователей
-	while ($arContentUser = $rsContentUsers->Fetch())
-	{
-		$arUsersAll[$arContentUser['ID']] = (!empty($arContentUser['NAME']))? $arContentUser['NAME'].' '.$arContentUser['LAST_NAME'] : $arContentUser['LOGIN'];
-	}
-	?>
-	<strong>Ответственный:</strong>
-	<select name="content-manager">
-		<option value="">(любой)</option>
-		<?php
-		foreach ($arUsersAll as $userId => $userName)
-		{
-			$selected = ($_GET["content-manager"] == $userId)? ' selected="selected"' : '';
-			
-			echo '<option value="'.$userId.'"'.$selected.'>'.trim($userName).'</option>';
-		}
-		?>
-	</select>
-</div>
-
-<?php
-// Добавим данные в фильтр
-if (intval($_GET["content-manager"]) > 0)
-	$GLOBALS["arrFilterSec"]["PROPERTY_C_MANAGER"] = $_GET["content-manager"];
-	
-	*/
 ?>

@@ -5,70 +5,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.ph
 if ($USER->IsAuthorized())
 {
 	?>
-	<style type="text/css">
-		.conteiner {
-			color: #333;
-			padding: 20px 30px;
-		}
-		
-		.goods-list {
-			border-collapse: collapse;
-			width: 100%;
-		}
-		
-		.goods-list td, .goods-list th {
-			border: 1px solid #ddd;
-			padding: 5px 10px;
-		}
-		
-		.goods-list td img {display: block;}
-		
-		.goods-list .td-photo {width: 50px;}
-		
-		.filter {overflow: hidden;}
-		
-		.filter .f-item {float: left; padding-right: 20px;}
-		
-		.goods-list tr:hover td {background: #f8f8f8}
-		
-		.clear {
-			clear: both;
-			width: 100%;
-			height: 0;
-			line-height: 0;
-			font-size: 0;
-		}
-		
-		.set-to-edit-block {
-			float: right;
-		}
-		
-		.add-to-edit {
-			float: right;
-			padding: 10px 15px;
-		}
-		
-		.warning-text, .success-text {
-			background: #eee;
-			
-			-webkit-border-radius: 5px;
-			   -moz-border-radius: 5px;
-					border-radius: 5px;
-			
-			border: 1px solid #333;
-			padding: 5px 10px;
-		}
-		
-		.warning-text {
-			border-color: red;
-			color: red
-		}
-		
-		.success-text {
-			border-color: green;
-			color: green
-		}
-	</style>
+	<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL("style.css")?>" />
 	<?php
 	if (CModule::IncludeModule("iblock"))
 	{
