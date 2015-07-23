@@ -39,8 +39,6 @@ class im extends CModule
 	{
 		$this->InstallFiles();
 		$this->InstallDB();
-		$this->InstallEvents();
-		$this->InstallUserFields();
 
 		$GLOBALS['APPLICATION']->IncludeAdminFile(GetMessage("IM_INSTALL_TITLE"), $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/im/install/step1.php");
 	}
@@ -95,6 +93,9 @@ class im extends CModule
 			));
 			CAgent::AddAgent("CIMConvert::UndeliveredMessageAgent();", "im", "N", 20, "", "Y", ConvertTimeStamp(time()+CTimeZone::GetOffset()+20, "FULL"));
 		}
+
+		$this->InstallEvents();
+		$this->InstallUserFields();
 
 		return true;
 	}
@@ -211,7 +212,6 @@ class im extends CModule
 			if(!isset($_REQUEST["saveemails"]) || $_REQUEST["saveemails"] != "Y")
 				$this->UnInstallEvents();
 
-			$this->UnInstallUserFields(array("savedata" => $_REQUEST["savedata"]));
 			$this->UnInstallFiles();
 
 			$APPLICATION->IncludeAdminFile(GetMessage("IM_UNINSTALL_TITLE"), $DOCUMENT_ROOT."/bitrix/modules/im/install/unstep2.php");
@@ -251,6 +251,8 @@ class im extends CModule
 		UnRegisterModuleDependences("main", "OnProlog", "main", "", "", "/modules/im/ajax_hit.php");
 		UnRegisterModuleDependences("main", "OnApplicationsBuildList", "im", "DesktopApplication", "OnApplicationsBuildList");
 		UnRegisterModuleDependences('rest', 'OnRestServiceBuildDescription', 'im', 'CIMRestService', 'OnRestServiceBuildDescription');
+
+		$this->UnInstallUserFields($arParams);
 
 		UnRegisterModule("im");
 

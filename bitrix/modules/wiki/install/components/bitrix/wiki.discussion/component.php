@@ -589,6 +589,14 @@ if (CWikiSocnet::isEnabledSocnet() && !empty($arParams['SOCNET_GROUP_ID']))
 				$this->deleteLogComment($ID);
 			}
 		}
+
+		function onBeforeTopicAdd(&$arFields)
+		{
+			if (intval($this->SonetGroupID) > 0)
+			{
+				$arFields["SOCNET_GROUP_ID"] = intval($this->SonetGroupID);
+			}
+		}
 	}
 
 	$obWikiForumEventHandler = new CSocNetWikiForumEvent;
@@ -597,7 +605,10 @@ if (CWikiSocnet::isEnabledSocnet() && !empty($arParams['SOCNET_GROUP_ID']))
 	AddEventHandler('forum', 'onAfterMessageAdd', array($obWikiForumEventHandler, 'onAfterMessageAdd'));
 	AddEventHandler('forum', 'onMessageModerate', array($obWikiForumEventHandler, 'onMessageModerate'));
 	AddEventHandler('forum', 'onAfterMessageDelete', array($obWikiForumEventHandler, 'onAfterMessageDelete'));
-
+	if (intval($arParams['SOCNET_GROUP_ID']) > 0)
+	{
+		AddEventHandler('forum', 'onBeforeTopicAdd', array($obWikiForumEventHandler, 'onBeforeTopicAdd'));
+	}
 }
 
 $this->IncludeComponentTemplate();

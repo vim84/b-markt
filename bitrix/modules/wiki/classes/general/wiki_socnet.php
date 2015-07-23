@@ -555,10 +555,21 @@ class CWikiSocnet
 			);
 			$db_res = CIBlockElement::GetList(array(), $arFilter, false, false, $arSelectedFields);
 			if ($db_res && $res = $db_res->GetNext())
+			{
 				$arElement = $res;
+			}
 
 			if ($arElement)
 			{
+				if (
+					isset($arFields["ENTITY_TYPE"])
+					&& isset($arFields["ENTITY_ID"])
+				)
+				{
+					$arElement["ENTITY_TYPE"] = $arFields["ENTITY_TYPE"];
+					$arElement["ENTITY_ID"] = $arFields["ENTITY_ID"];
+				}
+
 				// check iblock properties
 				CSocNetLogTools::AddComment_Review_CheckIBlock($arElement);
 

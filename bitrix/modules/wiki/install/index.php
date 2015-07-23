@@ -46,6 +46,7 @@ Class wiki extends CModule
 		RegisterModuleDependences('main', 'OnAddRatingVote', 'wiki', 'CRatingsComponentsWiki', 'OnAddRatingVote', 200);
 		RegisterModuleDependences('main', 'OnCancelRatingVote', 'wiki', 'CRatingsComponentsWiki', 'OnCancelRatingVote', 200);
 		RegisterModuleDependences('search', 'BeforeIndex', 'wiki', 'CRatingsComponentsWiki', 'BeforeIndex');
+		RegisterModuleDependences('socialnetwork', 'BeforeIndexSocNet', 'wiki', 'CWikiSocNet', 'BeforeIndexSocNet');
 		RegisterModuleDependences("im", "OnGetNotifySchema", "wiki", "CWikiNotifySchema", "OnGetNotifySchema");
 		return true;
 	}
@@ -57,6 +58,7 @@ Class wiki extends CModule
 		UnRegisterModuleDependences('main', 'OnAddRatingVote', 'wiki', 'CRatingsComponentsWiki', 'OnAddRatingVote');
 		UnRegisterModuleDependences('main', 'OnCancelRatingVote', 'wiki', 'CRatingsComponentsWiki', 'OnCancelRatingVote');
 		UnRegisterModuleDependences('search', 'BeforeIndex', 'wiki', 'CRatingsComponentsWiki', 'BeforeIndex');
+		UnRegisterModuleDependences('socialnetwork', 'BeforeIndexSocNet', 'wiki', 'CWikiSocNet', 'BeforeIndexSocNet');
 		UnRegisterModuleDependences("im", "OnGetNotifySchema", "wiki", "CWikiNotifySchema", "OnGetNotifySchema");
 		return true;
 	}
