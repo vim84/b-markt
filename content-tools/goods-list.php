@@ -77,33 +77,13 @@ if ($USER->isAdmin())
 		
 		<a href="goods-list.php">Сбросить фильтр</a><br /><br />
 		<form name="filter" id="filter" method="GET" action="" class="filter">
-		<div class="brands-list f-item">
-			<?php
-			// Массив брендов
-			$arBrands = array();
-			
-			// Список брендов
-			$property_enums = CIBlockPropertyEnum::GetList(array("SORT"=>"ASC"), array("IBLOCK_ID" => IBLOCK_CATALOGUE, "CODE" => "G_MANUFACTURER"));
-			
-			while($enum_fields = $property_enums->GetNext())
-				$arBrands[$enum_fields["ID"]] = $enum_fields["VALUE"];
-			?>
-			<strong>Производитель:</strong>
-			<select name="brand">
-				<option value="">(любой)</option>
-				<?php
-				foreach ($arBrands as $brandId => $brandVal)
-				{
-					$selected = ($_GET["brand"] == $brandId)? ' selected="selected"' : '';
-					
-					echo '<option value="'.$brandId.'"'.$selected.'>'.$brandVal.'</option>';
-				}
-				?>
-			</select>
-		</div>
+		
 		<?php
-		// Изначальное значение это бренд
-		$GLOBALS["arrFilterSec"] = array("PROPERTY_G_MANUFACTURER" => $_GET["brand"]);
+		// Массив для фильтрации
+		$GLOBALS["arrFilterSec"] = array();
+		
+		// Список брендов
+		require_once('filter/brands.php');
 		?>
 		<div class="sections-list f-item">
 			<?php
