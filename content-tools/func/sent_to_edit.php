@@ -20,6 +20,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 				CIBlockElement::SetPropertyValuesEx(intval($elementId), IBLOCK_CATALOGUE, array("C_TO_EDIT_FLAG" => 809));
 				// Ответственный контент-менеджер
 				CIBlockElement::SetPropertyValuesEx(intval($elementId), IBLOCK_CATALOGUE, array("C_MANAGER" => intval($_GET["set-content-manager"])));
+				// Комментарий к доработкам
+				CIBlockElement::SetPropertyValuesEx(intval($elementId), IBLOCK_CATALOGUE, array("C_COMMENT" => $_GET["to-edit-comment"]));
 			}
 			
 			echo '<p class="success-text">Отправлено на редактирование позиций: '.count($_GET["check"]).'<br />Ответственный: '.$arUsersAll[$_GET["set-content-manager"]].'</p>';

@@ -5,6 +5,20 @@ if ($USER->isAdmin())
 {
 	?>
 	<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL("style.css")?>" />
+	<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+	<script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+	<script>
+	$(document).ready(function() {
+		$("#check-all").click(function () {
+			if (!$("#check-all").is(":checked"))
+				$(".goods-list .good-checkbox").removeAttr("checked");
+			else
+				$(".goods-list .good-checkbox").attr("checked", "checked");
+				
+			//return false;
+		});
+	});
+	</script>
 	<?php
 	if (CModule::IncludeModule("iblock"))
 	{
@@ -147,6 +161,8 @@ if ($USER->isAdmin())
 				?>
 			</select>
 			<br /><br />
+			<textarea placeholder="Комментарий к доработке" name="to-edit-comment" class="to-edit-comment"></textarea>
+			<br />
 			<input type="submit" value="Отправить на доработку" name="add-to-edit" class="add-to-edit">
 		</div>
 		</form>

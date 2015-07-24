@@ -8,7 +8,7 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 	// Список пользователей
 	$arUsersAll = array();
 	
-	$rsContentUsers = CUser::GetList(($by = "ID"), ($order = "asc"), array()); // выбираем пользователей
+	$rsContentUsers = CUser::GetList(($by = "ID"), ($order = "asc"), array("ACTIVE" => "Y")); // выбираем пользователей
 	while ($arContentUser = $rsContentUsers->Fetch())
 	{
 		$arUsersAll[$arContentUser['ID']] = (!empty($arContentUser['NAME']))? $arContentUser['NAME'].' '.$arContentUser['LAST_NAME'] : $arContentUser['LOGIN'];

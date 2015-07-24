@@ -7,7 +7,7 @@ if (!empty($arResult['ITEMS']))
 	?>
 	<br /><br />
 
-	<table class="goods-list">
+	<table class="goods-list" id="goods-list">
 		<tr>
 			<th><input type="checkbox" name="check-all" id="check-all" value="1"></th>
 			<th class="td-photo">Фото</th>
@@ -16,6 +16,7 @@ if (!empty($arResult['ITEMS']))
 			<th>Производитель</th>
 			<th>Отправлено на доработку</th>
 			<th>Ответственный</th>
+			<th>Комментарий к доработке</th>
 		</tr>
 		<?
 		$itemCount = 0;
@@ -41,7 +42,7 @@ if (!empty($arResult['ITEMS']))
 			?>
 			
 			<tr id="<?=$this->GetEditAreaId($arItem['ID']);?>">
-				<td align="center"><input type="checkbox" name="check[]" id="check-<?=$arItem['ID']?>" value="<?=$arItem['ID']?>"<?=(in_array($arItem['ID'], $_GET["check"])? ' checked="checked"' : '')?></td>
+				<td align="center"><input type="checkbox" name="check[]" id="check-<?=$arItem['ID']?>" value="<?=$arItem['ID']?>"<?=(in_array($arItem['ID'], $_GET["check"])? ' checked="checked"' : '')?> class="good-checkbox"></td>
 				<td>
 					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>">
 					<?php
@@ -59,6 +60,7 @@ if (!empty($arResult['ITEMS']))
 				<td><?=$arItem["PROPERTIES"]["G_MANUFACTURER"]["VALUE"][0]?></td>
 				<td><?=(!empty($arItem["PROPERTIES"]["C_TO_EDIT_FLAG"]["VALUE"]))? 'Да' : ''?></td>
 				<td><?=$sUserInfo?></td>
+				<td><?=$arItem["PROPERTIES"]["C_COMMENT"]["VALUE"]?></td>
 			</tr>
 			<?php
 		}

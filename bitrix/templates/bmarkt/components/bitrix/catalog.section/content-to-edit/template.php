@@ -13,6 +13,7 @@ if (!empty($arResult['ITEMS']))
 			<th>Наименование</th>
 			<th>Артикул</th>
 			<th>Производитель</th>
+			<th>Комментарий к доработке</th>
 		</tr>
 		<?
 		$itemCount = 0;
@@ -39,6 +40,7 @@ if (!empty($arResult['ITEMS']))
 				</td>
 				<td><?=$arItem["PROPERTIES"]["G_REFERENCE"]["VALUE"]?></td>
 				<td><?=$arItem["PROPERTIES"]["G_MANUFACTURER"]["VALUE"][0]?></td>
+				<td><?=$arItem["PROPERTIES"]["C_COMMENT"]["VALUE"]?></td>
 			</tr>
 			<?php
 		}
