@@ -63,7 +63,12 @@ if ($USER->isAdmin())
 		// По ответственному контент-менеджеру
 		require_once('func/sent_to_edit.php');
 		?>
-			
+		<br class="clear" />
+		<?php
+		// // Фильтрация по строковым полям
+		require_once('filter/fields.php');
+		?>
+		<br class="clear" /><br />	
 		<?php
 		$APPLICATION->IncludeComponent(
 			"bitrix:catalog.section", 
