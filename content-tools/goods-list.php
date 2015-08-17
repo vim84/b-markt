@@ -162,16 +162,19 @@ if ($USER->isAdmin())
 		);
 		?>
 		<br class="clear" /><br />
-		
+		<input type="submit" value="Принять (снять галочку «на доработку»)" name="add-to-completed" class="add-to-completed">
 		<div class="set-to-edit-block">
 			<strong>Назначить ответственного</strong>
 			<select name="set-content-manager">
 				<?php
 				foreach ($arUsersAll as $userId => $userName)
 				{
-					$selected = ($_GET["set-content-manager"] == $userId)? ' selected="selected"' : '';
-					
-					echo '<option value="'.$userId.'"'.$selected.'>'.trim($userName).'</option>';
+					if ($userId !== 'none')
+					{
+						$selected = ($_GET["set-content-manager"] == $userId)? ' selected="selected"' : '';
+						
+						echo '<option value="'.$userId.'"'.$selected.'>'.trim($userName).'</option>';
+					}
 				}
 				?>
 			</select>
