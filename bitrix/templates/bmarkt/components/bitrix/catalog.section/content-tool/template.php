@@ -15,8 +15,10 @@ if (!empty($arResult['ITEMS']))
 			<th>Артикул</th>
 			<th>Производитель</th>
 			<th>Отправлено на доработку</th>
-			<th>Ответственный</th>
 			<th>Комментарий к доработке</th>
+			<th>Обработано контент-менеджером</th>
+			<th>Комментарий контент-менеджера</th>
+			<th>Ответственный</th>
 		</tr>
 		<?
 		$itemCount = 0;
@@ -59,8 +61,10 @@ if (!empty($arResult['ITEMS']))
 				<td><?=$arItem["PROPERTIES"]["G_REFERENCE"]["VALUE"]?></td>
 				<td><?=$arItem["PROPERTIES"]["G_MANUFACTURER"]["VALUE"][0]?></td>
 				<td><?=(!empty($arItem["PROPERTIES"]["C_TO_EDIT_FLAG"]["VALUE"]))? 'Да' : ''?></td>
-				<td><?=$sUserInfo?></td>
 				<td><?=$arItem["PROPERTIES"]["C_COMMENT"]["VALUE"]?></td>
+				<td><?=(!empty($arItem["PROPERTIES"]["C_EDITED_FLAG"]["VALUE"]))? 'Да' : ''?></td>
+				<td><?=$arItem["PROPERTIES"]["C_CONTENT_COMMENT"]["VALUE"]?></td>
+				<td><?=$sUserInfo?></td>
 			</tr>
 			<?php
 		}

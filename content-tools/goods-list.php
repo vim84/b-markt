@@ -57,10 +57,20 @@ if ($USER->isAdmin())
 		require_once('filter/marked.php');
 		?>
 		
-		<br class="clear" /><br />	
+		<br class="clear" /><br />
 		
 		<?php
-		// По ответственному контент-менеджеру
+		// По гоалочке "Обработано контент-менеджером"
+		require_once('filter/marked_by_content.php');
+		
+		// С комментарием контент-менеджера и без
+		require_once('filter/content_comment.php');
+		?>
+		
+		<br class="clear" /><br />
+		
+		<?php
+		// Поставить задачи на доработку
 		require_once('func/sent_to_edit.php');
 		?>
 		<br class="clear" />

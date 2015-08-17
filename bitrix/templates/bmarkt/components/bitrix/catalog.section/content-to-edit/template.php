@@ -14,6 +14,8 @@ if (!empty($arResult['ITEMS']))
 			<th>Артикул</th>
 			<th>Производитель</th>
 			<th>Комментарий к доработке</th>
+			<th>Обработано тобой</th>
+			<th>Твой комментарий</th>
 		</tr>
 		<?
 		$itemCount = 0;
@@ -41,6 +43,8 @@ if (!empty($arResult['ITEMS']))
 				<td><?=$arItem["PROPERTIES"]["G_REFERENCE"]["VALUE"]?></td>
 				<td><?=$arItem["PROPERTIES"]["G_MANUFACTURER"]["VALUE"][0]?></td>
 				<td><?=$arItem["PROPERTIES"]["C_COMMENT"]["VALUE"]?></td>
+				<td><?=(!empty($arItem["PROPERTIES"]["C_EDITED_FLAG"]["VALUE"]))? 'Да' : ''?></td>
+				<td><?=$arItem["PROPERTIES"]["C_CONTENT_COMMENT"]["VALUE"]?></td>
 			</tr>
 			<?php
 		}
