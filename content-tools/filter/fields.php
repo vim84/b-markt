@@ -19,10 +19,10 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 <?php
 // Добавим данные в фильтр
 if (!empty($_GET["reference"]))
-	$GLOBALS["arrFilterSec"]["PROPERTY_G_REFERENCE"] = $_GET["reference"];
+	$GLOBALS["arrFilterSec"]["PROPERTY_G_REFERENCE"] = '%'.$_GET["reference"].'%';
 	
 if (!empty($_GET["name"]))
-	$GLOBALS["arrFilterSec"]["NAME"] = $_GET["name"];
+	$GLOBALS["arrFilterSec"]["NAME"] = '%'.$_GET["name"].'%';
 	
 if (!empty($_GET["series"]))
 	$GLOBALS["arrFilterSec"]["PROPERTY_G_SERIES"] = $_GET["series"];
