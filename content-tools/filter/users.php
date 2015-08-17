@@ -6,7 +6,7 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 <div class="sections-list f-item">
 	<?php
 	// Список пользователей
-	$arUsersAll = array();
+	$arUsersAll = array("none" => "нет ответственного");
 	
 	$rsContentUsers = CUser::GetList(($by = "ID"), ($order = "asc"), array("ACTIVE" => "Y")); // выбираем пользователей
 	while ($arContentUser = $rsContentUsers->Fetch())
@@ -30,6 +30,8 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
 <?php
 // Добавим данные в фильтр
-if (intval($_GET["content-manager"]) > 0)
+if ($_GET["content-manager"] == 'none')
+	$GLOBALS["arrFilterSec"]["PROPERTY_C_MANAGER"] = false;
+elseif (intval($_GET["content-manager"]) > 0)
 	$GLOBALS["arrFilterSec"]["PROPERTY_C_MANAGER"] = $_GET["content-manager"];
 ?>
