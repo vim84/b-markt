@@ -73,7 +73,7 @@ if (is_array($arResult['PROPERTIES']['G_MORE_PHOTO']['VALUE']) && count($arResul
 		$arFileTmp = CFile::ResizeImageGet(
 			$arFileId,
 			array("width" => 2000, "height" => 2000),
-			BX_RESIZE_IMAGE_EXACT,
+			BX_RESIZE_IMAGE_PROPORTIONAL,
 			true
 		);
 
