@@ -4,6 +4,7 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 // Необходимо получить список свойств выбранного раздела
 $arMainPropsAll = array();
 $secName = '';
+$mess = '';
 
 if (isset($_GET["section"]) && intval($_GET["section"]) > 0)
 {
@@ -15,9 +16,7 @@ if (isset($_GET["section"]) && intval($_GET["section"]) > 0)
 		
 		if (!empty($arSectionsProps["UF_REQUIRED_PROPS"]))
 		{
-			//pre ($arSectionsProps["UF_REQUIRED_PROPS"]);
 			$arMainPropsAll = explode(";", $arSectionsProps["UF_REQUIRED_PROPS"]);
-
 			
 			// Добавим данные в фильтр
 			if ($_GET["main-props"] == 2) // Если выбрали только заполнены
@@ -27,26 +26,13 @@ if (isset($_GET["section"]) && intval($_GET["section"]) > 0)
 			}
 			elseif ($_GET["main-props"] == 1) // Если выбрали только НЕ заполнены
 			{
-				foreach ($arMainPropsAll as $mpVal)
-					$GLOBALS["arrFilterSec"]["PROPERTY_".$mpVal] = false;
-			}
-			/*elseif ($_GET["main-props"] == 3) // Если выбрали только НЕ заполнены
-			{
-				$arTmp = array();
+				$arTmp = array("LOGIC" => "OR");
 				
 				foreach ($arMainPropsAll as $mpVal)
-					$arTmp["PROPERTY_".$mpVal] = '';
+					$arTmp[] = array("PROPERTY_".$mpVal => false);
 					
-				$GLOBALS["arrFilterSec"][] = array("LOGIC" => "OR", $arTmp);
-			}*/
-			
-			//pre ($GLOBALS["arrFilterSec"]);
-			
-			/*$properties = CIBlockProperty::GetList(Array("sort" => "asc", "name" => "asc"), Array("ACTIVE" => "Y", "IBLOCK_ID" => IBLOCK_CATALOGUE, "ID" => 48));
-			while ($prop_fields = $properties->GetNext())
-			{
-				echo $prop_fields["ID"]." - ".$prop_fields["NAME"]."<br>";
-			}*/
+				$GLOBALS["arrFilterSec"][] = $arTmp;
+			}
 		}
 		else 
 		{
@@ -61,11 +47,11 @@ else
 	$mess = 'Выберите раздел!';
 }
 
-$arMainProps = array(1 => "ни одно не заполнено", /*3 => "заполнены не полностью",*/ 2 => "все заполнены");
+$arMainProps = array(1 => "НЕ все заполнены", 2 => "все заполнены");
 ?>
 <fieldset>
 	<legend>Фильтрация по свойствам раздела<?=$secName?> (не забудьте выбрать раздел):</legend>
-	<div><?=$mess?></div><br />
+	<?=(!empty($mess))? '<div>'.$mess.'</div><br />' : ''?>
 	<div class="sections-list f-item">
 		<strong>Основные свойства:</strong>
 		<select name="main-props">
