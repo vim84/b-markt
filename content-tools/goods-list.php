@@ -50,6 +50,11 @@ if ($USER->isAdmin())
 		<br class="clear" /><br />
 		
 		<?php
+		require_once('filter/section_props.php');
+		echo '<br class="clear" /><br />';
+		?>
+		
+		<?php
 		// По ответственному контент-менеджеру
 		require_once('filter/users.php');
 		
