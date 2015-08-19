@@ -7,10 +7,6 @@ body{
 }
 html.bx-no-touch body{min-width:640px}
 a img{border:none}
-a{
-	color: #576e75;
-}
-a:hover{}
 
 .grid{}
 .grid .bx_content_section{margin-bottom: 15px;}

@@ -20,6 +20,6 @@ if (!$GLOBALS['USER']->IsAuthorized())
 			"", array_merge($arParamsToDelete, array("backurl")), $get_index_page=false
 		));
 
-	$arResult["AUTH_FORGOT_PASSWORD_URL"] = SITE_DIR."auth?forgot_password=yes";
+	$arResult["AUTH_FORGOT_PASSWORD_URL"] = SITE_DIR."login?forgot_password=yes";
 }
 ?>
