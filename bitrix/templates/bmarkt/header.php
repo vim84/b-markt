@@ -17,7 +17,8 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		<meta charset="utf-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="shortcut icon" type="image/x-icon" href="<?=SITE_DIR?>/favicon.ico" />
+		<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+		<link href='http://fonts.googleapis.com/css?family=Roboto:400,300,100,100italic,300italic,400italic,500,500italic,700,700italic,900italic,900&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
 		<?php
 		$APPLICATION->ShowHead();
 		
@@ -33,6 +34,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		$APPLICATION->SetAdditionalCSS(SITE_TEMPLATE_PATH.'/css/bootstrap.min.css');
 		?>
 		<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/css/style.css")?>" />
+		
 	</head>
 	<body>
 	<div id="panel"><?$APPLICATION->ShowPanel();?></div>
@@ -59,58 +61,63 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 	</div>
 </nav>
   
-<div class="container-fluid">
-	<div class="row header">
-		<div class="col-md-3 col-sm-3">
-			<?php
-			if ($bMainPage)
-				echo '<span><img src="'.SITE_TEMPLATE_PATH.'/img/logo.jpg" alt="B-Markt"/></span>';
-			else 
-				echo '<a href="/" title="B-Markt"><img src="'.SITE_TEMPLATE_PATH.'/img/logo.jpg" alt="B-Markt"/></a>';
-			?>
-			
-		</div>
-		<div class="col-md-1 col-sm-1"></div>
-		<div class="col-md-3 col-sm-3 h-contacts">
-			<span class="wwwww">Санкт-Петербург:</span>
-			<span class="hc-phone">+7 (812) 000-00-00</span>
-			<a href="#">Заказать звонок</a>
-		</div>
-		<div class="col-md-3 col-sm-3 h-contacts">
-			<span class="hc-city">Россия:</span>
-			<div class="hc-phone">
-			<?php
-			$APPLICATION->IncludeFile(
-				SITE_DIR."include/phone-russia.php",
-				Array(),
-				Array("MODE"=>"text")
-			);
-			?>
+<div class="container-fluid header-wrap">
+	<div class="container">
+		<div class="row header">
+			<div class="col-md-3 col-sm-3 h-logo">
+				<?php
+				if ($bMainPage)
+					echo '<span><img src="'.SITE_TEMPLATE_PATH.'/img/logo.png" alt="B-Markt"/></span>';
+				else 
+					echo '<a href="/" title="B-Markt"><img src="'.SITE_TEMPLATE_PATH.'/img/logo.png" alt="B-Markt"/></a>';
+				?>
+				
 			</div>
-			<span class="hc-notice">Звонок бесплатный</span>
-		</div>
-		<div class="col-md-2 col-sm-2">
-			<?$APPLICATION->IncludeComponent(
-				"bitrix:menu", 
-				"top_small", 
-				array(
-					"ROOT_MENU_TYPE" => "top_small",
-					"MENU_CACHE_TYPE" => "Y",
-					"MENU_CACHE_TIME" => "36000000",
-					"MENU_CACHE_USE_GROUPS" => "N",
-					"MENU_CACHE_GET_VARS" => array(
+			<div class="col-md-1 col-sm-1"></div>
+			<div class="col-md-3 col-sm-3 h-contacts">
+				<span class="hc-city">Санкт-Петербург:</span>
+				<span class="hc-phone">+7 (812) 000-00-00</span>
+				<a href="#">Заказать звонок</a>
+			</div>
+			<div class="col-md-3 col-sm-3 h-contacts">
+				<span class="hc-city">Россия:</span>
+				<div class="hc-phone">
+				<?php
+				$APPLICATION->IncludeFile(
+					SITE_DIR."include/phone-russia.php",
+					Array(),
+					Array("MODE"=>"text")
+				);
+				?>
+				</div>
+				<span class="hc-notice">Звонок бесплатный</span>
+			</div>
+			<div class="col-md-2 col-sm-2">
+				<?$APPLICATION->IncludeComponent(
+					"bitrix:menu", 
+					"top_small", 
+					array(
+						"ROOT_MENU_TYPE" => "top_small",
+						"MENU_CACHE_TYPE" => "Y",
+						"MENU_CACHE_TIME" => "36000000",
+						"MENU_CACHE_USE_GROUPS" => "N",
+						"MENU_CACHE_GET_VARS" => array(
+						),
+						"MAX_LEVEL" => "1",
+						"USE_EXT" => "N",
+						"ALLOW_MULTI_SELECT" => "N",
+						"COMPONENT_TEMPLATE" => "top_small",
+						"CHILD_MENU_TYPE" => "left",
+						"DELAY" => "N"
 					),
-					"MAX_LEVEL" => "1",
-					"USE_EXT" => "N",
-					"ALLOW_MULTI_SELECT" => "N",
-					"COMPONENT_TEMPLATE" => "top_small",
-					"CHILD_MENU_TYPE" => "left",
-					"DELAY" => "N"
-				),
-				false
-			);?>
+					false
+				);?>
+			</div>
 		</div>
 	</div>
+</div>
+
+<div class="container">
 	<div class="row search-form">
 		<?php
 		$APPLICATION->IncludeComponent("bitrix:search.form", "flat", Array(
