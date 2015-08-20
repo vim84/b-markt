@@ -28,7 +28,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		$APPLICATION->AddHeadScript(SITE_TEMPLATE_PATH.'/js/fancybox/jquery.fancybox.pack.js');
 		$APPLICATION->SetAdditionalCSS(SITE_TEMPLATE_PATH.'/js/fancybox/jquery.fancybox.css');
 		
-		$APPLICATION->AddHeadScript(SITE_TEMPLATE_PATH."/script.js");
+		$APPLICATION->AddHeadScript(SITE_TEMPLATE_PATH."/js/scripts.js");
 		
 		// Bootstrap
 		$APPLICATION->SetAdditionalCSS(SITE_TEMPLATE_PATH.'/css/bootstrap.min.css');
@@ -38,7 +38,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 	</head>
 	<body>
 	<div id="panel"><?$APPLICATION->ShowPanel();?></div>
-	
+	<noindex>
 	<nav role="navigation" class="navbar navbar-default navbar-bmarkt">
 		<div class="container">
 			<div class="row">
@@ -52,16 +52,20 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 					array()
 				);?>
 				</div>
-				<div class="col-md-5 col-sm-5">
-					В корзине <b>3</b> товара на сумму <b>13 666 р.</b>
-					<a href="/personal/cart/" class="btn btn-info btn-xs" type="button">Купить</a>
-				</div>
-				<div class="col-md-4 col-sm-4">
-					<a href="/favorites/">Избранное</a> <a href="/compare/">Сравнить 5 товаров</a>
+				<div class="col-md-9 col-sm-9 h-cart-wrap">
+					<div class="h-cart">
+						<span class="hc-icon"><a href="/personal/cart/" class="glyphicon glyphicon-shopping-cart"></a></span>В корзине <b>3</b> товара на сумму <b>13 666 р.</b>
+						<a href="/personal/cart/" class="btn btn-success btn-sm" type="button" rel="nofollow">Купить</a>
+					</div>
+					
+					<div class="fav-compare-wrap">
+						<a href="/favorites/" rel="nofollow"><i class="glyphicon glyphicon-heart"></i>Избранное</a>
+						<a href="/compare/" class="h-compare-link"><i class="glyphicon glyphicon-stats"></i>Сравнить <span>5 товаров</span></a>
+					</div>
 				</div>
 		</div>
 	</nav>
-
+	</noindex>
 	<div class="container-fluid header-wrap">
 		<div class="container">
 			<div class="row header">
