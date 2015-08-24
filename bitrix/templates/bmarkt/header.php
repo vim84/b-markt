@@ -42,7 +42,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 	<nav role="navigation" class="navbar navbar-default navbar-bmarkt">
 		<div class="container">
 			<div class="row">
-				<div class="col-md-3 col-sm-3">
+				<div class="col-md-3 col-sm-3 col-xs-3">
 				<?$APPLICATION->IncludeComponent("bitrix:system.auth.form", "bmarkt", array(
 						"REGISTER_URL" => SITE_DIR."login/",
 						"PROFILE_URL" => SITE_DIR."personal/",
@@ -52,20 +52,20 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 					array()
 				);?>
 				</div>
-				<div class="col-md-9 col-sm-9 h-cart-wrap">
+				<div class="col-md-9 col-sm-9 col-xs-9 h-cart-wrap">
 					<div class="h-cart">
-						<span class="hc-icon"><a href="/personal/cart/" class="glyphicon glyphicon-shopping-cart"></a></span>В корзине <b>3</b> товара на сумму <b>13 666 р.</b>
+						<span class="hc-icon"><a href="/personal/cart/" class="glyphicon glyphicon-shopping-cart"></a></span><span class="hidden-xs">В корзине</span> <b>3</b> товара на сумму <b>13 666 р.</b>
 						<a href="/personal/cart/" class="btn btn-success btn-sm" type="button" rel="nofollow">Купить</a>
 					</div>
 					
 					<div class="fav-compare-wrap">
-						<a href="/favorites/" rel="nofollow"><i class="glyphicon glyphicon-heart"></i>Избранное</a>
-						<a href="/compare/" class="h-compare-link"><i class="glyphicon glyphicon-stats"></i>Сравнить <span>5 товаров</span></a>
+						<a href="/favorites/" rel="nofollow"><i class="glyphicon glyphicon-heart"></i><span class="hidden-sm hidden-xs">Избранное</span></a>
+						<a href="/compare/" class="h-compare-link"><i class="glyphicon glyphicon-stats"></i><span class="hidden-sm hidden-xs">Сравнить 5 товаров</span></a>
 					</div>
 				</div>
 		</div>
 	</nav>
-	</noindex>
+	
 	<div class="container-fluid header-wrap">
 		<div class="container">
 			<div class="row header">
