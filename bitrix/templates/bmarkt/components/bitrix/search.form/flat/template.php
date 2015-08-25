@@ -1,5 +1,5 @@
 <?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?>
-
+<noindex>
 <form action="<?=$arResult["FORM_ACTION"]?>" name="search-form" id="search-form">
 	<div class="col-md-10 col-sm-10 col-xs-10">
 		<div class="input-group">
@@ -7,9 +7,9 @@
 			<div class="input-group-btn">
 				<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">По всему каталогу 		<span class="caret"></span></button>
 				<ul class="dropdown-menu dropdown-menu-right" role="menu">
-			  		<li><a href="#">Ванны</a></li>
-			  		<li><a href="#">Душевые кабины</a></li>
-			  		<li><a href="#">Смесители</a></li>
+			  		<li><a href="#" rel="nofollow">Ванны</a></li>
+			  		<li><a href="#" rel="nofollow">Душевые кабины</a></li>
+			  		<li><a href="#" rel="nofollow">Смесители</a></li>
 				</ul>
 			</div><!-- /btn-group -->
 		</div><!-- /input-group -->
@@ -18,3 +18,4 @@
 		<button type="submit" class="btn btn-primary btn-block">Найти</button>
 	</div>
 </form>
+</noindex>
