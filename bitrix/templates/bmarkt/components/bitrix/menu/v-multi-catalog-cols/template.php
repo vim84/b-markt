@@ -6,18 +6,19 @@ if (!empty($arResult))
 	// Уровень, с которого начинать показ в меню
 	$depthStart = 2;
 
-	echo '<div class="list-group"><span class="list-group-item active">Каталог</span>';
+	echo '<ul><li class="cm-title">Каталог<i></i></li>';
 
 	foreach ($arResult as $arItem)
 	{
 		if (($arItem["DEPTH_LEVEL"] <= $arParams["MAX_LEVEL"]) && ($arItem["DEPTH_LEVEL"] >= $depthStart)) // Вложенность $arParams["MAX_LEVEL"]
 		{
-			$activeAddClass = ($arItem["SELECTED"])? ' active' : '';
-			echo '<a href="'.$arItem["LINK"].'" class="list-group-item'.$activeAddClass.'">'.$arItem["TEXT"].'</a>';
-			
+			if ($arItem["SELECTED"])
+				echo '<li><span href="'.$arItem["LINK"].'"><i></i>'.$arItem["TEXT"].'</span></li>';
+			else
+				echo '<li><a href="'.$arItem["LINK"].'"><i></i>'.$arItem["TEXT"].'</a></li>';
 		}
 	}
 
-	echo '</div>';
+	echo '</ul>';
 }
 ?>
