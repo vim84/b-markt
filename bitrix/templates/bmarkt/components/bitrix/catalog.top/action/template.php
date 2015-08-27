@@ -24,21 +24,23 @@ if (!empty($arResult['ITEMS']))
 						else 
 							echo '<img src="http://dummyimage.com/300x200/efefef/999999.png&text='.NO_IMG_TEXT.'" alt="'.$arItem["NAME"].'" />';
 					?></a>
-					
+					<div class="rating"></div>
 					<div class="gl-buy-block">
+						<div class="gl-price-wrap">
 						<?php
 						foreach ($arItem["PRICES"] as $code => $arPrice)
 						{
 							if ($arPrice["CAN_ACCESS"])
 							{
 								if ($arPrice["DISCOUNT_VALUE"] < $arPrice["VALUE"])
-									echo '<span class="gl-price gl-old-price">'.$arPrice["PRINT_VALUE"].'</span> <span class="gl-price">'.$arPrice["PRINT_DISCOUNT_VALUE"].'</span>';
+									echo '<span class="gl-price gl-old-price">'.$arPrice["PRINT_VALUE"].'</span><span class="gl-price">'.$arPrice["PRINT_DISCOUNT_VALUE"].'</span>';
 								else
 									echo '<span class="gl-price">'.$arPrice["PRINT_VALUE"].'</span>';
 									
 								break;
 							}
 						}
+						echo '</div>';
 						
 						if ($arItem["CAN_BUY"])
 						{
