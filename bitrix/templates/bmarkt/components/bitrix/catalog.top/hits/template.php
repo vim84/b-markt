@@ -15,19 +15,20 @@ if (!empty($arResult['ITEMS']))
 			?>
 			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
 				<div class="gl-item">
-					<?=(!empty($arItem["PROPERTIES"]["G_NEW_FLAG"]["VALUE"]))? '<span class="label label-warning">New</span>' : ''?>
-					<?=(!empty($arItem["PROPERTIES"]["G_HIT_FLAG"]["VALUE"]))? '<span class="label label-primary">Хит</span>' : ''?>
-<br />
-					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>">
+					<?=(!empty($arItem["PROPERTIES"]["G_NEW_FLAG"]["VALUE"]))? '<span class="gl-sticker sticker-new">New</span>' : ''?>
+					<?=(!empty($arItem["PROPERTIES"]["G_HIT_FLAG"]["VALUE"]))? '<span class="gl-sticker sticker-hit">Хит</span>' : ''?>
+					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>" class="gl-name"><?=$arItem["NAME"]?></a>
+					<div class="gl-preview-text"><?=$arItem["PREVIEW_TEXT"]?></div>
+					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>" class="gl-img">
 					<?php
 						if ($bHasPicture)
 							echo '<img src="'.$arItem["DETAIL_PICTURE_MID"]["SRC"].'" alt="'.$arItem["NAME"].'" />';
 						else 
 							echo '<img src="http://dummyimage.com/300x300/efefef/999999.png&text='.NO_IMG_TEXT.'" alt="'.$arItem["NAME"].'" />';
 					?></a>
-					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><?=$arItem["NAME"]?></a>
-					<?=(!empty($arItem["PREVIEW_TEXT"]))? '<p>'.$arItem["PREVIEW_TEXT"].'</p>' : ''?>
+					<div class="rating"></div>
 					<div class="gl-buy-block">
+						<div class="gl-price-wrap">
 						<?php
 						foreach ($arItem["PRICES"] as $code => $arPrice)
 						{
@@ -41,6 +42,7 @@ if (!empty($arResult['ITEMS']))
 								break;
 							}
 						}
+						echo '</div>';
 						
 						if ($arItem["CAN_BUY"])
 						{
