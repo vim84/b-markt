@@ -33,18 +33,14 @@ if ($slidersCount > 0)
 				?>
 				<div class="item<?=$activeItemClass?>" id="<?=$this->GetEditAreaId($arItem['ID'])?>">
 					<img alt="<?=$arItem["NAME"]?>" src="<?=$arItem["DETAIL_PICTURE"]["SRC"]?>" />
-					<div class="carousel-caption">
-						<h4><?=$arItem["NAME"]?></h4>
-						<p><?=$arItem["PREVIEW_TEXT"]?></p>
-						<p><a href="<?=$arItem["PROPERTIES"]["SLIDE_LINK"]["VALUE"]?>">Подробнее</a></p>
-					</div>
+					<a href="<?=$arItem["PROPERTIES"]["SLIDE_LINK"]["VALUE"]?>" class="carousel-caption"><?=$arItem["PREVIEW_TEXT"]?></a>
 				</div>
 		        <?php
 			}
 			?>
 		</div>
-		<a class="left carousel-control" href="#carousel-<?=$arResult["ID"]?>" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a>
-		<a class="right carousel-control" href="#carousel-<?=$arResult["ID"]?>" data-slide="next"><span class="glyphicon glyphicon-chevron-right"></span></a>
+		<a class="left carousel-control" href="#carousel-<?=$arResult["ID"]?>" data-slide="prev" rel="nofollow"><span class="glyphicon glyphicon-chevron-left"></span></a>
+		<a class="right carousel-control" href="#carousel-<?=$arResult["ID"]?>" data-slide="next" rel="nofollow"><span class="glyphicon glyphicon-chevron-right"></span></a>
 	</div>
 	<?php
 }
