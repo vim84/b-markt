@@ -125,7 +125,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 	</div>
 	
 	<div class="container">
-		<div class="row">
+		<div class="row menu-banner-block">
 			<div class="col-md-3 col-sm-3 catalog-menu">
 				<?php
 				$APPLICATION->IncludeComponent("bitrix:menu", "v-multi-catalog-cols", array(
@@ -290,6 +290,17 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 					$contentClass = ' content';
 				?>
 				<div class="col-md-9 col-sm-9<?=$contentClass?>">
+					<div class="row search-form">
+						<?php
+						$APPLICATION->IncludeComponent("bitrix:search.form", "flat", Array(
+							"PAGE" => "#SITE_DIR#search/",	// Страница выдачи результатов поиска (доступен макрос #SITE_DIR#)
+							),
+							false
+						);
+						?>
+					</div>
+				
+				
 					<?$APPLICATION->IncludeComponent("bitrix:breadcrumb", "", array(
 							"START_FROM" => "0",
 							"PATH" => "",

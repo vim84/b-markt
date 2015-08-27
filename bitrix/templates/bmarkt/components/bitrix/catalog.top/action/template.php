@@ -3,7 +3,7 @@
 if (!empty($arResult['ITEMS']))
 {
 	?>
-	<div class="row goods-list">
+	<div class="row goods-list gl-main-actions">
 		<?php
 		foreach ($arResult['ITEMS'] as $key => $arItem)
 		{
@@ -14,14 +14,15 @@ if (!empty($arResult['ITEMS']))
 			?>
 			<div class="col-md-4 col-sm-4 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
 				<div class="gl-item">
-					<span class="label label-danger">Акция</span><br />
-					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><?=$arItem["NAME"]?></a><br />
-					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>">
+					<span class="gl-sticker sticker-action">Акция</span>
+					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>" class="gl-name"><?=$arItem["NAME"]?></a>
+					<div class="gl-preview-text"><?=$arItem["PREVIEW_TEXT"]?></div>
+					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>" class="gl-img">
 					<?php
 						if ($bHasPicture)
 							echo '<img src="'.$arItem["DETAIL_PICTURE_MID"]["SRC"].'" alt="'.$arItem["NAME"].'" />';
 						else 
-							echo '<img src="http://dummyimage.com/300x300/efefef/999999.png&text='.NO_IMG_TEXT.'" alt="'.$arItem["NAME"].'" />';
+							echo '<img src="http://dummyimage.com/300x200/efefef/999999.png&text='.NO_IMG_TEXT.'" alt="'.$arItem["NAME"].'" />';
 					?></a>
 					
 					<div class="gl-buy-block">
