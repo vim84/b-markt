@@ -204,7 +204,10 @@ $APPLICATION->IncludeComponent(
 ?>
 		</div>
 	</div>
-	<div class="row pre-footer">
+</div>
+<div class="container-fluid pre-footer">
+<div class="container">
+	<div class="row">
 		<?php
 		$APPLICATION->IncludeComponent(
 			"bitrix:menu", 
@@ -226,8 +229,8 @@ $APPLICATION->IncludeComponent(
 			false
 		);
 		?>
-
-		<div class="col-md-4 col-sm-4">
+		<div class="col-md-1 col-sm-1"></div>
+		<div class="col-md-3 col-sm-3 f-subscribe">
 			<form role="form">
 				<div class="form-group">
 					<input class="form-control" placeholder="Ваш e-mail" type="email" />
@@ -237,22 +240,13 @@ $APPLICATION->IncludeComponent(
 			</form>
 		</div>
 	</div>
-	<div class="row footer-row">
-		<div class="col-md-8 col-sm-8">
-			<?php
-			$APPLICATION->IncludeFile(
-				SITE_DIR."include/footer-text.php",
-				Array(),
-				Array("MODE"=>"html")
-			);
-			?>
-		</div>
-		<div class="col-md-4 col-sm-4">
-			<p>Принимаем к оплате</p>
-			<img alt="Принимаем к оплате — B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/pays.png" />
-		</div>
+	
 	</div>
-	<div class="row footer-row">
+	</div>
+	<div class="container-fluid footer-row">
+<div class="container">
+	
+	<div class="row">
 		<div class="col-md-3 col-sm-3">
 			<img alt="B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/logo-f.png" /><br /><br />
 			<?php
@@ -262,9 +256,18 @@ $APPLICATION->IncludeComponent(
 				Array("MODE"=>"html")
 			);
 			?>
-			<p>Копирайт</p>
 		</div>
-		<div class="col-md-3 col-sm-3">
+		<div class="col-md-6 col-sm-6">
+			<?php
+			$APPLICATION->IncludeFile(
+				SITE_DIR."include/footer-text.php",
+				Array(),
+				Array("MODE"=>"html")
+			);
+			?>
+		</div>
+		<div class="col-md-3 col-sm-3 f-right-block">
+			<span class="fr-title">Мы в социальных сетях:</span>
 			<?php
 			$APPLICATION->IncludeComponent(
 	"bitrix:news.list", 
@@ -324,10 +327,11 @@ $APPLICATION->IncludeComponent(
 	false
 );
 			?>
-		</div>
-		<div class="col-md-6 col-sm-6">
+			<span class="fr-title">Принимаем к оплате:</span>
+			<img alt="Принимаем к оплате — B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/pays.png" />
 		</div>
 	</div>
+</div>
 </div>
 	<script src="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/js/bootstrap.min.js")?>"></script>
   </body>

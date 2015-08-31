@@ -4,7 +4,7 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 if (empty($arResult))
 	return;
 
-echo '<div class="col-md-2 col-sm-2"><ul class="list-unstyled">';
+echo '<div class="col-md-2 col-sm-2"><ul>';
 				
 $itemsCount = count($arResult);
 // Поделим объекты пополам (для вывода на 4 колонки)
