@@ -4,7 +4,7 @@ if (!empty($arResult['ITEMS']))
 {
 	?>
 	<div class="row goods-list gl-hits">
-		<div class="col-md-12 gh-title">Хиты и новинки</div>
+		<div class="col-md-12 h-title">Хиты и новинки</div>
 		<?php
 		foreach ($arResult['ITEMS'] as $key => $arItem)
 		{

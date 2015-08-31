@@ -3,17 +3,21 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 $APPLICATION->SetTitle("Интернет-магазин B-Markt");
 ?>
 	<div class="row reviews-wrap">
-		<div class="col-md-3 col-sm-3">
-			<h4>Отзывы о нас</h4>
-			<ul class="list-unstyled">
+		<div class="col-md-3 col-sm-3 reviews-main">
+			<span class="h-title">Отзывы о нас</span>
+			<ul>
 				<li>
-					<a href="#">Отзыв 1</a>
+					<div class="rating"></div>
+					<p>«Хороший магазин! Заказал, позвонили, привезли все быстро и оперативно и порад...»</p>
+					<span class="rw-author">Иван Иванович</span>
 				</li>
 				<li>
-					<a href="#">Отзыв 2</a>
+					<div class="rating"></div>
+					<p>«Хороший магазин! Заказал, позвонили, привезли все быстро и оперативно и порад...»</p>
+					<span class="rw-author">Иван Иванович</span>
 				</li>
 			</ul>
-			<a href="#">Показать ещё</a>
+			<a href="#" class="rw-more-link"><i></i>Показать ещё</a>
 		</div>
 		<div class="col-md-3 col-sm-3">
 			<p>Не знаете как выбрать?</p>
