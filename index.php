@@ -19,17 +19,26 @@ $APPLICATION->SetTitle("Интернет-магазин B-Markt");
 			</ul>
 			<a href="#" class="rw-more-link"><i></i>Показать ещё</a>
 		</div>
-		<div class="col-md-3 col-sm-3">
-			<p>Не знаете как выбрать?</p>
-			<a href="#">Мы подскажем!</a>
+		<div class="col-md-3 col-sm-3 service-item si-how">
+			<a href="#">
+			<img src="<?=SITE_TEMPLATE_PATH?>/img/s-how.png" alt="Не знаете как выбрать?">
+			<span class="s-title">Не знаете как выбрать?</span>
+			<span class="s-link">Мы подскажем!<i></i></span>
+			</a>
 		</div>
-		<div class="col-md-3 col-sm-3">
-			<p>Служба установки</p>
-			<a href="#">Решаем проблемы!</a>
+		<div class="col-md-3 col-sm-3 service-item si-service">
+			<a href="#">
+			<img src="<?=SITE_TEMPLATE_PATH?>/img/s-service.png" alt="Служба установки">
+			<span class="s-title">Служба установки</span>
+			<span class="s-link">Решаем проблемы!<i></i></span>
+			</a>
 		</div>
-		<div class="col-md-3 col-sm-3">
-			<p>Качество гарантировано производителем</p>
-			<a href="#">Сервисные центры</a>
+		<div class="col-md-3 col-sm-3 service-item si-guarantee">
+			<a href="#">
+			<img src="<?=SITE_TEMPLATE_PATH?>/img/s-guarantee.png" alt="Качество гарантировано!">
+			<span class="s-title">Качество гарантировано!</span>
+			<span class="s-link">Сервисные центры<i></i></span>
+			</a>
 		</div>
 	</div>
 	<?php
