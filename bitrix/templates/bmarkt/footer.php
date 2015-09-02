@@ -208,6 +208,7 @@ $APPLICATION->IncludeComponent(
 <div class="container-fluid pre-footer">
 <div class="container">
 	<div class="row">
+		<div class="col-md-9 col-sm-9">
 		<?php
 		$APPLICATION->IncludeComponent(
 			"bitrix:menu", 
@@ -229,7 +230,7 @@ $APPLICATION->IncludeComponent(
 			false
 		);
 		?>
-		<div class="col-md-1 col-sm-1"></div>
+		</div>
 		<div class="col-md-3 col-sm-3 f-subscribe">
 			<form role="form">
 				<div class="form-group">
