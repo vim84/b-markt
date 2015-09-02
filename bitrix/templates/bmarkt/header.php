@@ -53,11 +53,13 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 				);?>
 				</div>
 				<div class="col-md-9 col-sm-9 col-xs-9 h-cart-wrap">
-					<div class="h-cart">
-						<span class="hc-icon"><i></i></span><span class="hidden-xs">В корзине</span> <b>3 товара</b> на сумму <b>13 666 р.</b>
-						<a href="/personal/cart/" class="btn btn-success btn-sm" type="button" rel="nofollow">Купить</a>
-					</div>
-					
+					<?$APPLICATION->IncludeComponent("bitrix:sale.basket.basket.line", "bmarkt", array(
+						"PATH_TO_BASKET" => "/personal/cart/",
+						"PATH_TO_PERSONAL" => "",
+						"SHOW_PERSONAL_LINK" => "N"
+						),
+						false
+					);?>
 					<div class="fav-compare-wrap">
 						<a href="/favorites/" rel="nofollow" class="fc-link"><i></i><span class="hidden-sm hidden-xs">Избранное</span></a>
 						<a href="/compare/" class="h-compare-link"><i></i><span class="hidden-sm hidden-xs">Сравнить <span>5 товаров</span></span></a>

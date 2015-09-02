@@ -23,4 +23,23 @@ $(document).ready(function(){
 	
 		return false;
 	});
+	
+	// Добавление товара в корзину
+	$(".add-to-cart").click(function(){
+		var thisProductId = $(this).attr("data-product-id");
+
+		$.ajax({
+			type: "POST",
+			url: "/ajax-requests/add-to-cart.php",
+			data: {productId: thisProductId, ajax_filter: "y"}
+		}).done(function(html) {
+			
+			$("#basket").html(html);
+			
+		}).fail(function() {
+			console.error("Ajax-запрос на добавление товара в корзину не отработал.");
+		});
+
+		return false;
+	});
  });
