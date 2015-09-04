@@ -503,11 +503,6 @@ body {background: #f1f5f8;}
 .goods-list .gl-item .sticker-hit {background: #b973ff}
 .goods-list .gl-item .sticker-new {background: #ff8000}
 
-.goods-list .gl-item img {
-	margin-bottom: 5px;
-	width: 100%;
-}
-
 .goods-list .gl-item .gl-buy-block {
 	overflow: hidden;
 	padding-top: 15px;
@@ -555,17 +550,34 @@ body {background: #f1f5f8;}
 
 .gl-main-actions {padding: 0 10px;}
 
-.gl-main-actions .gl-item {overflow: visible}
-
 .gl-main-actions .gl-item-wrap {
 	background: #ddd;
 	padding: 0 1px 0 0;
 }
 
-.gl-main-actions .gl-item {background: #fff;}
+.gl-main-actions .gl-item {background: #fff; overflow: visible}
 
 .gl-main-actions .gl-buy-block .gl-price {color: #d80022!important;}
 .gl-main-actions .gl-buy-block .gl-price {color: #d80022!important;}
+
+.goods-list .gl-item .gl-img {
+	display: block;
+	margin-bottom: 5px;
+	text-align: center;
+}
+
+/*.goods-list .gl-item .gl-img span {
+	display: table-cell;
+	text-align: center;
+	vertical-align: middle;
+	height: 100%;
+	width: 100%;
+}*/
+
+.goods-list .gl-item img {
+	max-height: 100%;
+	max-width: 100%;
+}
 
 .gl-hits {
 	border-bottom: 2px solid #ddd;
@@ -707,7 +719,7 @@ body {background: #f1f5f8;}
 .news-block ul {
 	list-style: none;
 	margin: 0 0 15px;
-	padding: 0;
+	padding: 3px 0 0;
 }
 
 .news-block ul li {
@@ -943,18 +955,38 @@ body {background: #f1f5f8;}
 .navbar-bmarkt .user-id-block {width: 70px;}
 .carousel .carousel-caption {font-size: 25px;}
 
+.goods-list .gl-item .gl-img {
+	height: 580px;
+	width: 580px;
+}
+
 /* Small devices (tablets, 768px and up) */
 @media (min-width:768px) {
 	.navbar-bmarkt .user-id-block {width: 90px}
+	
+	.goods-list .gl-item .gl-img {
+		height: 225px;
+		width: 225px;
+	}
 }
 
 /* Medium devices (desktops, 992px and up) */
 @media (min-width:992px) {
 	.navbar-bmarkt .user-id-block {width: 115px}
 	.carousel .carousel-caption {font-size: 45px;}
+	
+	.goods-list .gl-item .gl-img {
+		height: 190px;
+		width: 190px;
+	}
 }
 
 /* Large devices (large desktops, 1200px and up) */
 @media (min-width:1200px) {
 	.carousel .carousel-caption {font-size: 48px;}
+	
+	.goods-list .gl-item .gl-img {
+		height: 240px;
+		width: 240px;
+	}
 }

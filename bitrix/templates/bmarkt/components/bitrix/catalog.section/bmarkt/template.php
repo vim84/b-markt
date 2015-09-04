@@ -3,9 +3,9 @@
 if (!empty($arResult['ITEMS']))
 {
 	?>
-	<div class="row goods-list gl-hits">
+	<div class="row goods-list">
 		<?
-		$itemCount = 0;
+		//$itemCount = 0;
 		
 		foreach ($arResult['ITEMS'] as $key => $arItem)
 		{
@@ -15,20 +15,23 @@ if (!empty($arResult['ITEMS']))
 			$bHasPicture = is_array($arItem['PREVIEW_PICTURE']);
 			?>
 			
-			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
+			<div class="col-md-4 col-sm-6 col-xs-12 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
 				<div class="gl-item">
 					<?php
-					if (!empty($arItem["PROPERTIES"]["ACTION"]["VALUE"]))
-						echo '<span class="label label-warning">Акция</span>';
+					if (!empty($arItem["PROPERTIES"]["G_NEW_FLAG"]["VALUE"]))
+						echo '<span class="gl-sticker sticker-new">New</span>';
 						
-					if (!empty($arItem["PROPERTIES"]["NEW"]["VALUE"]))
-						echo '<span class="label label-warning">New</span>';
+					if (!empty($arItem["PROPERTIES"]["G_HIT_FLAG"]["VALUE"]))
+						echo '<span class="gl-sticker sticker-hit">Хит</span>';
 						
-					if (!empty($arItem["PROPERTIES"]["SALELEADER"]["VALUE"]))
-						echo '<span class="label label-primary">New</span>';
+					if (!empty($arItem["PROPERTIES"]["G_ACTION_FLAG"]["VALUE"]))
+						echo '<span class="gl-sticker sticker-action">Акция</span>';
 					?>
 					
-					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>">
+					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>" class="gl-name"><?=$arItem["NAME"]?></a>
+					<div class="gl-preview-text"><?=$arItem["PREVIEW_TEXT"]?></div>
+					
+					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>" class="gl-img">
 					<?php
 					if ($bHasPicture)
 						echo '<img src="'.$arItem["PREVIEW_PICTURE"]["SRC"].'" alt="'.$arItem["NAME"].'"/>';
@@ -36,8 +39,9 @@ if (!empty($arResult['ITEMS']))
 						echo '<img src="http://dummyimage.com/600x600/efefef/999999.png&text='.NO_IMG_TEXT.'" alt="'.$arItem["NAME"].'" />';
 					?>
 					</a>
-					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>"><?=$arItem["NAME"]?></a>
+					<div class="rating"></div>
 					<div class="gl-buy-block">
+						<div class="gl-price-wrap">
 						<?php
 						foreach ($arItem["PRICES"] as $code => $arPrice)
 						{
@@ -51,6 +55,7 @@ if (!empty($arResult['ITEMS']))
 								break;
 							}
 						}
+						echo '</div>';
 						
 						if ($arItem["CAN_BUY"])
 						{
@@ -63,9 +68,11 @@ if (!empty($arResult['ITEMS']))
 				</div>
 			</div>
 			<?php
+			/*
 			$itemCount++;
-			if ($itemCount % 4 == 0)
+			if ($itemCount % 3 == 0)
 				echo '<br class="clear" />';
+			*/
 		}
 		?>
 	</div>
