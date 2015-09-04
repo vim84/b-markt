@@ -504,6 +504,7 @@ body {background: #f1f5f8;}
 .goods-list .gl-item .sticker-new {background: #ff8000}
 
 .goods-list .gl-item .gl-buy-block {
+	height: 50px;
 	overflow: hidden;
 	padding-top: 15px;
 }
@@ -582,6 +583,11 @@ body {background: #f1f5f8;}
 .gl-hits {
 	border-bottom: 2px solid #ddd;
 	padding: 20px 0;
+}
+
+.goods-list .gl-item .gl-unavailable {
+	color: #666;
+	display: block;
 }
 
 /* < Catalog */

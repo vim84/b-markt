@@ -50,6 +50,8 @@ if (!empty($arResult['ITEMS']))
 							<a href="#" class="btn btn-success add-to-cart" type="button" data-product-id="<?=$arItem["ID"]?>" rel="nofollow">В корзину</a>
 							<?php
 						}
+						else 
+							echo '<span class="gl-unavailable">нет в наличии</span>';
 						?>
 					</div>
 				</div>
