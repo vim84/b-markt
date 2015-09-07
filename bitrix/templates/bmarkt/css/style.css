@@ -548,9 +548,26 @@ body {background: #f1f5f8; min-width: 660px}
 	padding: 0 1px 0 0;
 }
 
-.gl-main-actions .gl-item {background: #fff; overflow: visible}
+.gl-main-actions .gl-item-wrap:last-child {
+	padding: 0;
+	
+	-webkit-border-radius: 0 0 3px 0;
+	   -moz-border-radius: 0 0 3px 0;
+		    border-radius: 0 0 3px 0;
+}
 
-.gl-main-actions .gl-buy-block .gl-price {color: #d80022!important;}
+.gl-main-actions .gl-item-wrap:first-child {
+	-webkit-border-radius: 0 0 0 3px;
+	   -moz-border-radius: 0 0 0 3px;
+		    border-radius: 0 0 0 3px;
+}
+
+.gl-main-actions .gl-item {
+	background: #fff;
+	border-bottom: 1px solid #d8dcdf;
+	overflow: visible;
+}
+
 .gl-main-actions .gl-buy-block .gl-price {color: #d80022!important;}
 
 .goods-list .gl-item .gl-img {
@@ -954,8 +971,8 @@ body {background: #f1f5f8; min-width: 660px}
 .carousel .carousel-caption {font-size: 25px;}
 
 .goods-list .gl-item .gl-img {
-	height: 580px;
-	width: 580px;
+	height: 265px;
+	width: 265px;
 }
 
 .navbar-bmarkt .h-cart {min-width: 315px;}
@@ -970,6 +987,10 @@ body {background: #f1f5f8; min-width: 660px}
 .h-contacts .hc-notice, .h-contacts .back-call-link {font-size: 11px;}
 .h-contacts .back-call-link {display: block;}
 .h-contacts .hc-notice {display: inline-block; margin-left: 10px;}
+
+.catalog-menu {padding-bottom: 0;}
+
+.gl-main-actions .gl-item .gl-img {height: 183px; width: 274px;}
 
 /* Small devices (phone vertical, 320px and up) */
 @media (min-width:320px) {
@@ -988,6 +1009,10 @@ body {background: #f1f5f8; min-width: 660px}
 	.navbar-bmarkt .h-cart {min-width: 400px;}
 	
 	.catalog-menu ul li a, .catalog-menu ul li span {padding: 8px 12px 9px;}
+	
+	.catalog-menu {padding-bottom: 20px;}
+	
+	.gl-main-actions .gl-item .gl-img {height: 157px; width: 236px;}
 }
 
 /* Medium devices (desktops, 992px and up) */
@@ -1014,6 +1039,8 @@ body {background: #f1f5f8; min-width: 660px}
 	.h-contacts .hc-notice {display: inline; margin-left: 0;}
 	
 	.catalog-menu ul li a, .catalog-menu ul li span {padding: 13px 12px 14px;}
+	
+	.gl-main-actions .gl-item .gl-img {height: 135px; width: 202px;}
 }
 
 /* Large devices (large desktops, 1200px and up) */
@@ -1026,4 +1053,6 @@ body {background: #f1f5f8; min-width: 660px}
 	}
 	
 	.navbar-bmarkt .h-cart {min-width: 535px;}
+	
+	.gl-main-actions .gl-item .gl-img {height: 168px; width: 252px;}
 }

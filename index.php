@@ -3,7 +3,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 $APPLICATION->SetTitle("Интернет-магазин B-Markt");
 ?>
 	<div class="row reviews-wrap">
-		<div class="col-md-3 col-sm-3 reviews-main">
+		<div class="col-md-3 col-sm-3 hidden-sm hidden-xs reviews-main">
 			<span class="h-title">Отзывы о нас</span>
 			<ul>
 				<li>
@@ -19,21 +19,21 @@ $APPLICATION->SetTitle("Интернет-магазин B-Markt");
 			</ul>
 			<a href="#" class="rw-more-link"><i></i>Показать ещё</a>
 		</div>
-		<div class="col-md-3 col-sm-3 service-item si-how">
+		<div class="col-md-3 col-sm-4 col-xs-4 service-item si-how">
 			<a href="#">
 			<img src="<?=SITE_TEMPLATE_PATH?>/img/s-how.png" alt="Не знаете как выбрать?">
 			<span class="s-title">Не знаете как выбрать?</span>
 			<span class="s-link">Мы подскажем!<i></i></span>
 			</a>
 		</div>
-		<div class="col-md-3 col-sm-3 service-item si-service">
+		<div class="col-md-3 col-sm-4 col-xs-4 service-item si-service">
 			<a href="#">
 			<img src="<?=SITE_TEMPLATE_PATH?>/img/s-service.png" alt="Служба установки">
 			<span class="s-title">Служба установки</span>
 			<span class="s-link">Решаем проблемы!<i></i></span>
 			</a>
 		</div>
-		<div class="col-md-3 col-sm-3 service-item si-guarantee">
+		<div class="col-md-3 col-sm-4 col-xs-4 service-item si-guarantee">
 			<a href="#">
 			<img src="<?=SITE_TEMPLATE_PATH?>/img/s-guarantee.png" alt="Качество гарантировано!">
 			<span class="s-title">Качество гарантировано!</span>

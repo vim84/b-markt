@@ -15,7 +15,7 @@ if (!empty($arResult['ITEMS']))
 			$bHasPicture = is_array($arItem['PREVIEW_PICTURE']);
 			?>
 			
-			<div class="col-md-4 col-sm-6 col-xs-12 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
+			<div class="col-md-4 col-sm-6 col-xs-6 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
 				<div class="gl-item">
 					<?php
 					if (!empty($arItem["PROPERTIES"]["G_NEW_FLAG"]["VALUE"]))

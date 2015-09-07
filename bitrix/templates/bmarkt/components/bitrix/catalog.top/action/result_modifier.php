@@ -1,7 +1,7 @@
 <?php
 if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
-foreach ($arResult['ITEMS'] as $key => $arItem)
+/*foreach ($arResult['ITEMS'] as $key => $arItem)
 {
 	if (is_array($arItem["DETAIL_PICTURE"]))
 	{
@@ -18,5 +18,5 @@ foreach ($arResult['ITEMS'] as $key => $arItem)
 			'HEIGHT' => $arFileTmp["height"],
 		);
 	}
-}
+}*/
 ?>
