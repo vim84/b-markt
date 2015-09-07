@@ -991,6 +991,7 @@ body {background: #f1f5f8; min-width: 660px}
 .catalog-menu {padding-bottom: 0;}
 
 .gl-main-actions .gl-item .gl-img {height: 183px; width: 274px;}
+.gl-hits .gl-item .gl-img {height: 264px; width: 264px;}
 
 /* Small devices (phone vertical, 320px and up) */
 @media (min-width:320px) {
@@ -1013,6 +1014,7 @@ body {background: #f1f5f8; min-width: 660px}
 	.catalog-menu {padding-bottom: 20px;}
 	
 	.gl-main-actions .gl-item .gl-img {height: 157px; width: 236px;}
+	.gl-hits .gl-item .gl-img {height: 319px; width: 319px;}
 }
 
 /* Medium devices (desktops, 992px and up) */

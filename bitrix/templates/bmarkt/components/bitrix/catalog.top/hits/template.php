@@ -11,9 +11,9 @@ if (!empty($arResult['ITEMS']))
 			$this->AddEditAction($arItem['ID'], $arItem['EDIT_LINK'], CIBlock::GetArrayByID($arParams["IBLOCK_ID"], "ELEMENT_EDIT"));
 			$this->AddDeleteAction($arItem['ID'], $arItem['DELETE_LINK'], CIBlock::GetArrayByID($arParams["IBLOCK_ID"], "ELEMENT_DELETE"), array("CONFIRM" => GetMessage('CATALOG_ELEMENT_DELETE_CONFIRM')));
 		
-			$bHasPicture = is_array($arItem['DETAIL_PICTURE_MID']);
+			$bHasPicture = is_array($arItem['DETAIL_PICTURE']);
 			?>
-			<div class="col-md-3 col-sm-3 col-xs-6 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
+			<div class="col-md-3 col-sm-6 col-xs-6 gl-item-wrap" id="<?=$this->GetEditAreaId($arItem['ID']);?>">
 				<div class="gl-item">
 					<?=(!empty($arItem["PROPERTIES"]["G_NEW_FLAG"]["VALUE"]))? '<span class="gl-sticker sticker-new">New</span>' : ''?>
 					<?=(!empty($arItem["PROPERTIES"]["G_HIT_FLAG"]["VALUE"]))? '<span class="gl-sticker sticker-hit">Хит</span>' : ''?>
@@ -22,7 +22,7 @@ if (!empty($arResult['ITEMS']))
 					<a href="<?=$arItem["DETAIL_PAGE_URL"]?>" class="gl-img">
 					<?php
 						if ($bHasPicture)
-							echo '<img src="'.$arItem["DETAIL_PICTURE_MID"]["SRC"].'" alt="'.$arItem["NAME"].'" />';
+							echo '<img src="'.$arItem["DETAIL_PICTURE"]["SRC"].'" alt="'.$arItem["NAME"].'" />';
 						else 
 							echo '<img src="http://dummyimage.com/300x300/efefef/999999.png&text='.NO_IMG_TEXT.'" alt="'.$arItem["NAME"].'" />';
 					?></a>
