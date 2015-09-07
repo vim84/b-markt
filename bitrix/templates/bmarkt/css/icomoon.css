@@ -24,7 +24,7 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
-.icon-actions_icon_big:before {
+.icon-actions-big:before {
 	content: "\e600";
 }
 .icon-alpha .path1:before {
@@ -51,7 +51,7 @@
 .icon-arrow_right:before {
 	content: "\e607";
 }
-.icon-articles_icon_big:before {
+.icon-articles-big:before {
 	content: "\e608";
 }
 .icon-calendar_icon:before {
@@ -147,10 +147,10 @@
 .icon-menu_icon:before {
 	content: "\e626";
 }
-.icon-more_icon:before {
+.icon-more:before {
 	content: "\e627";
 }
-.icon-news_icon_big:before {
+.icon-news-big:before {
 	content: "\e628";
 }
 .icon-phone:before {

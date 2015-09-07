@@ -5,7 +5,7 @@ if (count($arResult["ITEMS"]) > 0)
 {
 	?>
 	<div class="articles-idx">
-		<span class="news-title">Статьи</span>
+		<a href="<?=SITE_DIR?>articles/" class="news-title"><i class="icon-articles-big"></i>Статьи</a>
 		<ul>
 			<?php
 			foreach($arResult["ITEMS"] as $arItem)
@@ -22,7 +22,7 @@ if (count($arResult["ITEMS"]) > 0)
 			?>
 	
 		</ul>
-		<a href="<?=SITE_DIR?>articles/" class="more-link"><i></i>Ещё статьи</a>
+		<a href="<?=SITE_DIR?>articles/" class="more-link"><i class="icon-more"></i>Ещё статьи</a>
 	</div>
 	<?php
 }

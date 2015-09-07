@@ -17,7 +17,7 @@ $APPLICATION->SetTitle("Интернет-магазин B-Markt");
 					<span class="rw-author">Иван Иванович</span>
 				</li>
 			</ul>
-			<a href="#" class="rw-more-link"><i></i>Показать ещё</a>
+			<a href="#" class="rw-more-link"><i class="icon-more"></i>Показать ещё</a>
 		</div>
 		<div class="col-md-3 col-sm-4 col-xs-4 service-item si-how">
 			<a href="#">
