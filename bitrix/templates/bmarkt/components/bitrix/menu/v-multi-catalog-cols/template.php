@@ -10,12 +10,14 @@ if (!empty($arResult))
 
 	foreach ($arResult as $arItem)
 	{
+		$linkToClass = preg_replace("/[^a-z-]/", '', $arItem["LINK"]);
+		
 		if (($arItem["DEPTH_LEVEL"] <= $arParams["MAX_LEVEL"]) && ($arItem["DEPTH_LEVEL"] >= $depthStart)) // Вложенность $arParams["MAX_LEVEL"]
 		{
 			if ($arItem["SELECTED"])
-				echo '<li><span href="'.$arItem["LINK"].'"><i></i>'.$arItem["TEXT"].'</span></li>';
+				echo '<li><span href="'.$arItem["LINK"].'"><i class="icon-'.$linkToClass.' hidden-sm"></i>'.$arItem["TEXT"].'</span></li>';
 			else
-				echo '<li><a href="'.$arItem["LINK"].'"><i></i>'.$arItem["TEXT"].'</a></li>';
+				echo '<li><a href="'.$arItem["LINK"].'"><i class="icon-'.$linkToClass.' hidden-sm"></i>'.$arItem["TEXT"].'</a></li>';
 		}
 	}
 

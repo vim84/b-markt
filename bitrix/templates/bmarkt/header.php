@@ -39,7 +39,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/css/style.css")?>" />
 		
 	</head>
-	<body>
+	<body <?=($bMainPage)? ' class="tpl-main"' : ''?>>
 	<div id="panel"><?$APPLICATION->ShowPanel();?></div>
 	<noindex>
 	<nav role="navigation" class="navbar navbar-default navbar-bmarkt">

@@ -324,7 +324,7 @@ body {background: #f1f5f8; min-width: 660px}
 	border-bottom: 1px solid #ececfb;
 	color: #666;
 	display: block;
-	padding: 10px 12px 14px;
+	padding: 13px 12px 14px;
 }
 
 .catalog-menu ul li a:hover, .catalog-menu ul li span {
@@ -355,15 +355,18 @@ body {background: #f1f5f8; min-width: 660px}
 
 .catalog-menu ul li a i, .catalog-menu ul li span i {
 	display: inline-block;
-	height: 22px;
-	margin-right: 10px;
+	float: left;
+	font-size: 22px;
 	position: relative;
-	bottom: -4px;
-	width: 25px;
+	top: -1px;
+	width: 35px;
 }
 
-.catalog-menu ul li a i {background: url("../img/temp-icons/santehnika.png") no-repeat;}
-.catalog-menu ul li a:hover i, .catalog-menu ul li span i {background: url("../img/temp-icons/santehnika-act.png") no-repeat;}
+.catalog-menu ul li a i:before, .catalog-menu ul li span i:before {
+	content: "\e615";
+}
+
+.tpl-main .catalog-menu .cm-title i {display: none;}
 
 /* < Catalog menu */
 
@@ -983,6 +986,8 @@ body {background: #f1f5f8; min-width: 660px}
 	}
 	
 	.navbar-bmarkt .h-cart {min-width: 400px;}
+	
+	.catalog-menu ul li a, .catalog-menu ul li span {padding: 8px 12px 9px;}
 }
 
 /* Medium devices (desktops, 992px and up) */
@@ -1007,6 +1012,8 @@ body {background: #f1f5f8; min-width: 660px}
 	.h-contacts .hc-notice, .h-contacts .back-call-link {font-size: 13px;}
 	.h-contacts .back-call-link {display: inline;}
 	.h-contacts .hc-notice {display: inline; margin-left: 0;}
+	
+	.catalog-menu ul li a, .catalog-menu ul li span {padding: 13px 12px 14px;}
 }
 
 /* Large devices (large desktops, 1200px and up) */
