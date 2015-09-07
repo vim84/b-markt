@@ -85,13 +85,13 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 				</div>
 				<div class="col-md-1 col-sm-1"></div>
 				<div class="col-md-3 col-sm-3 h-contacts h-regional-contacts">
-					<div class="hc-icon"><i></i></div>
-					<a href="#" rel="nofollow" class="hc-city">Санкт-Петербург:<i></i></a>
-					<span class="hc-phone">+7 (812) 000-00-00</span>
+					<a href="tel:+7 (812) 425-35-64" class="hc-icon" rel="nofollow"><i class="icon-phone-city"></i></a>
+					<a href="#" rel="nofollow" class="hc-city">Санкт-Петербург:<i class="icon-arrow-dropdown"></i></a>
+					<span class="hc-phone">+7 (812) 425-35-64</span>
 					<a href="#">Заказать обратный звонок ›</a>
 				</div>
 				<div class="col-md-3 col-sm-3 h-contacts">
-					<div class="hc-icon"><i></i></div>
+					<a href="tel:8 (800) 775-35-74" class="hc-icon" rel="nofollow"><i class="icon-phone-all"></i></a>
 					<span class="hc-city">Россия:</span>
 					<div class="hc-phone">
 					<?php

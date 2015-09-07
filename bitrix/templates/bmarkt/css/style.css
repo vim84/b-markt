@@ -209,11 +209,10 @@ body {background: #f1f5f8;}
 .h-contacts .hc-notice {color: #d80022}
 
 .h-contacts .hc-city i {
-	background: url("../img/temp-icons/arrow-d.png") no-repeat;
-	display: inline-block;
-	height: 5px;
-	margin-left: 44px;
-	width: 7px;
+	font-size: 5px;
+	margin-left: 55px;
+	position: relative;
+	top: -1px;
 }
 
 .h-contacts .hc-icon {
@@ -223,7 +222,7 @@ body {background: #f1f5f8;}
 	-webkit-border-radius: 20px;
 	   -moz-border-radius: 20px;
 		    border-radius: 20px;
-	
+	display: block;
 	height: 39px;
 	padding: 6px 0 0 6px;
 	position: absolute;
@@ -231,6 +230,8 @@ body {background: #f1f5f8;}
 	top: 20px;
 	width: 39px;
 }
+
+.h-contacts .hc-icon:hover {border-color: #2cbfd6; text-decoration: none;}
 
 .header .h-regional-contacts {
 	margin-left: -14px;
@@ -245,17 +246,13 @@ body {background: #f1f5f8;}
 }
 
 .h-contacts .hc-icon i {
-	background: url("../img/temp-icons/phone-all.png") no-repeat;
-	display: inline-block;
+	color: #2cbfd6;
+	font-size: 24px;
 	height: 25px;
 	width: 25px;
 }
 
-.h-regional-contacts .hc-icon i {
-	background: url("../img/temp-icons/phone-city.png") no-repeat;
-	height: 23px;
-	width: 22px;
-}
+.h-regional-contacts .hc-icon i {font-size: 23px;}
 
 .header .h-sub-menu {
 	border-left: 1px dotted #ccc;
@@ -278,8 +275,8 @@ body {background: #f1f5f8;}
 .header .h-sub-menu li a {
 	color: #666;
 	display: inline-block;
-	height: 20px;
-	line-height: 19px;
+	height: 23px;
+	line-height: 23px;
 }
 
 .header .h-sub-menu li a:hover, .header .h-sub-menu li span {
@@ -288,22 +285,15 @@ body {background: #f1f5f8;}
 }
 
 .header .h-sub-menu li i {
-	background: url("../img/temp-icons/how-order.png") no-repeat center center;
 	display: inline-block;
-	height: 20px;
-	margin-right: 9px;
+	font-size: 19px;
 	position: relative;
-	bottom: -5px;
-	width: 20px;
+	bottom: -4px;
+	margin: -2px 0;
+	width: 30px;
 }
 
-.header .h-sub-menu li a:hover i, .header .h-sub-menu li span i {background-image: url("../img/temp-icons/how-order-act.png")}
-
-.header .h-sub-menu .payment-and-delivery i {background-image: url("../img/temp-icons/car.png"); bottom: -6px;}
-.header .h-sub-menu .payment-and-delivery a:hover i, .header .h-sub-menu .payment-and-delivery span i {background-image: url("../img/temp-icons/car-act.png")}
-
-.header .h-sub-menu .contacts i {background-image: url("../img/temp-icons/contacts.png")}
-.header .h-sub-menu .contacts a:hover i, .header .h-sub-menu .contacts span i {background-image: url("../img/temp-icons/contacts-act.png")}
+.header .h-sub-menu li .icon-payment-and-delivery {font-size: 15px;}
 
 /* < Header */
 
