@@ -27,13 +27,15 @@ $(document).ready(function(){
 	// Добавление товара в корзину
 	$(".add-to-cart").click(function(){
 		var thisProductId = $(this).attr("data-product-id");
+		var thisButton = $(this);
 
 		$.ajax({
 			type: "POST",
 			url: "/ajax-requests/add-to-cart.php",
 			data: {productId: thisProductId, ajax_filter: "y"}
 		}).done(function(html) {
-			
+			// Деактивируем кнопку покупки и поменяем текст
+			$(thisButton).addClass("disabled").text("В корзине");
 			$("#basket").html(html);
 			
 		}).fail(function() {
