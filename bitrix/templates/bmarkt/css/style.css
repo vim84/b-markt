@@ -74,25 +74,25 @@ body {background: #f1f5f8;}
 }
 
 .navbar-bmarkt .login-link i {
-	background: url("../img/temp-icons/enter.png") no-repeat;
-	display: inline-block;
-	margin-left: 8px;
+	margin-left: 10px;
 	position: relative;
 	bottom: -3px;
-	height: 17px;
-	width: 17px;
 }
+
+.navbar-bmarkt .login-link .icon-login-act {display: none;}
 
 .navbar-bmarkt .login-link:hover {
 	color: #2cbfd6;
 	text-decoration: none;
 }
 
-.navbar-bmarkt .login-link:hover i {background-image: url("../img/temp-icons/enter-act.png");}
+.navbar-bmarkt .login-link:hover .icon-login {display: none;}
+.navbar-bmarkt .login-link:hover .icon-login-act {display: inline;}
 
+/*
 .navbar-bmarkt .logout-link i {background: url("../img/temp-icons/exit.png") no-repeat;}
 .navbar-bmarkt .logout-link:hover i {background-image: url("../img/temp-icons/exit-act.png");}
-
+*/
 .navbar-bmarkt .h-cart-wrap {
 	font-weight: 300;
 	height: 50px;
@@ -117,12 +117,9 @@ body {background: #f1f5f8;}
 }
 
 .navbar-bmarkt .h-cart .hc-icon i {
-	background: url("../img/temp-icons/cart.png") no-repeat;
-	display: inline-block;
-	height: 18px;
+	color: #85b93b;
 	position: relative;
 	bottom: -2px;
-	width: 21px;
 }
 
 .navbar-bmarkt .h-cart .btn {
@@ -146,32 +143,28 @@ body {background: #f1f5f8;}
 }
 
 .fav-compare-wrap .fc-link i {
-	background: url("../img/temp-icons/favorite.png") no-repeat;
-	display: inline-block;
-	height: 17px;
+	color: #2cbfd6;
 	margin-right: 8px;
 	position: relative;
 	bottom: -4px;
-	width: 19px;
 }
 
-.fav-compare-wrap .fc-link:hover i {background-image: url("../img/temp-icons/favorite-act.png")}
+.fav-compare-wrap .fc-link .icon-heart-act, .fav-compare-wrap .fc-link:hover .icon-heart {display: none;}
+.fav-compare-wrap .fc-link:hover .icon-heart-act {display: inline;}
 
 .navbar-bmarkt .fav-compare-wrap a:hover {color: #2cbfd6}
 
 .navbar-bmarkt .fav-compare-wrap .h-compare-link {margin-left: 22px;}
 
 .fav-compare-wrap .h-compare-link i {
-	background: url("../img/temp-icons/compare.png") no-repeat;
-	display: inline-block;
-	height: 17px;
+	color: #2cbfd6;
 	margin-right: 8px;
 	position: relative;
 	bottom: -4px;
-	width: 17px;
 }
 
-.fav-compare-wrap .h-compare-link:hover i {background-image: url("../img/temp-icons/compare-act.png")}
+.fav-compare-wrap .h-compare-link .icon-compare-act, .fav-compare-wrap .h-compare-link:hover .icon-compare {display: none;}
+.fav-compare-wrap .h-compare-link:hover .icon-compare-act {display: inline;}
 
 .fav-compare-wrap .h-compare-link span span {color: #2cbfd6}
 /* < Top navbar */

@@ -75,6 +75,37 @@ if (empty($arrSectionInfo["ID"]))
 </div><!--left_column-->
 
 <div class="right_column">
+
+<?$APPLICATION->IncludeComponent(
+	"bitrix:catalog.smart.filter", 
+	"visual_horizontal", 
+	array(
+		"IBLOCK_TYPE" => "catalog",
+		"IBLOCK_ID" => "4",
+		"SECTION_ID" => $arrSectionInfo["ID"],
+		"FILTER_NAME" => "arrFilterSec",
+		"HIDE_NOT_AVAILABLE" => "N",
+		"CACHE_TYPE" => "A",
+		"CACHE_TIME" => "36000000",
+		"CACHE_GROUPS" => "N",
+		"SAVE_IN_SESSION" => "N",
+		"INSTANT_RELOAD" => "N",
+		"PRICE_CODE" => array(
+			0 => "BASE",
+		),
+		"XML_EXPORT" => "N",
+		"SECTION_TITLE" => "NAME",
+		"SECTION_DESCRIPTION" => "DESCRIPTION",
+		"SHOW_PROPS" => "",
+		"COMPONENT_TEMPLATE" => "visual_horizontal",
+		"SECTION_CODE" => "",
+		"TEMPLATE_THEME" => "blue",
+		"DISPLAY_ELEMENT_COUNT" => "Y",
+		"CONVERT_CURRENCY" => "N"
+	),
+	false
+);?>
+
 <?php
 $APPLICATION->IncludeComponent(
 	"bitrix:catalog.section", 

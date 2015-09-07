@@ -44,7 +44,7 @@ if (CModule::IncludeModule("sale"))
 		$goods_title = declOfNum($arResult["NUM_PRODUCTS"],	array('товар', 'товара', 'товаров'));
 		
 		?>
-			<span class="hc-icon"><i></i></span><span class="hidden-xs">В корзине</span> <b><?=$arResult["NUM_PRODUCTS"]?> <?=$goods_title?></b> на сумму <b><?=SaleFormatCurrency($summ, "RUB");?></b>
+			<span class="hc-icon"><i class="icon-cart"></i></span><span class="hidden-xs">В корзине</span> <b><?=$arResult["NUM_PRODUCTS"]?> <?=$goods_title?></b> на сумму <b><?=SaleFormatCurrency($summ, "RUB");?></b>
 			<a href="<?=$arParams["PATH_TO_BASKET"]?>" class="btn btn-success btn-sm" type="button" rel="nofollow">Купить</a>
 		<?php
 	}

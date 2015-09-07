@@ -32,6 +32,9 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		
 		// Bootstrap
 		$APPLICATION->SetAdditionalCSS(SITE_TEMPLATE_PATH.'/css/bootstrap.min.css');
+		
+		// Icomoon
+		$APPLICATION->SetAdditionalCSS(SITE_TEMPLATE_PATH.'/css/icomoon.css');
 		?>
 		<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/css/style.css")?>" />
 		
@@ -61,8 +64,8 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 						false
 					);?>
 					<div class="fav-compare-wrap">
-						<a href="/favorites/" rel="nofollow" class="fc-link"><i></i><span class="hidden-sm hidden-xs">Избранное</span></a>
-						<a href="/compare/" class="h-compare-link"><i></i><span class="hidden-sm hidden-xs">Сравнить <span>5 товаров</span></span></a>
+						<a href="/favorites/" rel="nofollow" class="fc-link"><i class="icon-heart"></i><i class="icon-heart-act"></i><span class="hidden-sm hidden-xs">Избранное</span></a>
+						<a href="/compare/" class="h-compare-link"><i class="icon-compare"></i><i class="icon-compare-act"></i><span class="hidden-sm hidden-xs">Сравнить <span>5 товаров</span></span></a>
 					</div>
 				</div>
 		</div>
