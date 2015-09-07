@@ -959,6 +959,11 @@ body {background: #f1f5f8;}
 	width: 580px;
 }
 
+/* Small devices (phone vertical, 320px and up) */
+@media (min-width:320px) {
+
+}
+
 /* Small devices (tablets, 768px and up) */
 @media (min-width:768px) {
 	.navbar-bmarkt .user-id-block {width: 90px}
@@ -978,6 +983,8 @@ body {background: #f1f5f8;}
 		height: 190px;
 		width: 190px;
 	}
+	
+	.navbar-bmarkt .h-cart {min-width: 395px;}
 }
 
 /* Large devices (large desktops, 1200px and up) */
@@ -988,4 +995,6 @@ body {background: #f1f5f8;}
 		height: 240px;
 		width: 240px;
 	}
+	
+	.navbar-bmarkt .h-cart {min-width: 535px;}
 }

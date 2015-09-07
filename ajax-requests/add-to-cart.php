@@ -52,7 +52,7 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && !empty($_SERVER['HTTP_X_REQUESTE
 			$goods_title = declOfNum($productsCount, array('товар', 'товара', 'товаров'));
 			
 			?>
-			<span class="hc-icon"><i></i></span><span class="hidden-xs">В корзине</span> <b><?=$productsCount?> <?=$goods_title?></b> на сумму <b><?=SaleFormatCurrency($summ, "RUB");?></b>
+			<span class="hc-icon"><i class="icon-cart"></i></span><span class="hidden-xs">В корзине</span> <b><?=$productsCount?> <?=$goods_title?></b> на сумму <b><?=SaleFormatCurrency($summ, "RUB");?></b>
 			<a href="/personal/cart/" class="btn btn-success btn-sm" type="button" rel="nofollow">Купить</a>
 			<?php
 		}
