@@ -74,7 +74,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 	<div class="container-fluid header-wrap">
 		<div class="container">
 			<div class="row header">
-				<div class="col-md-3 col-sm-3 h-logo">
+				<div class="col-md-3 col-sm-2 col-xs-2 h-logo">
 					<?php
 					if ($bMainPage)
 						echo '<span><img src="'.SITE_TEMPLATE_PATH.'/img/logo.png" alt="B-Markt"/></span>';
@@ -83,28 +83,32 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 					?>
 					
 				</div>
-				<div class="col-md-1 col-sm-1"></div>
-				<div class="col-md-3 col-sm-3 h-contacts h-regional-contacts">
-					<a href="tel:+7 (812) 425-35-64" class="hc-icon" rel="nofollow"><i class="icon-phone-city"></i></a>
-					<a href="#" rel="nofollow" class="hc-city">Санкт-Петербург:<i class="icon-arrow-dropdown"></i></a>
-					<span class="hc-phone">+7 (812) 425-35-64</span>
-					<a href="#">Заказать обратный звонок ›</a>
-				</div>
-				<div class="col-md-3 col-sm-3 h-contacts">
-					<a href="tel:8 (800) 775-35-74" class="hc-icon" rel="nofollow"><i class="icon-phone-all"></i></a>
-					<span class="hc-city">Россия:</span>
-					<div class="hc-phone">
-					<?php
-					$APPLICATION->IncludeFile(
-						SITE_DIR."include/phone-russia.php",
-						Array(),
-						Array("MODE"=>"text")
-					);
-					?>
+				<div class="col-md-1 hidden-sm hidden-xs"></div>
+				<div class="col-md-6 col-sm-7 col-xs-7">
+					<div class="row">
+						<div class="col-md-6 col-sm-12 col-xs-12 h-contacts h-regional-contacts">
+							<a href="tel:+7 (812) 425-35-64" class="hc-icon hidden-sm hidden-xs" rel="nofollow"><i class="icon-phone-city"></i></a>
+							<a href="#" rel="nofollow" class="hc-city">Санкт-Петербург:<i class="icon-arrow-dropdown"></i></a>
+							<span class="hc-phone">+7 (812) 425-35-64</span>
+							<span class="back-call-link"><a href="#" rel="nofollow">Заказать обратный звонок ›</a></span>
+						</div>
+						<div class="col-md-6 col-sm-12 col-xs-12 h-contacts">
+							<a href="tel:8 (800) 775-35-74" class="hc-icon hidden-sm hidden-xs" rel="nofollow"><i class="icon-phone-all"></i></a>
+							<span class="hc-city">Россия:</span>
+							<div class="hc-phone">
+							<?php
+							$APPLICATION->IncludeFile(
+								SITE_DIR."include/phone-russia.php",
+								Array(),
+								Array("MODE"=>"text")
+							);
+							?>
+							</div>
+							<span class="hc-notice">Звонок бесплатный</span>
+						</div>
 					</div>
-					<span class="hc-notice">Звонок бесплатный</span>
 				</div>
-				<div class="col-md-2 col-sm-2 h-sub-menu">
+				<div class="col-md-2 col-sm-3 col-xs-3 h-sub-menu">
 					<?$APPLICATION->IncludeComponent(
 						"bitrix:menu", 
 						"top_small", 

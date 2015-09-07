@@ -49,7 +49,7 @@ if (CModule::IncludeModule("sale"))
 		<?php
 	}
 	else
-		echo '<span class="hc-icon"><i></i></span><span class="hidden-xs">В корзине</span> <b>0 товаров</b> на сумму <b>0 р.</b>';
+		echo '<span class="hc-icon"><i class="icon-cart"></i></span><span class="hidden-xs">В корзине</span> <b>0 товаров</b> на сумму <b>0 р.</b>';
 
 	echo '</div>';
 }

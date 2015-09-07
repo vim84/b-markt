@@ -7,7 +7,7 @@ a {color: #2cbfd6; text-decoration: none;}
 a:hover {color: #2cbfd6; text-decoration: underline}
 a img {border:none}
 
-body {background: #f1f5f8;}
+body {background: #f1f5f8; min-width: 660px}
 
 .clear {
 	clear: both;
@@ -118,6 +118,7 @@ body {background: #f1f5f8;}
 
 .navbar-bmarkt .h-cart .hc-icon i {
 	color: #85b93b;
+	display: inlineblock;
 	position: relative;
 	bottom: -2px;
 }
@@ -186,6 +187,11 @@ body {background: #f1f5f8;}
 
 .header .h-logo {
 	padding-top: 10px;
+}
+
+.header .h-logo a, .header .h-logo span {
+	display: block;
+	overflow: hidden;
 }
 
 .header .h-contacts {
@@ -949,6 +955,19 @@ body {background: #f1f5f8;}
 	width: 580px;
 }
 
+.navbar-bmarkt .h-cart {min-width: 315px;}
+
+.header .h-contacts .hc-city i {margin-left: 10px;}
+	
+.header .h-logo a, .header .h-logo span {width: 58px;}
+.h-contacts .hc-phone {display: inline-block; font-size: 15px; margin-left: 10px;}
+
+.header .h-contacts {min-height: 30px; padding-top: 0}
+.header .h-regional-contacts {margin-left: 0; margin-right: 0; min-height: 50px; padding-top: 5px;}
+.h-contacts .hc-notice, .h-contacts .back-call-link {font-size: 11px;}
+.h-contacts .back-call-link {display: block;}
+.h-contacts .hc-notice {display: inline-block; margin-left: 10px;}
+
 /* Small devices (phone vertical, 320px and up) */
 @media (min-width:320px) {
 
@@ -962,6 +981,8 @@ body {background: #f1f5f8;}
 		height: 225px;
 		width: 225px;
 	}
+	
+	.navbar-bmarkt .h-cart {min-width: 400px;}
 }
 
 /* Medium devices (desktops, 992px and up) */
@@ -975,6 +996,17 @@ body {background: #f1f5f8;}
 	}
 	
 	.navbar-bmarkt .h-cart {min-width: 395px;}
+	
+	.header .h-contacts .hc-city i {margin-left: 55px;}
+	
+	.header .h-logo a, .header .h-logo span {width: auto;}
+	.h-contacts .hc-phone {display: block; font-size: 19px; margin-left: 0;}
+	
+	.header .h-contacts {min-height: 80px; padding-top: 5px;}
+	.header .h-regional-contacts {margin-left: -14px; margin-right: 12px; padding-top: 5px;}
+	.h-contacts .hc-notice, .h-contacts .back-call-link {font-size: 13px;}
+	.h-contacts .back-call-link {display: inline;}
+	.h-contacts .hc-notice {display: inline; margin-left: 0;}
 }
 
 /* Large devices (large desktops, 1200px and up) */
