@@ -394,6 +394,11 @@ body {background: #f1f5f8; min-width: 660px}
 	line-height: 38px;
 }
 
+.search-form .dropdown-toggle {
+	font-size: 15px;
+	font-weight: 300;
+}
+
 /* Banners main > */
 
 .carousel .carousel-caption {
@@ -822,8 +827,6 @@ body {background: #f1f5f8; min-width: 660px}
 
 .pre-footer ul li .active {color: #0088a9;}
 
-.pre-footer .f-subscribe {border-left: 1px dotted #bbb}
-
 .footer-row {
 	background: #ccc;
 	color: #666;
@@ -835,13 +838,18 @@ body {background: #f1f5f8; min-width: 660px}
 
 .footer-row a {color: #fff;}
 
-.f-right-block {border-left: 1px dotted #aaa; text-align: center;}
+.f-right-block {text-align: center;}
 .f-right-block .social {margin: 0 -5px; padding-bottom: 10px;}
 .f-right-block .social a {margin: 0 6px;}
 
 .f-right-block .fr-title {
 	display: block;
 	padding-bottom: 5px;
+}
+
+.footer-row .f-logo {
+	display: block;
+	margin-bottom: 35px;
 }
 
 /* < Footer */
@@ -1024,6 +1032,9 @@ body {background: #f1f5f8; min-width: 660px}
 	
 	.gl-main-actions .gl-item .gl-img {height: 157px; width: 236px;}
 	.gl-hits .gl-item .gl-img {height: 319px; width: 319px;}
+	
+	.f-right-block {border-left: 1px dotted #aaa;}
+	.pre-footer .f-subscribe {border-left: 1px dotted #bbb}
 }
 
 /* Medium devices (desktops, 992px and up) */

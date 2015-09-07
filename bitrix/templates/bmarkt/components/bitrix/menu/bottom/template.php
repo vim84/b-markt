@@ -4,7 +4,7 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 if (empty($arResult))
 	return;
 
-echo '<div class="row"><div class="col-md-3 col-sm-3"><ul>';
+echo '<div class="row"><div class="col-md-3 col-sm-3 col-xs-3"><ul>';
 				
 $itemsCount = count($arResult);
 // Поделим объекты пополам (для вывода на 4 колонки)
@@ -18,7 +18,7 @@ foreach ($arResult as $itemIdex => $arItem)
 		echo '<li><a href="'.$arItem["LINK"].'">'.$arItem["TEXT"].'</a></li>';
 
 	if (((($itemIdex + 1) % $oneColCount) == 0) && (($itemIdex + 1) !== $itemsCount))
-		echo '</ul></div><div class="col-md-3 col-sm-3"><ul class="list-unstyled">';
+		echo '</ul></div><div class="col-md-3 col-sm-3 col-xs-3"><ul class="list-unstyled">';
 	
 }
 

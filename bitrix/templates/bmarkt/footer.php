@@ -237,7 +237,7 @@ $APPLICATION->IncludeComponent(
 					<input class="form-control" placeholder="Ваш e-mail" type="email" />
 				</div>
 			
-				<button type="submit" class="btn btn-primary btn-block">Подписаться на новости</button>
+				<button type="submit" class="btn btn-primary btn-block">Подписаться <span class="hidden-sm">на новости</span></button>
 			</form>
 		</div>
 	</div>
@@ -249,16 +249,16 @@ $APPLICATION->IncludeComponent(
 	
 	<div class="row">
 		<div class="col-md-3 col-sm-3">
-			<img alt="B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/logo-f.png" /><br /><br />
-			<?php
+			<img alt="B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/logo-f.png" class="f-logo hidden-xs" />
+			<p><?php
 			$APPLICATION->IncludeFile(
 				SITE_DIR."include/footer-copyright.php",
 				Array(),
-				Array("MODE"=>"html")
+				Array("MODE"=>"text")
 			);
-			?>
+			?></p>
 		</div>
-		<div class="col-md-6 col-sm-6">
+		<div class="col-md-6 col-sm-5">
 			<?php
 			$APPLICATION->IncludeFile(
 				SITE_DIR."include/footer-text.php",
@@ -267,7 +267,7 @@ $APPLICATION->IncludeComponent(
 			);
 			?>
 		</div>
-		<div class="col-md-3 col-sm-3 f-right-block">
+		<div class="col-md-3 col-sm-4 f-right-block">
 			<span class="fr-title">Мы в социальных сетях:</span>
 			<?php
 			$APPLICATION->IncludeComponent(
@@ -328,8 +328,8 @@ $APPLICATION->IncludeComponent(
 	false
 );
 			?>
-			<span class="fr-title">Принимаем к оплате:</span>
-			<img alt="Принимаем к оплате — B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/pays.png" />
+			<span class="fr-title hidden-xs">Принимаем к оплате:</span>
+			<img alt="Принимаем к оплате — B-Markt" src="<?=SITE_TEMPLATE_PATH?>/img/pays.png" class="hidden-xs" />
 		</div>
 	</div>
 </div>
