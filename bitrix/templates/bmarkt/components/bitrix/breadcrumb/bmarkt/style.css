@@ -1,0 +1,8 @@
+.bc {
+	color: #aaa;
+	font-size: 11px;
+	padding: 0 15px 2px;
+	text-transform: uppercase;
+}
+
+.bc span {color: #333;}

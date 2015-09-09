@@ -296,14 +296,16 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 					?>
 					<div class="row">
 						<div class="col-lg-12">
-							<?$APPLICATION->IncludeComponent("bitrix:breadcrumb", "", array(
-									"START_FROM" => "0",
-									"PATH" => "",
-									"SITE_ID" => "-"
-								),
-								false,
-								Array('HIDE_ICONS' => 'Y')
-							);?>
+							<?$APPLICATION->IncludeComponent("bitrix:breadcrumb", "bmarkt", Array(
+	"START_FROM" => "1",	// Номер пункта, начиная с которого будет построена навигационная цепочка
+		"PATH" => "",	// Путь, для которого будет построена навигационная цепочка (по умолчанию, текущий путь)
+		"SITE_ID" => "-",	// Cайт (устанавливается в случае многосайтовой версии, когда DOCUMENT_ROOT у сайтов разный)
+	),
+	false,
+	array(
+	"HIDE_ICONS" => "Y"
+	)
+);?>
 							<h1><?=$APPLICATION->ShowTitle(false);?></h1>
 						</div>
 					</div>
