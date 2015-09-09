@@ -154,20 +154,21 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 				);
 				?>
 			</div>
-			<?php
-			if ($bMainPage)
-			{
-				?>
-				<div class="col-md-9 col-sm-9">
-					<div class="row search-form">
-						<?php
-						$APPLICATION->IncludeComponent("bitrix:search.form", "flat", Array(
-							"PAGE" => "#SITE_DIR#search/",	// Страница выдачи результатов поиска (доступен макрос #SITE_DIR#)
-							),
-							false
-						);
-						?>
-					</div>
+			
+			<div class="col-md-9 col-sm-9">
+				<div class="row search-form">
+					<?php
+					$APPLICATION->IncludeComponent("bitrix:search.form", "flat", Array(
+						"PAGE" => "#SITE_DIR#search/",	// Страница выдачи результатов поиска (доступен макрос #SITE_DIR#)
+						),
+						false
+					);
+					?>
+				</div>
+				<?php
+				if ($bMainPage)
+				{
+					?>
 					<?php
 					// Слайдер баннеров
 					$APPLICATION->IncludeComponent(
@@ -286,12 +287,75 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 						),
 						false
 					);
+				}
+				
+				echo '</div></div>';
+				
+				if (!$bMainPage)
+				{
 					?>
+					<div class="row">
+						<div class="col-lg-12">
+							<?$APPLICATION->IncludeComponent("bitrix:breadcrumb", "", array(
+									"START_FROM" => "0",
+									"PATH" => "",
+									"SITE_ID" => "-"
+								),
+								false,
+								Array('HIDE_ICONS' => 'Y')
+							);?>
+							<h1><?=$APPLICATION->ShowTitle(false);?></h1>
+						</div>
 					</div>
-				</div>
-				<?php
-			}
-			else 
+					
+					<div class="col-md-3 col-sm-3 catalog-menu">
+						<?php
+						$APPLICATION->IncludeComponent("pure:super.component", "catalog.subsections.list", array(
+							"CACHE_TYPE" => "A",
+							"CACHE_TIME" => "3600",
+							"SECTION_ID" => $arrSectionInfo["ID"]
+							),
+							false
+						);
+						?>
+						<?php
+						$APPLICATION->IncludeComponent(
+	"bitrix:catalog.smart.filter", 
+	".default_old", 
+	array(
+		"IBLOCK_TYPE" => "catalog",
+		"IBLOCK_ID" => "4",
+		"SECTION_ID" => $arrSectionInfo["ID"],
+		"FILTER_NAME" => "arrFilterSec",
+		"HIDE_NOT_AVAILABLE" => "N",
+		"CACHE_TYPE" => "A",
+		"CACHE_TIME" => "36000000",
+		"CACHE_GROUPS" => "N",
+		"SAVE_IN_SESSION" => "N",
+		"INSTANT_RELOAD" => "N",
+		"PRICE_CODE" => array(
+			0 => "BASE",
+		),
+		"XML_EXPORT" => "N",
+		"SECTION_TITLE" => "NAME",
+		"SECTION_DESCRIPTION" => "DESCRIPTION",
+		"SHOW_PROPS" => "",
+		"COMPONENT_TEMPLATE" => ".default_old",
+		"SECTION_CODE" => "",
+		"TEMPLATE_THEME" => "blue",
+		"DISPLAY_ELEMENT_COUNT" => "Y",
+		"CONVERT_CURRENCY" => "N",
+		"SEF_MODE" => "N",
+		"PAGER_PARAMS_NAME" => "arrPager"
+	),
+	false
+);
+						?>
+					</div>
+					<div class="col-md-9 col-sm-9">
+					<?php
+				}
+			/*else 
 			{
 				$contentClass = '';
 				
@@ -320,5 +384,6 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 					);?>
 					<h1><?=$APPLICATION->ShowTitle(false);?></h1>
 				<?php
-			}
+			}*/
 			?>
+			

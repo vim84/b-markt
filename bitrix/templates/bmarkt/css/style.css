@@ -318,7 +318,8 @@ body {background: #f1f5f8; min-width: 660px}
 	margin: 0;
 }
 
-.catalog-menu ul li {}
+.catalog-menu ul li {display: none;}
+.tpl-main .catalog-menu ul li {display: block;}
 
 .catalog-menu ul li a, .catalog-menu ul li span {
 	border-bottom: 1px solid #ececfb;

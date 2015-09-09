@@ -6,7 +6,7 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 if ($arResult["FORM_TYPE"] == "login")
 {
 	?>
-	<span class="user-id-block"><span class="hidden-xs">Ваш</span> ID: <b>TEMP</b></span>
+	<span class="user-id-block"><span class="hidden-xs">Ваш</span> ID: <b>0</b></span>
 	<a href="/login/" class="login-link" rel="nofollow" title="Войти"><span class="hidden-sm hidden-xs">Войти</span><i class="icon-login"></i><i class="icon-login-act"></i></a>
 	<?php
 }
