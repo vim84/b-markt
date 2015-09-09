@@ -3,10 +3,8 @@
 if (!empty($arResult['ITEMS']))
 {
 	?>
-	<div class="row goods-list">
+	<div class="row goods-list catalog-section">
 		<?
-		//$itemCount = 0;
-		
 		foreach ($arResult['ITEMS'] as $key => $arItem)
 		{
 			$this->AddEditAction($arItem['ID'], $arItem['EDIT_LINK'], CIBlock::GetArrayByID($arParams["IBLOCK_ID"], "ELEMENT_EDIT"));
@@ -68,13 +66,15 @@ if (!empty($arResult['ITEMS']))
 						?>
 					</div>
 				</div>
+				
+				<div class="gl-cmp-fav">
+					<noindex>
+					<a href="#" class="gl-compare-link" rel="nofollow"><i class="icon-compare"></i><i class="icon-compare-act"></i><span>К сравнению</span></a>
+					<a href="#" class="gl-favorite-link" rel="nofollow"><span>В изрбранное</span><i class="icon-heart"></i><i class="icon-heart-act"></i></a>
+					</noindex>
+				</div>
 			</div>
 			<?php
-			/*
-			$itemCount++;
-			if ($itemCount % 3 == 0)
-				echo '<br class="clear" />';
-			*/
 		}
 		?>
 	</div>
