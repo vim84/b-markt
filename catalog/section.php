@@ -3,7 +3,7 @@ require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 $APPLICATION->SetTitle("");
 
 // Поле сортировки (цена)
-$sortBy = "CATALOG_PRICE_5";
+$sortBy = "CATALOG_PRICE_1";
 // Направление сортировки
 if ($_GET['order'] == "asc")
 {
@@ -42,15 +42,15 @@ $APPLICATION->IncludeComponent(
 			0 => "",
 			1 => "",
 		),
-		"ELEMENT_SORT_FIELD" => "\$sortBy",
-		"ELEMENT_SORT_ORDER" => "\$order",
+		"ELEMENT_SORT_FIELD" => $sortBy,
+		"ELEMENT_SORT_ORDER" => $order,
 		"ELEMENT_SORT_FIELD2" => "id",
 		"ELEMENT_SORT_ORDER2" => "desc",
 		"FILTER_NAME" => "arrFilterSec",
 		"INCLUDE_SUBSECTIONS" => "A",
 		"SHOW_ALL_WO_SECTION" => "N",
 		"HIDE_NOT_AVAILABLE" => "N",
-		"PAGE_ELEMENT_COUNT" => "20",
+		"PAGE_ELEMENT_COUNT" => "12",
 		"LINE_ELEMENT_COUNT" => "3",
 		"PROPERTY_CODE" => array(
 			0 => "G_MANUFACTURER",

@@ -324,35 +324,35 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 							);
 							?>
 							<?php
-							$APPLICATION->IncludeComponent(
-								"bitrix:catalog.smart.filter", 
-								"visual_horizontal", 
-								array(
-									"IBLOCK_TYPE" => "catalog",
-									"IBLOCK_ID" => "4",
-									"SECTION_ID" => $arrSectionInfo["ID"],
-									"FILTER_NAME" => "arrFilterSec",
-									"HIDE_NOT_AVAILABLE" => "N",
-									"CACHE_TYPE" => "A",
-									"CACHE_TIME" => "36000000",
-									"CACHE_GROUPS" => "N",
-									"SAVE_IN_SESSION" => "N",
-									"INSTANT_RELOAD" => "N",
-									"PRICE_CODE" => array(
-										0 => "BASE",
-									),
-									"XML_EXPORT" => "N",
-									"SECTION_TITLE" => "NAME",
-									"SECTION_DESCRIPTION" => "DESCRIPTION",
-									"SHOW_PROPS" => "",
-									"COMPONENT_TEMPLATE" => "visual_horizontal",
-									"SECTION_CODE" => "",
-									"TEMPLATE_THEME" => "blue",
-									"DISPLAY_ELEMENT_COUNT" => "Y",
-									"CONVERT_CURRENCY" => "N"
-								),
-								false
-							);
+							$APPLICATION->IncludeComponent("bitrix:catalog.smart.filter", "bmarkt", Array(
+	"IBLOCK_TYPE" => "catalog",	// Тип инфоблока
+		"IBLOCK_ID" => "4",	// Инфоблок
+		"SECTION_ID" => $arrSectionInfo["ID"],	// ID раздела инфоблока
+		"FILTER_NAME" => "arrFilterSec",	// Имя выходящего массива для фильтрации
+		"HIDE_NOT_AVAILABLE" => "N",	// Не отображать товары, которых нет на складах
+		"CACHE_TYPE" => "A",	// Тип кеширования
+		"CACHE_TIME" => "36000000",	// Время кеширования (сек.)
+		"CACHE_GROUPS" => "N",	// Учитывать права доступа
+		"SAVE_IN_SESSION" => "N",	// Сохранять установки фильтра в сессии пользователя
+		"INSTANT_RELOAD" => "N",	// Мгновенная фильтрация при включенном AJAX
+		"PRICE_CODE" => array(	// Тип цены
+			0 => "BASE",
+		),
+		"XML_EXPORT" => "N",	// Включить поддержку Яндекс Островов
+		"SECTION_TITLE" => "NAME",	// Заголовок
+		"SECTION_DESCRIPTION" => "DESCRIPTION",	// Описание
+		"SHOW_PROPS" => "",
+		"COMPONENT_TEMPLATE" => ".default_old",
+		"SECTION_CODE" => "",	// Код раздела
+		"TEMPLATE_THEME" => "blue",	// Цветовая тема
+		"DISPLAY_ELEMENT_COUNT" => "Y",	// Показывать количество
+		"CONVERT_CURRENCY" => "N",	// Показывать цены в одной валюте
+		"FILTER_VIEW_MODE" => "vertical",
+		"SEF_MODE" => "N",	// Включить поддержку ЧПУ
+		"PAGER_PARAMS_NAME" => "arrPager",	// Имя массива с переменными для построения ссылок в постраничной навигации
+	),
+	false
+);
 							?>
 						</div>
 						<div class="col-md-9 col-sm-9">
