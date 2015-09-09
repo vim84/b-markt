@@ -24,14 +24,10 @@ else
 	$sortArr = "&#9650;";
 }
 
-$arrSectionInfo = secInfoByPath($_REQUEST["SECTION_PATH"]);
-
 // Если раздел каталога не найден, то 404
 if (empty($arrSectionInfo["ID"]))
    @define('ERROR_404', 'Y');
 ?>
-
-<div class="right_column">
 
 <?php
 $APPLICATION->IncludeComponent(
@@ -116,13 +112,6 @@ $APPLICATION->IncludeComponent(
 );
 ?>
 
-<?php
-// Описание группы
-if ($arrSectionInfo["DESCRIPTION"])
-	echo '<article>'.$arrSectionInfo["DESCRIPTION"].'</article>';
-?>
-
-</div>
 <?php
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");
 ?>

@@ -17,6 +17,21 @@ body {background: #f1f5f8; min-width: 660px}
 	font-size: 0;
 }
 
+
+h1, .h1, h2, h3, h4, h5, h6, .h2, .h3, .h4, .h5, .h6 {
+	color: #333;
+	display: block;
+	font-size: 48px;
+	font-weight: 300;
+	line-height: 120%;
+	padding-bottom: 15px;
+}
+
+h2, .h2 {font-size: 45px;}
+h3, .h3 {font-size: 40px;}
+h4, .h4 {font-size: 35px;}
+h6, .h6 {font-size: 30px;}
+
 .h-title {
 	display: block;
 	font-size: 24px;
@@ -305,10 +320,7 @@ body {background: #f1f5f8; min-width: 660px}
 
 /* Catalog menu > */
 
-.catalog-menu {
-	padding-top: 22px;
-	padding-bottom: 20px;
-}
+.catalog-menu {padding-top: 22px;}
 
 .catalog-menu ul {
 	background: #fff;
@@ -619,9 +631,7 @@ body {background: #f1f5f8; min-width: 660px}
 
 /* < Catalog */
 
-.menu-banner-block {
-	border-bottom: 1px solid #ddd;
-}
+.tpl-main .menu-banner-block {border-bottom: 1px solid #ddd; padding-bottom: 20px;}
 
 /* Reviews-services main > */
 .reviews-wrap {
@@ -1006,8 +1016,6 @@ body {background: #f1f5f8; min-width: 660px}
 .h-contacts .back-call-link {display: block;}
 .h-contacts .hc-notice {display: inline-block; margin-left: 10px;}
 
-.catalog-menu {padding-bottom: 0;}
-
 .gl-main-actions .gl-item .gl-img {height: 183px; width: 274px;}
 .gl-hits .gl-item .gl-img {height: 264px; width: 264px;}
 
@@ -1028,8 +1036,6 @@ body {background: #f1f5f8; min-width: 660px}
 	.navbar-bmarkt .h-cart {min-width: 400px;}
 	
 	.catalog-menu ul li a, .catalog-menu ul li span {padding: 8px 12px 9px;}
-	
-	.catalog-menu {padding-bottom: 20px;}
 	
 	.gl-main-actions .gl-item .gl-img {height: 157px; width: 236px;}
 	.gl-hits .gl-item .gl-img {height: 319px; width: 319px;}
