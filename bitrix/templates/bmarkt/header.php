@@ -295,7 +295,7 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 				{
 					?>
 					<div class="row">
-						<div class="col-lg-12">
+						<div class="col-lg-12 bc-h1-block">
 							<?$APPLICATION->IncludeComponent("bitrix:breadcrumb", "bmarkt", Array(
 	"START_FROM" => "1",	// Номер пункта, начиная с которого будет построена навигационная цепочка
 		"PATH" => "",	// Путь, для которого будет построена навигационная цепочка (по умолчанию, текущий путь)

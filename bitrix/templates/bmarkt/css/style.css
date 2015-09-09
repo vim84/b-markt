@@ -347,6 +347,11 @@ h6, .h6 {font-size: 30px;}
 
 .catalog-menu .cm-title {
 	background: #0089a9;
+	
+	-webkit-border-radius: 2px;
+	   -moz-border-radius: 2px;
+		    border-radius: 2px;
+		    
 	color: #fff;
 	display: block;
 	font-size: 17px;
@@ -380,6 +385,45 @@ h6, .h6 {font-size: 30px;}
 }
 
 .tpl-main .catalog-menu .cm-title i {display: none;}
+
+.catalog-submenu {
+	background: #fff;
+	border-bottom: 1px solid #d8dcdf;
+	
+	-webkit-border-radius: 2px;
+	   -moz-border-radius: 2px;
+		    border-radius: 2px;
+		    
+	font-size: 13px;
+	list-style: none;
+	margin: 0 0 20px;
+	padding: 0;
+}
+
+.catalog-submenu li a {
+	border-top: 1px solid #ececfb;
+	color: #666;
+	display: block;
+	overflow: hidden;
+	padding: 14px 15px 15px;
+}
+
+.catalog-submenu li:first-child a {border: none;}
+
+.catalog-submenu li a:hover {
+	color: #2cbfd6;
+	text-decoration: none;
+}
+
+.catalog-submenu li a span {
+	display: block;
+	padding-right: 40px;
+}
+.catalog-submenu li a i {
+	float: right;
+	font-style: normal;
+	font-weight: 300;
+}
 
 /* < Catalog menu */
 
@@ -810,6 +854,8 @@ h6, .h6 {font-size: 30px;}
 .news-block .articles-idx .more-link {color: #0089a9}
 
 /* < News main */
+
+.bc-h1-block {padding: 0 25px;}
 
 /* Footer > */
 .pre-footer {

@@ -8,7 +8,7 @@ if (!empty($arResult))
 	
 	foreach ($arResult["ITEMS"] as $arItem)
 	{
-		echo '<li><a href="'.$arItem['SECTION_PAGE_URL'].'"><span>'.$arItem['NAME'].'</span> ('.$arItem['ELEMENT_CNT'].')</a></li>';
+		echo '<li><a href="'.$arItem['SECTION_PAGE_URL'].'"><i>('.$arItem['ELEMENT_CNT'].')</i><span>'.$arItem['NAME'].'</span></a></li>';
 	}
 		
 	echo '</ul>';
