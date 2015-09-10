@@ -14,7 +14,7 @@ if (is_array($arResult["DETAIL_PICTURE"]))
 	
 	$arFileTmpSm = CFile::ResizeImageGet(
 		$arResult['DETAIL_PICTURE'],
-		array("width" => 51, "height" => 51),
+		array("width" => 90, "height" => 90),
 		BX_RESIZE_IMAGE_EXACT,
 		true
 	);
@@ -56,7 +56,7 @@ if (is_array($arResult['PROPERTIES']['G_MORE_PHOTO']['VALUE']) && count($arResul
 	{
 		$arFileTmp = CFile::ResizeImageGet(
 			$arFileId,
-			array("width" => 51, "height" => 51),
+			array("width" => 90, "height" => 90),
 			BX_RESIZE_IMAGE_EXACT,
 			true
 		);

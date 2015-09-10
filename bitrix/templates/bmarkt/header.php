@@ -8,8 +8,11 @@ if ($APPLICATION->GetCurPage() == '/')
 $bCataloguePage = false;
 if (!empty($_REQUEST["SECTION_PATH"]))
 	$bCatalogPage = true;
+	
+$bCatalogElement = false;
+if (!empty($_REQUEST["ELEMENT_CODE"]))
+	$bCatalogElement = true;
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -39,7 +42,18 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 		<link rel="stylesheet" type="text/css" href="<?=CUtil::GetAdditionalFileURL(SITE_TEMPLATE_PATH."/css/style.css")?>" />
 		
 	</head>
-	<body <?=($bMainPage)? ' class="tpl-main"' : ''?>>
+	
+	<?php
+	// Класс шаблона страницы
+	if ($bMainPage)
+		$tplClass = ' class="tpl-main"';
+	elseif ($bCatalogElement)
+		$tplClass = ' class="tpl-good-detail"';
+	else 
+		$tplClass = '';
+	?>
+	
+	<body <?=$tplClass?>>
 	<div id="panel"><?$APPLICATION->ShowPanel();?></div>
 	<noindex>
 	<nav role="navigation" class="navbar navbar-default navbar-bmarkt">
@@ -310,52 +324,59 @@ if (!empty($_REQUEST["SECTION_PATH"]))
 						</div>
 					</div>
 					<div class="row">
-						<div class="col-md-3 col-sm-3">
-							<?php
-							// Данные о текущем разделе каталога
-							$arrSectionInfo = secInfoByPath($_REQUEST["SECTION_PATH"]);
-							
-							$APPLICATION->IncludeComponent("pure:super.component", "catalog.subsections.list", array(
-								"CACHE_TYPE" => "A",
-								"CACHE_TIME" => "3600000",
-								"SECTION_ID" => $arrSectionInfo["ID"]
-								),
-								false
-							);
+						<?php
+						if (!$bCatalogElement)
+						{
 							?>
+							<div class="col-md-3 col-sm-3">
+								<?php
+								// Данные о текущем разделе каталога
+								$arrSectionInfo = secInfoByPath($_REQUEST["SECTION_PATH"]);
+								
+								$APPLICATION->IncludeComponent("pure:super.component", "catalog.subsections.list", array(
+									"CACHE_TYPE" => "A",
+									"CACHE_TIME" => "3600000",
+									"SECTION_ID" => $arrSectionInfo["ID"]
+									),
+									false
+								);
+								?>
+								<?php
+								$APPLICATION->IncludeComponent("bitrix:catalog.smart.filter", "bmarkt", Array(
+									"IBLOCK_TYPE" => "catalog",	// Тип инфоблока
+										"IBLOCK_ID" => "4",	// Инфоблок
+										"SECTION_ID" => $arrSectionInfo["ID"],	// ID раздела инфоблока
+										"FILTER_NAME" => "arrFilterSec",	// Имя выходящего массива для фильтрации
+										"HIDE_NOT_AVAILABLE" => "N",	// Не отображать товары, которых нет на складах
+										"CACHE_TYPE" => "A",	// Тип кеширования
+										"CACHE_TIME" => "36000000",	// Время кеширования (сек.)
+										"CACHE_GROUPS" => "N",	// Учитывать права доступа
+										"SAVE_IN_SESSION" => "N",	// Сохранять установки фильтра в сессии пользователя
+										"INSTANT_RELOAD" => "N",	// Мгновенная фильтрация при включенном AJAX
+										"PRICE_CODE" => array(	// Тип цены
+											0 => "BASE",
+										),
+										"XML_EXPORT" => "N",	// Включить поддержку Яндекс Островов
+										"SECTION_TITLE" => "NAME",	// Заголовок
+										"SECTION_DESCRIPTION" => "DESCRIPTION",	// Описание
+										"SHOW_PROPS" => "",
+										"COMPONENT_TEMPLATE" => ".default_old",
+										"SECTION_CODE" => "",	// Код раздела
+										"TEMPLATE_THEME" => "blue",	// Цветовая тема
+										"DISPLAY_ELEMENT_COUNT" => "Y",	// Показывать количество
+										"CONVERT_CURRENCY" => "N",	// Показывать цены в одной валюте
+										"FILTER_VIEW_MODE" => "vertical",
+										"SEF_MODE" => "N",	// Включить поддержку ЧПУ
+										"PAGER_PARAMS_NAME" => "arrPager",	// Имя массива с переменными для построения ссылок в постраничной навигации
+									),
+									false
+								);
+								?>
+							</div>
 							<?php
-							$APPLICATION->IncludeComponent("bitrix:catalog.smart.filter", "bmarkt", Array(
-	"IBLOCK_TYPE" => "catalog",	// Тип инфоблока
-		"IBLOCK_ID" => "4",	// Инфоблок
-		"SECTION_ID" => $arrSectionInfo["ID"],	// ID раздела инфоблока
-		"FILTER_NAME" => "arrFilterSec",	// Имя выходящего массива для фильтрации
-		"HIDE_NOT_AVAILABLE" => "N",	// Не отображать товары, которых нет на складах
-		"CACHE_TYPE" => "A",	// Тип кеширования
-		"CACHE_TIME" => "36000000",	// Время кеширования (сек.)
-		"CACHE_GROUPS" => "N",	// Учитывать права доступа
-		"SAVE_IN_SESSION" => "N",	// Сохранять установки фильтра в сессии пользователя
-		"INSTANT_RELOAD" => "N",	// Мгновенная фильтрация при включенном AJAX
-		"PRICE_CODE" => array(	// Тип цены
-			0 => "BASE",
-		),
-		"XML_EXPORT" => "N",	// Включить поддержку Яндекс Островов
-		"SECTION_TITLE" => "NAME",	// Заголовок
-		"SECTION_DESCRIPTION" => "DESCRIPTION",	// Описание
-		"SHOW_PROPS" => "",
-		"COMPONENT_TEMPLATE" => ".default_old",
-		"SECTION_CODE" => "",	// Код раздела
-		"TEMPLATE_THEME" => "blue",	// Цветовая тема
-		"DISPLAY_ELEMENT_COUNT" => "Y",	// Показывать количество
-		"CONVERT_CURRENCY" => "N",	// Показывать цены в одной валюте
-		"FILTER_VIEW_MODE" => "vertical",
-		"SEF_MODE" => "N",	// Включить поддержку ЧПУ
-		"PAGER_PARAMS_NAME" => "arrPager",	// Имя массива с переменными для построения ссылок в постраничной навигации
-	),
-	false
-);
-							?>
-						</div>
-						<div class="col-md-9 col-sm-9">
+						}
+						?>
+						<div class="<?=($bCatalogElement)? 'col-md-12 col-sm-12 good-detail' : 'col-md-9 col-sm-9'?>">
 					<?php
 				}
 			?>
