@@ -42,8 +42,8 @@ $APPLICATION->IncludeComponent(
 			0 => "",
 			1 => "",
 		),
-		"ELEMENT_SORT_FIELD" => $sortBy,
-		"ELEMENT_SORT_ORDER" => $order,
+		"ELEMENT_SORT_FIELD" => "\$sortBy",
+		"ELEMENT_SORT_ORDER" => "\$order",
 		"ELEMENT_SORT_FIELD2" => "id",
 		"ELEMENT_SORT_ORDER2" => "desc",
 		"FILTER_NAME" => "arrFilterSec",
@@ -95,7 +95,7 @@ $APPLICATION->IncludeComponent(
 		"PARTIAL_PRODUCT_PROPERTIES" => "N",
 		"PRODUCT_PROPERTIES" => array(
 		),
-		"PAGER_TEMPLATE" => ".default",
+		"PAGER_TEMPLATE" => "bmarkt",
 		"DISPLAY_TOP_PAGER" => "N",
 		"DISPLAY_BOTTOM_PAGER" => "Y",
 		"PAGER_TITLE" => "Товары",
@@ -106,7 +106,13 @@ $APPLICATION->IncludeComponent(
 		"AJAX_OPTION_ADDITIONAL" => "",
 		"PRODUCT_QUANTITY_VARIABLE" => "quantity",
 		"COMPONENT_TEMPLATE" => "bmarkt",
-		"SET_BROWSER_TITLE" => "Y"
+		"SET_BROWSER_TITLE" => "Y",
+		"SEF_MODE" => "N",
+		"SET_LAST_MODIFIED" => "N",
+		"USE_MAIN_ELEMENT_SECTION" => "N",
+		"PAGER_BASE_LINK_ENABLE" => "N",
+		"SHOW_404" => "N",
+		"MESSAGE_404" => ""
 	),
 	false
 );

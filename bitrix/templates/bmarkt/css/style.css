@@ -727,6 +727,9 @@ h6, .h6 {font-size: 30px;}
 .goods-list .gl-item-wrap .gl-cmp-fav .gl-compare-link:hover .icon-compare-act,
 .goods-list .gl-item-wrap .gl-cmp-fav .gl-favorite-link:hover .icon-heart-act {display: inline;}
 
+.pagination-wrap {text-align: center}
+.pagination {margin: 0;}
+
 /* < Catalog */
 
 .tpl-main .menu-banner-block {border-bottom: 1px solid #ddd; padding-bottom: 20px;}
