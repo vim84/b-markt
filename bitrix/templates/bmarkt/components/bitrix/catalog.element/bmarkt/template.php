@@ -6,7 +6,7 @@
 		<div class=""></div>
 	</div>
 </div>
-<div class="row">
+<div class="row gd-main-props">
 	<div class="col-md-6 col-sm-6">
 		<div class="product_gallery">
 			<?php
@@ -70,19 +70,7 @@
 	<div class="col-md-3 col-sm-3">
 		<div class="gd-price-block">
 			<div class="gd-discount"><span>Скидка</span> 21<i>%</i></span></div>
-		</div>
-	</div>
-	<div class="col-md-3 col-sm-3">
-		<div class="gd-props-block">
-			ss
-		</div>
-	</div>
-</div>
-	<br class="clear" />
-	<div class="product_info">
-		<div class="group-wrap">
-			<div class="group">
-				<?php
+			<?php
 				if ($arResult["CAN_BUY"])
 				{
 					?>
@@ -95,47 +83,97 @@
 								if ($arPrice["DISCOUNT_VALUE"] < $arPrice["VALUE"])
 								{
 									?>
-									<div class="price old-price">
-										<big><?=$arPrice["PRINT_VALUE"]?></big>
+									<div class="old-price">
+										<span>Старая цена:</span>
+										<i><?=$arPrice["PRINT_VALUE"]?></i>
+										<?// Скидка $arPrice["DISCOUNT_DIFF_PERCENT"]?>
 									</div>
-									<div class="price" itemprop="offers" itemscope itemtype="http://schema.org/Offer">
-										<big itemprop="price"><?=$arPrice["PRINT_DISCOUNT_VALUE"]?></big>
-									</div>
+									<div class="price"><?=$arPrice["PRINT_DISCOUNT_VALUE"]?></div>
 									<?
 								}
 								else
 								{
 									?>
-									<div class="price" itemprop="offers" itemscope itemtype="http://schema.org/Offer">
-										<big itemprop="price"><?=$arPrice["PRINT_VALUE"]?></big>
-									</div>
+									<div class="price"><?=$arPrice["PRINT_VALUE"]?></div>
 									<?
 								}
 								
 								break;
 							}
-			            }
-			            
-			            // Проверка, добавлен ли товар в сравнение
-						if (array_key_exists($arResult["ID"], $_SESSION["CATALOG_COMPARE_LIST"][IBLOCK_CATALOG]["ITEMS"]))
-							$cmpDisabledClass = ' disabled';
-						else 
-							$cmpDisabledClass = '';
+			            }       
 						?>
-						<div class="actions">
-							<div class="action compare<?=$cmpDisabledClass?>"><a href="#" rel="nofollow" data-product-id="<?=$arResult["ID"]?>" class="add-to-compare"><span>Сравнить товар</span></a></div>
-						</div>
+						
 						<div class="buy">
-							<a class="css-button green-button cb-mid add-to-cart" href="#" rel="nofollow" data-product-id="<?=$arResult["ID"]?>">В корзину</a>
+							<a class="btn btn-success btn-block add-to-cart" href="#" rel="nofollow" data-product-id="<?=$arResult["ID"]?>">Купить</a>
 						</div>
-					</div><!--price_and_actions-->
+					</div>
+					<table class="buy-params">
+						<tr><td class="bp-name">Ожидаемая дата доставки:</td><td>15.01.2016</td></tr>
+						<tr><td class="bp-name">Стоимость доставки:</td><td>500 р.</td></tr>
+						<tr><td class="bp-name">Стоимость установки:</td><td>500 р.</td></tr>
+					</table>
 					<?php
 				}
 				?>
-			</div><!--group-->
-		</div><!--group-wrap-->
-	</div><!--product_info-->
-</div><!--product-->
+		</div>
+	</div>
+	<div class="col-md-3 col-sm-3">
+		<div class="gd-props-block">
+			<?php
+			// Основные свойства (первые 10)
+			if (!empty($arResult["DISPLAY_PROPERTIES"]))
+			{
+				echo '<span class="props-title">Основные характеристики:</span><table>';
+				
+				$propsCount = 0;
+				
+				foreach ($arResult["DISPLAY_PROPERTIES"] as $propertyVal)
+				{
+					$propsCount++;
+					
+					if (is_array($propertyVal["DISPLAY_VALUE"]))
+						echo '<tr><td>'.$propertyVal["NAME"].'</td><td>'.implode($propertyVal["DISPLAY_VALUE"], ", ").'</td></tr>';
+					else
+						echo '<tr><td>'.$propertyVal["NAME"].'</td><td>'.$propertyVal["DISPLAY_VALUE"].'</td></tr>';
+					
+					if ($propsCount == 10)
+						break;
+				}
+				
+				echo '</table>';
+			}
+			
+			if (!empty($arResult["PREVIEW_TEXT"]))
+				echo '<div class="props-preview-text"><span class="props-text-title">Описание:</span>'.$arResult["PREVIEW_TEXT"].'</div>';
+			?>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-md-12 col-sm-12">
+		<ul class="nav nav-tabs nav-justified">
+		  <li role="presentation" class="active"><a href="#">Характеристики</a></li>
+		  <li role="presentation"><a href="#">Доставка и оплата</a></li>
+		  <li role="presentation"><a href="#">Дополнительно</a></li>
+		</ul>
+	</div>
+</div>
+
+<?php
+/*
+// Проверка, добавлен ли товар в сравнение
+if (array_key_exists($arResult["ID"], $_SESSION["CATALOG_COMPARE_LIST"][IBLOCK_CATALOG]["ITEMS"]))
+	$cmpDisabledClass = ' disabled';
+else 
+	$cmpDisabledClass = '';
+?>
+<div class="actions">
+	<div class="action compare<?=$cmpDisabledClass?>"><a href="#" rel="nofollow" data-product-id="<?=$arResult["ID"]?>" class="add-to-compare"><span>Сравнить товар</span></a></div>
+</div>
+<?php
+*/
+?>
 
 <dl class="tabs">
 	<?php
@@ -347,3 +385,4 @@ false
 
 */
 ?>
+</div>
