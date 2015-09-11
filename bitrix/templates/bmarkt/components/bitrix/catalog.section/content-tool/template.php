@@ -2,6 +2,12 @@
 
 if (!empty($arResult['ITEMS']))
 {
+	// Всего товаров на данной странице
+	$pageItemsCount = count($arResult['ITEMS']);
+	
+	if ($pageItemsCount <= $arParams["PAGE_ELEMENT_COUNT"])
+		echo 'Товаров на текущей странице: '.$pageItemsCount;
+	
 	if ($arParams["DISPLAY_TOP_PAGER"])
 		echo $arResult["NAV_STRING"];
 	?>
@@ -72,6 +78,9 @@ if (!empty($arResult['ITEMS']))
 	</table>
 	<br /><br />
 	<?php
+	if ($pageItemsCount <= $arParams["PAGE_ELEMENT_COUNT"])
+		echo 'Товаров на текущей странице: '.$pageItemsCount;
+	
 	if ($arParams["DISPLAY_BOTTOM_PAGER"])
 		echo $arResult["NAV_STRING"];
 }
