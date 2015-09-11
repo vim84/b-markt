@@ -170,6 +170,33 @@
 		  <li role="presentation"><a href="#">Доставка и оплата</a></li>
 		  <li role="presentation"><a href="#">Дополнительно</a></li>
 		</ul>
+		
+		<div class="tabs-results">
+			<div class="tr-all-props">
+				<?php
+				// Подробное описание
+				echo '<div class="content">'.$arResult["DETAIL_TEXT"].'</div>';
+				
+				// Все характеристики
+				if (!empty($arResult["DISPLAY_PROPERTIES"]))
+				{
+					echo '<span class="tr-subtitle">Характеристики</span><table class="all-props-tbl">';
+					
+					foreach ($arResult["DISPLAY_PROPERTIES"] as $propertyVal)
+					{
+						$propsCount++;
+						
+						if (is_array($propertyVal["DISPLAY_VALUE"]))
+							echo '<tr><td>'.$propertyVal["NAME"].'</td><td>'.implode($propertyVal["DISPLAY_VALUE"], ", ").'</td></tr>';
+						else
+							echo '<tr><td>'.$propertyVal["NAME"].'</td><td>'.$propertyVal["DISPLAY_VALUE"].'</td></tr>';
+					}
+					
+					echo '</table>';
+				}
+				?>
+			</div>
+		</div>
 	</div>
 </div>
 
@@ -187,37 +214,6 @@ else
 <?php
 */
 ?>
-
-<dl class="tabs">
-	<?php
-	if (!empty($arResult["DETAIL_TEXT"]))
-		echo '<dt id="description" class="active">Описание</dt><dd itemprop="description">'.$arResult["DETAIL_TEXT"].'</dd>';
-	?>
-	
-	<?php
-	if (!empty($arResult["DISPLAY_PROPERTIES"]))
-	{
-		echo '<dt id="properties">Все характеристики</dt><dd><ul>';
-		
-		foreach ($arResult["DISPLAY_PROPERTIES"] as $propertyVal)
-		{
-			if (is_array($propertyVal["DISPLAY_VALUE"]))
-				echo '<li><b>'.$propertyVal["NAME"].'</b>: '.implode($propertyVal["DISPLAY_VALUE"], ", ").'</li>';
-			else
-			{
-				if ($propertyVal["CODE"] == "CML2_MANUFACTURER")
-					echo '<li><b>'.$propertyVal["NAME"].'</b>: <span itemprop="manufacturer">'.$propertyVal["DISPLAY_VALUE"].'</span></li>';
-				elseif ($propertyVal["CODE"] == "TSVET")
-					echo '<li><b>'.$propertyVal["NAME"].'</b>: <span itemprop="color">'.$propertyVal["DISPLAY_VALUE"].'</span></li>';
-				else 
-					echo '<li><b>'.$propertyVal["NAME"].'</b>: '.$propertyVal["DISPLAY_VALUE"].'</li>';
-			}
-		}
-		
-		echo '</ul></dd>';
-	}
-	?>
-</dl><!--tabs-->
 
 <div class="no_micro">
 <?php /*
