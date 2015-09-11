@@ -7,7 +7,7 @@ a {color: #2cbfd6; text-decoration: none;}
 a:hover {color: #2cbfd6; text-decoration: underline}
 a img {border:none}
 
-body {background: #f1f5f8; min-width: 660px}
+body {background: #f1f5f8; min-width: 660px;}
 
 .clear {
 	clear: both;
@@ -1238,6 +1238,8 @@ h6, .h6 {font-size: 30px;}
 	vertical-align: top;
 	width: 50%;
 }
+
+.tabs-results .goods-list {margin: 0 -20px;}
 
 /* ------------------------- */
 

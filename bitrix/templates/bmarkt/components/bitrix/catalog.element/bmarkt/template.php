@@ -166,6 +166,74 @@
 <div class="row">
 	<div class="col-md-12 col-sm-12">
 		<ul class="nav nav-tabs nav-justified">
+		  <li role="presentation" class="active"><a href="#">Сопутствующие товары</a></li>
+		  <li role="presentation"><a href="#">Товары часто продаваемые с этим</a></li>
+		</ul>
+		
+		<div class="tabs-results">
+			<?php
+			// Хиты и новинки (все товары, у которых стоит отметка или хит или новинка)
+			$GLOBALS["arrFilterHits"] = array(
+				array(
+					"LOGIC" => "OR",
+					array("!PROPERTY_G_HIT_FLAG_VALUE" => false),
+					array("!PROPERTY_G_NEW_FLAG_VALUE" => false)
+				)
+			);
+					
+			$APPLICATION->IncludeComponent("bitrix:catalog.top", "related", Array(
+	"IBLOCK_TYPE" => "catalog",	// Тип инфоблока
+		"IBLOCK_ID" => "4",	// Инфоблок
+		"ELEMENT_SORT_FIELD" => "RAND",	// По какому полю сортируем элементы
+		"ELEMENT_SORT_ORDER" => "asc",	// Порядок сортировки элементов
+		"ELEMENT_SORT_FIELD2" => "id",	// Поле для второй сортировки элементов
+		"ELEMENT_SORT_ORDER2" => "desc",	// Порядок второй сортировки элементов
+		"FILTER_NAME" => "arrFilterHits",	// Имя массива со значениями фильтра для фильтрации элементов
+		"HIDE_NOT_AVAILABLE" => "N",	// Не отображать товары, которых нет на складах
+		"ELEMENT_COUNT" => "4",	// Количество выводимых элементов
+		"LINE_ELEMENT_COUNT" => "1",	// Количество элементов выводимых в одной строке таблицы
+		"PROPERTY_CODE" => array(	// Свойства
+			0 => "",
+			1 => "",
+		),
+		"OFFERS_LIMIT" => "5",	// Максимальное количество предложений для показа (0 - все)
+		"SECTION_URL" => "",	// URL, ведущий на страницу с содержимым раздела
+		"DETAIL_URL" => "",	// URL, ведущий на страницу с содержимым элемента раздела
+		"SECTION_ID_VARIABLE" => "SECTION_ID",	// Название переменной, в которой передается код группы
+		"CACHE_TYPE" => "A",	// Тип кеширования
+		"CACHE_TIME" => "360000",	// Время кеширования (сек.)
+		"CACHE_GROUPS" => "N",	// Учитывать права доступа
+		"DISPLAY_COMPARE" => "N",	// Разрешить сравнение товаров
+		"CACHE_FILTER" => "N",	// Кешировать при установленном фильтре
+		"PRICE_CODE" => array(	// Тип цены
+			0 => "BASE",
+		),
+		"USE_PRICE_COUNT" => "N",	// Использовать вывод цен с диапазонами
+		"SHOW_PRICE_COUNT" => "1",	// Выводить цены для количества
+		"PRICE_VAT_INCLUDE" => "Y",	// Включать НДС в цену
+		"CONVERT_CURRENCY" => "N",	// Показывать цены в одной валюте
+		"BASKET_URL" => "/personal/cart/",	// URL, ведущий на страницу с корзиной покупателя
+		"ACTION_VARIABLE" => "action",	// Название переменной, в которой передается действие
+		"PRODUCT_ID_VARIABLE" => "id",	// Название переменной, в которой передается код товара для покупки
+		"USE_PRODUCT_QUANTITY" => "N",	// Разрешить указание количества товара
+		"ADD_PROPERTIES_TO_BASKET" => "N",	// Добавлять в корзину свойства товаров и предложений
+		"PRODUCT_PROPS_VARIABLE" => "prop",	// Название переменной, в которой передаются характеристики товара
+		"PARTIAL_PRODUCT_PROPERTIES" => "N",	// Разрешить добавлять в корзину товары, у которых заполнены не все характеристики
+		"PRODUCT_PROPERTIES" => "",	// Характеристики товара
+		"PRODUCT_QUANTITY_VARIABLE" => "quantity",	// Название переменной, в которой передается количество товара
+		"COMPONENT_TEMPLATE" => "hits",
+		"SEF_MODE" => "N",	// Включить поддержку ЧПУ
+	),
+	false
+);
+			?>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-md-12 col-sm-12">
+		<ul class="nav nav-tabs nav-justified">
 		  <li role="presentation" class="active"><a href="#">Характеристики</a></li>
 		  <li role="presentation"><a href="#">Доставка и оплата</a></li>
 		  <li role="presentation"><a href="#">Дополнительно</a></li>
