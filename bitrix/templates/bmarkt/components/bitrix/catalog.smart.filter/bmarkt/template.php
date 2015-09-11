@@ -41,7 +41,7 @@ foreach($arResult["ITEMS"] as $key=>$arItem)
 		?>
 		<div class="bx_filter_parameters_box active">
 			<span class="bx_filter_container_modef"></span>
-			<div class="bx_filter_parameters_box_title" onclick="smartFilter.hideFilterProps(this)"><?=$arItem["NAME"]?></div>
+			<div class="bx_filter_parameters_box_title" onclick="smartFilter.hideFilterProps(this)"><i class="icon-arrow-dropdown"></i><?=$arItem["NAME"]?></div>
 			<div class="bx_filter_block">
 				<div class="bx_filter_parameters_box_container">
 					<div class="bx_filter_parameters_box_container_block">
@@ -147,7 +147,7 @@ foreach($arResult["ITEMS"] as $key=>$arItem)
 	?>
 	<div class="bx_filter_parameters_box <?if ($arItem["DISPLAY_EXPANDED"]== "Y"):?>active<?endif?>">
 	<span class="bx_filter_container_modef"></span>
-	<div class="bx_filter_parameters_box_title" onclick="smartFilter.hideFilterProps(this)"><?=$arItem["NAME"]?></div>
+	<div class="bx_filter_parameters_box_title" onclick="smartFilter.hideFilterProps(this)"><i class="icon-arrow-dropdown"></i><?=$arItem["NAME"]?></div>
 	<?if ($arItem["FILTER_HINT"] <> ""):?>
 		<div class="bx_filter_parameters_box_hint" id="item_title_hint_<?echo $arItem["ID"]?>"></div>
 		<script type="text/javascript">
