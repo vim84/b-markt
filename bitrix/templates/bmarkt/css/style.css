@@ -348,9 +348,9 @@ h6, .h6 {font-size: 30px;}
 .catalog-menu .cm-title {
 	background: #0089a9;
 	
-	-webkit-border-radius: 3px;
-	   -moz-border-radius: 3px;
-		    border-radius: 3px;
+	-webkit-border-radius: 2px;
+	   -moz-border-radius: 2px;
+		    border-radius: 2px;
 		    
 	color: #fff;
 	display: block;
@@ -360,6 +360,12 @@ h6, .h6 {font-size: 30px;}
 	padding: 0 40px 0 16px;
 	position: relative;
 	text-transform: uppercase;
+}
+
+.tpl-main .catalog-menu .cm-title {
+	-webkit-border-radius: 0;
+	   -moz-border-radius: 0;
+		    border-radius: 0;
 }
 
 .catalog-menu .cm-title i {
@@ -1100,7 +1106,67 @@ h6, .h6 {font-size: 30px;}
 	width: 50%;
 }
 
-.gd-main-props {padding-bottom: 40px;}
+.good-detail .gd-main-props {padding-bottom: 40px;}
+
+.good-detail .gb-params-links {
+	overflow: hidden;
+	padding: 0 15px 15px;
+}
+
+.good-detail .gb-params-links .gd-rating {
+	border-right: 1px solid #ccc;
+	float: left;
+	height: 23px;
+	padding-right: 10px;
+	padding-top: 5px;
+}
+
+.good-detail .gb-params-links .gd-article {
+	border-right: 1px solid #ccc;
+	font-size: 13px;
+	font-weight: 300;
+	float: left;
+	height: 23px;
+	line-height: 23px;
+	padding: 0 10px;
+}
+
+.good-detail .gb-params-links .gd-article span {
+	color: #d80021;
+	font-weight: 500;
+}
+
+.good-detail .gb-params-links .gd-compare-wrap {
+	float: left;
+	font-size: 11px;
+	height: 23px;
+	line-height: 23px;
+	padding: 0 0 0 10px;
+}
+
+.good-detail .gb-params-links .gd-compare-wrap div {float: left}
+
+.good-detail .gb-params-links .gd-compare-wrap a:hover {text-decoration: none;}
+
+.good-detail .gb-params-links .gd-compare-wrap a i {
+	font-size: 15px;
+	margin-right: 9px;
+	position: relative;
+	bottom: -2px;
+}
+
+.gb-params-links .gd-compare-wrap .gd-fc-link a {color: #d80022}
+
+.gb-params-links .gd-compare-wrap .gd-compare-link a .icon-compare-act,
+.gb-params-links .gd-compare-wrap .gd-fc-link a .icon-heart-act,
+.gb-params-links .gd-compare-wrap .gd-compare-link a:hover .icon-compare,
+.gb-params-links .gd-compare-wrap .gd-fc-link a:hover .icon-heart {display: none}
+
+.gb-params-links .gd-compare-wrap .gd-compare-link a:hover .icon-compare-act,
+.gb-params-links .gd-compare-wrap .gd-fc-link a:hover .icon-heart-act {display: inline}
+
+.gb-params-links .gd-compare-wrap .gd-compare-link {border-right: 1px solid #ccc; padding-right: 10px;}
+.gb-params-links .gd-compare-wrap .gd-fc-link {padding-left: 10px;}
 
 /* ------------------------- */
 

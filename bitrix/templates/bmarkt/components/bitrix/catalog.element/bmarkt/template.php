@@ -1,9 +1,16 @@
 <?php if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();?>
-<?//pre($arResult)?>
+<?//pre($arResult["PROPERTIES"]["G_REFERENCE"]["VALUE"])?>
 <div class="row">
 	<div class="col-md-12">
 		<?=(!empty($arResult["PREVIEW_TEXT"]))? '<div class="gd-preview-text">'.$arResult["PREVIEW_TEXT"].'</div>' : ''?>
-		<div class=""></div>
+		<div class="gb-params-links">
+			<div class="gd-rating"><div class="rating"></div></div>
+			<div class="gd-article">Код товара: <span><?=$arResult["PROPERTIES"]["G_REFERENCE"]["VALUE"]?></span></div>
+			<div class="gd-compare-wrap">
+				<div class="gd-compare-link"><a href="#" rel="nofollow"><i class="icon-compare"></i><i class="icon-compare-act"></i>К сравнению</a></div>
+				<div class="gd-fc-link"><a href="#" rel="nofollow"><i class="icon-heart"></i><i class="icon-heart-act"></i>В избранное</a></div>
+			</div>
+		</div>
 	</div>
 </div>
 <div class="row gd-main-props">
