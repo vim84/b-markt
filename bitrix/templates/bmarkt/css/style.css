@@ -1021,7 +1021,7 @@ h6, .h6 {font-size: 30px;}
 
 .gd-price-block .price_and_actions .old-price {padding-bottom: 8px;}
 
-.gd-price-block .price_and_actions .old-price span {
+.gd-price-block .price_and_actions .old-price span, .gd-price-block .gd-rating-number .grn-title {
 	display: block;
 	font-size: 13px;
 	font-weight: 300
@@ -1053,6 +1053,31 @@ h6, .h6 {font-size: 30px;}
 	padding-bottom: 8px;
 	text-transform: uppercase;
 }
+
+.gd-price-block .gd-rating-number {
+	overflow: hidden;
+	padding-top: 10px;
+}
+
+.gd-price-block .gd-rating-number .rating {
+	background-image: url("../img/temp-icons/rating-big.png");
+	display: inline-block;
+	height: 21px;
+	margin-right: 10px;
+	width: 117px;
+}
+
+.gd-price-block .gd-rating-number .grn-title {padding-bottom: 5px;}
+
+.gd-price-block .gd-rating-number .grn-number {
+	display: inline-block;
+	font-size: 24px;
+	font-weight: 100;
+}
+
+.gd-price-block .gd-rating-number .grn-number span {color: #2ebfd6; font-weight: 500;}
+
+.gd-price-block .gd-rating-number .grn-number i {font-size: 15px; font-weight: 300;}
 
 .gd-price-block .buy-params {
 	font-size: 15px;
@@ -1107,6 +1132,22 @@ h6, .h6 {font-size: 30px;}
 }
 
 .good-detail .gd-main-props {padding-bottom: 40px;}
+
+.good-detail .gd-props-block .gd-all-props-link {
+	font-size: 15px;
+	margin-left: 10px; 
+}
+
+.good-detail .gd-props-block .gd-all-props-link:hover {
+	color: #272a2b;
+	text-decoration: none;
+}
+
+.good-detail .gd-props-block .gd-all-props-link i {
+	margin-right: 9px;
+	position: relative;
+	bottom: -2px;
+}
 
 .good-detail .gb-params-links {
 	overflow: hidden;

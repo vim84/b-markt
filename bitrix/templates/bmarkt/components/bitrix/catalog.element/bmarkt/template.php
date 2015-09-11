@@ -109,9 +109,14 @@
 							}
 			            }       
 						?>
-						
+
 						<div class="buy">
 							<a class="btn btn-success btn-block add-to-cart" href="#" rel="nofollow" data-product-id="<?=$arResult["ID"]?>">Купить</a>
+						</div>
+						
+						<div class="gd-rating-number">
+							<span class="grn-title">Рейтинг товара:</span>
+							<div class="rating"></div><div class="grn-number"><span>4.9</span>/<i>5</i></div>
 						</div>
 					</div>
 					<table class="buy-params">
@@ -153,6 +158,7 @@
 			if (!empty($arResult["PREVIEW_TEXT"]))
 				echo '<div class="props-preview-text"><span class="props-text-title">Описание:</span>'.$arResult["PREVIEW_TEXT"].'</div>';
 			?>
+			<a href="#" class="gd-all-props-link"><i class="icon-more"></i>Все характеристики</a>
 		</div>
 	</div>
 </div>
