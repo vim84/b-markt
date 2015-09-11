@@ -1342,6 +1342,10 @@ h6, .h6 {font-size: 30px;}
 
 .tabs {float: left;}
 
+.content-wrap {
+	padding: 0 15px;
+}
+
 /* Extra small devices (phones, less than 768px) */
 /* No media query since this is the default in Bootstrap */
 .navbar-bmarkt .user-id-block {width: 70px;}

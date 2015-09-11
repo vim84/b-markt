@@ -325,7 +325,7 @@ if (!empty($_REQUEST["ELEMENT_CODE"]))
 					</div>
 					<div class="row">
 						<?php
-						if (!$bCatalogElement)
+						if ($bCatalogPage && !$bCatalogElement)
 						{
 							?>
 							<div class="col-md-3 col-sm-3">
@@ -376,7 +376,9 @@ if (!empty($_REQUEST["ELEMENT_CODE"]))
 							<?php
 						}
 						?>
-						<div class="<?=($bCatalogElement)? 'col-md-12 col-sm-12 good-detail' : 'col-md-9 col-sm-9'?>">
+						<div class="<?=($bCatalogElement || !$bCatalogPage)? 'col-md-12 col-sm-12 good-detail' : 'col-md-9 col-sm-9'?>">
 					<?php
+					if (!$bCatalogPage)
+						echo '<div class="content-wrap">';
 				}
 			?>
